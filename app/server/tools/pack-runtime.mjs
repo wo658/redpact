@@ -1,10 +1,10 @@
-import { execFileSync } from "node:child_process"
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
 import { parse, stringify } from "yaml"
+import { runPnpm } from "./runtime-commands.mjs"
 
 const { values } = parseArgs({ options: { directory: { type: "string" } } })
 const root = fileURLToPath(new URL("../../../", import.meta.url))
@@ -50,7 +50,7 @@ try {
   await cp(join(root, "LICENSE"), join(stage, "LICENSE"))
   await cp(join(root, "app/web/NOTICE"), join(stage, "NOTICE"))
   await cp(join(root, "app/web/licenses"), join(stage, "licenses"), { recursive: true })
-  execFileSync("pnpm", ["install", "--prod", "--frozen-lockfile", "--ignore-scripts"], {
+  runPnpm(["install", "--prod", "--frozen-lockfile", "--ignore-scripts"], {
     cwd: stage,
     stdio: "inherit",
   })
@@ -66,15 +66,11 @@ try {
     console.log(values.directory)
   } else {
     await mkdir(output, { recursive: true })
-    execFileSync(
-      "pnpm",
-      ["pack", "--json", "--out", join(output, `redpact-${manifest.version}.tgz`)],
-      {
-        cwd: stage,
-        stdio: ["ignore", "pipe", "inherit"],
-        maxBuffer: 10 * 1024 * 1024,
-      },
-    )
+    runPnpm(["pack", "--json", "--out", join(output, `redpact-${manifest.version}.tgz`)], {
+      cwd: stage,
+      stdio: ["ignore", "pipe", "inherit"],
+      maxBuffer: 10 * 1024 * 1024,
+    })
     console.log(join(output, `redpact-${manifest.version}.tgz`))
   }
 } finally {

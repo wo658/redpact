@@ -96,6 +96,31 @@ continues to require its persistent private key. User installation and removal a
 in [installation](installation.md). The Homebrew Cask uses these same architecture-specific assets and checksums.
 Apple notarization and Universal builds are not provided.
 
+## Windows and Linux preview verification
+
+Manually dispatch the [platform workflow](../.github/workflows/desktop-portability.yml) to build Windows
+x64 NSIS installers on Windows Server 2022 and Linux x64 DEBs on Ubuntu 22.04.
+It uses the same preview overlay without updater keys. Windows archive extraction
+uses the OS-provided `tar.exe`, avoiding Git Bash path/archive incompatibility;
+packaging uses the existing Execa dependency to launch pnpm with preserved arguments.
+
+Both jobs retain their packages, run native Rust tests/lint, install the actual
+package, launch the installed desktop with isolated settings, check bundled Node,
+HTTP health/viewer and MCP, and verify owned-server shutdown and package removal.
+Linux uses Xvfb and a D-Bus session. These checks do not cover Windows 10/11
+interactive installer/SmartScreen behavior, every WebView control or every Linux
+window system/distribution. Package download and user instructions are in
+[installation](installation.md).
+
+After successful native verification and repository checks, create a matching
+`desktop-platform-preview-v<version>` tag at the reviewed source commit and upload
+the exact workflow artifacts plus `SHA256SUMS` to a draft prerelease. Publish with
+`--latest=false` after checking the artifacts. Keep the existing Mac release and
+its checksums intact. Run [public platform installation verification](../.github/workflows/desktop-platform-installation.yml)
+after publication to download the unauthenticated release URLs, verify checksums
+and repeat installation/runtime/removal without rebuilding. Do not replace published files. Windows publisher signing,
+AppImage/RPM, ARM builds and an updater feed are not configured for these previews.
+
 ## Signed updates
 
 Check for Updates lives in the native menu. Release builds use
@@ -109,8 +134,8 @@ public key to the existing native updater through `REDPACT_UPDATE_ENDPOINT` and
 ### GitHub Release workflow
 
 The [desktop release workflow](../.github/workflows/desktop-release.yml) builds on
-native Apple Silicon and Intel macOS runners. Windows and Linux release jobs are
-not configured. It uses [Tauri Action](https://github.com/tauri-apps/tauri-action)
+native Apple Silicon and Intel macOS runners. Windows and Linux signed-updater release jobs are
+not configured; their manual preview workflow is separate. It uses [Tauri Action](https://github.com/tauri-apps/tauri-action)
 to upload DMGs, signed `.app.tar.gz` updater bundles, signatures and `latest.json`
 to one **draft** GitHub Release. Uploads are serialized to preserve both manifest
 platform entries. No updater sees a draft release.

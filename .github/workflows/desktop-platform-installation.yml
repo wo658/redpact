@@ -1,0 +1,41 @@
+name: Public Windows and Linux desktop installation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            file: Redpact_0.1.0_amd64.deb
+          - runner: windows-2022
+            file: Redpact_0.1.0_x64-setup.exe
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Download public package and verify checksum
+        shell: bash
+        env:
+          PACKAGE: ${{ matrix.file }}
+        run: |
+          base=https://github.com/wo658/redpact/releases/download/desktop-platform-preview-v0.1.0
+          curl --fail --location --retry 3 "$base/$PACKAGE" --output "$PACKAGE"
+          curl --fail --location --retry 3 "$base/SHA256SUMS" --output SHA256SUMS
+          grep "  $PACKAGE$" SHA256SUMS | sha256sum --check --strict -
+      - name: Install and verify Linux package
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb dbus-x11
+          bash app/desktop/tools/verify-linux.sh '${{ matrix.file }}'
+      - name: Install and verify Windows package
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./app/desktop/tools/verify-windows.ps1 -Package '${{ matrix.file }}'

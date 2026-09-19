@@ -4,6 +4,8 @@ import { chmod, cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promi
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { nodeArchiveCommand, runPnpm } from "../../server/tools/runtime-commands.mjs"
+
 const desktop = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const root = resolve(desktop, "../..")
 const nodeVersion = "24.20.0"
@@ -55,14 +57,13 @@ await rm(staged, { recursive: true, force: true })
 try {
   await mkdir(join(staged, "bin"), { recursive: true })
   const extracted = join(cache, `node-v${nodeVersion}-${platform}-${process.arch}`)
-  execFileSync("tar", ["-xf", archive, "-C", cache])
+  execFileSync(nodeArchiveCommand(), ["-xf", archive, "-C", cache])
   const binary = process.platform === "win32" ? "node.exe" : "bin/node"
   const installed = join(staged, "bin", process.platform === "win32" ? "node.exe" : "node")
   await cp(join(extracted, binary), installed)
   await chmod(installed, 0o755)
   await cp(join(extracted, "LICENSE"), join(staged, "NODE-LICENSE"))
-  const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm"
-  const run = (args) => execFileSync(pnpm, args, { cwd: root, stdio: "inherit" })
+  const run = (args) => runPnpm(args, { cwd: root, stdio: "inherit" })
   run(["--filter", "@redpact/web", "build"])
   run(["--filter", "@redpact/server", "build"])
   execFileSync(

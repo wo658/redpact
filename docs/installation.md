@@ -14,6 +14,7 @@ CLI and bundled browser viewer. It does not install the Tauri desktop applicatio
 | Path | What it installs | Requirements / limits |
 | --- | --- | --- |
 | macOS desktop download | Native app, server, viewer and Node | macOS 13.5+, Apple Silicon or Intel; preview without notarization |
+| Windows/Linux desktop preview | Native app, server, viewer and Node | Windows x64 EXE; Ubuntu 22.04 x64 DEB; manual updates |
 | Homebrew custom tap | CLI formula or macOS desktop Cask | Select `--cask` for the desktop; desktop preview is not notarized |
 | Terminal installer | CLI and browser viewer under `~/.local` | macOS or Linux, Node 24+, npm, curl and SHA-256 utility |
 | GitHub release tarball with npm/pnpm | CLI and browser viewer | Node 24+ and npm or pnpm |
@@ -24,9 +25,9 @@ CLI and bundled browser viewer. It does not install the Tauri desktop applicatio
 Managed execution additionally needs Docker with Compose. Git operations use native
 Git; managed worktree creation requires maintained Git 2.50+. Installation and MCP
 connectivity do not verify Docker readiness or client support for MCP Apps.
-Windows package installation, native Windows/Linux desktop builds and a Universal
-macOS desktop installer are not verified distribution paths. The macOS desktop
-preview is not Apple notarized.
+Windows CLI installation, ARM Windows/Linux, other Linux distributions and a Universal
+macOS installer remain unverified. The macOS preview is not Apple notarized;
+the Windows preview has no publisher code-signing certificate.
 
 ## macOS desktop download
 
@@ -67,6 +68,47 @@ Redpact to install a newer Cask version. Remove with
 `brew uninstall --cask wo658/redpact/redpact`; instance data is retained.
 If you previously installed the DMG manually, quit and move that app out of
 Applications before installing the Cask. Keep the old copy until launch succeeds.
+
+## Windows and Linux desktop preview
+
+Download the OS-specific package from the [Windows/Linux preview](https://github.com/wo658/redpact/releases/tag/desktop-platform-preview-v0.1.0).
+Node, the server and viewer are bundled. Quit other Redpact instances using port
+54321 before opening the app; its initial MCP endpoint is `http://127.0.0.1:54321/mcp`.
+
+### Windows x64
+
+Download `Redpact_0.1.0_x64-setup.exe`, run it and open Redpact from the Start menu.
+The installer provisions WebView2 when needed, so first installation may need
+network access. This preview is unsigned; Windows SmartScreen may show a publisher
+warning. Verify the release source and compare `Get-FileHash <file> -Algorithm SHA256`
+with `SHA256SUMS`. Native build, silent installation, app/server/viewer/MCP launch
+and uninstall are tested on the GitHub Windows Server 2022 runner. Windows 10/11
+interactive installation and SmartScreen approval are not covered by that check.
+
+Quit Redpact before running a newer installer. Remove it through Windows Settings
+→ Apps. Instance settings/results are separate from the installation and remain
+under `%APPDATA%\dev.redpact.desktop\state`.
+
+### Ubuntu x64
+
+Download `Redpact_0.1.0_amd64.deb`, compare `sha256sum <file>` with `SHA256SUMS`, then:
+
+```sh
+sudo apt install ./Redpact_0.1.0_amd64.deb
+redpact-desktop
+```
+
+The package manager installs the required system libraries, including WebKitGTK.
+Native build, DEB installation, desktop/server/viewer/MCP launch under a virtual
+X display and package removal are tested on Ubuntu 22.04 x64. This does not establish
+compatibility with every Linux distribution, Wayland session or desktop environment.
+AppImage, RPM and ARM packages are not provided.
+
+For an update, quit Redpact and install the newer DEB with `apt install ./<file>`.
+Remove with `sudo apt remove redpact`; instance data stays in
+`${XDG_DATA_HOME:-$HOME/.local/share}/dev.redpact.desktop/state`.
+Both previews use manual updates and retain the [desktop lifecycle](desktop.md).
+Installation checks do not prove managed Docker execution or every WebView interaction.
 
 ## Homebrew
 
@@ -240,7 +282,7 @@ Connect the agent and viewer to the same instance. Results from one server do no
 
 ## Optional macOS desktop build
 
-The desktop bundles the viewer, server, and Node runtime. Building it requires Rust stable and the platform's Tauri prerequisites in addition to Node and pnpm. macOS needs Xcode Command Line Tools; the bundled Node runtime requires macOS 13.5 or later. Windows and Linux native desktop builds have not been verified in the current implementation.
+The desktop bundles the viewer, server, and Node runtime. Building it requires Rust stable and the platform's Tauri prerequisites in addition to Node and pnpm. macOS needs Xcode Command Line Tools; the bundled Node runtime requires macOS 13.5 or later. Windows and Linux build and installation verification is described above.
 
 From the Redpact checkout, run `pnpm desktop:dev` for development. For a personal macOS installation:
 

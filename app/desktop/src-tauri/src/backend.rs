@@ -23,6 +23,9 @@ pub fn allowed_navigation(origin: &url::Url, destination: &url::Url) -> bool {
 
 impl Backend {
     pub fn start(resources: &Path, data: &Path) -> Result<Self, String> {
+        // Node's entry-point resolver rejects Windows verbatim paths.
+        let resources = dunce::simplified(resources);
+        let data = dunce::simplified(data);
         fs::create_dir_all(data).map_err(|e| e.to_string())?;
         match OpenOptions::new()
             .write(true)
@@ -54,7 +57,7 @@ impl Backend {
             .map_err(|e| e.to_string())?;
         let mut command = Command::new(node);
         command
-            .arg(resources.join("server/dist/cli.js"))
+            .arg(resources.join("server").join("dist").join("cli.js"))
             .arg("serve")
             .arg("--data-dir")
             .arg(data)
