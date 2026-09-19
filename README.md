@@ -4,6 +4,33 @@ A local development review tool for agent-authored test intent, submitted source
 and observed execution results. The connected web/Tauri viewer reviews Git changes,
 Unit commands, Vitest Integration and Playwright evidence across local checkouts.
 
+## Install and run
+
+Install the CLI and bundled browser viewer on macOS or Linux. The terminal
+installer requires Node.js 24+, npm, curl and a SHA-256 utility:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/wo658/redpact/main/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+redpact serve --port 54321
+```
+
+Open <http://127.0.0.1:54321> and keep the terminal running. Add the PATH setting
+to your shell profile to use `redpact` in future terminals.
+
+Alternatively, install with Homebrew on macOS:
+
+```sh
+brew tap wo658/redpact https://github.com/wo658/redpact.git
+brew install wo658/redpact/redpact
+redpact serve --port 54321
+```
+
+These commands install the CLI and web viewer, not the Tauri desktop app. Managed
+test execution additionally requires Docker with Compose. See the
+[installation guide](docs/installation.md) ([한국어](docs/installation.ko.md)) for
+npm/pnpm release URLs, Codex and Claude Code plugins, updates and supported platforms.
+
 ## Documentation
 
 The separate `redpact-web` website reads the maintained Markdown in `docs/` directly. User guides and
