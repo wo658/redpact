@@ -49,8 +49,9 @@ jobs:
         if: matrix.extension == 'zip'
         run: |
           bundle=app/desktop/node_modules/.redpact/target/${{ matrix.target }}/release/bundle
+          version=$(node -p "require('./app/desktop/src-tauri/tauri.conf.json').version")
           mkdir -p "$bundle/dmg"
-          ditto -c -k --sequesterRsrc --keepParent "$bundle/macos/Redpact.app" "$bundle/dmg/Redpact_0.1.0_x64.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$bundle/macos/Redpact.app" "$bundle/dmg/Redpact_${version}_x64.zip"
       - name: Native tests and lint
         working-directory: app/desktop/src-tauri
         run: |
