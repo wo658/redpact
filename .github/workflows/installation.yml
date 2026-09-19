@@ -30,3 +30,16 @@ jobs:
         run: npm install --global --ignore-scripts --prefix "$RUNNER_TEMP/redpact-npm" https://github.com/wo658/redpact/releases/download/runtime-v0.1.0/redpact-0.1.0.tgz
       - name: Verify npm installation
         run: node tools/install/smoke.mjs "$RUNNER_TEMP/redpact-npm/bin/redpact"
+      - name: Install from the public Homebrew tap
+        if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          INSTALL_REF: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          brew tap wo658/redpact https://github.com/wo658/redpact.git
+          tap_root="$(brew --repo wo658/redpact)"
+          git -C "$tap_root" fetch origin "$INSTALL_REF"
+          git -C "$tap_root" checkout --detach FETCH_HEAD
+          brew install wo658/redpact/redpact
+          brew test wo658/redpact/redpact
+          node tools/install/smoke.mjs "$(brew --prefix)/bin/redpact"
