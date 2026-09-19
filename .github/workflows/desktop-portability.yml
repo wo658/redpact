@@ -1,6 +1,12 @@
 name: Windows and Linux desktop verification
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        type: choice
+        default: all
+        options: [all, windows, linux]
+        description: Native platform to build and verify
 permissions:
   contents: read
 jobs:
@@ -8,13 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - runner: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            bundles: deb
-          - runner: windows-2022
-            target: x86_64-pc-windows-msvc
-            bundles: nsis
+        include: ${{ fromJSON(inputs.platform == 'windows' && '[{"runner":"windows-2022","target":"x86_64-pc-windows-msvc","bundles":"nsis"}]' || inputs.platform == 'linux' && '[{"runner":"ubuntu-22.04","target":"x86_64-unknown-linux-gnu","bundles":"deb"}]' || '[{"runner":"ubuntu-22.04","target":"x86_64-unknown-linux-gnu","bundles":"deb"},{"runner":"windows-2022","target":"x86_64-pc-windows-msvc","bundles":"nsis"}]') }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     defaults:

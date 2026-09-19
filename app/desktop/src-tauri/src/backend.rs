@@ -54,7 +54,7 @@ impl Backend {
             .map_err(|e| e.to_string())?;
         let mut command = Command::new(node);
         command
-            .arg(resources.join("server/dist/cli.js"))
+            .arg(resources.join("server").join("dist").join("cli.js"))
             .arg("serve")
             .arg("--data-dir")
             .arg(data)
