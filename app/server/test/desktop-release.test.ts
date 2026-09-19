@@ -59,3 +59,22 @@ test("다른 저장소나 안전하지 않은 feed를 거부한다", () => {
     ).toThrow("endpoint")
   }
 })
+
+test("수동 Mac preview는 updater 키 없이 일치하는 버전만 배포한다", () => {
+  expect(
+    releaseEnvironment({
+      ...input,
+      tag: "desktop-preview-v0.1.0",
+      mode: "preview",
+      privateKey: "",
+    }),
+  ).toEqual({})
+  expect(() =>
+    releaseEnvironment({
+      ...input,
+      tag: "desktop-preview-v0.2.0",
+      mode: "preview",
+      privateKey: "",
+    }),
+  ).toThrow("tag")
+})

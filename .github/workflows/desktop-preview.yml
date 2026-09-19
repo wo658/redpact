@@ -1,0 +1,75 @@
+name: Mac desktop preview
+on:
+  push:
+    tags: ['desktop-preview-v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: desktop-preview-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            target: aarch64-apple-darwin
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Validate manual preview tag
+        run: node app/desktop/tools/release-config.mjs
+        env:
+          REDPACT_RELEASE_MODE: preview
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm rebuild esbuild
+      - run: pnpm docs:check
+      - run: pnpm --filter @redpact/server exec vitest run test/desktop-release.test.ts
+      - run: pnpm --filter @redpact/desktop exec tauri build --target ${{ matrix.target }} --config src-tauri/tauri.preview.conf.json --bundles app,dmg
+      - name: Native tests and lint
+        working-directory: app/desktop/src-tauri
+        run: |
+          cargo test --locked --target ${{ matrix.target }}
+          cargo clippy --locked --target ${{ matrix.target }} -- -D warnings
+      - name: Install DMG and verify native launch, viewer and MCP
+        run: node app/desktop/tools/verify-dmg.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.target }}
+          path: app/desktop/node_modules/.redpact/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          merge-multiple: true
+          path: assets
+      - name: Create verified draft preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          cd assets
+          sha256sum *.dmg > SHA256SUMS
+          gh release create "$RELEASE_TAG" *.dmg SHA256SUMS --verify-tag --draft --prerelease --latest=false --title "Redpact macOS desktop preview" --notes 'Apple Silicon (aarch64) and Intel (x64) DMGs. Requires macOS 13.5+. Bundles Node, server and viewer. Ad-hoc signed, not Apple notarized; Gatekeeper may require Open Anyway in Privacy & Security. Manual updates only. Each DMG was installed and its native app, HTTP viewer and MCP checked on its matching macOS runner. This does not establish complete product test coverage.'

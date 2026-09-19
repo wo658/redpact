@@ -77,6 +77,25 @@ before starting children. It carries readiness, shutdown and idle-update control
 not a public HTTP endpoint. The WebView permits admitted loopback/about:blank
 navigation and denies external/file navigation; loopback pages gain no native bridge.
 
+## Manual preview downloads
+
+The [Mac preview workflow](../.github/workflows/desktop-preview.yml) is separate
+from signed updater releases. Push a matching `desktop-preview-v<version>` tag.
+It uses `tauri.preview.conf.json` to build ad-hoc signed DMGs without updater keys
+on native Apple Silicon and Intel runners. Each runner mounts its DMG, copies the
+app out, verifies the signature and bundled Node architecture, launches the native
+app with isolated state, checks HTTP health, viewer HTML and MCP initialization,
+and verifies owned-server shutdown after parent exit. This does not exercise
+Gatekeeper approval, every WebView control, Docker tests or a previous-version upgrade.
+
+Only after both jobs pass does the workflow create a draft prerelease with both
+DMGs and `SHA256SUMS`. Review the evidence and publish with `--latest=false` to
+preserve the stable updater feed. Do not replace published assets. These previews
+have no updater feed and require manual app replacement; the signed workflow below
+continues to require its persistent private key. User installation and removal are
+in [installation](installation.md). Apple notarization, Universal builds and a
+Homebrew desktop Cask are not provided.
+
 ## Signed updates
 
 Check for Updates lives in the native menu. Release builds use

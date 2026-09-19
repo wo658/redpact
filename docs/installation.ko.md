@@ -13,6 +13,7 @@ CLI와 브라우저 뷰어를 설치합니다. Tauri 데스크톱 앱은 설치�
 
 | 경로 | 설치 대상 | 요구 사항 / 제한 |
 | --- | --- | --- |
+| macOS 데스크톱 DMG | 네이티브 앱, 서버, 뷰어, Node | macOS 13.5+, Apple Silicon 또는 Intel, 공증 없는 preview |
 | Homebrew 자체 Tap | CLI, 브라우저 뷰어, Node | Homebrew가 있는 macOS 또는 Linux, 데스크톱 Cask 아님 |
 | 터미널 설치기 | `~/.local` 아래 CLI와 브라우저 뷰어 | macOS 또는 Linux, Node 24+, npm, curl, SHA-256 도구 |
 | GitHub 릴리스 tarball과 npm/pnpm | CLI와 브라우저 뷰어 | Node 24+와 npm 또는 pnpm |
@@ -26,6 +27,30 @@ CLI와 브라우저 뷰어를 설치합니다. Tauri 데스크톱 앱은 설치�
 Windows 패키지 설치, Windows/Linux 네이티브 데스크톱 빌드, Universal macOS
 데스크톱 설치기는 검증된 배포 경로가 아닙니다. 이 런타임 설치 안내는 Homebrew
 데스크톱 Cask나 Apple 공증 데스크톱 릴리스를 제공하지 않습니다.
+
+## macOS 데스크톱 다운로드
+
+[Mac 데스크톱 preview](https://github.com/wo658/redpact/releases/tag/desktop-preview-v0.1.0)에서 CPU에 맞는 DMG를 다운로드하세요.
+
+- Apple Silicon(M 시리즈): `Redpact_0.1.0_aarch64.dmg`.
+- Intel: `Redpact_0.1.0_x64.dmg`.
+
+DMG를 열고 **Redpact**를 **Applications**로 드래그한 뒤 디스크 이미지를 추출하고
+Redpact를 실행하세요. Node·서버·뷰어가 포함되어 터미널에서 서버를 실행할 필요가 없습니다.
+최초 MCP 주소는 `http://127.0.0.1:54321/mcp`입니다. 같은 포트를 사용하는 다른
+Redpact 인스턴스가 있다면 먼저 종료하세요.
+
+이 preview는 ad-hoc 서명을 사용하며 **Apple 공증을 받지 않았습니다**.
+`shasum -a 256 <다운로드한파일.dmg>` 결과를 릴리스의 `SHA256SUMS`와 비교하세요.
+macOS가 차단하면 출처를 확인한 뒤 시스템 설정 → 개인정보 보호 및 보안에서
+[Apple의 앱별 ‘확인 없이 열기’ 안내](https://support.apple.com/ko-kr/102445)를 따르세요.
+Gatekeeper를 전역으로 해제하지 마세요. 체크섬 일치는 릴리스 파일의 일치 여부이며 Apple 심사가 아닙니다.
+
+업데이트는 수동입니다. 활성 작업을 마치고 Redpact를 종료한 뒤 새 DMG를 받아
+Applications의 앱을 교체하세요. 이 preview에는 자동 업데이트 feed가 없습니다.
+제거하려면 종료 후 `Redpact.app`을 삭제하세요. 설정과 결과는
+`~/Library/Application Support/dev.redpact.desktop/state`에 남습니다.
+[데스크톱 수명주기와 릴리스 경계](desktop.md)를 참고하세요.
 
 ## Homebrew
 
