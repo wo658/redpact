@@ -24,7 +24,12 @@ function description(node: Node, kind: "intent" | "reason") {
 }
 
 export function parseSource(path: string, source: string): ParsedFile {
-  const project = new Project({ useInMemoryFileSystem: true, skipAddingFilesFromTsConfig: true })
+  const project = new Project({
+    useInMemoryFileSystem: true,
+    skipAddingFilesFromTsConfig: true,
+    // Import binding identity needs no standard-library types or ambient globals.
+    skipLoadingLibFiles: true,
+  })
   const file = project.createSourceFile(path, source)
   const review: ParsedFile = { scenarios: [], limitations: [] }
   const imports = new Map<number, string>()

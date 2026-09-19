@@ -19,13 +19,21 @@ import { createTestWorktrees } from "./helpers/worktrees.js"
 const dockerTest = process.env.REDPACT_DOCKER_TESTS === "1" ? test : test.skip
 
 dockerTest(
-  "automatic removal deletes owned Docker data and preserves final logs",
+  "자동 정리는 제외된 서비스의 필수 변수를 읽지 않고 실행 이미지와 데이터를 제거한다",
   async () => {
     const root = await mkdtemp(join(tmpdir(), "redpact-cleanup-docker-"))
     const project = join(root, "project")
     const data = join(root, "data")
+    const namedImage = `redpact-cleanup-preserved-${randomUUID()}`
     await mkdir(join(project, ".redpact"), { recursive: true })
-    await writeFile(join(project, "Dockerfile"), "FROM alpine:3.21\n")
+    await writeFile(
+      join(project, "Dockerfile"),
+      `FROM alpine:3.21\nLABEL redpact.cleanup-test="${randomUUID()}"\n`,
+    )
+    await writeFile(
+      join(project, "named.Dockerfile"),
+      `FROM alpine:3.21\nLABEL redpact.named-test="${randomUUID()}"\n`,
+    )
     await writeFile(
       join(project, "compose.yaml"),
       `services:
@@ -38,6 +46,21 @@ dockerTest(
       interval: 1s
       timeout: 1s
       retries: 30
+  named:
+    build:
+      context: .
+      dockerfile: named.Dockerfile
+    image: ${namedImage}
+    command: [sh, -c, "sleep 300"]
+    healthcheck:
+      test: [CMD, "true"]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+  excluded:
+    image: alpine:3.21
+    environment:
+      REQUIRED: "\${UNSELECTED_SECRET:?must not be needed for cleanup}"
 volumes:
   data: {}
 `,
@@ -64,7 +87,9 @@ volumes:
     const captured: Environment[] = []
     async function writeRuntimeData(environment: Environment) {
       captured.push(environment)
-      const container = environment.resources.find((resource) => resource.kind === "container")!
+      const container = environment.resources.find(
+        (resource) => resource.kind === "container" && resource.service === "app",
+      )!
       await execa("docker", [
         "exec",
         container.id,
@@ -102,7 +127,7 @@ volumes:
         source: "import {test} from 'vitest'; test('cleanup probe',()=>{})",
       },
     ])
-    const selection = { services: ["app"], select: {} }
+    const selection = { services: ["app", "named"], select: {} }
     try {
       for (let attempt = 0; attempt < 2; attempt++) {
         const run = await runs.start(submission.id, selection)
@@ -131,7 +156,7 @@ volumes:
           ).not.toBe(0)
         }
         for (const resource of environment.resources.filter(
-          (item) => item.kind === "container" && item.image,
+          (item) => item.kind === "container" && item.service === "app" && item.image,
         )) {
           expect(
             (await execa("docker", ["image", "inspect", resource.image!], { reject: false }))
@@ -147,6 +172,9 @@ volumes:
         await expect(access(join(directory, "preparation.log"))).resolves.toBeUndefined()
       }
       expect(captured).toHaveLength(2)
+      expect(
+        (await execa("docker", ["image", "inspect", namedImage], { reject: false })).exitCode,
+      ).toBe(0)
     } finally {
       await runs.close()
       for (const environment of environments.list(worktree.id)) {
@@ -155,6 +183,7 @@ volumes:
       await runs.stopEnvironment.idle()
       await environments.close()
       storage.close()
+      await execa("docker", ["image", "rm", namedImage], { reject: false })
       await rm(root, { recursive: true, force: true })
     }
   },
