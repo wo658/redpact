@@ -301,6 +301,21 @@ export function createComposeAdapter(
             throw new Error("Test binding requires a declared published service port")
           }
         }
+        if (record.lifecycle === "run") {
+          const localBuilds = Object.entries(model.services).filter(
+            ([, service]) => service.build && !service.image,
+          )
+          if (localBuilds.length) {
+            // Cleanup needs only Compose's implicit image names, never application variables.
+            await writeFile(
+              join(stage, ".redpact-image-cleanup.yaml"),
+              stringify({
+                services: Object.fromEntries(localBuilds.map(([name]) => [name, { build: "." }])),
+              }),
+              { mode: 0o600, flag: "wx" },
+            )
+          }
+        }
         signal.throwIfAborted()
         let worker = new URL("./compose-worker.js", import.meta.url)
         if (!existsSync(worker)) {
@@ -466,9 +481,9 @@ export function createComposeAdapter(
       if (remaining.resources.length || failures.length) {
         throw new Error("Owned resources could not all be removed")
       }
-      if (record.lifecycle === "run") {
-        const source = join(directory(record), "source")
-        const files = [...record.settings.environment.compose.files, ".redpact-runtime.yaml"]
+      const source = join(directory(record), "source")
+      const imageCleanup = join(source, ".redpact-image-cleanup.yaml")
+      if (record.lifecycle === "run" && existsSync(imageCleanup)) {
         await docker(
           [
             "compose",
@@ -476,7 +491,8 @@ export function createComposeAdapter(
             record.projectName,
             "--project-directory",
             source,
-            ...files.flatMap((file) => ["-f", join(source, file)]),
+            "-f",
+            imageCleanup,
             "down",
             "--rmi",
             "local",
