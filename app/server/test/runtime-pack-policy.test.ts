@@ -5,8 +5,8 @@ import { parse } from "yaml"
 
 const installation = vi.hoisted(() => ({ workspace: undefined as unknown }))
 
-vi.mock("node:child_process", () => ({
-  execFileSync: (_command: string, args: string[], options: { cwd: string }) => {
+vi.mock("execa", () => ({
+  execaSync: (_command: string, args: string[], options: { cwd: string }) => {
     if (args[0] === "install") {
       installation.workspace = parse(readFileSync(join(options.cwd, "pnpm-workspace.yaml"), "utf8"))
     }
