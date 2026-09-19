@@ -1,22 +1,116 @@
 ---
 title: Installation and agent connection
-description: Run a local Redpact build and connect your agent to the same instance as the viewer.
+description: Install Redpact from GitHub with Homebrew or the terminal and connect Codex or Claude Code.
 ---
 
 # Installation and agent connection
 
-Redpact is currently an unreleased local development tool. These instructions use a source checkout. Public installers and a production update feed are not assumed to be available.
+Redpact's public source and runtime downloads are hosted at
+[wo658/redpact](https://github.com/wo658/redpact). The runtime package installs the
+CLI and bundled browser viewer. It does not install the Tauri desktop application.
 
-## Install the npm release
+## Choose an installation path
 
-After `redpact` is published to npm, install and start the bundled server and viewer with:
+| Path | What it installs | Requirements / limits |
+| --- | --- | --- |
+| Homebrew custom tap | CLI and browser viewer, with Node | macOS or Linux with Homebrew; not a desktop Cask |
+| Terminal installer | CLI and browser viewer under `~/.local` | macOS or Linux, Node 24+, npm, curl and SHA-256 utility |
+| GitHub release tarball with npm/pnpm | CLI and browser viewer | Node 24+ and npm or pnpm |
+| GitHub source checkout | Contributor build | Node 24+, pnpm; Rust for desktop |
+| Codex plugin | MCP connection and skills | Codex plus a running Redpact instance on port 54321 |
+| Claude Code plugin | MCP connection and skills | Claude Code plus the same running instance |
+
+Managed execution additionally needs Docker with Compose. Git operations use native
+Git; managed worktree creation requires maintained Git 2.50+. Installation and MCP
+connectivity do not verify Docker readiness or client support for MCP Apps.
+Windows package installation, native Windows/Linux desktop builds and a Universal
+macOS desktop installer are not verified distribution paths. No Homebrew desktop
+Cask or notarized desktop release is supplied by these runtime instructions.
+
+## Homebrew
 
 ```sh
-pnpm add --global redpact
-redpact serve --project /absolute/path/to/your-project
+brew tap wo658/redpact https://github.com/wo658/redpact.git
+brew install wo658/redpact/redpact
+redpact serve --port 54321
 ```
 
-Open `http://127.0.0.1:54318` and connect your agent to `http://127.0.0.1:54318/mcp`. A separate `pnpm dev` process is unnecessary. The source-based instructions below remain available before publication and for contributors.
+Update with `brew update && brew upgrade wo658/redpact/redpact`. Remove the package
+with `brew uninstall wo658/redpact/redpact`; runtime state is separate and retained.
+This is the project's custom tap, not Homebrew core. Use the explicit repository URL
+when adding it because the source repository is named `redpact`, not `homebrew-redpact`.
+
+## Terminal installer
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/wo658/redpact/main/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+redpact serve --port 54321
+```
+
+The script downloads the pinned runtime release and checks `SHA256SUMS` before npm
+installation. It requires Node 24+ and npm already installed and does not use sudo.
+Save the PATH setting in your shell profile for future terminals. To inspect before
+running, download `install.sh`, read it, then run `sh install.sh`. An absolute custom
+prefix is supported with `sh install.sh --prefix /absolute/path`.
+Rerun the installer to install the release it currently selects. It refuses to replace
+an unrelated executable. Remove `<prefix>/bin/redpact` and `<prefix>/share/redpact`
+to uninstall this route; do not remove your runtime data directory unless intended.
+
+## GitHub release package
+
+Download and inspect the checksum from
+[the runtime release](https://github.com/wo658/redpact/releases/tag/runtime-v0.1.0),
+or install its package URL directly with either package manager:
+
+```sh
+npm install --global --ignore-scripts https://github.com/wo658/redpact/releases/download/runtime-v0.1.0/redpact-0.1.0.tgz
+# Alternatively:
+pnpm add --global --ignore-scripts https://github.com/wo658/redpact/releases/download/runtime-v0.1.0/redpact-0.1.0.tgz
+redpact serve --port 54321
+```
+
+Use a user-writable global package directory. The terminal installer above avoids
+global directory setup and validates the release checksum automatically.
+`npm install -g redpact`, `pnpm add -g redpact`, and `npx redpact` by package name
+are not available until an npm registry release is published. GitHub tarball installation
+does not require npm publishing credentials. Dependencies still come from npm.
+
+## Install an agent plugin
+
+First start `redpact serve --port 54321` and keep that terminal running. Open
+`http://127.0.0.1:54321` for the viewer. If the desktop already owns that port,
+connect to it instead of starting a second instance.
+
+Codex:
+
+```sh
+codex plugin marketplace add wo658/redpact
+codex plugin add redpact@redpact
+```
+
+Start a new task, then use `$redpact-init` for project setup or `$redpact` for work.
+
+Claude Code:
+
+```sh
+claude plugin marketplace add wo658/redpact
+claude plugin install redpact@redpact
+```
+
+Start a new session, then use `/redpact:redpact-init` or `/redpact:redpact`.
+Both catalogs install the same self-contained skill and MCP files from the public
+GitHub repository. Plugin installation does not install or launch Redpact, install
+Docker, or grant test approval. These are project-hosted catalogs, not claims of
+listing in an OpenAI or Anthropic curated directory.
+
+The plugin uses `http://127.0.0.1:54321/mcp`. To use a different instance, configure
+a direct HTTP MCP connection to its actual port instead of assuming the plugin
+follows it. Other clients may use that connection, but are not claimed as tested
+plugin integrations. Ask the agent to call `configure describe` to verify tools.
+Approval and credential cards require a compatible MCP Apps host. Plugin installation
+alone does not prove card support; an unavailable approval UI must not be bypassed.
+See [the interface contract](interfaces.md).
 
 ## Requirements
 

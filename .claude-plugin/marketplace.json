@@ -1,0 +1,13 @@
+{
+  "name": "redpact",
+  "owner": {
+    "name": "wo658"
+  },
+  "plugins": [
+    {
+      "name": "redpact",
+      "source": "./plugins/redpact",
+      "description": "Local development review with Redpact MCP and skills."
+    }
+  ]
+}

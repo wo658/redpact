@@ -172,3 +172,21 @@ Implementation: [runtime packaging](../app/server/tools/pack-runtime.mjs),
 [local updater](../app/server/tools/local-update.ts),
 [desktop updater](../app/desktop/tools/local-update.ts),
 [release workflow](../.github/workflows/npm-publish.yml).
+
+## Public installation distribution
+
+The public repository owns `install.sh`, `Formula/redpact.rb`, the Codex catalog at
+`.agents/plugins/marketplace.json` and the Claude Code catalog at
+`.claude-plugin/marketplace.json`. Both catalogs reuse `plugins/redpact`.
+See [installation](installation.md) for user commands and unsupported paths.
+
+For a runtime release, run `pnpm test:package` and the required executable checks.
+Upload that exact `dist/redpact-<version>.tgz` and its `SHA256SUMS` to the matching
+`runtime-v<version>` GitHub release. Update the installer version, Formula URL and
+checksum, installation examples and verification workflow together. Never replace
+an existing version's artifact. Mark runtime releases as not latest, because the
+desktop updater's `releases/latest` endpoint belongs to desktop releases.
+After publication, run the `Public installation verification` workflow to install
+from the real public URL on Linux x64, macOS arm64 and macOS x64, then check the CLI,
+bundled viewer and MCP. Verify Homebrew and both plugin clients separately; these
+checks do not prove Docker execution or MCP Apps card support in each client.
