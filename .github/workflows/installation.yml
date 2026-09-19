@@ -1,5 +1,11 @@
 name: Public installation verification
 on:
+  pull_request:
+    paths:
+      - 'install.sh'
+      - 'Formula/**'
+      - 'tools/install/**'
+      - '.github/workflows/installation.yml'
   workflow_dispatch:
 permissions:
   contents: read
