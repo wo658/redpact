@@ -1,6 +1,7 @@
 import type { en } from "./en"
 
 export const ko = {
+  "New tab": "새 탭",
   "Open workspaces": "열린 작업공간",
   "Close {{name}}": "{{name}} 닫기",
   "File view": "파일 보기",

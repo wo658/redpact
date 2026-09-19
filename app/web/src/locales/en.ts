@@ -1,4 +1,5 @@
 export const en = {
+  "New tab": "New tab",
   "Open workspaces": "Open workspaces",
   "Close {{name}}": "Close {{name}}",
   "File view": "File view",

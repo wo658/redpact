@@ -85,7 +85,9 @@ preview never executes project code.
 
 The app header owns open-workspace tabs and native drag space outside the rounded content
 frame; it does not repeat the current page title or expose history controls. Workspace tabs use
-a fixed width and truncate long names, with horizontal scrolling when space is exhausted. The
+a fixed width, left-aligned icons and truncated titles, with a subtle outline and a brighter
+selected surface. The adjacent plus button opens a new project tab and remains reachable
+when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The
 browser desktop keeps the sidebar open rather than offering a collapse control; compact mobile
 screens retain the sidebar trigger. The native macOS desktop keeps its sidebar control.
 The sidebar remains on the canvas. Preserve desktop

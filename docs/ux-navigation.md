@@ -24,6 +24,7 @@ Redpact
 │       └── Open project folder [action]
 │
 ├── Application header
+│   ├── New tab [action]
 │   └── Open workspace tabs [tab]
 │       ├── Connected project [tab]
 │       └── Selected worktree [tab]
@@ -183,7 +184,10 @@ Redpact
 - Browser desktop keeps the sidebar open and the header exposes only the open-workspace
   strip rather than a sidebar toggle, page title or history controls. Compact mobile
   screens retain the sidebar trigger; the native macOS desktop keeps its sidebar control.
-  Workspace tabs use a fixed width and truncate long labels. Selecting a project opens or activates its project tab;
+  Workspace tabs use a fixed width, left-aligned icons and truncated labels with subtle outlines.
+  The header plus button opens another project tab on the current project’s default review
+  screen without replacing existing tabs. Each tab remembers its current page and worktree while switching tabs. New tabs are
+  session-only; reloading resets the strip. Selecting a project opens or activates its project tab;
   selecting a worktree adds a worktree tab. Closing either tab only removes it from
   the strip and never stops an execution or disconnects a project.
 - Settings sections and actions can depend on available API capabilities. The MCP

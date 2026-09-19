@@ -7,6 +7,7 @@ import {
   FolderGit2,
   GitBranch,
   GitGraph,
+  Plus,
   Settings,
   Settings2,
   X,
@@ -86,6 +87,7 @@ type WorkspaceTab = {
   label: string
   projectId: string
   worktreeId?: string
+  navigation?: { page: Page; selectedId: string }
 }
 
 function initialProject(projects: Project[]) {
@@ -219,6 +221,34 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
     setActiveWorkspaceTabId(tabId)
     setError("")
   }
+  function newWorkspaceTab() {
+    if (!selected) {
+      return
+    }
+    const id = `project:${selected.id}:${crypto.randomUUID()}`
+    setWorkspaceTabs((tabs) => [
+      ...tabs,
+      { id, kind: "project", label: selected.name, projectId: selected.id },
+    ])
+    setActiveWorkspaceTabId(id)
+  }
+  const rememberNavigation = useCallback(
+    (page: Page, selectedId: string) => {
+      setWorkspaceTabs((tabs) =>
+        tabs.map((tab) => {
+          if (
+            tab.id !== activeWorkspaceTabId ||
+            (tab.navigation?.page === page && tab.navigation.selectedId === selectedId)
+          ) {
+            return tab
+          }
+          return { ...tab, navigation: { page, selectedId } }
+        }),
+      )
+    },
+    [activeWorkspaceTabId],
+  )
+  const activeWorkspace = workspaceTabs.find((tab) => tab.id === activeWorkspaceTabId)
   function activateWorkspaceTab(tab: WorkspaceTab) {
     setSelectedId(tab.projectId)
     setActiveWorkspaceTabId(tab.id)
@@ -367,9 +397,12 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
             activeWorkspaceTabId={activeWorkspaceTabId}
             onActivateWorkspaceTab={activateWorkspaceTab}
             onCloseWorkspaceTab={closeWorkspaceTab}
+            onNewWorkspaceTab={newWorkspaceTab}
+            onNavigate={rememberNavigation}
+            initialPage={activeWorkspace?.navigation?.page}
             onOpenWorktree={openWorktree}
             initialSelectedId={
-              workspaceTabs.find((tab) => tab.id === activeWorkspaceTabId)?.worktreeId ?? ""
+              activeWorkspace?.navigation?.selectedId ?? activeWorkspace?.worktreeId ?? ""
             }
           />
         </LiveUpdates>
@@ -386,11 +419,13 @@ export function WorktreePanel({
   activeWorkspaceTabId,
   onActivateWorkspaceTab,
   onCloseWorkspaceTab,
+  onNewWorkspaceTab,
+  onNavigate,
   onOpenWorktree,
   initialPage = "review",
   initialSelectedId = "",
 }: {
-  initialPage?: "review" | "git-graph"
+  initialPage?: Page
   initialSelectedId?: string
   api: Api
   project: Project
@@ -399,6 +434,8 @@ export function WorktreePanel({
   activeWorkspaceTabId?: string
   onActivateWorkspaceTab?: (tab: WorkspaceTab) => void
   onCloseWorkspaceTab?: (tabId: string) => void
+  onNewWorkspaceTab?: () => void
+  onNavigate?: (page: Page, selectedId: string) => void
   onOpenWorktree?: (project: Project, worktree: Worktree) => void
 }) {
   const { t } = useTranslation()
@@ -409,6 +446,13 @@ export function WorktreePanel({
     index: 0,
   })
   const { page, selectedId } = navigation.entries[navigation.index]
+  const activeTabRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    activeTabRef.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" })
+  }, [])
+  useEffect(() => {
+    onNavigate?.(page, selectedId)
+  }, [onNavigate, page, selectedId])
   function setPage(page: Page, worktreeId = selectedId) {
     setNavigation((current) => {
       const previous = current.entries[current.index]
@@ -553,7 +597,7 @@ export function WorktreePanel({
             <SidebarTrigger />
           </div>
           <div
-            className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto"
+            className="flex min-w-0 items-center gap-1 overflow-x-auto py-1"
             role="tablist"
             aria-label={t("Open workspaces")}
           >
@@ -562,11 +606,12 @@ export function WorktreePanel({
               return (
                 <div
                   key={tab.id}
+                  ref={active ? activeTabRef : undefined}
                   className={cn(
-                    "flex h-7 w-40 shrink-0 items-center gap-1 rounded-lg px-1 text-xs",
+                    "group/workspace-tab flex h-8 w-48 shrink-0 items-center gap-1 rounded-lg border px-1 text-xs transition-colors",
                     active
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent/50",
+                      ? "border-border bg-card text-foreground shadow-xs"
+                      : "border-border/60 bg-muted/50 text-muted-foreground hover:bg-muted",
                   )}
                 >
                   <Button
@@ -574,15 +619,25 @@ export function WorktreePanel({
                     size="xs"
                     role="tab"
                     aria-selected={active}
-                    className="min-w-0 flex-1 truncate px-1"
+                    className="min-w-0 flex-1 justify-start gap-1.5 px-1 text-left"
+                    title={tab.label}
                     onClick={() => onActivateWorkspaceTab?.(tab)}
                   >
-                    {tab.label}
+                    {tab.kind === "worktree" ? (
+                      <GitBranch aria-hidden="true" data-icon="inline-start" />
+                    ) : (
+                      <FolderGit2 aria-hidden="true" data-icon="inline-start" />
+                    )}
+                    <span className="truncate">{tab.label}</span>
                   </Button>
                   {workspaceTabs.length > 1 && (
                     <Button
                       variant="ghost"
                       size="icon-xs"
+                      className={cn(
+                        !active &&
+                          "opacity-0 group-hover/workspace-tab:opacity-100 group-focus-within/workspace-tab:opacity-100 [@media(hover:none)]:opacity-100",
+                      )}
                       aria-label={t("Close {{name}}", { name: tab.label })}
                       onClick={() => onCloseWorkspaceTab?.(tab.id)}
                     >
@@ -593,6 +648,18 @@ export function WorktreePanel({
               )
             })}
           </div>
+          {onNewWorkspaceTab && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("New tab")}
+              title={t("New tab")}
+              onClick={onNewWorkspaceTab}
+            >
+              <Plus aria-hidden="true" />
+            </Button>
+          )}
+          <div className="h-8 min-w-4 flex-1" data-tauri-drag-region />
         </header>
         <SidebarInset
           className={cn(

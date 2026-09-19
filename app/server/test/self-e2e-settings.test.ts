@@ -50,12 +50,13 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/tests/settings.spec.ts", purpose: "functional" },
       { path: "project/tests/viewers.spec.ts", purpose: "functional" },
       { path: "project/tests/word-wrap.spec.ts", purpose: "functional" },
+      { path: "project/tests/workspace-tabs.spec.ts", purpose: "functional" },
     ])
     expect(browserFiles.every((file) => file.scope === "project")).toBe(true)
     expect(
       browserFiles.find((file) => file.path === "project/tests/product-demo.spec.ts")?.target,
     ).toBe("demo")
-    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(9)
+    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(10)
     const files = await createLocalFiles().readTests(root, result.settings.tests.directory)
     const scenarios = files
       .filter((file) => file.path.endsWith(".test.ts"))
