@@ -6,41 +6,49 @@ import { dirname, join, resolve } from "node:path"
 import { setTimeout } from "node:timers/promises"
 import { fileURLToPath } from "node:url"
 
-const desktop = resolve(dirname(fileURLToPath(import.meta.url)), "..")
-const target = process.arch === "arm64" ? "aarch64-apple-darwin" : "x86_64-apple-darwin"
-const folder = join(desktop, "node_modules/.redpact/target", target, "release/bundle/dmg")
-const supplied = process.argv[2] ? resolve(process.argv[2]) : undefined
-// Tauri intentionally rejects executable paths containing macOS /var symlinks.
-const temporary = await realpath(await mkdtemp(join(tmpdir(), "redpact-dmg-")))
-const mount = join(temporary, "volume")
-const installed = supplied?.endsWith(".app") ? supplied : join(temporary, "Redpact.app")
-const run = (command, args) => execFileSync(command, args, { encoding: "utf8" })
-if (!supplied?.endsWith(".app")) {
-  const files = supplied
-    ? [supplied]
-    : (await readdir(folder))
-        .filter((name) => name.endsWith(".dmg") || name.endsWith(".zip"))
-        .map((name) => join(folder, name))
-  assert.equal(files.length, 1, "Expected one architecture-specific desktop package")
-  if (files[0].endsWith(".zip")) {
-    run("ditto", ["-x", "-k", files[0], temporary])
-  } else {
-    run("hdiutil", ["attach", files[0], "-nobrowse", "-readonly", "-mountpoint", mount])
-    try {
-      run("ditto", [join(mount, "Redpact.app"), installed])
-    } finally {
-      run("hdiutil", ["detach", mount])
+const temporary = await realpath(await mkdtemp(join(tmpdir(), "redpact-desktop-")))
+async function macInstallation() {
+  const desktop = resolve(dirname(fileURLToPath(import.meta.url)), "..")
+  const target = process.arch === "arm64" ? "aarch64-apple-darwin" : "x86_64-apple-darwin"
+  const folder = join(desktop, "node_modules/.redpact/target", target, "release/bundle/dmg")
+  const supplied = process.argv[2] ? resolve(process.argv[2]) : undefined
+  // Tauri intentionally rejects executable paths containing macOS /var symlinks.
+  const mount = join(temporary, "volume")
+  const installed = supplied?.endsWith(".app") ? supplied : join(temporary, "Redpact.app")
+  const run = (command, args) => execFileSync(command, args, { encoding: "utf8" })
+  if (!supplied?.endsWith(".app")) {
+    const files = supplied
+      ? [supplied]
+      : (await readdir(folder))
+          .filter((name) => name.endsWith(".dmg") || name.endsWith(".zip"))
+          .map((name) => join(folder, name))
+    assert.equal(files.length, 1, "Expected one architecture-specific desktop package")
+    if (files[0].endsWith(".zip")) {
+      run("ditto", ["-x", "-k", files[0], temporary])
+    } else {
+      run("hdiutil", ["attach", files[0], "-nobrowse", "-readonly", "-mountpoint", mount])
+      try {
+        run("ditto", [join(mount, "Redpact.app"), installed])
+      } finally {
+        run("hdiutil", ["detach", mount])
+      }
     }
   }
+  run("codesign", ["--verify", "--deep", "--strict", installed])
+  const resources = join(installed, "Contents/Resources/runtime")
+  const info = run("/usr/libexec/PlistBuddy", [
+    "-c",
+    "Print :CFBundleExecutable",
+    join(installed, "Contents/Info.plist"),
+  ]).trim()
+  return { resources, executable: join(installed, "Contents/MacOS", info) }
 }
-run("codesign", ["--verify", "--deep", "--strict", installed])
-const resources = join(installed, "Contents/Resources/runtime")
-assert.equal(run(join(resources, "bin/node"), ["-p", "process.arch"]).trim(), process.arch)
-const info = run("/usr/libexec/PlistBuddy", [
-  "-c",
-  "Print :CFBundleExecutable",
-  join(installed, "Contents/Info.plist"),
-]).trim()
+const { resources, executable } =
+  process.platform === "darwin"
+    ? await macInstallation()
+    : { executable: resolve(process.argv[2]), resources: resolve(process.argv[3]) }
+const node = join(resources, "bin", process.platform === "win32" ? "node.exe" : "node")
+assert.equal(execFileSync(node, ["-p", "process.arch"], { encoding: "utf8" }).trim(), process.arch)
 const port = 55431
 await writeFile(join(temporary, "settings.json"), JSON.stringify({ server: { port } }))
 assert.equal(
@@ -50,7 +58,7 @@ assert.equal(
   false,
   "Verification port must not be owned by an existing instance",
 )
-const app = spawn(await realpath(join(installed, "Contents/MacOS", info)), [], {
+const app = spawn(await realpath(executable), [], {
   env: { ...process.env, REDPACT_DESKTOP_DATA_DIR: temporary },
   stdio: "inherit",
 })
@@ -110,7 +118,7 @@ try {
   assert.equal(result.result.structuredContent.specification.path, ".redpact/settings.json")
   assert.equal(app.exitCode, null, "Native desktop must remain running")
   console.log(
-    `Verified installed desktop: ${process.arch}; native app, code signature, bundled Node, viewer, health and MCP`,
+    `Verified installed desktop: ${process.arch}; native app, bundled Node, viewer, health and MCP`,
   )
 } catch (error) {
   console.error(
