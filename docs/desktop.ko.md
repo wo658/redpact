@@ -90,6 +90,26 @@ Gatekeeper 승인, 모든 WebView 컨트롤, Docker 테스트, 이전 버전 업
 [설치 안내](installation.md)를 참고하세요. Homebrew Cask도 동일한 아키텍처별 파일과 체크섬을 사용합니다.
 Apple 공증과 Universal 빌드는 제공하지 않습니다.
 
+## Windows와 Linux preview 검증
+
+[플랫폼 워크플로](../.github/workflows/desktop-portability.yml)는 Windows Server 2022에서
+Windows x64 NSIS 설치기를, Ubuntu 22.04에서 Linux x64 DEB를 빌드합니다.
+같은 preview 설정을 사용하며 updater 키는 필요하지 않습니다. Windows 압축 해제는
+OS의 `tar.exe`를 사용해 Git Bash의 경로·압축 형식 충돌을 피합니다. 패키징은 기존
+Execa 의존성으로 pnpm을 실행하며 인자를 그대로 보존합니다.
+
+두 job은 패키지를 보존하고 Rust 테스트·린트를 실행한 뒤 실제 패키지를 설치합니다.
+독립 설정으로 설치된 데스크톱을 실행하고 번들 Node, HTTP 상태·뷰어, MCP를 확인한 뒤
+소유 서버 종료와 패키지 제거를 검사합니다. Linux에서는 Xvfb와 D-Bus 세션을 사용합니다.
+Windows 10/11 대화형 설치·SmartScreen, 모든 WebView 컨트롤, 모든 Linux 창 시스템·배포판은
+검증 범위가 아닙니다. 다운로드와 사용자 명령은 [설치 안내](installation.md)에 있습니다.
+
+네이티브 검증과 저장소 검사가 통과하면 검토한 소스 커밋에 버전과 일치하는
+`desktop-platform-preview-v<version>` 태그를 만들고 해당 워크플로의 정확한 아티팩트와
+`SHA256SUMS`를 draft prerelease에 업로드하세요. 파일을 확인한 뒤 `--latest=false`로
+공개합니다. 기존 Mac 릴리스와 체크섬은 유지하고 공개한 파일을 교체하지 마세요.
+이 preview에는 Windows 게시자 서명, AppImage/RPM, ARM 빌드와 updater feed가 없습니다.
+
 ## 서명된 업데이트
 
 Check for Updates는 native 메뉴에 있습니다. 릴리스 빌드는
@@ -102,7 +122,7 @@ Check for Updates는 native 메뉴에 있습니다. 릴리스 빌드는
 ### GitHub Release 워크플로
 
 [데스크톱 릴리스 워크플로](../.github/workflows/desktop-release.yml)는 Apple Silicon과
-Intel macOS의 native runner에서 빌드합니다. Windows·Linux 릴리스 job은 구성하지
+Intel macOS의 native runner에서 빌드합니다. Windows·Linux 서명 updater 릴리스 job은 구성하지
 않았습니다. [Tauri Action](https://github.com/tauri-apps/tauri-action)이 DMG,
 서명된 `.app.tar.gz` 업데이트 번들, 서명 파일과 `latest.json`을 하나의 **Draft**
 GitHub Release에 올립니다. 두 플랫폼의 manifest 항목을 보존하도록 순차 업로드합니다.

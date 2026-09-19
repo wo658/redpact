@@ -14,6 +14,7 @@ CLI와 브라우저 뷰어를 설치합니다. Tauri 데스크톱 앱은 설치�
 | 경로 | 설치 대상 | 요구 사항 / 제한 |
 | --- | --- | --- |
 | macOS 데스크톱 다운로드 | 네이티브 앱, 서버, 뷰어, Node | macOS 13.5+, Apple Silicon 또는 Intel, 공증 없는 preview |
+| Windows/Linux 데스크톱 preview | 네이티브 앱, 서버, 뷰어, Node | Windows x64 EXE, Ubuntu 22.04 x64 DEB, 수동 업데이트 |
 | Homebrew 자체 Tap | CLI Formula 또는 macOS 데스크톱 Cask | 데스크톱은 `--cask`로 선택, 공증 없는 preview |
 | 터미널 설치기 | `~/.local` 아래 CLI와 브라우저 뷰어 | macOS 또는 Linux, Node 24+, npm, curl, SHA-256 도구 |
 | GitHub 릴리스 tarball과 npm/pnpm | CLI와 브라우저 뷰어 | Node 24+와 npm 또는 pnpm |
@@ -24,9 +25,9 @@ CLI와 브라우저 뷰어를 설치합니다. Tauri 데스크톱 앱은 설치�
 관리형 실행에는 Docker와 Compose가 추가로 필요합니다. Git 기능은 네이티브 Git을
 사용하며 관리형 워크트리 생성에는 유지보수되는 Git 2.50+가 필요합니다. 설치와 MCP
 연결 성공이 Docker 준비 상태나 클라이언트의 MCP Apps 지원을 증명하지는 않습니다.
-Windows 패키지 설치, Windows/Linux 네이티브 데스크톱 빌드, Universal macOS
-데스크톱 설치기는 검증된 배포 경로가 아닙니다. macOS 데스크톱 preview는
-Apple 공증을 받지 않았습니다.
+Windows CLI 설치, Windows/Linux ARM, 다른 Linux 배포판과 Universal macOS
+설치기는 미검증입니다. macOS preview는 Apple 공증을 받지 않았으며
+Windows preview에는 게시자 코드 서명 인증서가 없습니다.
 
 ## macOS 데스크톱 다운로드
 
@@ -67,6 +68,46 @@ Cask는 Apple Silicon DMG 또는 Intel ZIP를 선택하고 체크섬을 검증�
 제거는 `brew uninstall --cask wo658/redpact/redpact`이며 인스턴스 데이터는 보존됩니다.
 기존 DMG를 수동 설치했다면 종료하고 해당 앱을 Applications 밖으로 옮긴 뒤
 Cask를 설치하세요. 새 앱의 실행이 확인될 때까지 이전 복사본을 보관하세요.
+
+## Windows와 Linux 데스크톱 preview
+
+[Windows/Linux preview](https://github.com/wo658/redpact/releases/tag/desktop-platform-preview-v0.1.0)에서 OS에 맞는 패키지를 다운로드하세요.
+Node·서버·뷰어가 포함되어 있습니다. 실행 전 54321 포트를 사용하는 다른 Redpact를
+종료하세요. 최초 MCP 주소는 `http://127.0.0.1:54321/mcp`입니다.
+
+### Windows x64
+
+`Redpact_0.1.0_x64-setup.exe`를 받아 실행하고 시작 메뉴에서 Redpact를 여세요.
+설치기는 필요한 경우 WebView2를 설치하므로 최초 설치 시 인터넷 연결이 필요할 수
+있습니다. 이 preview에는 코드 서명이 없어 Windows SmartScreen 게시자 경고가
+나타날 수 있습니다. 릴리스 출처를 확인하고 `Get-FileHash <파일> -Algorithm SHA256`
+결과를 `SHA256SUMS`와 비교하세요. GitHub Windows Server 2022 러너에서 네이티브
+빌드, 무인 설치, 앱·서버·뷰어·MCP 실행과 제거를 검사합니다. Windows 10/11의
+대화형 설치와 SmartScreen 허용은 이 검사에 포함되지 않습니다.
+
+업데이트는 Redpact를 종료한 뒤 새 설치기를 실행하세요. 제거는 Windows 설정 → 앱을
+사용합니다. 인스턴스 설정·결과는 설치 경로와 별개인
+`%APPDATA%\dev.redpact.desktop\state`에 남습니다.
+
+### Ubuntu x64
+
+`Redpact_0.1.0_amd64.deb`를 받아 `sha256sum <파일>`을 `SHA256SUMS`와 비교한 뒤 실행하세요.
+
+```sh
+sudo apt install ./Redpact_0.1.0_amd64.deb
+redpact-desktop
+```
+
+패키지 관리자가 WebKitGTK를 포함한 시스템 라이브러리를 설치합니다. Ubuntu 22.04 x64에서
+네이티브 빌드, DEB 설치, 가상 X 디스플레이의 데스크톱·서버·뷰어·MCP 실행과 패키지
+제거를 검사합니다. 모든 Linux 배포판·Wayland 세션·데스크톱 환경의 호환성을 뜻하지
+않습니다. AppImage·RPM·ARM 패키지는 제공하지 않습니다.
+
+업데이트는 Redpact를 종료한 뒤 `apt install ./<파일>`로 새 DEB를 설치하세요.
+제거는 `sudo apt remove redpact`이며 인스턴스 데이터는
+`${XDG_DATA_HOME:-$HOME/.local/share}/dev.redpact.desktop/state`에 남습니다.
+두 preview 모두 수동 업데이트이며 [데스크톱 수명주기](desktop.md)를 따릅니다.
+설치 검사는 관리형 Docker 실행이나 모든 WebView 동작의 검증이 아닙니다.
 
 ## Homebrew
 
@@ -239,7 +280,7 @@ http://127.0.0.1:54318/mcp
 
 ## 선택 사항: macOS 데스크톱 빌드
 
-데스크톱 앱은 뷰어, 서버, Node 런타임을 함께 제공합니다. 빌드하려면 Node와 pnpm 외에 Rust stable과 해당 플랫폼의 Tauri 사전 요구사항이 필요합니다. macOS에는 Xcode Command Line Tools가 필요하며, 번들 Node 런타임은 macOS 13.5 이상을 요구합니다. 현재 구현에서 Windows와 Linux의 네이티브 데스크톱 빌드는 검증되지 않았습니다.
+데스크톱 앱은 뷰어, 서버, Node 런타임을 함께 제공합니다. 빌드하려면 Node와 pnpm 외에 Rust stable과 해당 플랫폼의 Tauri 사전 요구사항이 필요합니다. macOS에는 Xcode Command Line Tools가 필요하며, 번들 Node 런타임은 macOS 13.5 이상을 요구합니다. Windows·Linux 빌드와 설치 검증 범위는 위의 preview 안내를 참고하세요.
 
 개발용으로는 Redpact 체크아웃에서 `pnpm desktop:dev`를 실행하세요. 개인용 macOS 설치는 다음 명령을 사용합니다.
 
