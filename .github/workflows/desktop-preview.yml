@@ -16,8 +16,12 @@ jobs:
         include:
           - runner: macos-14
             target: aarch64-apple-darwin
+            bundles: app,dmg
+            extension: dmg
           - runner: macos-15-intel
             target: x86_64-apple-darwin
+            bundles: app
+            extension: zip
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
@@ -40,19 +44,26 @@ jobs:
       - run: pnpm rebuild esbuild
       - run: pnpm docs:check
       - run: pnpm --filter @redpact/server exec vitest run test/desktop-release.test.ts
-      - run: pnpm --filter @redpact/desktop exec tauri build --target ${{ matrix.target }} --config src-tauri/tauri.preview.conf.json --bundles app,dmg
+      - run: pnpm --filter @redpact/desktop exec tauri build --target ${{ matrix.target }} --config src-tauri/tauri.preview.conf.json --bundles ${{ matrix.bundles }} --verbose
+      - name: Package Intel app archive
+        if: matrix.extension == 'zip'
+        run: |
+          bundle=app/desktop/node_modules/.redpact/target/${{ matrix.target }}/release/bundle
+          version=$(node -p "require('./app/desktop/src-tauri/tauri.conf.json').version")
+          mkdir -p "$bundle/dmg"
+          ditto -c -k --sequesterRsrc --keepParent "$bundle/macos/Redpact.app" "$bundle/dmg/Redpact_${version}_x64.zip"
       - name: Native tests and lint
         working-directory: app/desktop/src-tauri
         run: |
           cargo test --locked --target ${{ matrix.target }}
           cargo clippy --locked --target ${{ matrix.target }} -- -D warnings
-      - name: Install DMG and verify native launch, viewer and MCP
+      - name: Install package and verify native launch, viewer and MCP
         run: node app/desktop/tools/verify-dmg.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: desktop-${{ matrix.target }}
-          path: app/desktop/node_modules/.redpact/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+          path: app/desktop/node_modules/.redpact/target/${{ matrix.target }}/release/bundle/dmg/*.${{ matrix.extension }}
           if-no-files-found: error
   release:
     needs: build
@@ -72,5 +83,5 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           cd assets
-          sha256sum *.dmg > SHA256SUMS
-          gh release create "$RELEASE_TAG" *.dmg SHA256SUMS --verify-tag --draft --prerelease --latest=false --title "Redpact macOS desktop preview" --notes 'Apple Silicon (aarch64) and Intel (x64) DMGs. Requires macOS 13.5+. Bundles Node, server and viewer. Ad-hoc signed, not Apple notarized; Gatekeeper may require Open Anyway in Privacy & Security. Manual updates only. Each DMG was installed and its native app, HTTP viewer and MCP checked on its matching macOS runner. This does not establish complete product test coverage.'
+          sha256sum *.dmg *.zip > SHA256SUMS
+          gh release create "$RELEASE_TAG" *.dmg *.zip SHA256SUMS --verify-tag --draft --prerelease --latest=false --title "Redpact macOS desktop preview" --notes 'Apple Silicon (aarch64) DMG and Intel (x64) app ZIP. Requires macOS 13.5+. Bundles Node, server and viewer. Ad-hoc signed, not Apple notarized; Gatekeeper may require Open Anyway in Privacy & Security. Manual updates only. Each package was installed and its native app, HTTP viewer and MCP checked on its matching macOS runner. This does not establish complete product test coverage.'

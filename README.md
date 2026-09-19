@@ -31,6 +31,10 @@ test execution additionally requires Docker with Compose. See the
 [installation guide](docs/installation.md) ([한국어](docs/installation.ko.md)) for
 npm/pnpm release URLs, Codex and Claude Code plugins, updates and supported platforms.
 
+Download the [macOS desktop preview](https://github.com/wo658/redpact/releases/tag/desktop-preview-v0.1.0)
+for Apple Silicon or Intel. See [installation](docs/installation.md) for the desktop
+Homebrew Cask, CLI and agent plugins. The desktop preview is not Apple notarized.
+
 ## Documentation
 
 The separate `redpact-web` website reads the maintained Markdown in `docs/` directly. User guides and

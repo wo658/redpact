@@ -77,17 +77,18 @@ Loopback 페이지에 native bridge 권한이 생기지 않습니다.
 [Mac preview 워크플로](../.github/workflows/desktop-preview.yml)는 서명된 updater
 릴리스와 별개입니다. 버전과 일치하는 `desktop-preview-v<version>` 태그를 push하세요.
 `tauri.preview.conf.json`으로 updater 키 없이 Apple Silicon·Intel native runner에서
-ad-hoc 서명된 DMG를 빌드합니다. 각 runner는 DMG를 마운트하고 앱을 복사하여 서명과
+ad-hoc 서명된 앱을 빌드합니다. Apple Silicon은 DMG, Intel은 디스크 이미지 생성 실패로
+앱 ZIP을 제공합니다. 각 runner는 패키지를 풀어 서명과
 번들 Node 아키텍처를 확인합니다. 격리된 데이터로 네이티브 앱을 실행하고 HTTP health,
 뷰어 HTML, MCP 초기화를 검사하며 부모 종료 후 소유 서버 종료까지 확인합니다.
 Gatekeeper 승인, 모든 WebView 컨트롤, Docker 테스트, 이전 버전 업그레이드는 검증하지 않습니다.
 
-두 job이 모두 통과해야 DMG 두 개와 `SHA256SUMS`를 포함한 Draft prerelease를 만듭니다.
+두 job이 모두 통과해야 두 패키지와 `SHA256SUMS`를 포함한 Draft prerelease를 만듭니다.
 증거를 검토하고 stable updater feed를 보존하도록 `--latest=false`로 공개하세요.
 공개된 파일을 교체하지 마세요. Preview에는 updater feed가 없으므로 앱을 수동 교체합니다.
 아래 서명된 워크플로는 계속 지속적인 비공개 키를 요구합니다. 사용자 설치·제거는
-[설치 안내](installation.md)를 참고하세요. Apple 공증, Universal 빌드, Homebrew
-데스크톱 Cask는 제공하지 않습니다.
+[설치 안내](installation.md)를 참고하세요. Homebrew Cask도 동일한 아키텍처별 파일과 체크섬을 사용합니다.
+Apple 공증과 Universal 빌드는 제공하지 않습니다.
 
 ## 서명된 업데이트
 

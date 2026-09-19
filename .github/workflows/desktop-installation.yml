@@ -1,0 +1,58 @@
+name: Public Mac desktop installation
+on:
+  pull_request:
+    paths:
+      - 'Casks/**'
+      - '.github/workflows/desktop-installation.yml'
+      - 'app/desktop/tools/verify-dmg.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            arch: aarch64
+            extension: dmg
+          - runner: macos-15-intel
+            arch: x64
+            extension: zip
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Download public desktop package and check release checksum
+        env:
+          ARCH: ${{ matrix.arch }}
+          EXTENSION: ${{ matrix.extension }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/download"
+          cd "$RUNNER_TEMP/download"
+          base=https://github.com/wo658/redpact/releases/download/desktop-preview-v0.1.0
+          curl --fail --location --retry 3 "$base/Redpact_0.1.0_$ARCH.$EXTENSION" -o "Redpact_0.1.0_$ARCH.$EXTENSION"
+          curl --fail --location --retry 3 "$base/SHA256SUMS" -o SHA256SUMS
+          grep "Redpact_0.1.0_$ARCH.$EXTENSION$" SHA256SUMS | shasum -a 256 --check
+      - name: Verify public desktop package installation
+        run: node app/desktop/tools/verify-dmg.mjs "$RUNNER_TEMP/download/Redpact_0.1.0_${{ matrix.arch }}.${{ matrix.extension }}"
+      - name: Install public Homebrew Cask
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          INSTALL_REF: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          brew tap wo658/redpact https://github.com/wo658/redpact.git
+          tap_root="$(brew --repo wo658/redpact)"
+          git -C "$tap_root" fetch origin "$INSTALL_REF"
+          git -C "$tap_root" checkout --detach FETCH_HEAD
+          brew install --cask wo658/redpact/redpact
+      - name: Verify Homebrew desktop installation
+        run: node app/desktop/tools/verify-dmg.mjs /Applications/Redpact.app
+      - name: Verify Cask removal
+        run: |
+          brew uninstall --cask wo658/redpact/redpact
+          test ! -d /Applications/Redpact.app

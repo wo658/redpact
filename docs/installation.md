@@ -13,8 +13,8 @@ CLI and bundled browser viewer. It does not install the Tauri desktop applicatio
 
 | Path | What it installs | Requirements / limits |
 | --- | --- | --- |
-| macOS desktop DMG | Native app, server, viewer and Node | macOS 13.5+, Apple Silicon or Intel; preview without notarization |
-| Homebrew custom tap | CLI and browser viewer, with Node | macOS or Linux with Homebrew; not a desktop Cask |
+| macOS desktop download | Native app, server, viewer and Node | macOS 13.5+, Apple Silicon or Intel; preview without notarization |
+| Homebrew custom tap | CLI formula or macOS desktop Cask | Select `--cask` for the desktop; desktop preview is not notarized |
 | Terminal installer | CLI and browser viewer under `~/.local` | macOS or Linux, Node 24+, npm, curl and SHA-256 utility |
 | GitHub release tarball with npm/pnpm | CLI and browser viewer | Node 24+ and npm or pnpm |
 | GitHub source checkout | Contributor build | Node 24+, pnpm; Rust for desktop |
@@ -25,32 +25,48 @@ Managed execution additionally needs Docker with Compose. Git operations use nat
 Git; managed worktree creation requires maintained Git 2.50+. Installation and MCP
 connectivity do not verify Docker readiness or client support for MCP Apps.
 Windows package installation, native Windows/Linux desktop builds and a Universal
-macOS desktop installer are not verified distribution paths. No Homebrew desktop
-Cask or notarized desktop release is supplied by these runtime instructions.
+macOS desktop installer are not verified distribution paths. The macOS desktop
+preview is not Apple notarized.
 
 ## macOS desktop download
 
-Download the matching DMG from the [Mac desktop preview](https://github.com/wo658/redpact/releases/tag/desktop-preview-v0.1.0):
+Download the matching package from the [Mac desktop preview](https://github.com/wo658/redpact/releases/tag/desktop-preview-v0.1.0):
 
 - Apple Silicon (M-series): `Redpact_0.1.0_aarch64.dmg`.
-- Intel: `Redpact_0.1.0_x64.dmg`.
+- Intel: `Redpact_0.1.0_x64.zip`.
 
-Open the DMG, drag **Redpact** to **Applications**, eject the disk image, then open
+Open the Apple Silicon DMG (or extract the Intel ZIP), drag **Redpact** to **Applications**, eject the disk image if used, then open
 Redpact. Node, the server and viewer are bundled; no terminal server command is needed.
 The first-launch MCP address is `http://127.0.0.1:54321/mcp`. Quit any other Redpact
 instance using that port before opening the desktop app.
 
 This preview is ad-hoc signed, **not Apple notarized**. Check the downloaded file
-against the release's `SHA256SUMS` with `shasum -a 256 <downloaded-file.dmg>`.
+against the release's `SHA256SUMS` with `shasum -a 256 <downloaded-file>`.
 If macOS blocks it, follow [Apple's app-specific Open Anyway instructions](https://support.apple.com/en-us/102445)
 in System Settings → Privacy & Security after checking the source. Do not disable
 Gatekeeper globally. A matching checksum confirms the release file, not Apple review.
 
-Updates are manual: finish active work, quit Redpact, download the new DMG and replace
+Updates are manual: finish active work, quit Redpact, download the new package and replace
 the app in Applications. This preview has no automatic update feed. To uninstall,
 quit and remove `Redpact.app`; settings and results remain in
 `~/Library/Application Support/dev.redpact.desktop/state`.
 See [desktop lifecycle and release boundaries](desktop.md).
+
+### Homebrew desktop Cask
+
+```sh
+brew tap wo658/redpact https://github.com/wo658/redpact.git
+brew install --cask wo658/redpact/redpact
+open /Applications/Redpact.app
+```
+
+The Cask selects the matching Apple Silicon DMG or Intel ZIP and verifies its checksum.
+It has the same notarization and first-launch limitations as the direct download.
+Use `brew update` then `brew upgrade --cask wo658/redpact/redpact` after quitting
+Redpact to install a newer Cask version. Remove with
+`brew uninstall --cask wo658/redpact/redpact`; instance data is retained.
+If you previously installed the DMG manually, quit and move that app out of
+Applications before installing the Cask. Keep the old copy until launch succeeds.
 
 ## Homebrew
 
