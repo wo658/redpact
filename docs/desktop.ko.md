@@ -92,7 +92,7 @@ Apple 공증과 Universal 빌드는 제공하지 않습니다.
 
 ## Windows와 Linux preview 검증
 
-[플랫폼 워크플로](../.github/workflows/desktop-portability.yml)는 Windows Server 2022에서
+[플랫폼 워크플로](../.github/workflows/desktop-portability.yml)를 수동 실행하면 Windows Server 2022에서
 Windows x64 NSIS 설치기를, Ubuntu 22.04에서 Linux x64 DEB를 빌드합니다.
 같은 preview 설정을 사용하며 updater 키는 필요하지 않습니다. Windows 압축 해제는
 OS의 `tar.exe`를 사용해 Git Bash의 경로·압축 형식 충돌을 피합니다. 패키징은 기존
@@ -107,7 +107,10 @@ Windows 10/11 대화형 설치·SmartScreen, 모든 WebView 컨트롤, 모든 Li
 네이티브 검증과 저장소 검사가 통과하면 검토한 소스 커밋에 버전과 일치하는
 `desktop-platform-preview-v<version>` 태그를 만들고 해당 워크플로의 정확한 아티팩트와
 `SHA256SUMS`를 draft prerelease에 업로드하세요. 파일을 확인한 뒤 `--latest=false`로
-공개합니다. 기존 Mac 릴리스와 체크섬은 유지하고 공개한 파일을 교체하지 마세요.
+공개합니다. 기존 Mac 릴리스와 체크섬은 유지하세요. 공개 후
+[공개 플랫폼 설치 검증](../.github/workflows/desktop-platform-installation.yml)을 실행하면
+인증 없는 릴리스 URL에서 다운로드하고 체크섬·설치·실행·제거를 재빌드 없이 검사합니다.
+공개한 파일을 교체하지 마세요.
 이 preview에는 Windows 게시자 서명, AppImage/RPM, ARM 빌드와 updater feed가 없습니다.
 
 ## 서명된 업데이트

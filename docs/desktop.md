@@ -98,7 +98,7 @@ Apple notarization and Universal builds are not provided.
 
 ## Windows and Linux preview verification
 
-The [platform workflow](../.github/workflows/desktop-portability.yml) builds Windows
+Manually dispatch the [platform workflow](../.github/workflows/desktop-portability.yml) to build Windows
 x64 NSIS installers on Windows Server 2022 and Linux x64 DEBs on Ubuntu 22.04.
 It uses the same preview overlay without updater keys. Windows archive extraction
 uses the OS-provided `tar.exe`, avoiding Git Bash path/archive incompatibility;
@@ -116,7 +116,9 @@ After successful native verification and repository checks, create a matching
 `desktop-platform-preview-v<version>` tag at the reviewed source commit and upload
 the exact workflow artifacts plus `SHA256SUMS` to a draft prerelease. Publish with
 `--latest=false` after checking the artifacts. Keep the existing Mac release and
-its checksums intact. Do not replace published files. Windows publisher signing,
+its checksums intact. Run [public platform installation verification](../.github/workflows/desktop-platform-installation.yml)
+after publication to download the unauthenticated release URLs, verify checksums
+and repeat installation/runtime/removal without rebuilding. Do not replace published files. Windows publisher signing,
 AppImage/RPM, ARM builds and an updater feed are not configured for these previews.
 
 ## Signed updates
