@@ -16,6 +16,7 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.github/workflows/server.yml'
+      - '.github/workflows/desktop-release.yml'
   push:
     branches: [main]
     paths:
@@ -33,6 +34,7 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.github/workflows/server.yml'
+      - '.github/workflows/desktop-release.yml'
 permissions:
   contents: read
 jobs:

@@ -1,0 +1,12 @@
+{
+  "bundle": {
+    "createUpdaterArtifacts": true,
+    "macOS": { "signingIdentity": "-" }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": ["https://github.com/wo658/redpact/releases/latest/download/latest.json"]
+    }
+  }
+}

@@ -74,15 +74,47 @@ Loopback 페이지에 native bridge 권한이 생기지 않습니다.
 
 ## 서명된 업데이트
 
-Check for Updates는 native 메뉴에 있습니다. 개발 빌드에 feed가 없으면 이를 알립니다.
-업데이트 가능한 릴리스에는 실제 HTTPS endpoint, Tauri 서명 key pair, 플랫폼·아키텍처
-아티팩트가 필요합니다. `REDPACT_UPDATE_ENDPOINT`, `REDPACT_UPDATE_PUBLIC_KEY`,
-비공개 `TAURI_SIGNING_PRIVATE_KEY`와 Tauri 빌드의 `bundle.createUpdaterArtifacts`를
-설정합니다. 비공개 키를 커밋하지 않습니다. 불변 서명 아티팩트를 manifest보다 먼저 게시합니다.
+Check for Updates는 native 메뉴에 있습니다. 릴리스 빌드는
+`https://github.com/wo658/redpact/releases/latest/download/latest.json`을 조회합니다.
+저장소의 `tauri.release.conf.json`은 updater 아티팩트를 활성화하고 공개 검증 키를
+고정합니다. 일반 로컬 빌드는 이 overlay를 사용하지 않으며 업데이트 미설정을 안내합니다.
+릴리스 준비 단계는 overlay의 endpoint와 공개 키를 컴파일 시
+`REDPACT_UPDATE_ENDPOINT`, `REDPACT_UPDATE_PUBLIC_KEY`로 기존 native updater에 전달합니다.
 
-Tauri는 업데이트 서명을 검증하며 macOS Developer ID 서명·공증은 별도 배포 요건입니다.
-Production feed나 서명 자격 증명을 자동 제공하지 않습니다. Native 메뉴 확인 후 설치·
-재시작합니다. 예약된 background 검사, 차등 다운로드, 재시작 없는 업데이트를 보장하지 않습니다.
+### GitHub Release 워크플로
+
+[데스크톱 릴리스 워크플로](../.github/workflows/desktop-release.yml)는 Apple Silicon과
+Intel macOS의 native runner에서 빌드합니다. Windows·Linux 릴리스 job은 구성하지
+않았습니다. [Tauri Action](https://github.com/tauri-apps/tauri-action)이 DMG,
+서명된 `.app.tar.gz` 업데이트 번들, 서명 파일과 `latest.json`을 하나의 **Draft**
+GitHub Release에 올립니다. 두 플랫폼의 manifest 항목을 보존하도록 순차 업로드합니다.
+앱의 updater에는 Draft 릴리스가 노출되지 않습니다.
+
+유지관리자의 설정·릴리스 절차:
+
+1. `pnpm --filter @redpact/desktop exec tauri signer generate --write-keys /secure/path/redpact.key`로
+   지속 사용할 키를 생성합니다. 비공개 키를 저장소 밖에 백업하고 공개 키를
+   `tauri.release.conf.json`에 설정합니다. 비공개 키는 커밋하지 않습니다.
+   키를 분실하거나 교체하면 기존 설치 앱의 업데이트가 끊깁니다.
+2. 저장소 Actions Secret `TAURI_SIGNING_PRIVATE_KEY`에 비공개 키 내용을 등록합니다.
+   암호가 있으면 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`도 등록합니다.
+3. `app/desktop/src-tauri/tauri.conf.json`, `app/desktop/src-tauri/Cargo.toml`,
+   `app/desktop/package.json`의 버전을 올리고 `Cargo.lock`을 갱신한 뒤 커밋합니다.
+   일치하는 stable 태그(예: `desktop-v0.1.0`)를 push합니다. 수동 실행도 해당 태그를
+   선택해야 합니다. 버전 불일치, prerelease 태그, 서명 설정 누락은 패키징 전에 실패합니다.
+4. 두 job의 성공 후 `latest.json`에 해당 버전의 `darwin-aarch64`, `darwin-x86_64`
+   항목, 비어 있지 않은 서명, 다운로드 가능한 태그별 아티팩트가 있는지 확인합니다.
+   두 아키텍처에서 설치와 이전 릴리스로부터의 업데이트를 검증한 뒤 Draft를 최신 stable
+   릴리스로 공개합니다. 공개한 버전의 파일을 교체하지 않습니다. GitHub의 최신 stable
+   릴리스에는 데스크톱 파일이 있어야 하며 관계없는 릴리스가 최신이면 feed가 깨집니다.
+
+첫 릴리스는 수동 설치해야 합니다. 기존 개발 빌드에는 feed가 없습니다. 첫 릴리스 공개는
+이전 버전에서의 업그레이드 검증이 아닙니다. Tauri는 updater 서명을 검증합니다.
+워크플로는 현재 macOS ad-hoc 코드 서명을 사용하며 **Apple Developer ID 서명·공증은
+하지 않습니다**. 첫 설치를 Gatekeeper가 차단할 수 있습니다. 원활한 공개 배포를 위한
+Apple 서명·공증에는 별도 자격 증명과 설정이 필요합니다.
+Native 메뉴 확인 후 설치·재시작합니다. 예약된 background 검사, 차등 다운로드,
+재시작 없는 업데이트를 보장하지 않습니다.
 
 설치 전 부모는 유휴 종료를 요청합니다. 수락된 요청이 끝나는 동안 새 HTTP/MCP 수락을
 멈춥니다. 활성 테스트·환경 작업이 있으면 설치를 미루고 수락을 복원합니다. 유휴 설치는

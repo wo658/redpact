@@ -79,18 +79,51 @@ navigation and denies external/file navigation; loopback pages gain no native br
 
 ## Signed updates
 
-Check for Updates lives in the native menu. A development build without a feed says
-so. An updatable release needs a real HTTPS endpoint, a Tauri signing key pair and
-platform/architecture artifacts. Configure `REDPACT_UPDATE_ENDPOINT`,
-`REDPACT_UPDATE_PUBLIC_KEY`, and private `TAURI_SIGNING_PRIVATE_KEY`, then enable
-`bundle.createUpdaterArtifacts` in the Tauri build. Never commit private keys.
-Publish immutable signed artifacts before their updater manifest.
+Check for Updates lives in the native menu. Release builds use
+`https://github.com/wo658/redpact/releases/latest/download/latest.json`.
+The checked-in `tauri.release.conf.json` enables updater artifacts and pins the
+public verification key. Ordinary local builds omit that overlay and report that
+updates are not configured. Release preparation passes the overlay's endpoint and
+public key to the existing native updater through `REDPACT_UPDATE_ENDPOINT` and
+`REDPACT_UPDATE_PUBLIC_KEY` at compile time.
 
-Tauri verifies update signatures; macOS Developer ID signing/notarization is a
-separate distribution requirement. No production feed or signing credentials are
-provided automatically. Native menu confirmation initiates install and restart;
-background scheduled checks, differential downloads and restart-free updates are
-not promised.
+### GitHub Release workflow
+
+The [desktop release workflow](../.github/workflows/desktop-release.yml) builds on
+native Apple Silicon and Intel macOS runners. Windows and Linux release jobs are
+not configured. It uses [Tauri Action](https://github.com/tauri-apps/tauri-action)
+to upload DMGs, signed `.app.tar.gz` updater bundles, signatures and `latest.json`
+to one **draft** GitHub Release. Uploads are serialized to preserve both manifest
+platform entries. No updater sees a draft release.
+
+Maintainer setup and release procedure:
+
+1. Generate a persistent key with `pnpm --filter @redpact/desktop exec tauri signer
+   generate --write-keys /secure/path/redpact.key`. Back up the private key outside
+   the repository. Set the public key in `tauri.release.conf.json`; never commit
+   the private key. Losing or replacing this key breaks updates for installed apps.
+2. Set repository Actions Secret `TAURI_SIGNING_PRIVATE_KEY` to the private key
+   contents, and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if it has a password.
+3. Update the version in `app/desktop/src-tauri/tauri.conf.json`,
+   `app/desktop/src-tauri/Cargo.toml` and `app/desktop/package.json`, refresh
+   `Cargo.lock`, and commit. Push a matching stable tag such as `desktop-v0.1.0`.
+   Manual workflow dispatch must also select that tag. Mismatched versions,
+   prerelease tags and missing signing configuration fail before packaging.
+4. Wait for both jobs to succeed. Verify `latest.json` has `darwin-aarch64` and
+   `darwin-x86_64` entries for this version, nonempty signatures and downloadable
+   tag-specific assets. Test installation and an update from the previous release
+   on both architectures, then publish the draft as the latest stable release.
+   Never replace assets of an already published version. Keep the latest stable
+   GitHub Release desktop-compatible; an unrelated latest release breaks this feed.
+
+The first release must be installed manually; older development builds have no
+feed. Publishing the first release does not prove an upgrade from a previous one.
+Tauri verifies updater signatures. The workflow currently applies macOS ad-hoc
+code signing, **not Apple Developer ID signing or notarization**; Gatekeeper can
+block first installation. Apple signing/notarization needs separate credentials
+and configuration before frictionless public distribution.
+Native menu confirmation initiates installation and restart; background scheduled
+checks, differential downloads and restart-free updates are not promised.
 
 Before installation, the parent asks for idle shutdown. New HTTP/MCP admission pauses
 while admitted requests finish. Active tests/environment operations defer installation
