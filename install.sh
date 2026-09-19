@@ -50,7 +50,7 @@ fi
 [ "${#expected}" -eq 64 ] && [ "$expected" = "$actual" ] || { echo 'Release checksum mismatch' >&2; exit 1; }
 mkdir -p "$runtime" "$prefix/bin"
 npm install --prefix "$runtime" --omit=dev --ignore-scripts --no-audit --no-fund "$work/$asset"
-"$runtime/node_modules/.bin/redpact" --help >/dev/null
+"$runtime/node_modules/.bin/redpact" serve --help >/dev/null
 ln -sfn "$runtime/node_modules/.bin/redpact" "$launcher"
 printf '\nInstalled Redpact %s: %s\n' "$version" "$launcher"
 printf 'Add %s/bin to PATH, then run: redpact serve --port 54321\n' "$prefix"

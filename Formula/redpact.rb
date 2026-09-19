@@ -24,6 +24,6 @@ class Redpact < Formula
   end
 
   test do
-    assert_match "serve", shell_output("#{bin}/redpact --help")
+    assert_match "--port", shell_output("#{bin}/redpact serve --help")
   end
 end
