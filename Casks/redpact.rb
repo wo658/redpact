@@ -10,11 +10,12 @@ cask "redpact" do
   desc "Local development review and test evidence"
   homepage "https://github.com/wo658/redpact"
 
-  depends_on macos: ">= 13.5"
+  depends_on macos: :ventura
 
   app "Redpact.app"
 
   caveats <<~EOS
+    Requires macOS 13.5 or later.
     This preview is ad-hoc signed, not Apple notarized.
     macOS may require Open Anyway in System Settings > Privacy & Security.
     Quit other Redpact instances using port 54321 before opening the app.
