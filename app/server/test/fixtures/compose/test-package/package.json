@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.2.2",
+  "dependencies": {
+    "pg": "8.16.3"
+  }
+}

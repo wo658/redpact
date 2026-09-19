@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+
+if [ "$(git config --bool --get redpact.autoUpdate || true)" != "true" ]; then
+  exit 0
+fi
+
+cd "$(git rev-parse --show-toplevel)"
+if [ -n "$(git status --porcelain)" ]; then
+  echo "Redpact update skipped: checkout has uncommitted changes. Retry with pnpm local:update:all." >&2
+  exit 0
+fi
+
+echo "Updating local Redpact runtime and plugin from the completed commit..."
+if ! pnpm local:update:all; then
+  echo "Commit saved, but Redpact update failed. Resolve the error and retry pnpm local:update:all." >&2
+fi
+exit 0

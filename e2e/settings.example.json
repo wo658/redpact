@@ -1,0 +1,34 @@
+{
+  "composeFiles": ["e2e/compose.yaml"],
+  "dependencies": {},
+  "tests": {
+    "directory": "e2e/tests",
+    "timeoutMs": 60000
+  },
+  "playwright": {
+    "directory": "ui-tests",
+    "service": "app",
+    "port": 54318,
+    "locale": "ko-KR",
+    "uiLanguage": "ko",
+    "timezoneId": "Asia/Seoul",
+    "video": true,
+    "targets": {
+      "captures": {
+        "purpose": "capture",
+        "testMatch": ["project/captures/**/*.spec.ts"],
+        "scope": "project"
+      },
+      "functional": {
+        "purpose": "functional",
+        "testMatch": ["project/tests/**/!(product-demo).spec.ts"],
+        "scope": "project"
+      },
+      "demo": {
+        "scope": "project",
+        "purpose": "functional",
+        "testMatch": ["project/tests/product-demo.spec.ts"]
+      }
+    }
+  }
+}

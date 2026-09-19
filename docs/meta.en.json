@@ -1,0 +1,30 @@
+{
+  "title": "Redpact",
+  "pages": [
+    "---Understand Redpact---",
+    "index",
+    "dependencies",
+    "---Start your project---",
+    "installation",
+    "first-project",
+    "first-run",
+    "---Review changes---",
+    "review-workflow",
+    "results",
+    "---Authoring and reference---",
+    "tests",
+    "configuration",
+    "troubleshooting",
+    "---Implementation reference---",
+    "architecture",
+    "settings-reference",
+    "execution",
+    "git",
+    "storage",
+    "interfaces",
+    "frontend",
+    "ux-navigation",
+    "desktop",
+    "development"
+  ]
+}

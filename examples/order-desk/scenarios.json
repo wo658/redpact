@@ -1,0 +1,43 @@
+{
+  "http": {
+    "test": "tests/http.test.js",
+    "outcome": "passed"
+  },
+  "checkout": {
+    "test": "tests/checkout.test.js",
+    "outcome": "passed"
+  },
+  "assertion-failed": {
+    "test": "scenarios/assertion-failed.test.js",
+    "outcome": "assertion_failed"
+  },
+  "execution-error": {
+    "test": "scenarios/execution-error.test.js",
+    "outcome": "execution_error"
+  },
+  "collection-error": {
+    "test": "scenarios/collection-error.test.js",
+    "outcome": "collection_error"
+  },
+  "skipped": {
+    "test": "scenarios/skipped.test.js",
+    "outcome": "unknown"
+  },
+  "timeout": {
+    "test": "scenarios/timeout.test.js",
+    "outcome": "execution_error"
+  },
+  "cancelled": {
+    "test": "scenarios/cancelled.test.js",
+    "outcome": "cancelled",
+    "cancel": true
+  },
+  "mixed-results": {
+    "test": "scenarios/mixed-results.test.js",
+    "outcome": "assertion_failed"
+  },
+  "steps": {
+    "test": "tests/steps.test.ts",
+    "outcome": "passed"
+  }
+}

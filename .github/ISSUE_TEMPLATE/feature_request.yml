@@ -1,0 +1,27 @@
+name: Feature request
+description: Discuss a user problem and proposed improvement before implementation.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Who is affected, and what are they trying to do?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the expected experience and a concrete example.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and scope
+      description: Existing workarounds, alternatives considered, and what can wait.
+  - type: textarea
+    id: contribution
+    attributes:
+      label: Contribution interest
+      description: Optionally tell us whether you can help implement, test, or document this.

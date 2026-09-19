@@ -1,0 +1,4 @@
+interface:
+  display_name: "Redpact Init"
+  short_description: "Configure and validate a project for Redpact"
+  default_prompt: "Use $redpact-init to initialize this project for local Redpact."

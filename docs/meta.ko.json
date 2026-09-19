@@ -1,0 +1,30 @@
+{
+  "title": "Redpact",
+  "pages": [
+    "---Redpact 이해하기---",
+    "index",
+    "dependencies",
+    "---내 프로젝트 시작하기---",
+    "installation",
+    "first-project",
+    "first-run",
+    "---변경 검토하기---",
+    "review-workflow",
+    "results",
+    "---작성 가이드와 레퍼런스---",
+    "tests",
+    "configuration",
+    "troubleshooting",
+    "---구현 레퍼런스---",
+    "architecture",
+    "settings-reference",
+    "execution",
+    "git",
+    "storage",
+    "interfaces",
+    "frontend",
+    "ux-navigation",
+    "desktop",
+    "development"
+  ]
+}

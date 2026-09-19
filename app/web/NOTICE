@@ -1,0 +1,76 @@
+Redpact UI scaffold
+Copyright 2026 Redpact contributors
+
+The preserved original UI source is licensed under the Apache License, Version 2.0.
+Third-party software retains its respective license.
+
+The components in src/components/ui originate from shadcn/ui, Copyright (c) 2023 shadcn,
+with local Linear adaptations. The MIT license is reproduced in licenses/shadcn-ui.txt.
+
+COSS UI — Tabs and segmented-control styling
+Source: https://github.com/cosscom/coss/tree/3bab6543c83b2634a43f5269e29cf86340ce8101/apps/ui
+Registry: @coss/tabs, @coss/segmented-control (retrieved 2026-09-08 with shadcn view)
+Scope: src/components/ui/coss-tabs.tsx and src/lib/segmented-control.ts
+UI subtree MIT scope: https://github.com/cosscom/coss/blob/3bab6543c83b2634a43f5269e29cf86340ce8101/LICENSING.md
+Adaptation: local import paths; separate filename preserves existing shadcn Tabs.
+Removed dark input-color overrides so existing theme tokens control both themes.
+
+License text: licenses/coss-ui.txt.
+
+Selection and hover surfaces use the local Linear accent tokens.
+Shared segment dimensions and track opacity follow the compact Linear controls.
+
+
+Kibo UI — read-only List adaptation
+Source: https://github.com/shadcnblocks/kibo/tree/main/packages/list
+Registry: https://www.kibo-ui.com/r/list.json (shadcn view, 2026-09-08)
+Scope: src/components/kibo-ui/list/index.tsx
+License: MIT; root license.md verified 2026-09-08; reproduced in licenses/kibo-ui.txt.
+Adaptation: semantic list markup, status counts, Linear tokens, no drag/drop.
+
+shadcn/ui Toast — official @shadcn/toast, Base UI + Nova, retrieved 2026-09-08.
+Scope: src/components/ui/toast.tsx. MIT license verified at
+https://github.com/shadcn-ui/ui/blob/main/LICENSE.md; reproduced in licenses/shadcn-ui.txt.
+Adaptation: existing cn helper, Linear radius, localized close label.
+
+MCP Apps browser integration uses @modelcontextprotocol/ext-apps 1.7.5 and its
+@modelcontextprotocol/sdk 1.29.0 peer. Full applicable Apache-2.0/MIT license text
+and bundled dependency notices are copied into the server dist/mcp artifact.
+Source: https://github.com/modelcontextprotocol/ext-apps/tree/v1.7.5
+
+Apps SDK UI — non-color token adaptation
+Source: https://github.com/openai/apps-sdk-ui/tree/0f00143c7a639906f1621fe58e1b6be7b5bea46d
+Scope: typography, system font stacks, radii and spacing in src/index.css, adapted
+from src/styles/variables-semantic.css and src/styles/tailwind-utilities.css.
+License: MIT; root LICENSE verified 2026-09-10; reproduced in licenses/apps-sdk-ui.txt.
+The existing Redpact light/dark palette, shadows and compact control heights are retained.
+
+Apps SDK UI — Git Graph identity palette
+Source: https://github.com/openai/apps-sdk-ui/blob/main/src/styles/variables-primitive.css
+Scope: graph-only blue, green, purple, orange, pink, yellow and red tokens in src/index.css.
+License: MIT; reproduced in licenses/apps-sdk-ui.txt. Palette retrieved 2026-09-17.
+
+Code surface typography and syntax palette
+Sources: https://github.com/JetBrains/JetBrainsMono and
+https://github.com/primer/github-syntax-theme-generator
+Scope: JetBrains Mono Variable and local Prism `--code-highlight-*` variables in
+src/index.css. JetBrains Mono is bundled from @fontsource-variable/jetbrains-mono
+under SIL OFL-1.1. The GitHub PrettyLights-derived values are locally mapped to Prism
+roles; no external theme stylesheet is bundled. Sources verified 2026-09-19.
+
+ReUI — Timeline
+
+Retrieved 2026-09-08 with the installed shadcn 4.19.1 CLI: `shadcn view @reui/timeline` (Radix variant in the original review-timeline worktree).
+
+- Registry item: https://reui.io/docs/components/radix/timeline
+- Canonical repository: https://github.com/keenthemes/reui
+- License: https://github.com/keenthemes/reui/blob/main/LICENSE.md (MIT; reproduced in licenses/reui.txt)
+- Original source SHA-256: `a4c56c23dd98f5f4b669e49d69bfdda98fcf15c28fa4a38f4dd1841b9d1d65f0`
+
+Local changes: attribution header and repository formatting. The application passes value zero for source declarations, so their order never implies execution or completion. No ReUI Pro blocks, remote assets, or additional npm dependencies are included. During the user-requested timeline merge, the unused Slot-based wrappers were removed so the display primitives use only React and cn. Scenario controls use the application’s shadcn Base UI components. Redpact maintainers own this copied source and should compare upstream changes through the shadcn CLI.
+
+Material Icon Theme 5.38.1 — file and folder SVG icons and associations
+Source: https://github.com/material-extensions/vscode-material-icon-theme
+Copyright (c) 2025 Material Extensions. MIT license; reproduced in
+licenses/material-icon-theme.txt and bundled with web assets as material-icons/LICENSE.
+Official associations are generated at build time with the React icon pack.

@@ -1,0 +1,28 @@
+node_modules/
+dist/
+.DS_Store
+.codex/worktrees/
+app/desktop/runtime/
+app/desktop/.cache/
+app/desktop/src-tauri/target/
+app/desktop/src-tauri/gen/
+app/desktop/runtime.next/
+
+# Worktree-local review drafts; executed evidence is stored by Redpact.
+ui-tests/worktree/
+.worktrees/
+
+# Next.js documentation build artifacts.
+app/docs/.next/
+app/docs/.source/
+app/docs/tsconfig.tsbuildinfo
+
+# Local instance choices and credentials do not belong in source exports.
+.redpact/settings.yaml
+.redpact/selection.json
+.redpact/tracking.json
+.redpact/dependencies.override.json
+.redpact/integration-defaults.json
+.env
+.env.*
+!.env.example

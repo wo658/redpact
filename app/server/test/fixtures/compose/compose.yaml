@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_DB: test
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD required}
+    ports: [5432]
+    volumes: [data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -h 127.0.0.1 -U test -d test]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+  migrate:
+    image: postgres:17-alpine
+    environment:
+      PGHOST: db
+      PGUSER: test
+      PGDATABASE: test
+      PGPASSWORD: ${DB_PASSWORD:?DB_PASSWORD required}
+    command: [psql, -c, 'CREATE TABLE records (id text PRIMARY KEY, value text NOT NULL);']
+    depends_on:
+      db:
+        condition: service_healthy
+  app:
+    build: ./app
+    environment:
+      PGHOST: db
+      PGUSER: test
+      PGDATABASE: test
+      PGPASSWORD: ${DB_PASSWORD:?DB_PASSWORD required}
+    ports: [3000]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+volumes:
+  data: {}

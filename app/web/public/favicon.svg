@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="24 24 464 464">
+  <title>Redpact Aurora</title>
+  <defs>
+    <linearGradient id="aurora" x1="0" y1="0" x2="0.4" y2="1">
+      <stop stop-color="#7863D7"/>
+      <stop offset="0.3" stop-color="#6E78D5"/>
+      <stop offset="0.7" stop-color="#6E78D5"/>
+      <stop offset="1" stop-color="#709CE5"/>
+    </linearGradient>
+  </defs>
+  <rect x="24" y="24" width="464" height="464" rx="78" fill="url(#aurora)"/>
+  <path fill="#fff" d="M142 257C142 171 180 111 252 111C301 111 333 127 347 160C350 169 354 172 362 177C379 189 388 205 388 222C388 258 351 275 305 281C296 282 293 287 299 294C316 317 326 353 326 382V388C326 406 318 413 302 413H282C266 413 259 405 259 389V378C259 351 235 352 235 374V388C235 405 224 413 208 413H178C154 413 142 401 142 378Z"/>
+  <g fill="#222136">
+    <rect x="244" y="181" width="24" height="40" rx="12"/>
+    <rect x="305" y="181" width="24" height="40" rx="12"/>
+  </g>
+</svg>

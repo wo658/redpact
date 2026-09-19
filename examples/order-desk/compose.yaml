@@ -1,0 +1,66 @@
+services:
+  app:
+    build: .
+    ports: [3000]
+    environment:
+      PAYMENTS_MODE: mock
+      NODE_ENV: development
+      NODE_OPTIONS: --enable-source-maps
+      TZ: UTC
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+  checkout-seoul:
+    build: .
+    ports: [3000]
+    environment:
+      PAYMENTS_MODE: mock
+      NODE_ENV: development
+      NODE_OPTIONS: --enable-source-maps
+      TZ: Asia/Seoul
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+  checkout-london:
+    build: .
+    ports: [3000]
+    environment:
+      PAYMENTS_MODE: mock
+      NODE_ENV: development
+      NODE_OPTIONS: --enable-source-maps
+      TZ: Europe/London
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+  retail-store:
+    build: .
+    ports: [3000]
+    environment:
+      PAYMENTS_MODE: mock
+      NODE_ENV: development
+      NODE_OPTIONS: --enable-source-maps
+      TZ: Asia/Seoul
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+  wholesale-store:
+    build: .
+    ports: [3000]
+    environment:
+      PAYMENTS_MODE: mock
+      NODE_ENV: development
+      NODE_OPTIONS: --enable-source-maps
+      TZ: Europe/London
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 1s
+      timeout: 2s
+      retries: 30

@@ -1,0 +1,12 @@
+{
+  "extends": "../app/server/tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "typeRoots": ["../app/server/node_modules/@types"],
+    "paths": { "vitest": ["../app/server/node_modules/vitest"] }
+  },
+  "include": ["tests/**/*.ts"]
+}

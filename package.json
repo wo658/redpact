@@ -1,0 +1,41 @@
+{
+  "name": "redpact",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Local development support with Vitest test submissions and result review",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "dev": "pnpm --filter @redpact/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "pnpm --filter @redpact/server test",
+    "pack:runtime": "pnpm --filter @redpact/web build && pnpm --filter @redpact/server build && node app/server/tools/pack-runtime.mjs",
+    "local:update": "node app/server/tools/local-update.ts",
+    "local:update:plugin": "node app/server/tools/local-update.ts --plugin-only",
+    "local:update:all": "node app/server/tools/local-update.ts --all",
+    "test:package": "pnpm pack:runtime && REDPACT_PACKAGE_TEST=1 pnpm --filter @redpact/server exec vitest run test/runtime-package.test.ts",
+    "test:package:docker": "REDPACT_DOCKER_TESTS=1 pnpm test:package",
+    "desktop:dev": "pnpm --filter @redpact/desktop desktop:dev",
+    "desktop:build": "pnpm --filter @redpact/desktop desktop:build",
+    "desktop:update": "node app/desktop/tools/local-update.ts",
+    "docs:dev": "node tools/docs/website.mjs dev",
+    "docs:build": "node tools/docs/website.mjs build",
+    "docs:preview": "node tools/docs/website.mjs preview",
+    "publish:runtime": "pnpm test:package && node app/server/tools/publish-runtime.mjs",
+    "docs:check": "node --test tools/docs/*.test.ts",
+    "docs:test:preview": "node tools/docs/website.mjs test:preview"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.11"
+  },
+  "bin": {
+    "redpact": "app/server/dist/cli.js"
+  }
+}

@@ -1,0 +1,12 @@
+interface:
+  display_name: "Redpact"
+  short_description: "Develop in worktrees with reviewable evidence"
+  default_prompt: "Use $redpact to develop this feature in an isolated worktree. Run Integration only through MCP run_tests, Playwright only through declared Redpact UI/API targets, and Unit only through the configured Redpact Unit UI/API command; direct Docker, Compose, Vitest or Playwright commands are local-only evidence. For user-visible UI changes, also record actual-application Playwright captures at desktop and mobile viewports for human review; do not treat captures as functional assertions."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "redpact"
+      description: "Redpact desktop configuration and test execution"
+      transport: "streamable_http"
+      url: "http://127.0.0.1:54321/mcp"

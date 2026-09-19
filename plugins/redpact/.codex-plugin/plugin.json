@@ -1,0 +1,23 @@
+{
+  "name": "redpact",
+  "version": "0.1.0+codex.20260914063949",
+  "description": "Develop with local Redpact-managed Integration, Unit and Playwright execution evidence.",
+  "author": {
+    "name": "jhkim"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Redpact",
+    "shortDescription": "Develop in worktrees with reviewable evidence.",
+    "longDescription": "Use redpact-init for project setup. Redpact routes Integration through MCP run_tests, Playwright through declared UI/API targets, and Unit through the configured UI/API command; direct Docker or shell runs are local-only, not connected evidence. User-visible UI changes also record desktop and mobile Playwright captures for human review; captures do not replace functional assertions or imply agent visual approval. Feature work uses an isolated worktree; redpact current stays in the supplied checkout. Completion requires observed evidence for changed acceptance outcomes; missing required Integration or browser evidence cannot be replaced by Unit success.",
+    "developerName": "jhkim",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": [
+      "Use $redpact to implement and test this feature.",
+      "Use $redpact current to develop this feature on the current checkout branch.",
+      "Use $redpact-init to initialize this project."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

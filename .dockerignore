@@ -1,0 +1,20 @@
+.git
+.codex
+node_modules
+**/node_modules
+**/dist
+**/coverage
+**/.source
+**/.next
+.redpact/selection.json
+
+app/desktop/runtime
+app/desktop/runtime.next
+app/desktop/.cache
+app/desktop/src-tauri/target
+app/desktop/src-tauri/gen
+
+# Documentation caches contain host-specific absolute paths.
+app/docs/.next
+app/docs/.source
+app/docs/tsconfig.tsbuildinfo

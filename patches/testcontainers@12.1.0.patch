@@ -1,0 +1,34 @@
+diff --git a/build/container-runtime/clients/compose/compose-client.js b/build/container-runtime/clients/compose/compose-client.js
+index 39eb48ed2f51da762e8a334de1a2e79251916592..5ff4b3775e802e8d24d1481d57e1ddc9960d2377 100644
+--- a/build/container-runtime/clients/compose/compose-client.js
++++ b/build/container-runtime/clients/compose/compose-client.js
+@@ -36,7 +36,7 @@ class DockerComposeClient {
+             await handleAndRethrow(err, async (error) => {
+                 try {
+                     common_1.log.error(`Failed to up Compose environment: ${error.message}`);
+-                    await this.down(options, { removeVolumes: true, timeout: 0 });
++                    if (options.autoCleanup !== false) await this.down(options, { removeVolumes: true, timeout: 0 });
+                 }
+                 catch {
+                     common_1.log.error(`Failed to down Compose environment after failed up`);
+diff --git a/build/docker-compose-environment/docker-compose-environment.js b/build/docker-compose-environment/docker-compose-environment.js
+index e81d0cc1f0f12fc48190f5d92c0340e9840efa02..b8d016ac7e243e0aef380c635259af5762b1b517 100644
+--- a/build/docker-compose-environment/docker-compose-environment.js
++++ b/build/docker-compose-environment/docker-compose-environment.js
+@@ -90,6 +90,7 @@ class DockerComposeEnvironment {
+         const { composeOptions: clientComposeOptions = [], commandOptions: clientCommandOptions = [], ...remainingClientOptions } = this.clientOptions;
+         const options = {
+             ...remainingClientOptions,
++            autoCleanup: this.autoCleanup,
+             filePath: this.composeFilePath,
+             files: this.composeFiles,
+             projectName: this.projectName,
+@@ -147,7 +148,7 @@ class DockerComposeEnvironment {
+             }
+             catch (err) {
+                 try {
+-                    await client.compose.down(options, { removeVolumes: true, timeout: 0 });
++                    if (this.autoCleanup) await client.compose.down(options, { removeVolumes: true, timeout: 0 });
+                 }
+                 catch {
+                     common_1.log.warn(`Failed to stop DockerCompose environment after failed up`);

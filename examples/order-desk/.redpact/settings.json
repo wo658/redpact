@@ -1,0 +1,120 @@
+{
+  "composeFiles": ["compose.yaml"],
+  "dependencies": {
+    "payments": {
+      "modes": {
+        "mock": {
+          "env": {
+            "app": {
+              "PAYMENTS_MODE": "mock"
+            }
+          }
+        }
+      },
+      "recommendation": {
+        "mode": "mock",
+        "reason": "The example implements an in-process payment mock"
+      }
+    }
+  },
+  "tests": {
+    "timeoutMs": 10000,
+    "env": {
+      "APP_URL": {
+        "service": "app",
+        "port": 3000,
+        "scheme": "http"
+      },
+      "TZ": "UTC"
+    }
+  },
+  "applicationServices": {
+    "app": {
+      "services": ["app"]
+    },
+    "checkout-seoul": {
+      "services": ["checkout-seoul"]
+    },
+    "checkout-london": {
+      "services": ["checkout-london"]
+    },
+    "retail-store": {
+      "services": ["retail-store"]
+    },
+    "wholesale-store": {
+      "services": ["wholesale-store"]
+    }
+  },
+  "relationships": [
+    {
+      "from": "app",
+      "to": {
+        "kind": "dependency",
+        "name": "payments"
+      },
+      "description": "Process checkout payments",
+      "evidence": [
+        {
+          "path": "src/server.js",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "from": "checkout-seoul",
+      "to": {
+        "kind": "dependency",
+        "name": "payments"
+      },
+      "description": "Process checkout payments",
+      "evidence": [
+        {
+          "path": "src/server.js",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "from": "checkout-london",
+      "to": {
+        "kind": "dependency",
+        "name": "payments"
+      },
+      "description": "Process checkout payments",
+      "evidence": [
+        {
+          "path": "src/server.js",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "from": "retail-store",
+      "to": {
+        "kind": "dependency",
+        "name": "payments"
+      },
+      "description": "Process checkout payments",
+      "evidence": [
+        {
+          "path": "src/server.js",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "from": "wholesale-store",
+      "to": {
+        "kind": "dependency",
+        "name": "payments"
+      },
+      "description": "Process checkout payments",
+      "evidence": [
+        {
+          "path": "src/server.js",
+          "line": 8
+        }
+      ]
+    }
+  ]
+}

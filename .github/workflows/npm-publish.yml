@@ -1,0 +1,39 @@
+name: Publish npm runtime
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the verified package (false performs a dry run)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm rebuild esbuild
+      - run: pnpm lint
+      - run: pnpm --filter @redpact/server typecheck
+      - run: pnpm test:package
+      - run: pnpm --filter @redpact/server test
+      - name: Inspect publish contents
+        run: node app/server/tools/publish-runtime.mjs --dry-run
+      - name: Publish using npm trusted publishing
+        if: ${{ inputs.publish }}
+        run: node app/server/tools/publish-runtime.mjs

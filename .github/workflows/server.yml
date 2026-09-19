@@ -1,0 +1,76 @@
+name: Application verification
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'e2e/**'
+      - 'ui-tests/**'
+      - 'examples/**'
+      - 'patches/**'
+      - 'tools/**'
+      - 'plugins/**'
+      - 'unit.Dockerfile'
+      - '.dockerignore'
+      - 'package.json'
+      - 'biome.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/server.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'e2e/**'
+      - 'ui-tests/**'
+      - 'examples/**'
+      - 'patches/**'
+      - 'tools/**'
+      - 'plugins/**'
+      - 'unit.Dockerfile'
+      - '.dockerignore'
+      - 'package.json'
+      - 'biome.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/server.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm rebuild esbuild
+      - run: pnpm lint
+      - run: pnpm docs:check
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test
+      - run: pnpm --filter @redpact/web test
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm rebuild esbuild
+      - run: pnpm --filter @redpact/server build
+      - run: pnpm --filter @redpact/server exec vitest run test/environment-modes-docker.test.ts test/environment-docker.test.ts
+        env:
+          REDPACT_DOCKER_TESTS: '1'

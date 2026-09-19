@@ -1,0 +1,51 @@
+{
+  "composeFiles": ["e2e/compose.yaml"],
+  "dependencies": {},
+  "tests": {
+    "directory": "e2e/tests",
+    "timeoutMs": 60000,
+    "env": {}
+  },
+  "unitTests": {
+    "cwd": "app/server",
+    "command": "pnpm test",
+    "patterns": ["app/server/test/*.test.ts"],
+    "dockerfile": "unit.Dockerfile"
+  },
+  "playwright": {
+    "directory": "ui-tests",
+    "service": "app",
+    "port": 54318,
+    "locale": "ko-KR",
+    "uiLanguage": "ko",
+    "timezoneId": "Asia/Seoul",
+    "video": true,
+    "targets": {
+      "worktree-captures": {
+        "scope": "worktree",
+        "purpose": "capture",
+        "testMatch": ["worktree/captures/**/*.ts"]
+      },
+      "worktree-tests": {
+        "scope": "worktree",
+        "purpose": "functional",
+        "testMatch": ["worktree/tests/**/*.ts"]
+      },
+      "project-captures": {
+        "scope": "project",
+        "purpose": "capture",
+        "testMatch": ["project/captures/**/*.ts"]
+      },
+      "project-tests": {
+        "scope": "project",
+        "purpose": "functional",
+        "testMatch": ["project/tests/**/!(product-demo.spec).ts"]
+      },
+      "product-demo": {
+        "scope": "project",
+        "purpose": "functional",
+        "testMatch": ["project/tests/product-demo.spec.ts"]
+      }
+    }
+  }
+}

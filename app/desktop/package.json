@@ -1,0 +1,15 @@
+{
+  "name": "@redpact/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "desktop:dev": "pnpm exec tauri dev",
+    "desktop:build": "pnpm exec tauri build",
+    "prepare:runtime": "node tools/prepare-runtime.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.11.4"
+  }
+}

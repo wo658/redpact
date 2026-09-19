@@ -1,0 +1,19 @@
+packages:
+  - app/*
+
+allowBuilds:
+  esbuild: true
+  cpu-features: false
+  protobufjs: false
+  ssh2: false
+  '@scarf/scarf': false
+  core-js: false
+  '@parcel/watcher': false
+
+minimumReleaseAgeExclude:
+  - lucide-react@1.38.0
+  - shadcn@4.19.1
+
+patchedDependencies:
+  '@web-git-graph/web@1.0.7': patches/@web-git-graph__web@1.0.7.patch
+  testcontainers@12.1.0: patches/testcontainers@12.1.0.patch
