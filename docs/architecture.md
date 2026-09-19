@@ -82,7 +82,8 @@ between record files.
 - Native Git owns status and exclude semantics for all index formats, patches and
   mutations. Repository discovery and supported blob reads retain isomorphic-git.
 - Parcel file observation drives scoped invalidations; observation never runs tests.
-- ts-morph extracts static test intent. Vitest records actual integration results.
+- ts-morph extracts static test intent from isolated submitted-file symbols without
+  loading TypeScript standard-library declarations. Vitest records actual integration results.
   Static parsing does not prove assertion execution or full import coverage.
 - Testcontainers owns container startup. Redpact owns input capture, admission,
   health observations, resource identities, cancellation and cleanup.

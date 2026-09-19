@@ -53,6 +53,13 @@ the run environment and are removed with it. Preserve metadata, logs, results an
 from the test verdict, and remains retryable. Startup reconciles labelled resources
 and removes interrupted environments; it never reruns tests automatically.
 
+Before starting a temporary Compose environment, Redpact captures the selected
+services that use implicitly named build images in an image-cleanup manifest.
+Image cleanup uses this captured list without re-evaluating the original Compose
+files, inactive services or required environment-variable expressions. It does not
+require application credentials to be supplied again. Explicitly named images are
+excluded from this manifest.
+
 Redpact does not prune unrelated Docker resources. Shared-local and remote services
 are independently managed and are not stopped by Redpact; tests own their fixture
 isolation. Normal shutdown awaits execution and cleanup. Abrupt termination may

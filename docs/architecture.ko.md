@@ -79,7 +79,8 @@ TypeScript, Hono와 일반 함수를 사용합니다. controller 클래스, DI �
 - 모든 index 형식의 상태·제외 규칙, patch와 변경 작업은 native Git이 담당합니다.
   저장소 발견과 지원되는 blob 읽기에는 isomorphic-git을 유지합니다.
 - Parcel 파일 관찰은 범위별 갱신을 유도하며 테스트를 자동 실행하지 않습니다.
-- ts-morph는 정적 테스트 의도를 추출하고 Vitest는 실제 통합 결과를 기록합니다.
+- ts-morph는 TypeScript 표준 라이브러리 선언을 로드하지 않고 격리된 제출 파일의
+  심볼에서 정적 테스트 의도를 추출합니다. Vitest는 실제 통합 결과를 기록합니다.
   정적 파싱은 어설션 실행이나 전체 import 수집을 입증하지 않습니다.
 - Testcontainers는 컨테이너 시작을 담당합니다. Redpact는 입력 캡처, 수락,
   상태 관찰, 리소스 식별, 취소와 정리를 담당합니다.
