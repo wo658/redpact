@@ -9,7 +9,7 @@ class Redpact < Formula
 
   def install
     system "npm", "install", "--global", "--prefix", libexec, "--omit=dev",
-                  "--ignore-scripts", "--no-audit", "--no-fund", buildpath
+                  "--ignore-scripts", "--install-links", "--no-audit", "--no-fund", buildpath
     bin.install_symlink libexec/"bin/redpact"
   end
 
