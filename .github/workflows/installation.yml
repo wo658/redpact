@@ -1,0 +1,26 @@
+name: Public installation verification
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, macos-14, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install the public GitHub release
+        run: sh install.sh --prefix "$RUNNER_TEMP/redpact"
+      - name: Verify installed CLI, viewer and MCP
+        run: node tools/install/smoke.mjs "$RUNNER_TEMP/redpact/bin/redpact"
+      - name: Install directly with npm from GitHub
+        run: npm install --global --ignore-scripts --prefix "$RUNNER_TEMP/redpact-npm" https://github.com/wo658/redpact/releases/download/runtime-v0.1.0/redpact-0.1.0.tgz
+      - name: Verify npm installation
+        run: node tools/install/smoke.mjs "$RUNNER_TEMP/redpact-npm/bin/redpact"

@@ -31,6 +31,14 @@ unavailable, finish independent work and report the connected-evidence gap.
 
 ## Invocation
 
+In Codex, use `$redpact` and `$redpact-init`. In Claude Code, use
+`/redpact:redpact` and `/redpact:redpact-init`; the same task modes apply.
+The plugin connects to an already running Redpact instance on port 54321.
+It does not install or start the runtime. Start the terminal runtime with
+`redpact serve --port 54321`, or launch the desktop app.
+MCP Apps approval and credential cards require a compatible host; do not
+bypass an unavailable approval UI or silently change the approval policy.
+
 | Request | Completion scope |
 | --- | --- |
 | `$redpact <task>` | Isolated worktree, required verification, local commit and review handoff |

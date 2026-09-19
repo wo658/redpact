@@ -158,3 +158,22 @@ Docker 리소스를 prune하지 않습니다. 이전 릴리스는 명시적으�
 [로컬 updater](../app/server/tools/local-update.ts),
 [데스크톱 updater](../app/desktop/tools/local-update.ts),
 [릴리스 workflow](../.github/workflows/npm-publish.yml).
+
+## 공개 설치 배포
+
+공개 저장소는 `install.sh`, `Formula/redpact.rb`, Codex 카탈로그
+`.agents/plugins/marketplace.json`, Claude Code 카탈로그
+`.claude-plugin/marketplace.json`을 소유합니다. 두 카탈로그는
+`plugins/redpact`를 재사용합니다. 사용자 명령과 미지원 경로는
+[설치 안내](installation.md)를 참고하세요.
+
+런타임 릴리스 전에는 `pnpm test:package`와 필수 실행 코드 검사를 수행합니다.
+검증한 바로 그 `dist/redpact-<version>.tgz`와 `SHA256SUMS`를 해당
+`runtime-v<version>` GitHub 릴리스에 올립니다. 설치기 버전, Formula URL·체크섬,
+설치 예제, 검증 workflow를 함께 갱신합니다. 기존 버전의 파일을 교체하지 않습니다.
+데스크톱 업데이터가 `releases/latest`를 사용하므로 런타임 릴리스는 latest로
+지정하지 않습니다.
+게시 후 `Public installation verification` workflow로 실제 공개 URL에서
+Linux x64, macOS arm64, macOS x64 설치를 수행하고 CLI·번들 뷰어·MCP를 확인합니다.
+Homebrew와 두 플러그인 클라이언트는 별도로 검증합니다. 이 검사는 Docker 실행이나
+각 클라이언트의 MCP Apps 카드 지원을 증명하지 않습니다.

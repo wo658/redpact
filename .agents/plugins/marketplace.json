@@ -1,0 +1,20 @@
+{
+  "name": "redpact",
+  "interface": {
+    "displayName": "Redpact"
+  },
+  "plugins": [
+    {
+      "name": "redpact",
+      "source": {
+        "source": "local",
+        "path": "./plugins/redpact"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

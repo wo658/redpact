@@ -1,0 +1,11 @@
+{
+  "name": "redpact",
+  "version": "0.1.0",
+  "description": "Local development review with Redpact MCP and skills.",
+  "author": {
+    "name": "wo658"
+  },
+  "homepage": "https://github.com/wo658/redpact",
+  "repository": "https://github.com/wo658/redpact",
+  "license": "Apache-2.0"
+}

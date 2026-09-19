@@ -1,22 +1,115 @@
 ---
 title: 설치와 에이전트 연결
-description: 로컬 Redpact를 빌드하고 뷰어와 같은 인스턴스에 에이전트를 연결합니다.
+description: GitHub 기반 Homebrew·터미널 경로로 Redpact를 설치하고 Codex·Claude Code를 연결합니다.
 ---
 
 # 설치와 에이전트 연결
 
-Redpact는 아직 정식 출시 전인 로컬 개발 도구입니다. 이 안내는 소스 체크아웃을 사용합니다. 공개 설치 프로그램이나 프로덕션 업데이트 채널이 제공된다고 가정하지 않습니다.
+Redpact의 공개 소스와 런타임 다운로드는
+[wo658/redpact](https://github.com/wo658/redpact)에서 제공합니다. 런타임 패키지는
+CLI와 브라우저 뷰어를 설치합니다. Tauri 데스크톱 앱은 설치하지 않습니다.
 
-## npm 릴리스 설치
+## 설치 경로 선택
 
-`redpact`가 npm에 게시된 이후에는 서버와 뷰어를 함께 설치하고 실행할 수 있습니다.
+| 경로 | 설치 대상 | 요구 사항 / 제한 |
+| --- | --- | --- |
+| Homebrew 자체 Tap | CLI, 브라우저 뷰어, Node | Homebrew가 있는 macOS 또는 Linux, 데스크톱 Cask 아님 |
+| 터미널 설치기 | `~/.local` 아래 CLI와 브라우저 뷰어 | macOS 또는 Linux, Node 24+, npm, curl, SHA-256 도구 |
+| GitHub 릴리스 tarball과 npm/pnpm | CLI와 브라우저 뷰어 | Node 24+와 npm 또는 pnpm |
+| GitHub 소스 체크아웃 | 기여자용 빌드 | Node 24+, pnpm, 데스크톱은 Rust 추가 필요 |
+| Codex 플러그인 | MCP 연결과 스킬 | Codex, 54321 포트에서 실행 중인 Redpact |
+| Claude Code 플러그인 | MCP 연결과 스킬 | Claude Code, 동일한 실행 중 인스턴스 |
+
+관리형 실행에는 Docker와 Compose가 추가로 필요합니다. Git 기능은 네이티브 Git을
+사용하며 관리형 워크트리 생성에는 유지보수되는 Git 2.50+가 필요합니다. 설치와 MCP
+연결 성공이 Docker 준비 상태나 클라이언트의 MCP Apps 지원을 증명하지는 않습니다.
+Windows 패키지 설치, Windows/Linux 네이티브 데스크톱 빌드, Universal macOS
+데스크톱 설치기는 검증된 배포 경로가 아닙니다. 이 런타임 설치 안내는 Homebrew
+데스크톱 Cask나 Apple 공증 데스크톱 릴리스를 제공하지 않습니다.
+
+## Homebrew
 
 ```sh
-pnpm add --global redpact
-redpact serve --project /absolute/path/to/your-project
+brew tap wo658/redpact https://github.com/wo658/redpact.git
+brew install wo658/redpact/redpact
+redpact serve --port 54321
 ```
 
-`http://127.0.0.1:54318`을 열고 에이전트는 `http://127.0.0.1:54318/mcp`에 연결하세요. 별도의 `pnpm dev` 실행은 필요하지 않습니다. 게시 전이나 소스 개발 시에는 아래 소스 실행 안내를 사용하세요.
+업데이트는 `brew update && brew upgrade wo658/redpact/redpact`, 제거는
+`brew uninstall wo658/redpact/redpact`를 사용합니다. 별도 런타임 데이터는 유지됩니다.
+Homebrew core가 아닌 프로젝트 자체 Tap입니다. 소스 저장소 이름이
+`homebrew-redpact`가 아닌 `redpact`이므로 Tap 추가 시 저장소 URL을 명시합니다.
+
+## 터미널 설치기
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/wo658/redpact/main/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+redpact serve --port 54321
+```
+
+스크립트는 지정된 런타임 릴리스와 `SHA256SUMS`를 받아 체크섬을 검증한 뒤 npm으로
+설치합니다. Node 24+와 npm이 미리 설치되어 있어야 하며 sudo는 사용하지 않습니다.
+새 터미널에도 적용하려면 PATH 설정을 셸 프로필에 저장하세요. 실행 전 검토하려면
+`install.sh`를 내려받아 읽고 `sh install.sh`로 실행하세요. 절대 경로 지정은
+`sh install.sh --prefix /absolute/path`로 지원합니다.
+설치기를 다시 실행하면 해당 스크립트가 선택하는 릴리스를 설치합니다. 다른 실행 파일은
+덮어쓰지 않습니다. 이 경로의 제거 대상은 `<prefix>/bin/redpact`와
+`<prefix>/share/redpact`이며, 의도하지 않았다면 런타임 데이터 디렉터리는 삭제하지 마세요.
+
+## GitHub 릴리스 패키지
+
+[런타임 릴리스](https://github.com/wo658/redpact/releases/tag/runtime-v0.1.0)에서
+패키지와 체크섬을 확인하거나 다음 두 패키지 관리자 중 하나로 URL을 직접 설치하세요.
+
+```sh
+npm install --global --ignore-scripts https://github.com/wo658/redpact/releases/download/runtime-v0.1.0/redpact-0.1.0.tgz
+# 또는:
+pnpm add --global --ignore-scripts https://github.com/wo658/redpact/releases/download/runtime-v0.1.0/redpact-0.1.0.tgz
+redpact serve --port 54321
+```
+
+사용자에게 쓰기 권한이 있는 전역 패키지 디렉터리를 사용하세요. 앞의 터미널 설치기는
+전역 디렉터리 설정 없이 설치하며 릴리스 체크섬을 자동 검증합니다.
+`npm install -g redpact`, `pnpm add -g redpact`, `npx redpact`처럼 이름만 사용하는
+경로는 npm 레지스트리 릴리스 게시 전까지 사용할 수 없습니다. GitHub tarball 설치에는
+npm 게시 자격증명이 필요하지 않습니다. 의존성은 여전히 npm에서 받습니다.
+
+## 에이전트 플러그인 설치
+
+먼저 `redpact serve --port 54321`을 실행하고 터미널을 유지하세요. 뷰어는
+`http://127.0.0.1:54321`에서 엽니다. 데스크톱이 이미 그 포트를 사용한다면
+두 번째 인스턴스를 실행하지 말고 기존 데스크톱에 연결하세요.
+
+Codex:
+
+```sh
+codex plugin marketplace add wo658/redpact
+codex plugin add redpact@redpact
+```
+
+새 작업을 시작하고 프로젝트 설정은 `$redpact-init`, 개발은 `$redpact`를 사용하세요.
+
+Claude Code:
+
+```sh
+claude plugin marketplace add wo658/redpact
+claude plugin install redpact@redpact
+```
+
+새 세션에서 `/redpact:redpact-init` 또는 `/redpact:redpact`를 사용하세요.
+두 카탈로그는 공개 GitHub 저장소의 동일한 자체 포함 스킬·MCP 파일을 설치합니다.
+플러그인 설치는 Redpact 설치·실행, Docker 설치, 테스트 승인을 대신하지 않습니다.
+프로젝트가 호스팅하는 카탈로그이며 OpenAI나 Anthropic의 공식 추천 목록 등재를
+의미하지 않습니다.
+
+플러그인은 `http://127.0.0.1:54321/mcp`를 사용합니다. 다른 인스턴스를 쓰려면
+플러그인이 자동으로 따라간다고 가정하지 말고 실제 포트로 HTTP MCP를 직접 연결하세요.
+다른 클라이언트도 이 연결을 사용할 수 있으나 검증된 플러그인 통합으로 주장하지 않습니다.
+도구 확인에는 에이전트에게 `configure describe` 호출을 요청하세요.
+승인·자격증명 카드는 호환되는 MCP Apps 호스트가 필요합니다. 플러그인 설치만으로 카드
+지원을 증명할 수 없으며, 승인 UI가 없다고 승인을 우회해서는 안 됩니다.
+[인터페이스 계약](interfaces.md)을 참고하세요.
 
 ## 사전 준비
 
