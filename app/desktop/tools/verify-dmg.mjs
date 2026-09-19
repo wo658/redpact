@@ -19,14 +19,18 @@ if (!supplied?.endsWith(".app")) {
   const files = supplied
     ? [supplied]
     : (await readdir(folder))
-        .filter((name) => name.endsWith(".dmg"))
+        .filter((name) => name.endsWith(".dmg") || name.endsWith(".zip"))
         .map((name) => join(folder, name))
-  assert.equal(files.length, 1, "Expected one architecture-specific DMG")
-  run("hdiutil", ["attach", files[0], "-nobrowse", "-readonly", "-mountpoint", mount])
-  try {
-    run("ditto", [join(mount, "Redpact.app"), installed])
-  } finally {
-    run("hdiutil", ["detach", mount])
+  assert.equal(files.length, 1, "Expected one architecture-specific desktop package")
+  if (files[0].endsWith(".zip")) {
+    run("ditto", ["-x", "-k", files[0], temporary])
+  } else {
+    run("hdiutil", ["attach", files[0], "-nobrowse", "-readonly", "-mountpoint", mount])
+    try {
+      run("ditto", [join(mount, "Redpact.app"), installed])
+    } finally {
+      run("hdiutil", ["detach", mount])
+    }
   }
 }
 run("codesign", ["--verify", "--deep", "--strict", installed])
@@ -70,7 +74,7 @@ try {
   assert(healthy, "Installed desktop must start its own server")
   const viewer = await request("/")
   assert(viewer.ok)
-  assert.match(await viewer.text(), /<html/i)
+  assert.match(await viewer.text(), /<div id="root">/)
   const mcp = await request("/mcp", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
@@ -87,6 +91,23 @@ try {
   })
   assert(mcp.ok, `MCP initialize status ${mcp.status}`)
   assert.match(await mcp.text(), /serverInfo/)
+  const configured = await request("/mcp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: {
+        name: "configure",
+        arguments: { action: "describe" },
+      },
+    }),
+  })
+  assert(configured.ok)
+  const result = await configured.json()
+  assert.equal(result.result.isError, false)
+  assert.equal(result.result.structuredContent.specification.path, ".redpact/settings.json")
   assert.equal(app.exitCode, null, "Native desktop must remain running")
   console.log(
     `Verified installed desktop: ${process.arch}; native app, code signature, bundled Node, viewer, health and MCP`,
