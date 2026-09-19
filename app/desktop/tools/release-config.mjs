@@ -1,7 +1,13 @@
 import { appendFile, readFile } from "node:fs/promises"
 import { pathToFileURL } from "node:url"
 
-export function releaseEnvironment({ version, tag, config, privateKey }) {
+export function releaseEnvironment({ version, tag, config, privateKey, mode = "signed" }) {
+  if (mode === "preview") {
+    if (!/^\d+\.\d+\.\d+$/.test(version) || tag !== `desktop-preview-v${version}`) {
+      throw new Error("Preview tag must equal desktop-preview-v followed by the Tauri version")
+    }
+    return {}
+  }
   if (!/^\d+\.\d+\.\d+$/.test(version) || tag !== `desktop-v${version}`) {
     throw new Error("Release tag must equal desktop-v followed by the stable Tauri version")
   }
@@ -39,6 +45,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const config = await read("tauri.release.conf.json")
   const environment = releaseEnvironment({
     version: base.version,
+    mode: process.env.REDPACT_RELEASE_MODE,
     tag: process.env.GITHUB_REF_NAME,
     config,
     privateKey: process.env.TAURI_SIGNING_PRIVATE_KEY,
