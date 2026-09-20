@@ -52,3 +52,77 @@ test("헤더에서 새 탭을 열고 전환하고 닫아도 기존 작업공간�
     await expect(tabs.getByRole("tab").last()).toBeInViewport()
   })
 })
+
+test("탭마다 파일 탐색 상태와 Test 하위 탭을 독립적으로 유지한다", async ({ page, request }) => {
+  const connected = await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })
+  expect(connected.ok()).toBeTruthy()
+  await openApp(page, "en")
+  const tabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
+  async function navigate(name: string) {
+    const button = page.getByRole("button", { name, exact: true })
+    if (!(await button.isVisible())) {
+      await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+    }
+    await button.click()
+    await page.keyboard.press("Escape")
+  }
+  await test.step("첫 탭에서 폴더와 파일을 선택한다", async () => {
+    await navigate("File Viewer")
+    await page.getByRole("treeitem", { name: "docs", exact: true }).click()
+    await page.getByRole("treeitem", { name: "frontend.md", exact: true }).click()
+    await expect(page.getByRole("treeitem", { name: "frontend.md", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    )
+  })
+  const sourceScroll = page.locator(".diff-source:visible").locator("..")
+  await expect(sourceScroll).toBeVisible()
+  await sourceScroll.evaluate((element) => {
+    element.scrollTop = 300
+  })
+  const scrollTop = await sourceScroll.evaluate((element) => element.scrollTop)
+  expect(scrollTop, "선택한 파일 본문을 실제로 스크롤한다").toBeGreaterThan(200)
+  await test.step("새 탭에서는 Integration을 선택한다", async () => {
+    await page.getByRole("button", { name: "New tab", exact: true }).click()
+    await navigate("Tests")
+    await page.getByRole("tab", { name: "Integration", exact: true }).click()
+  })
+  await test.step("첫 탭의 폴더 펼침과 파일 선택을 복원한다", async () => {
+    await tabs.getByRole("tab").first().click()
+    await expect(page.getByRole("treeitem", { name: "docs", exact: true })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    )
+    await expect(page.getByRole("treeitem", { name: "frontend.md", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    )
+  })
+  expect(
+    await sourceScroll.evaluate((element) => element.scrollTop),
+    "파일 스크롤 위치를 유지한다",
+  ).toBe(scrollTop)
+  await test.step("둘째 탭은 Unit으로 초기화되지 않고 Integration을 유지한다", async () => {
+    await tabs.getByRole("tab").nth(1).click()
+    await expect(page.getByRole("tab", { name: "Integration", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    )
+    await expect(page.getByRole("treeitem", { name: "frontend.md", exact: true })).toHaveCount(0)
+  })
+  await test.step("워크트리 탭을 열어도 원래 탭의 파일 화면은 바뀌지 않는다", async () => {
+    await tabs.getByRole("tab").first().click()
+    const navigation = page.getByRole("navigation", { name: "Worktrees", exact: true })
+    if (!(await navigation.isVisible())) {
+      await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+    }
+    await navigation.getByRole("button").first().click()
+    await page.keyboard.press("Escape")
+    await expect(tabs.getByRole("tab")).toHaveCount(3)
+    await tabs.getByRole("tab").first().click()
+    await expect(page.getByRole("treeitem", { name: "frontend.md", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    )
+  })
+})

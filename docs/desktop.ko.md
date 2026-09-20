@@ -6,9 +6,10 @@ description: Native 프로세스 소유권, 로컬 설치와 서명된 업데이
 # 데스크톱 런타임
 
 Tauri 2가 OS WebView에서 연결된 React UI를 호스팅합니다. 번들 Node 24가 Hono
-HTTP/MCP 서버를 자식 프로세스로 실행하며 Core는 Tauri와 독립적입니다. WebView에는
-특권 Tauri command capability가 없습니다. Native 메뉴가 수명주기와 업데이트를
-소유합니다. 최종 사용자는 Redpact용 Node를 별도 설치할 필요가 없습니다.
+HTTP/MCP 서버를 자식 프로세스로 실행하며 Core는 Tauri와 독립적입니다. Native Rust가
+수명주기와 업데이트를 소유합니다. 주 WebView는 범위가 제한된 세 명령으로 캐시된
+업데이트 상태를 읽고 native 업데이트 확인 대화상자를 요청하며 고정된 공개 GitHub
+저장소를 기본 브라우저로 열 수 있습니다. 최종 사용자는 Redpact용 Node를 별도 설치할 필요가 없습니다.
 
 ## 빌드와 검증
 
@@ -70,7 +71,10 @@ control pipe가 닫히고 소유 서버를 종료합니다. 정리 timeout은 �
 비공개 pipe는 `REDPACT_DESKTOP_CONTROL=1`로 켜며 서버는 자식 실행 전 이 변수를
 제거합니다. 준비·종료·유휴 업데이트 제어용이고 공개 HTTP endpoint가 아닙니다.
 WebView는 허용된 loopback·about:blank 탐색만 허용하고 외부·file 탐색은 거부합니다.
-Loopback 페이지에 native bridge 권한이 생기지 않습니다.
+이 데스크톱 명령은 소유 서버 origin의 주 창에만 허용하며 호출 origin을 추가로 검사합니다.
+다른 loopback 페이지에는 데스크톱 작업 권한을 부여하지 않습니다. GitHub 명령은 URL 인자를
+받지 않고 `https://github.com/wo658/redpact`만 엽니다. Star도 같은 페이지를 열며 사용자가
+GitHub에 로그인하여 직접 별을 줍니다. 자동으로 Star를 추가하지 않습니다.
 
 ## 수동 preview 다운로드
 
@@ -115,7 +119,20 @@ Windows 10/11 대화형 설치·SmartScreen, 모든 WebView 컨트롤, 모든 Li
 
 ## 서명된 업데이트
 
-Check for Updates는 native 메뉴에 있습니다. 릴리스 빌드는
+데스크톱은 시작 시와 6시간마다 새 버전을 확인합니다. 사이드바 하단에는 Settings,
+GitHub, Star와 함께 작은 **업데이트 확인** 아이콘이 있습니다. 새 버전이나 feed가
+없어도 확인 아이콘을 유지하며, feed가 없는 빌드에서 누르면 미설정 상태를 알립니다.
+일반 브라우저에서는 이 데스크톱 전용 동작을 숨깁니다. 새 버전이 확인되면 위쪽 화살표와
+작은 점으로 바뀌고 툴팁에 버전을 표시합니다. 뷰어는 5초마다 캐시된 native 상태를 읽으며
+feed를 직접 조회하지 않습니다.
+아이콘을 누르면 릴리스를 다시 확인하고 새 버전이 있을 때 native 설치·재시작 확인
+대화상자를 엽니다. 확인·설치 중에는 아이콘을 비활성화하고 스피너를 표시합니다. 취소나
+보류 시 새 버전 표시를 유지합니다. native 상태 조회가 실패하면 새 버전 표시는 지우되
+수동 확인은 유지합니다. 백그라운드 feed 확인 실패는 조용히 처리하고 이전에 발견한 버전을
+유지하며, 새 버전이 없다는 정상 응답을 받으면 일반 확인 아이콘으로 돌아갑니다.
+
+
+Check for Updates는 native 메뉴에 유지합니다. 릴리스 빌드는
 `https://github.com/wo658/redpact/releases/latest/download/latest.json`을 조회합니다.
 저장소의 `tauri.release.conf.json`은 updater 아티팩트를 활성화하고 공개 검증 키를
 고정합니다. 일반 로컬 빌드는 이 overlay를 사용하지 않으며 업데이트 미설정을 안내합니다.
@@ -154,8 +171,8 @@ GitHub Release에 올립니다. 두 플랫폼의 manifest 항목을 보존하도
 워크플로는 현재 macOS ad-hoc 코드 서명을 사용하며 **Apple Developer ID 서명·공증은
 하지 않습니다**. 첫 설치를 Gatekeeper가 차단할 수 있습니다. 원활한 공개 배포를 위한
 Apple 서명·공증에는 별도 자격 증명과 설정이 필요합니다.
-Native 메뉴 확인 후 설치·재시작합니다. 예약된 background 검사, 차등 다운로드,
-재시작 없는 업데이트를 보장하지 않습니다.
+Native 확인 후 설치·재시작하며 백그라운드 확인만으로 자동 설치하지 않습니다.
+차등 다운로드와 재시작 없는 업데이트는 구현하지 않습니다.
 
 설치 전 부모는 유휴 종료를 요청합니다. 수락된 요청이 끝나는 동안 새 HTTP/MCP 수락을
 멈춥니다. 활성 테스트·환경 작업이 있으면 설치를 미루고 수락을 복원합니다. 유휴 설치는

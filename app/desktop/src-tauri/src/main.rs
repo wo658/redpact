@@ -18,6 +18,7 @@ struct Runtime {
     exiting: AtomicBool,
     exit_allowed: AtomicBool,
     updating: AtomicBool,
+    available_version: Mutex<Option<String>>,
 }
 
 fn message(app: &tauri::AppHandle, text: impl Into<String>) {
@@ -31,47 +32,123 @@ fn show_window(app: &tauri::AppHandle) {
     }
 }
 
-fn check_update(app: tauri::AppHandle) {
+fn check_update(app: tauri::AppHandle, interactive: bool) {
     let state = app.state::<Runtime>();
     if state.updating.swap(true, Ordering::SeqCst) {
         return;
     }
     tauri::async_runtime::spawn(async move {
-        let result = update(&app).await;
+        let result = update(&app, interactive).await;
         app.state::<Runtime>()
             .updating
             .store(false, Ordering::SeqCst);
         if let Err(error) = result {
-            message(&app, format!("Update failed: {error}"));
+            if interactive {
+                message(&app, format!("Update failed: {error}"));
+            }
         }
     });
 }
 
-async fn update(app: &tauri::AppHandle) -> Result<(), String> {
+fn verify_desktop_caller(window: &tauri::WebviewWindow) -> Result<(), String> {
+    let state = window.state::<Runtime>();
+    let backend = state.backend.lock().map_err(|e| e.to_string())?;
+    let backend = backend.as_ref().ok_or("Server is not ready")?;
+    let url = window.url().map_err(|e| e.to_string())?;
+    if window.label() != "main" || url.origin() != backend.origin.origin() {
+        return Err("Desktop actions are only available to the connected desktop viewer".into());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn desktop_update_status(window: tauri::WebviewWindow) -> Result<serde_json::Value, String> {
+    verify_desktop_caller(&window)?;
+    let state = window.state::<Runtime>();
+    let version = state
+        .available_version
+        .lock()
+        .map_err(|e| e.to_string())?
+        .clone();
+    Ok(serde_json::json!({
+        "version": version,
+        "busy": state.updating.load(Ordering::SeqCst)
+    }))
+}
+
+#[tauri::command]
+fn desktop_install_update(window: tauri::WebviewWindow) -> Result<(), String> {
+    verify_desktop_caller(&window)?;
+    check_update(window.app_handle().clone(), true);
+    Ok(())
+}
+
+#[tauri::command]
+async fn desktop_open_repository(window: tauri::WebviewWindow) -> Result<(), String> {
+    verify_desktop_caller(&window)?;
+    // Only this fixed public repository can leave the viewer through this command.
+    let url = "https://github.com/wo658/redpact";
+    #[cfg(target_os = "macos")]
+    let mut command = std::process::Command::new("/usr/bin/open");
+    #[cfg(target_os = "linux")]
+    let mut command = std::process::Command::new("xdg-open");
+    #[cfg(target_os = "windows")]
+    let mut command = {
+        let mut command = std::process::Command::new("rundll32.exe");
+        command.arg("url.dll,FileProtocolHandler");
+        command
+    };
+    let result = command.arg(url).status().map_err(|e| e.to_string())?;
+    if !result.success() {
+        return Err("Could not open the public repository in your browser".into());
+    }
+    Ok(())
+}
+
+async fn update(app: &tauri::AppHandle, interactive: bool) -> Result<(), String> {
     let endpoint = option_env!("REDPACT_UPDATE_ENDPOINT");
     let key = option_env!("REDPACT_UPDATE_PUBLIC_KEY");
     let (Some(endpoint), Some(key)) = (endpoint, key) else {
-        message(
-            app,
-            "Updates are not configured for this development build.",
-        );
+        if interactive {
+            message(
+                app,
+                "Updates are not configured for this development build.",
+            );
+        }
         return Ok(());
     };
     let url = url::Url::parse(endpoint).map_err(|e| e.to_string())?;
     if url.scheme() != "https" {
         return Err("Update endpoint must use HTTPS".into());
     }
-    let updater = app
+    let builder = app
         .updater_builder()
         .pubkey(key)
         .endpoints(vec![url])
-        .map_err(|e| e.to_string())?
-        .build()
         .map_err(|e| e.to_string())?;
+    let builder = if interactive {
+        builder
+    } else {
+        builder.timeout(std::time::Duration::from_secs(30))
+    };
+    let updater = builder.build().map_err(|e| e.to_string())?;
     let Some(update) = updater.check().await.map_err(|e| e.to_string())? else {
-        message(app, "Redpact is up to date.");
+        *app.state::<Runtime>()
+            .available_version
+            .lock()
+            .map_err(|e| e.to_string())? = None;
+        if interactive {
+            message(app, "Redpact is up to date.");
+        }
         return Ok(());
     };
+    *app.state::<Runtime>()
+        .available_version
+        .lock()
+        .map_err(|e| e.to_string())? = Some(update.version.clone());
+    if !interactive {
+        return Ok(());
+    }
     let approved = app
         .dialog()
         .message(format!(
@@ -124,11 +201,13 @@ fn main() {
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .invoke_handler(tauri::generate_handler![desktop_update_status, desktop_install_update, desktop_open_repository])
         .manage(Runtime {
             backend: Mutex::new(None),
             exiting: AtomicBool::new(false),
             exit_allowed: AtomicBool::new(false),
             updating: AtomicBool::new(false),
+            available_version: Mutex::new(None),
         })
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Show Redpact", true, None::<&str>)?;
@@ -158,7 +237,7 @@ fn main() {
             app.set_menu(Menu::with_items(app, &[&product, &edit])?)?;
             app.on_menu_event(|app, event| match event.id().as_ref() {
                 "show" => show_window(app),
-                "updates" => check_update(app.clone()),
+                "updates" => check_update(app.clone(), true),
                 "quit" => app.exit(0),
                 _ => {}
             });
@@ -175,6 +254,13 @@ fn main() {
             let origin = backend.origin.clone();
             let allowed = origin.clone();
             *app.state::<Runtime>().backend.lock().unwrap() = Some(backend);
+            app.add_capability(serde_json::json!({
+                "identifier": "main-updates",
+                "windows": ["main"],
+                "local": false,
+                "remote": { "urls": [origin.as_str()] },
+                "permissions": ["allow-desktop-update-status", "allow-desktop-install-update", "allow-desktop-open-repository"]
+            }).to_string())?;
             #[cfg(target_os = "macos")]
             app.add_capability(serde_json::json!({
                 "identifier": "main-titlebar",
@@ -195,6 +281,11 @@ fn main() {
                 .traffic_light_position(tauri::LogicalPosition::new(16.0, 24.0))
                 .initialization_script("document.addEventListener('DOMContentLoaded', () => { document.documentElement.dataset.desktop = 'macos'; });");
             let window = builder.build()?;
+            let handle = app.handle().clone();
+            std::thread::spawn(move || loop {
+                check_update(handle.clone(), false);
+                std::thread::sleep(std::time::Duration::from_secs(6 * 60 * 60));
+            });
             let hidden = window.clone();
             window.on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {

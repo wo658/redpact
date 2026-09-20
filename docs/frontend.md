@@ -92,6 +92,11 @@ browser desktop keeps the sidebar open rather than offering a collapse control; 
 screens retain the sidebar trigger. The native macOS desktop keeps its sidebar control.
 The sidebar remains on the canvas. Preserve desktop
 gutters, collapsed state, full-width mobile content and macOS toolbar positioning.
+Open workspace tabs retain their React state and DOM through React Activity. Hidden tabs
+release effect subscriptions; activating a tab restarts reads without discarding its view state.
+Sidebar providers belong to each workspace tab. This retention is session-only and ends when
+the tab closes; it does not persist drafts across reloads.
+
 The app owns viewport height; evidence and lists scroll in their own panels.
 Flex/grid boundaries need `min-w-0` and, for nested scrolling, `min-h-0`.
 
@@ -127,6 +132,9 @@ user can hand it off immediately. The diagnostic stays visible once; the formatt
 copy text appears only if clipboard access fails. Views with durable identifiers,
 selection or retained resources still provide their own specific `CopyHandoff`
 context rather than relying on this fallback.
+
+Only the active workspace mounts the project selector, so hidden tabs cannot retain
+its portaled menu.
 
 ## One review toolbar
 

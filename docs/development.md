@@ -136,6 +136,55 @@ Read the installed Next.js guidance before modifying the renderer.
 Docker build contexts exclude the documentation renderer’s generated `.next`,
 `.source` and TypeScript cache so host-specific paths are regenerated in containers.
 
+## Release policy
+
+Redpact uses `0.x.y` product versions during beta, with `Beta` as a separate
+user-facing label. A normal beta-period release does not need a `-beta.N` suffix.
+These are Redpact's pre-1.0 conventions within [Semantic Versioning](https://semver.org/):
+
+| Change | Version example |
+| --- | --- |
+| Bug fixes or small usability improvements | `0.1.0` → `0.1.1` |
+| Meaningful new functionality | `0.1.3` → `0.2.0` |
+| Incompatible settings, API or storage changes | `0.2.4` → `0.3.0`, with explicit change notes |
+| Validation builds for a specific upcoming release | `0.3.0-beta.1` → `0.3.0-beta.2` → `0.3.0` |
+| Stable core functionality and compatibility policy | `1.0.0` |
+
+Choose the largest applicable increment for the release; reset patch to zero when
+incrementing minor. Compatibility changes during `0.x` require a minor increment
+and notes describing affected users, resets and manual actions. They do not imply
+automatic migration support. Published versions and tags are immutable.
+
+Use these naming conventions when presenting releases:
+
+- Product display: `Redpact 0.2.0 · Beta`.
+- Git tag: `v0.2.0`; a validation build uses `v0.3.0-beta.1`.
+- Release title: `Redpact v0.2.0 — Execution result comparison`.
+- Diagnostic identification: product version plus short commit SHA.
+
+Target one release per week when verified changes are ready, with important bug
+fixes released as needed. Bump versions when distributing verified changes, not
+for every commit or merely because a week elapsed. This cadence is policy, not an
+automated schedule. Release notes describe changes, verification, known limitations
+and required user actions in English and Korean.
+
+The server and desktop share one product release version. Keep their package
+manifests, Tauri configuration, Cargo manifest and the desktop package's Cargo lock
+entry aligned in the same release change. Synchronization is currently manual;
+the private workspace root version is not the product release number.
+
+Tag the exact verified release commit. Building, installing locally, tagging and
+publishing are distinct operations. The current npm workflow requires manual
+dispatch and is not triggered by a version tag. Its publish script does not
+automatically select an npm prerelease dist-tag for `-beta.N`; verify explicit
+prerelease channel selection before publishing such a package.
+
+The product snapshot tag is `v<version>`. Existing distribution workflows still use
+`desktop-v<version>`, `desktop-preview-v<version>`,
+`desktop-platform-preview-v<version>` and `runtime-v<version>` for their respective
+artifacts. These channel tags do not replace the product snapshot tag; preserve the
+workflow-specific tag validation and published download URLs.
+
 ## Runtime packaging and updates
 
 | Command | Scope |

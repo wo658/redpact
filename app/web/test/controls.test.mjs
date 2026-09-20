@@ -6892,3 +6892,111 @@ test("커밋·브랜치 이미지 뷰어가 비교 리비전과 이름 변경 �
   await userEvent.click(screen.getByRole("tab", { name: "Source" }))
   assert.ok(document.querySelector(".diff-code-delete"))
 })
+
+test("새 버전이 있을 때 사이드바 하단에 Update를 표시하고 네이티브 설치를 요청한다", async () => {
+  await i18n.changeLanguage("en")
+  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
+  const calls = []
+  window.__TAURI__ = {
+    core: {
+      invoke: async (command) => {
+        calls.push(command)
+        return { version: "0.2.0", busy: false }
+      },
+    },
+  }
+  try {
+    render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
+    const update = await screen.findByRole("button", { name: "Update to 0.2.0" })
+    assert.ok(update.closest('[data-slot="sidebar-footer"]'))
+    await userEvent.click(update)
+    await waitFor(() => assert.ok(calls.includes("desktop_install_update")))
+  } finally {
+    delete window.__TAURI__
+  }
+})
+
+test("브라우저에서는 Update를 숨기고 데스크톱에서는 새 버전이 없어도 확인할 수 있다", async () => {
+  await i18n.changeLanguage("en")
+  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
+  const props = { api: sampleApi(), initialProjects: [project] }
+  const view = render(createElement(ProjectManager, props))
+  assert.equal(screen.queryByRole("button", { name: /Update/ }), null)
+  view.unmount()
+  let checked = false
+  window.__TAURI__ = {
+    core: {
+      invoke: async () => {
+        checked = true
+        return { version: null, busy: false }
+      },
+    },
+  }
+  try {
+    render(createElement(ProjectManager, props))
+    await waitFor(() => assert.equal(checked, true))
+    assert.ok(screen.getByRole("button", { name: "Check for updates" }))
+  } finally {
+    delete window.__TAURI__
+  }
+})
+
+test("업데이트 작업 중에는 중복 설치 요청을 막는다", async () => {
+  await i18n.changeLanguage("en")
+  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
+  const calls = []
+  window.__TAURI__ = {
+    core: {
+      invoke: async (command) => {
+        calls.push(command)
+        return { version: "0.2.0", busy: true }
+      },
+    },
+  }
+  try {
+    render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
+    const update = await screen.findByRole("button", { name: "Update to 0.2.0" })
+    assert.equal(update.disabled, true)
+    await userEvent.click(update)
+    assert.deepEqual(calls, ["desktop_update_status"])
+  } finally {
+    delete window.__TAURI__
+  }
+})
+
+test("사이드바 하단 한 줄에 아이콘 설정과 GitHub·Star·업데이트 확인을 모은다", async () => {
+  await i18n.changeLanguage("en")
+  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
+  const calls = []
+  window.__TAURI__ = {
+    core: {
+      invoke: async (command) => {
+        calls.push(command)
+        return { version: null, busy: false }
+      },
+    },
+  }
+  try {
+    render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
+    const shortcuts = within(screen.getByRole("group", { name: "App shortcuts" }))
+    const settings = shortcuts.getByRole("button", { name: "Settings", exact: true })
+    assert.equal(settings.textContent, "")
+    const repository = shortcuts.getByRole("link", { name: "GitHub repository" })
+    const star = shortcuts.getByRole("link", { name: "Star on GitHub" })
+    assert.equal(repository.getAttribute("href"), "https://github.com/wo658/redpact")
+    assert.equal(star.getAttribute("href"), "https://github.com/wo658/redpact")
+    await userEvent.click(repository)
+    await userEvent.click(star)
+    assert.equal(calls.filter((command) => command === "desktop_open_repository").length, 2)
+    await userEvent.click(shortcuts.getByRole("button", { name: "Check for updates" }))
+    await waitFor(() => assert.ok(calls.includes("desktop_install_update")))
+    await userEvent.click(settings)
+    assert.equal(settings.getAttribute("aria-current"), "page")
+  } finally {
+    delete window.__TAURI__
+  }
+})

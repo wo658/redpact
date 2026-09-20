@@ -1,4 +1,13 @@
 export const en = {
+  "App shortcuts": "App shortcuts",
+  "GitHub repository": "GitHub repository",
+  "Star on GitHub": "Star on GitHub",
+  "Check for updates": "Check for updates",
+  "Could not open GitHub. Try again.": "Could not open GitHub. Try again.",
+  Update: "Update",
+  "Updating…": "Updating…",
+  "Update to {{version}}": "Update to {{version}}",
+  "Could not request the update. Try again.": "Could not request the update. Try again.",
   "New tab": "New tab",
   "Open workspaces": "Open workspaces",
   "Close {{name}}": "Close {{name}}",
