@@ -1,11 +1,13 @@
 {
   "bundle": {
     "createUpdaterArtifacts": true,
-    "macOS": { "signingIdentity": "-" }
+    "macOS": {
+      "signingIdentity": "-"
+    }
   },
   "plugins": {
     "updater": {
-      "pubkey": "",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJFRUVBNDc3MTRERUFENUIKUldSYnJkNFVkNlR1dmg5L3h3ckJ4SlhncTA1MXNrQlhiM00rYlA1M3hEeGpocU0xSFc1ZStuSE8K",
       "endpoints": ["https://github.com/wo658/redpact/releases/latest/download/latest.json"]
     }
   }

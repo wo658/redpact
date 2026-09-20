@@ -13,7 +13,7 @@ CLI와 브라우저 뷰어를 설치합니다. Tauri 데스크톱 앱은 설치�
 
 | 경로 | 설치 대상 | 요구 사항 / 제한 |
 | --- | --- | --- |
-| macOS 데스크톱 다운로드 | 네이티브 앱, 서버, 뷰어, Node | macOS 13.5+, Apple Silicon 또는 Intel, 공증 없는 preview |
+| macOS 데스크톱 다운로드 | 네이티브 앱, 서버, 뷰어, Node | macOS 13.5+, Apple Silicon 또는 Intel, 서명된 업데이트 제공, 공증 없음 |
 | Windows/Linux 데스크톱 preview | 네이티브 앱, 서버, 뷰어, Node | Windows x64 EXE, Ubuntu 22.04 x64 DEB, 수동 업데이트 |
 | Homebrew 자체 Tap | CLI Formula 또는 macOS 데스크톱 Cask | 데스크톱은 `--cask`로 선택, 공증 없는 preview |
 | 터미널 설치기 | `~/.local` 아래 CLI와 브라우저 뷰어 | macOS 또는 Linux, Node 24+, npm, curl, SHA-256 도구 |
@@ -26,7 +26,7 @@ CLI와 브라우저 뷰어를 설치합니다. Tauri 데스크톱 앱은 설치�
 사용하며 관리형 워크트리 생성에는 유지보수되는 Git 2.50+가 필요합니다. 설치와 MCP
 연결 성공이 Docker 준비 상태나 클라이언트의 MCP Apps 지원을 증명하지는 않습니다.
 Windows CLI 설치, Windows/Linux ARM, 다른 Linux 배포판과 Universal macOS
-설치기는 미검증입니다. macOS preview는 Apple 공증을 받지 않았으며
+설치기는 미검증입니다. macOS 앱은 Apple 공증을 받지 않았으며
 Windows preview에는 게시자 코드 서명 인증서가 없습니다.
 
 ## 소스에서 번들 런타임 설치
@@ -48,24 +48,25 @@ redpact serve --project /absolute/path/to/your-project
 
 ## macOS 데스크톱 다운로드
 
-[Mac 데스크톱 preview](https://github.com/wo658/redpact/releases/tag/desktop-preview-v0.1.0)에서 CPU에 맞는 패키지를 다운로드하세요.
+[Mac 데스크톱 릴리스](https://github.com/wo658/redpact/releases/latest)에서 CPU에 맞는 패키지를 다운로드하세요.
 
-- Apple Silicon(M 시리즈): `Redpact_0.1.0_aarch64.dmg`.
-- Intel: `Redpact_0.1.0_x64.zip`.
+- Apple Silicon(M 시리즈): `Redpact_0.2.0_aarch64.dmg`.
+- Intel: `Redpact_0.2.0_x64.zip`.
 
 Apple Silicon DMG를 열거나 Intel ZIP을 압축 해제하고 **Redpact**를 **Applications**로 드래그한 뒤 사용한 디스크 이미지가 있으면 추출하고
 Redpact를 실행하세요. Node·서버·뷰어가 포함되어 터미널에서 서버를 실행할 필요가 없습니다.
 최초 MCP 주소는 `http://127.0.0.1:54321/mcp`입니다. 같은 포트를 사용하는 다른
 Redpact 인스턴스가 있다면 먼저 종료하세요.
 
-이 preview는 ad-hoc 서명을 사용하며 **Apple 공증을 받지 않았습니다**.
+이 릴리스는 ad-hoc 서명을 사용하며 **Apple 공증을 받지 않았습니다**.
 `shasum -a 256 <다운로드한파일>` 결과를 릴리스의 `SHA256SUMS`와 비교하세요.
 macOS가 차단하면 출처를 확인한 뒤 시스템 설정 → 개인정보 보호 및 보안에서
 [Apple의 앱별 ‘확인 없이 열기’ 안내](https://support.apple.com/ko-kr/102445)를 따르세요.
 Gatekeeper를 전역으로 해제하지 마세요. 체크섬 일치는 릴리스 파일의 일치 여부이며 Apple 심사가 아닙니다.
 
-업데이트는 수동입니다. 활성 작업을 마치고 Redpact를 종료한 뒤 새 패키지를 받아
-Applications의 앱을 교체하세요. 이 preview에는 자동 업데이트 feed가 없습니다.
+0.2.0은 시작 시와 6시간마다 서명된 업데이트를 확인하며 설치·재시작에는 확인이 필요합니다.
+feed 없는 preview나 개발 빌드에서 전환할 때는 이 릴리스를 한 번 수동 설치하세요.
+활성 작업을 마치고 Redpact를 종료한 뒤 Applications의 앱을 교체하세요.
 제거하려면 종료 후 `Redpact.app`을 삭제하세요. 설정과 결과는
 `~/Library/Application Support/dev.redpact.desktop/state`에 남습니다.
 [데스크톱 수명주기와 릴리스 경계](desktop.md)를 참고하세요.
@@ -78,7 +79,9 @@ brew install --cask wo658/redpact/redpact
 open /Applications/Redpact.app
 ```
 
-Cask는 Apple Silicon DMG 또는 Intel ZIP를 선택하고 체크섬을 검증합니다.
+Cask는 현재 업데이트 feed가 없는 이전 0.1.0 preview를 설치합니다. 0.2.0과 서명된
+업데이트를 사용하려면 위에서 직접 다운로드하세요. Cask는 Apple Silicon DMG 또는
+Intel ZIP을 선택하고 체크섬을 검증합니다.
 직접 다운로드와 동일하게 공증·최초 실행 제한이 적용됩니다. 새 Cask 버전으로
 업데이트하려면 Redpact를 종료한 뒤 `brew update`와
 `brew upgrade --cask wo658/redpact/redpact`를 실행하세요.

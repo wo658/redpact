@@ -18,8 +18,10 @@ jobs:
         include:
           - runner: macos-14
             target: aarch64-apple-darwin
+            bundles: app,dmg
           - runner: macos-15-intel
             target: x86_64-apple-darwin
+            bundles: app
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
@@ -42,6 +44,9 @@ jobs:
       - run: pnpm rebuild esbuild
       - run: pnpm docs:check
       - run: pnpm --filter @redpact/server exec vitest run test/desktop-release.test.ts
+      - name: Verify installed runtime package
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: pnpm test:package
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -50,10 +55,29 @@ jobs:
         with:
           projectPath: app/desktop
           tauriScript: pnpm exec tauri
-          args: --target ${{ matrix.target }} --config src-tauri/tauri.release.conf.json --bundles app,dmg
+          args: --target ${{ matrix.target }} --config src-tauri/tauri.release.conf.json --bundles ${{ matrix.bundles }}
           tagName: ${{ github.ref_name }}
           releaseName: Redpact ${{ github.ref_name }}
           releaseBody: 'macOS desktop release. Ad-hoc signed; not Apple notarized. Review both architectures and latest.json before publishing.'
           releaseDraft: true
           prerelease: false
           uploadUpdaterJson: true
+      - name: Package Intel app archive
+        if: matrix.target == 'x86_64-apple-darwin'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          bundle=app/desktop/node_modules/.redpact/target/${{ matrix.target }}/release/bundle
+          version=$(node -p "require('./app/desktop/src-tauri/tauri.conf.json').version")
+          mkdir -p "$bundle/dmg"
+          ditto -c -k --sequesterRsrc --keepParent "$bundle/macos/Redpact.app" "$bundle/dmg/Redpact_${version}_x64.zip"
+          gh release upload "$RELEASE_TAG" "$bundle/dmg/Redpact_${version}_x64.zip"
+      - name: Native tests and lint
+        working-directory: app/desktop/src-tauri
+        run: |
+          cargo test --locked --target ${{ matrix.target }}
+          cargo clippy --locked --target ${{ matrix.target }} -- -D warnings
+      - name: Install package and verify native launch, viewer and MCP
+        run: node app/desktop/tools/verify-dmg.mjs

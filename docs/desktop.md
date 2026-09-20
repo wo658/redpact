@@ -152,14 +152,24 @@ updates are not configured. Release preparation passes the overlay's endpoint an
 public key to the existing native updater through `REDPACT_UPDATE_ENDPOINT` and
 `REDPACT_UPDATE_PUBLIC_KEY` at compile time.
 
+The release public key is configured and its matching private key is stored in the
+repository's `TAURI_SIGNING_PRIVATE_KEY` Actions Secret. The current key has no
+password, so `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is not required. Keep the existing
+key for future releases; key generation below is for initial setup, not each build.
+Public release downloads require no GitHub token or user-entered key. The signing
+key authenticates update artifacts; the public key and endpoint are checked-in
+build configuration and need no Actions Variables.
+
 ### GitHub Release workflow
 
 The [desktop release workflow](../.github/workflows/desktop-release.yml) builds on
 native Apple Silicon and Intel macOS runners. Windows and Linux signed-updater release jobs are
 not configured; their manual preview workflow is separate. It uses [Tauri Action](https://github.com/tauri-apps/tauri-action)
-to upload DMGs, signed `.app.tar.gz` updater bundles, signatures and `latest.json`
+to upload the Apple Silicon DMG, signed `.app.tar.gz` updater bundles, signatures and `latest.json`
 to one **draft** GitHub Release. Uploads are serialized to preserve both manifest
-platform entries. No updater sees a draft release.
+platform entries. Intel uses an app ZIP because DMG creation fails on that runner.
+Both jobs run native tests/lint and install their package to verify app launch,
+bundled Node, HTTP viewer, MCP and owned-server shutdown. No updater sees a draft release.
 
 Maintainer setup and release procedure:
 
@@ -170,8 +180,9 @@ Maintainer setup and release procedure:
 2. Set repository Actions Secret `TAURI_SIGNING_PRIVATE_KEY` to the private key
    contents, and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if it has a password.
 3. Update the version in `app/desktop/src-tauri/tauri.conf.json`,
-   `app/desktop/src-tauri/Cargo.toml` and `app/desktop/package.json`, refresh
-   `Cargo.lock`, and commit. Push a matching stable tag such as `desktop-v0.1.0`.
+   `app/desktop/src-tauri/Cargo.toml`, `app/desktop/package.json` and
+   `app/server/package.json`, refresh `Cargo.lock`, and commit. Tag the product
+   snapshot `v0.2.0` and push the matching distribution tag `desktop-v0.2.0`.
    Manual workflow dispatch must also select that tag. Mismatched versions,
    prerelease tags and missing signing configuration fail before packaging.
 4. Wait for both jobs to succeed. Verify `latest.json` has `darwin-aarch64` and

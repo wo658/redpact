@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises"
 import { expect, test } from "vitest"
 
 const { releaseEnvironment } = await import(
@@ -16,6 +17,22 @@ const config = {
   },
 }
 const input = { version: "0.1.0", tag: "desktop-v0.1.0", config, privateKey: "secret" }
+
+test("저장소 릴리스 설정에 실제 공개 검증 키와 공개 다운로드 주소가 포함된다", async () => {
+  const releaseConfig = JSON.parse(
+    await readFile(
+      new URL("../../desktop/src-tauri/tauri.release.conf.json", import.meta.url),
+      "utf8",
+    ),
+  )
+  const environment = releaseEnvironment({ ...input, config: releaseConfig })
+  expect(environment.REDPACT_UPDATE_ENDPOINT).toBe(config.plugins.updater.endpoints[0])
+  const keyLines = Buffer.from(environment.REDPACT_UPDATE_PUBLIC_KEY, "base64")
+    .toString("utf8")
+    .trim()
+    .split("\n")
+  expect(Buffer.from(keyLines[1], "base64").subarray(0, 2).toString()).toBe("Ed")
+})
 
 test("릴리스 버전과 공개 키를 native updater 빌드에 전달하고 비공개 키는 반환하지 않는다", () => {
   expect(releaseEnvironment(input)).toEqual({
