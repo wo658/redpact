@@ -1,6 +1,15 @@
 import type { en } from "./en"
 
 export const ko = {
+  "App shortcuts": "앱 바로가기",
+  "GitHub repository": "GitHub 저장소",
+  "Star on GitHub": "GitHub에서 Star 주기",
+  "Check for updates": "업데이트 확인",
+  "Could not open GitHub. Try again.": "GitHub를 열지 못했습니다. 다시 시도하세요.",
+  Update: "Update",
+  "Updating…": "업데이트 중…",
+  "Update to {{version}}": "{{version}} 버전으로 업데이트",
+  "Could not request the update. Try again.": "업데이트를 요청하지 못했습니다. 다시 시도하세요.",
   "New tab": "새 탭",
   "Open workspaces": "열린 작업공간",
   "Close {{name}}": "{{name}} 닫기",

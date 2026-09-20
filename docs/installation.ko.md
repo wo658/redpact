@@ -29,6 +29,23 @@ Windows CLI 설치, Windows/Linux ARM, 다른 Linux 배포판과 Universal macOS
 설치기는 미검증입니다. macOS preview는 Apple 공증을 받지 않았으며
 Windows preview에는 게시자 코드 서명 인증서가 없습니다.
 
+## 소스에서 번들 런타임 설치
+
+Node.js 24 이상, pnpm, Git을 설치한 뒤 서버와 뷰어를 함께 포함하는 패키지를 빌드하세요.
+
+```sh
+git clone https://github.com/wo658/redpact.git
+cd redpact
+pnpm install --frozen-lockfile
+pnpm pack:runtime
+pnpm add --global ./dist/redpact-0.1.0.tgz --ignore-scripts
+redpact serve --project /absolute/path/to/your-project
+```
+
+프로젝트 경로를 자신의 체크아웃 경로로 바꾸세요. 패키지 버전이 달라졌다면 `pnpm pack:runtime`이 출력한 tarball 경로를 사용하세요. pnpm 전역 실행 파일 디렉터리가 없다는 오류가 나면 `pnpm setup`을 실행하고 터미널을 다시 연 뒤 Redpact 체크아웃에서 전역 설치를 재시도하세요.
+
+번들 뷰어는 `http://127.0.0.1:54318`에서 열고, 에이전트는 `http://127.0.0.1:54318/mcp`에 연결하세요. 서버를 실행 상태로 유지하고 종료하려면 Ctrl+C를 누르세요. 이 명령은 CLI와 웹 뷰어를 설치합니다. 네이티브 데스크톱 앱은 아래 macOS 빌드 안내를 따르세요. 관리형 테스트에는 사전 준비 항목에 설명한 Docker와 Compose가 필요합니다.
+
 ## macOS 데스크톱 다운로드
 
 [Mac 데스크톱 preview](https://github.com/wo658/redpact/releases/tag/desktop-preview-v0.1.0)에서 CPU에 맞는 패키지를 다운로드하세요.

@@ -7,8 +7,10 @@ description: Native process ownership, local installation and signed update boun
 
 Tauri 2 hosts the connected React interface in the OS WebView. Bundled Node 24 runs
 the Hono HTTP/MCP server as a child process; Core remains independent of Tauri.
-The WebView has no privileged Tauri command capabilities. Native menus own lifecycle
-and updates. End users do not need a separate Node installation for Redpact itself.
+Native Rust owns lifecycle and updates. The main WebView can read cached update
+status, request native update confirmation, and open the fixed public GitHub
+repository in the default browser through three scoped commands.
+End users do not need a separate Node installation for Redpact itself.
 
 ## Build and verify
 
@@ -75,7 +77,11 @@ cleanup timeout reports a retryable problem instead of forcibly killing it.
 The private pipe is enabled by `REDPACT_DESKTOP_CONTROL=1`, which the server removes
 before starting children. It carries readiness, shutdown and idle-update control,
 not a public HTTP endpoint. The WebView permits admitted loopback/about:blank
-navigation and denies external/file navigation; loopback pages gain no native bridge.
+navigation and denies external/file navigation. These desktop commands are allowed only for
+the main window at the owned server origin, with an additional caller-origin check;
+other loopback pages receive no desktop action authority. The GitHub command accepts
+no URL argument and opens only `https://github.com/wo658/redpact`; Star opens the same
+page, where the user can sign in and star the repository. It never stars automatically.
 
 ## Manual preview downloads
 
@@ -123,7 +129,22 @@ AppImage/RPM, ARM builds and an updater feed are not configured for these previe
 
 ## Signed updates
 
-Check for Updates lives in the native menu. Release builds use
+The desktop checks for updates at startup and every six hours. Its sidebar footer
+contains a compact **Check for updates** icon beside Settings, GitHub and Star. The
+check icon remains available even without a new version or configured feed; an
+unconfigured build reports that when clicked. Ordinary browsers omit this desktop
+action. A discovered version changes the icon to an upward arrow with a small dot
+and a version tooltip. The viewer reads cached native status every five seconds;
+it does not fetch the feed.
+Clicking the icon rechecks the release and opens native install/restart confirmation
+when a newer version exists. Checking or installing disables the icon and shows a
+spinner. Canceling or deferring preserves the version indicator. Failed native status
+reads clear the indicator but retain manual checking. Background feed check failures
+are silent and preserve a previously discovered version; a successful no-update
+response restores the ordinary check icon.
+
+
+Check for Updates remains in the native menu. Release builds use
 `https://github.com/wo658/redpact/releases/latest/download/latest.json`.
 The checked-in `tauri.release.conf.json` enables updater artifacts and pins the
 public verification key. Ordinary local builds omit that overlay and report that
@@ -166,8 +187,8 @@ Tauri verifies updater signatures. The workflow currently applies macOS ad-hoc
 code signing, **not Apple Developer ID signing or notarization**; Gatekeeper can
 block first installation. Apple signing/notarization needs separate credentials
 and configuration before frictionless public distribution.
-Native menu confirmation initiates installation and restart; background scheduled
-checks, differential downloads and restart-free updates are not promised.
+Native confirmation initiates installation and restart; background checks never install
+automatically. Differential downloads and restart-free updates are not implemented.
 
 Before installation, the parent asks for idle shutdown. New HTTP/MCP admission pauses
 while admitted requests finish. Active tests/environment operations defer installation

@@ -9,6 +9,7 @@
     "frontendDist": "../placeholder"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [],
     "security": {
       "capabilities": []

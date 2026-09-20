@@ -29,6 +29,23 @@ Windows CLI installation, ARM Windows/Linux, other Linux distributions and a Uni
 macOS installer remain unverified. The macOS preview is not Apple notarized;
 the Windows preview has no publisher code-signing certificate.
 
+## Install a bundled runtime from source
+
+With Node.js 24+, pnpm, and Git installed, build a package containing both the server and viewer:
+
+```sh
+git clone https://github.com/wo658/redpact.git
+cd redpact
+pnpm install --frozen-lockfile
+pnpm pack:runtime
+pnpm add --global ./dist/redpact-0.1.0.tgz --ignore-scripts
+redpact serve --project /absolute/path/to/your-project
+```
+
+Replace the project path with your checkout. If the package version changes, use the tarball path printed by `pnpm pack:runtime`. If pnpm reports that its global bin directory is missing, run `pnpm setup`, reopen your terminal, and retry the global installation from the Redpact checkout.
+
+Open `http://127.0.0.1:54318` for the bundled viewer and use `http://127.0.0.1:54318/mcp` for your agent. Keep the server running; Ctrl+C stops it. This installs the CLI and web viewer. For the native desktop app, follow the macOS build instructions below. Managed tests require Docker with Compose as described under Requirements.
+
 ## macOS desktop download
 
 Download the matching package from the [Mac desktop preview](https://github.com/wo658/redpact/releases/tag/desktop-preview-v0.1.0):

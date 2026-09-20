@@ -134,7 +134,10 @@ Redpact
 │   │   └── Selected branch without a live checkout [page; optional]
 │   │       └── Committed changed files → selected file diff
 │   │
-│   └── Settings [page; global, sidebar footer]
+│   ├── GitHub repository [link; sidebar footer icon]
+│   ├── Star on GitHub [link; sidebar footer icon]
+│   ├── Check for updates / Update [action; desktop footer icon]
+│   └── Settings [page; global, sidebar footer icon]
 │       ├── Preferences [section]
 │       │   ├── Theme: Light / Dark / System
 │       │   ├── Word wrap
@@ -153,6 +156,11 @@ Redpact
 ```
 
 ## Navigation behavior
+
+- The sidebar footer places Settings, GitHub, Star and the desktop update action in
+  one compact row of icon controls with accessible names and tooltips. Settings
+  keeps its selected state. GitHub and Star open the public repository in a new
+  browser tab or the desktop system browser; users give Stars on GitHub.
 
 - Project display options start with every available item visible. Hiding an item
   preserves the current page and active work. Worktrees and global Settings remain
@@ -186,7 +194,9 @@ Redpact
   screens retain the sidebar trigger; the native macOS desktop keeps its sidebar control.
   Workspace tabs use a fixed width, left-aligned icons and truncated labels with subtle outlines.
   The header plus button opens another project tab on the current project’s default review
-  screen without replacing existing tabs. Each tab remembers its current page and worktree while switching tabs. New tabs are
+  screen without replacing existing tabs. Each open tab retains its sidebar and current view state when switching tabs, including
+  expanded folders, selected files, nested test tabs, drafts and scroll positions. Hidden
+  tabs suspend subscriptions and refresh when reactivated. Closing a tab releases its state. New tabs are
   session-only; reloading resets the strip. Selecting a project opens or activates its project tab;
   selecting a worktree adds a worktree tab. Closing either tab only removes it from
   the strip and never stops an execution or disconnects a project.
@@ -194,3 +204,5 @@ Redpact
   approval preference shown here does not imply a separate approval-inbox page.
 
 See [frontend conventions](frontend.md) for composition rules and [execution](execution.md) for lifecycle semantics.
+
+See [desktop updates](desktop.md) for Update visibility and installation conditions.

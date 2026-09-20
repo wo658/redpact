@@ -67,6 +67,38 @@ Use pnpm. Run server typecheck, tests/build, relevant CLI checks, and lint for e
 
 Use braces for control-flow bodies, avoid nested ternaries, and remove redundant `else` after early exits. Cognitive complexity above 15 is a review warning, not a commit blocker. Preserve evaluation order when simplifying branches, and split functions by responsibility rather than just to reduce the score. See `docs/development.md`.
 
+## Publication destination
+
+Publish product changes and pull requests to the public `wo658/redpact` repository.
+A merge into `wo658/redpact-private` alone does not complete publication. Verify the
+explicit GitHub repository and target branch before pushing or creating a PR.
+
+## Releases
+
+Follow the version, tag, naming and cadence policy in
+[Development: Release policy](docs/development.md#release-policy).
+Treat a release as a verified product snapshot, not a version bump on every commit.
+
+- Before preparing a release, inspect existing tags and published versions, choose
+  the next version under that policy, and summarize changes since the prior release.
+- Keep the server and desktop product versions aligned in one release change:
+  `app/server/package.json`, `app/desktop/package.json`,
+  `app/desktop/src-tauri/tauri.conf.json`, `app/desktop/src-tauri/Cargo.toml`,
+  and the desktop package entry in `Cargo.lock`. The private workspace root's
+  placeholder version is not the product version. Version synchronization is
+  currently manual; do not assume a bump command updates every file.
+- Complete required executable, affected acceptance, documentation and installed
+  package checks before release. Record the exact commit, version, validation and
+  remaining limitations. Explain incompatible settings/API/storage changes and any
+  required reset or manual action in English and Korean release notes.
+- Tag the verified release commit using the exact `v<version>` name. Never move an
+  existing published tag or replace published contents; corrections need a new version.
+- Local builds and updates do not constitute publication. Perform tagging, pushing
+  and publication within the user's authorized release scope. The current npm
+  workflow is manually dispatched; pushing a tag does not trigger it. For a
+  `-beta.N` package, verify an explicit npm prerelease dist-tag before publication:
+  the current publish script does not select one automatically.
+
 ## Retained worktree locations
 
 Use .codex/worktrees/ or another permanent project-owned directory for development
