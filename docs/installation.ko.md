@@ -38,7 +38,7 @@ git clone https://github.com/wo658/redpact.git
 cd redpact
 pnpm install --frozen-lockfile
 pnpm pack:runtime
-pnpm add --global ./dist/redpact-0.1.0.tgz --ignore-scripts
+pnpm add --global ./dist/redpact-0.2.0.tgz --ignore-scripts
 redpact serve --project /absolute/path/to/your-project
 ```
 
