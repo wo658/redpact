@@ -4,6 +4,12 @@ A local development review tool for agent-authored test intent, submitted source
 and observed execution results. The connected web/Tauri viewer reviews Git changes,
 Unit commands, Vitest Integration and Playwright evidence across local checkouts.
 
+Explore Redpact at [redpact.dev](https://redpact.dev):
+
+- [Demo Website](https://redpact.dev) — Explore the Redpact demo.
+- [Docs Site](https://redpact.dev/en/docs/) — Read the setup guides and reference documentation
+  in English or [한국어](https://redpact.dev/ko/docs/).
+
 ## Install and run
 
 Install the CLI and bundled browser viewer on macOS or Linux. The terminal
