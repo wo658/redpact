@@ -17,7 +17,7 @@ tracked convention. Unit patterns must not include the selected Integration dire
 
 Read before authoring or executing managed integration tests, reading their results,
 or cancelling/removing their resources. Discover the connected tools and actual
-HTTP contract. Use configure describe before authoring settings; read [Project dependencies](dependencies.md) when services, modes or connections need
+HTTP contract. Use configure describe before authoring settings; read [Project dependencies](dependencies.md) when services or connections need
 changes, and [configuration](../../redpact-init/references/configuration.md) only for setup repair. Unit IDs do not belong to these MCP operations.
 
 ## Test the public behavior
@@ -68,7 +68,7 @@ test("Application responds successfully", async (context) => {
 
 After execution, inspect `get_run` case results and confirm that tests which reached their bodies contain observed Steps and appropriate verdicts. If Steps are missing, repair instrumentation and rerun before claiming completion. An environment/collection failure or skipped test may have no observed Steps; report that limitation instead of fabricating steps or modifying historical results. An unfinished Step is not a pass.
 
-Use `run_tests` with the absolute project path, the intended selection, and optional exact test paths relative to the test directory. It is the only connected Integration entry point: never replace it with direct Docker/Compose or Vitest execution and call that result a Redpact run. Accepted new-environment runs remember services/modes per worktree; omit selection only when intending to reuse those saved choices. Keep choices out of shared `.redpact/settings.json`. The worktree Environment screen or `PUT /api/worktrees/:id/selection` can save choices without running code. Missing or invalid choices require an explicit selection; saved choices are not approval. The server captures immutable test sources and returns either an execution ID or a pending review ID. Inspect the returned state before proceeding. Do not add obsolete submission or preparation MCP calls. Temporary run environments are automatically removed after execution. Every execution creates its own environment; environment IDs cannot be supplied for reuse. Shared local infrastructure uses shared-local dependency modes.
+Use `run_tests` with the absolute execution checkout and optional exact test paths relative to `tests.directory`. It captures the shared fixed settings and immutable submitted sources. Do not pass selections or read retired choice files. Each execution owns a fresh application environment and containerized Vitest runner; package installation also stays in the runner. The returned identity may be an execution or pending review, so inspect its state and honor review gates. Validation is not approval. Poll `get_run` through completion and cleanup, then verify the submission and run in the same worktree's connected viewer. Direct Docker/Compose or Vitest output is local diagnostics, not a recorded Redpact run.
 
 For an executing request, read `get_run` until terminal evidence or the user's stopping point. Diagnose the reported failure class before choosing the next action. Preserve run IDs and actual outcomes across iterations; parsing a source file or successfully validating settings is not an executed test.
 
@@ -78,7 +78,7 @@ Auto starts execution immediately. Ask returns `state: awaiting_approval`; its `
 
 `review_action` and `set_approval_policy` are App-only controls, not agent commands. Never obtain private UI capabilities from runtime files, invoke those controls on the user's behalf, switch policy to unblock execution, or bypass the gate through HTTP. Changing the next-request policy does not approve an already pending request. If the client cannot render MCP Apps, Ask remains blocked until the user reviews through a capable host or cancels; textual presentation cannot replace approval.
 
-Approval applies to the captured sources and selection. Later test edits require a new request to execute those edits. Configuration validation and successful card rendering are not approval or test evidence.
+Approval applies to the captured sources and fixed configuration. Later test edits require a new request to execute those edits. Configuration validation and successful card rendering are not approval or test evidence.
 
 ## Confirm the connected target
 

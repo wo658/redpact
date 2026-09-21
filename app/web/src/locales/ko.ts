@@ -1,6 +1,16 @@
 import type { en } from "./en"
 
 export const ko = {
+  "Dependency kinds": "의존성 종류",
+  "Runs current integration sources with the fixed project configuration.":
+    "프로젝트의 고정 구성으로 현재 통합 테스트 소스를 실행합니다.",
+  "Each dependency has one fixed definition shared by all worktrees. Edit the project configuration to change future executions.":
+    "각 의존성은 모든 워크트리가 공유하는 하나의 고정 정의를 사용합니다. 이후 실행을 변경하려면 프로젝트 설정을 편집하세요.",
+  "Dependencies cannot write or unset the same variable on the same service, even if their values match.":
+    "값이 같더라도 여러 의존성이 같은 서비스의 동일한 변수를 설정하거나 제거할 수 없습니다.",
+  "An environment override does not start its target service. Declare the service in the fixed project configuration or Compose prerequisites.":
+    "환경변수 설정은 대상 서비스를 시작하지 않습니다. 고정 프로젝트 설정이나 Compose 선행 조건에 서비스를 선언하세요.",
+
   "App shortcuts": "앱 바로가기",
   "GitHub repository": "GitHub 저장소",
   "Star on GitHub": "GitHub에서 Star 주기",

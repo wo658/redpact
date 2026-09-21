@@ -2,8 +2,9 @@
 
 These acceptance tests exercise the built Redpact application through real HTTP,
 MCP, Git worktrees, filesystem events, and persisted submissions. They do not import
-server Core or rerun the unit-test suite. Browser rendering and nested Docker
-provisioning inside the target application are outside this suite's coverage.
+server Core or rerun the unit-test suite. Nested Docker provisioning inside the target application is outside this suite's
+coverage. A few embedded browser probes exercise public UI behavior; maintained
+Playwright functional tests and captures use their separate execution entry.
 
 ## Run through the connected Redpact
 
@@ -21,10 +22,9 @@ provisioning inside the target application are outside this suite's coverage.
    Preserve other entries and approval policy. Verify the project root and selected
    checkout through that same instance's `/api/projects`, tracking, and worktrees
    endpoints.
-5. Call `configure validate` with the checkout path and
-   `selection: { services: ["app"], select: {} }`. The discovered bundle must include
+5. Call `configure validate` with the checkout path. The discovered bundle must include
    `target.ts` and `worktree-evidence.test.ts`.
-6. Call `run_tests` with that same path, the selection above, and
+6. Call `run_tests` with that same path and
    `tests: ["worktree-evidence.test.ts"]`. Honor any Ask approval. Use a fresh
    environment after application changes. Read `get_run` until terminal.
 7. Verify `run.target.projectRoot` is the requested checkout. On the connected
@@ -44,11 +44,9 @@ The target has its own `/tmp/redpact-e2e-state`; the installed controlling servi
 independent. Docker and Compose are required on the controller host. Git and pnpm are
 installed in the target image. No host Docker socket or host runtime data is mounted.
 
-Redpact supplies `REDPACT_CONNECTIONS_FILE`. The small `tests/target.ts` helper uses
-the observed app port to identify exactly one managed container, then issues HTTP
-and MCP requests from inside it using `docker exec`. The helper continues to use that transport for existing acceptance tests. The image
-now starts Redpact with `--host 0.0.0.0`; host-loopback published ports also provide
-browser access without a proxy or disabled request admission.
+Redpact supplies `REDPACT_CONNECTIONS_FILE`. The `tests/target.ts` helper uses its
+consumer-specific addresses for HTTP/MCP requests and the disposable fixture endpoint
+described below. No Docker CLI or socket is required inside either runner.
 
 Add named `test(...)` cases under `e2e/tests`, using only declared test dependencies,
 Node primitives, and helpers within that directory. Exercise public operations and
@@ -97,20 +95,32 @@ produces no PNG screenshots.
 metadata and distinct value/status HTTP reads through the actual application.
 It does not establish that the current MCP host renders the input card.
 
-`dependency-topology.test.ts` verifies fixed dependency modes, application-service
-relationships, assessment-only mode rejection, explicit execution selection and
-revision-preserving rejection of unsupported modes through HTTP and MCP.
+`dependency-topology.test.ts` verifies fixed dependency definitions, application-service
+relationships, and revision-preserving rejection of unsupported kinds through HTTP and MCP.
 
 `capture-viewport.test.ts` seeds isolated capture records, verifies their public API
 readback, and runs Playwright functional assertions against that same application
-container's real Mobile toggle. It uses the existing `redpact-playwright:1.63.0-v1`
-runner image and reports browser assertions inside the managed Integration result.
+container's real Mobile toggle. It uses Chromium installed in the disposable fixture image and reports browser assertions inside the managed Integration result.
 It does not claim those seeded PNGs were application captures. Actual automatic
 collection, delayed/path attachments, crops and high-DPI pages are independently
 verified by `REDPACT_DOCKER_TESTS=1` and `test/playwright-docker.test.ts`.
 
-`dependency-mode-names.test.ts` checks all four mode plans, rejection of service
-provisioning by connection modes and retired identifiers, and Korean labels plus
-mode switching and persisted editing in actual Chromium at desktop/mobile widths.
-The browser assertions run inside its managed Integration result. Fixture dependency
-services are declarations, not a claim that PostgreSQL or remote endpoints were run.
+`dependency-mode-names.test.ts` checks all four fixed kinds, rejection of managed
+services on external dependencies, and rejection of retired execution selection input.
+Fixture services are declarations, not evidence of actual PostgreSQL or remote execution.
+
+## Container-runner fixture transport
+
+`target.ts` uses the consumer-specific connection manifest to reach the disposable
+image's fixture service on port 54319. It needs no Docker CLI, Docker socket or host
+filesystem mount. The fixture endpoint executes bounded setup commands only inside
+that image and rejects browser-origin requests. It is not included in product packages
+and must never be deployed as a normal server. Existing embedded browser probes run
+inside the fixture image; maintained UI verification uses the Playwright entry.
+
+The fixture image exposes the real application on 54318 with its unchanged loopback
+host/origin admission. Its test-only UI deployment on 54320 accepts the reserved
+`app.redpact.test` origin and forwards same-origin requests to the loopback upstream.
+Cross-origin requests remain rejected. Current Playwright setup uses 54320; an older
+controller using loopback 54318 can still inspect the same application. This deployment
+fixture does not establish production proxy, TLS or external API compatibility.

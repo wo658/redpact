@@ -1,8 +1,10 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { expect, test } from "vitest"
-import { createVitestRunner } from "../src/adapters/test-runner/vitest.js"
+import { expect, test as unitTest } from "vitest"
+import { createTestVitestRunner as createVitestRunner } from "./helpers/container-runner.js"
+
+const test = unitTest.skipIf(process.env.REDPACT_DOCKER_TESTS !== "1")
 
 test("preserves explicit step verdicts and unfinished steps from real Vitest annotations", async () => {
   const directory = await mkdtemp(join(tmpdir(), "redpact-steps-"))

@@ -2,7 +2,6 @@ import { zValidator } from "@hono/zod-validator"
 import { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
-import { testSelectionSchema } from "../../core/settings-schema.js"
 import { startWorkInput } from "../../core/start-work-schema.js"
 import type { WorkStarts, WorktreeService } from "../../core/types/services.js"
 import { createWorktreeInspection } from "../../workflows/inspection.js"
@@ -31,94 +30,7 @@ export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
   const imageSide = z
     .union([z.object({ dataUrl: z.string() }), z.object({ error: z.string() })])
     .nullable()
-  const selectionResponse = z.object({ selection: testSelectionSchema.nullable() })
   const app = new Hono()
-    .get(
-      "/projects/:id/integration-defaults",
-      describeRoute({
-        operationId: "getProjectIntegrationDefaults",
-        summary: "Read project integration defaults or automatic choices",
-        tags: ["Projects"],
-        responses: {
-          ...localErrors,
-          ...notFound,
-          ...inputErrors,
-          ...invalidSettings,
-          200: jsonResponse(
-            z.object({
-              selection: testSelectionSchema.extend({
-                services: testSelectionSchema.shape.services.min(0),
-              }),
-              saved: z.boolean(),
-            }),
-            "Project integration choices",
-          ),
-        },
-      }),
-      async (c) => c.json(await service.getIntegrationDefaults(c.req.param("id"))),
-    )
-    .put(
-      "/projects/:id/integration-defaults",
-      describeRoute({
-        operationId: "setProjectIntegrationDefaults",
-        summary: "Save project integration defaults without execution",
-        tags: ["Projects"],
-        requestBody: jsonBody(testSelectionSchema),
-        responses: {
-          ...localErrors,
-          ...notFound,
-          ...inputErrors,
-          ...invalidSettings,
-          200: jsonResponse(selectionResponse, "Saved project integration choices"),
-        },
-      }),
-      zValidator("json", testSelectionSchema),
-      async (c) =>
-        c.json({
-          selection: await service.setIntegrationDefaults(c.req.param("id"), c.req.valid("json")),
-        }),
-    )
-    .get(
-      "/worktrees/:id/selection",
-      describeRoute({
-        operationId: "getWorktreeSelection",
-        summary: "Read saved worktree execution choices",
-        tags: ["Worktrees"],
-        responses: {
-          ...localErrors,
-          ...notFound,
-          200: jsonResponse(
-            selectionResponse,
-            "Saved choices, or null before the first selection.",
-          ),
-        },
-      }),
-      async (c) => c.json({ selection: await service.getSelection(c.req.param("id")) }),
-    )
-    .put(
-      "/worktrees/:id/selection",
-      describeRoute({
-        operationId: "setWorktreeSelection",
-        summary: "Save worktree execution choices",
-        description:
-          "Validates shared rules against this checkout and saves only this worktree's choices. Does not edit project files, prepare environments or approve execution.",
-        tags: ["Worktrees"],
-        requestBody: jsonBody(testSelectionSchema),
-        responses: {
-          ...localErrors,
-          ...inputErrors,
-          ...notFound,
-          ...conflict,
-          ...invalidSettings,
-          200: jsonResponse(selectionResponse, "Saved worktree choices."),
-        },
-      }),
-      zValidator("json", testSelectionSchema),
-      async (c) =>
-        c.json({
-          selection: await service.setSelection(c.req.param("id"), c.req.valid("json")),
-        }),
-    )
   if (starts) {
     app
       .post(
@@ -169,7 +81,7 @@ export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
         summary: "Read the shared project dependency rules",
         tags: ["Settings"],
         description:
-          "Reads the primary checkout's common dependency modes and environment override rules. Does not select modes or start containers.",
+          "Reads the primary checkout's fixed dependency definitions and environment binding rules. Does not start containers.",
         responses: {
           ...localErrors,
           ...notFound,
@@ -400,7 +312,7 @@ export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
         summary: "Read dependency choices",
         tags: ["Settings"],
         description:
-          "Read-only dependency mode settings and selection planning. Does not resolve secrets or start containers.",
+          "Read-only fixed dependency settings and execution planning. Does not resolve secrets or start containers.",
 
         responses: {
           ...localErrors,
@@ -413,7 +325,7 @@ export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
           ),
           422: jsonResponse(
             z.union([dependenciesResponse, z.object({ error: z.string() })]),
-            "Invalid settings or selection.",
+            "Invalid fixed execution settings.",
           ),
         },
       }),
@@ -429,7 +341,7 @@ export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
         summary: "Read one dependency definition",
         tags: ["Settings"],
         description:
-          "Read-only dependency mode settings and selection planning. Does not resolve secrets or start containers.",
+          "Read-only fixed dependency settings and execution planning. Does not resolve secrets or start containers.",
 
         responses: {
           ...localErrors,
@@ -442,7 +354,7 @@ export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
           ),
           422: jsonResponse(
             z.union([dependenciesResponse, z.object({ error: z.string() })]),
-            "Invalid settings or selection.",
+            "Invalid fixed execution settings.",
           ),
         },
       }),
@@ -455,11 +367,11 @@ export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
       "/worktrees/:id/dependencies/plan",
       describeRoute({
         operationId: "planDependencies",
-        summary: "Preview a dependency selection",
+        summary: "Preview the fixed execution plan",
         tags: ["Settings"],
         description:
-          "Read-only dependency mode settings and selection planning. Does not resolve secrets or start containers.",
-        requestBody: jsonBody(testSelectionSchema),
+          "Read-only fixed dependency settings and execution planning. Does not resolve secrets or start containers.",
+        requestBody: jsonBody(z.strictObject({})),
         responses: {
           ...localErrors,
           ...notFound,
@@ -471,17 +383,13 @@ export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
           ),
           422: jsonResponse(
             z.union([dependenciesResponse, z.object({ error: z.string() })]),
-            "Invalid settings or selection.",
+            "Invalid fixed execution settings.",
           ),
         },
       }),
-      zValidator("json", testSelectionSchema),
+      zValidator("json", z.strictObject({})),
       async (c) => {
-        const result = await inspection.dependencies(
-          c.req.param("id"),
-          undefined,
-          c.req.valid("json"),
-        )
+        const result = await inspection.dependencies(c.req.param("id"), undefined)
         return c.json(result, result.valid ? 200 : 422)
       },
     )

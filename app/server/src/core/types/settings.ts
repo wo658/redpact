@@ -21,8 +21,7 @@ export type SettingsResult = {
   issues: SettingsIssue[]
   settings?: Settings
   source?: string
-  projectRules?: { file: string; source: string; override?: { file: string; source: string } }
-  promotion?: { file: string; baseSha256: string; overrideSha256: string; source: string }
+  projectRules?: { file: string; source: string }
   digest?: string
   bundle?: { files: { path: string; sha256: string; source: string }[] }
   plan?: EnvironmentPlan

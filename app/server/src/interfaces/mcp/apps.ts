@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs"
 import type { McpServer } from "@modelcontextprotocol/server"
 import { z } from "zod"
 import { approvalPolicySchema } from "../../core/review-schema.js"
-import { testSelectionSchema } from "../../core/settings-schema.js"
 import type { ReviewTests, ReviewView } from "../../core/types/reviews.js"
 
 export const environmentResource = "ui://redpact/environment.html"
@@ -74,7 +73,6 @@ export function registerApps(server: McpServer, reviews?: ReviewTests) {
         token: z.string().min(32),
         revision: z.number().int().nonnegative(),
         subject: z.enum(["environment", "tests"]),
-        selection: testSelectionSchema.optional(),
       }),
       _meta: { ui: { resourceUri: testsResource, visibility: ["app"] } },
       annotations: {

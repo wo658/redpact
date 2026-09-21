@@ -134,7 +134,7 @@ export function createReviewTests(deps: {
         dependencies: Object.fromEntries(
           Object.entries(settings.settings.dependencies).map(([name, definition]) => [
             name,
-            Object.keys(definition.modes),
+            [definition.kind],
           ]),
         ),
       }
@@ -170,7 +170,7 @@ export function createReviewTests(deps: {
         if (input.subject === "tests" && input.selection) {
           problem("invalid_input", "Test approval cannot change environment selection")
         }
-        const selection = input.selection ?? record.selection
+        const selection = record.selection
         await validate(record, selection)
         const updated: ReviewRecord = { ...record, selection, revision: record.revision + 1 }
         if (input.subject === "environment") {

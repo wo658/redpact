@@ -166,7 +166,7 @@ export function createCaptureWorkflow(deps: {
     async inspect(worktreeId) {
       const target = await deps.worktrees.resolve(worktreeId)
       const runs = deps.captures.list(worktreeId)
-      const selection = (await deps.worktrees.getSelection(worktreeId)) ?? runs[0]?.selection
+      const selection = (await deps.worktrees.getSelection(worktreeId)) ?? undefined
       const result = await target.settings.read(selection)
       let inputDigest: string | undefined
       let error = result.valid ? undefined : result.issues.map((issue) => issue.message).join("\n")
@@ -186,7 +186,7 @@ export function createCaptureWorkflow(deps: {
     },
     async start(
       worktreeId,
-      selection?: TestSelection,
+      _selection?: TestSelection,
       viewport?: { width: number; height: number },
       targetName?: string,
     ) {
@@ -199,7 +199,6 @@ export function createCaptureWorkflow(deps: {
         }
         const target = await deps.worktrees.resolve(worktreeId)
         const selected =
-          selection ??
           (await deps.worktrees.getSelection(worktreeId)) ??
           problem("invalid_input", "Choose application services and dependency modes")
         const result = await target.settings.read(selected)

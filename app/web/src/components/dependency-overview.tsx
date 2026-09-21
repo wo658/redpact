@@ -12,7 +12,7 @@ import {
   type DependencyNode as Node,
   dependencyNodeKey as nodeKey,
 } from "@/lib/dependency-diagram"
-import { dependencyModeLabel, dependencyModeNames } from "@/lib/dependency-modes"
+import { dependencyModeLabel } from "@/lib/dependency-modes"
 import { DependencyDiagram } from "./dependency-diagram"
 import { EmptyState } from "./feedback"
 import { Badge } from "./ui/badge"
@@ -157,43 +157,11 @@ function RelationshipList({
 export function ModeAssessments({ dependency }: { dependency: DependencyDefinition }) {
   const { t } = useTranslation()
   return (
-    <div className="flex w-full min-w-0 content-width-768 flex-col gap-3 [overflow-wrap:anywhere]">
-      {dependency.recommendation && (
-        <p className="text-sm">
-          <Badge variant="secondary">{t("Recommended")}</Badge>{" "}
-          {t(dependencyModeLabel(dependency.recommendation.mode))} ·{" "}
-          {dependency.recommendation.reason}
-        </p>
-      )}
-      <ul className="flex min-w-0 flex-col divide-y">
-        {dependencyModeNames.map((mode) => {
-          const definition = dependency.modes[mode]
-          const assessment = dependency.assessments?.[mode]
-          let status = "Not assessed"
-          if (definition) {
-            status = "Mode configured"
-          } else if (assessment?.status === "unavailable") {
-            status = "Unavailable"
-          } else if (assessment?.status === "implementation-needed") {
-            status = "Implementation needed"
-          }
-          return (
-            <li key={mode} className="flex min-w-0 flex-col gap-2 py-3 [overflow-wrap:anywhere]">
-              <h4 className="text-sm font-medium">{t(dependencyModeLabel(mode))}</h4>
-              <Badge variant="outline" className="self-start">
-                {t(status)}
-              </Badge>
-              {assessment && (
-                <>
-                  <p className="text-sm">{assessment.reason}</p>
-                  <SourceList evidence={assessment.evidence} />
-                </>
-              )}
-              {!!definition?.services?.length && <ServiceList services={definition.services} />}
-            </li>
-          )
-        })}
-      </ul>
+    <div className="flex min-w-0 flex-col gap-3">
+      <Badge variant="outline" className="self-start">
+        {t(dependencyModeLabel(dependency.kind))}
+      </Badge>
+      {!!dependency.services?.length && <ServiceList services={dependency.services} />}
     </div>
   )
 }

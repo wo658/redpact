@@ -4,7 +4,6 @@ import { join } from "node:path"
 import { isDeepStrictEqual } from "node:util"
 import { parseDocument } from "yaml"
 import type { z } from "zod"
-import { testSelectionSchema } from "../../core/settings-schema.js"
 import { trackingSchema } from "../../core/tracking-schema.js"
 import type { PreferenceFiles } from "../../core/types/preferences.js"
 import { readProjectFile } from "./bundle.js"
@@ -74,11 +73,6 @@ async function save<T>(root: string, file: string, schema: z.ZodType<T>, value: 
 }
 
 export const preferenceFiles: PreferenceFiles = {
-  integrationDefaults: (root) => read(root, "integration-defaults.json", testSelectionSchema),
-  saveIntegrationDefaults: (root, value) =>
-    save(root, "integration-defaults.json", testSelectionSchema, value),
   tracking: (root, previous) => recover(root, "tracking.json", trackingSchema, previous),
   saveTracking: (root, value) => save(root, "tracking.json", trackingSchema, value),
-  selection: (root, previous) => recover(root, "selection.json", testSelectionSchema, previous),
-  saveSelection: (root, value) => save(root, "selection.json", testSelectionSchema, value),
 }

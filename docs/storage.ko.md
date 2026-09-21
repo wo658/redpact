@@ -26,9 +26,9 @@ description: 레코드 식별자, 아티팩트 소유권과 파일 영속성 규
 | Work item | 해당 프로젝트·워크트리의 캡처된 작업 의도 |
 | Submission | 불변 테스트·helper 소스, digest, 파싱한 의도와 실행기 식별 |
 | Integration run | 제출, 수락한 대상·설정·Git, 실행 상태와 결과 |
-| Environment | 서비스·모드 선택, 소스 식별, 소유 리소스와 수명주기 |
+| Environment | 고정 서비스·의존성 종류, 소스 식별, 소유 리소스와 수명주기 |
 | Work start | 관리 체크아웃 생성 입력과 계획 결과의 영속 기록 |
-| Review | 캡처된 MCP 정책·승인·선택·revision과 실행 연결 |
+| Review | 캡처된 MCP 정책·승인·캡처된 구성·revision과 실행 연결 |
 | Unit run | 명령·런타임 식별, 출력, 최종 상태와 정리 상태 |
 | Playwright run | 타깃·시나리오 결과와 브라우저 아티팩트 |
 | Merge attempt | 검사한 소스·대상 식별자, 진행과 복구 결과 |

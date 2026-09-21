@@ -108,4 +108,4 @@ Every execution owns temporary resources and cleans them up after completion, fa
 
 **Clean up worktree code** removes recorded Playwright task drafts only after its checks pass. Historical evidence remains. Unit runtime input copies are removed during cleanup while command evidence remains. Integration submissions retain their captured test bundle.
 
-Changing [configuration](configuration.md) or execution selection affects future requests; it does not rewrite results or reconfigure an existing environment. Return to the [documentation overview](index.md).
+Changing [configuration](configuration.md)  affects future requests; it does not rewrite results or reconfigure an existing environment. Return to the [documentation overview](index.md).

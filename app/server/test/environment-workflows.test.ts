@@ -34,7 +34,7 @@ async function request(path: string, body?: object) {
     ...(body ? { method: "POST", body: JSON.stringify(body) } : {}),
   })
 }
-async function operation(name: string, args: object) {
+async function _operation(name: string, args: object) {
   if (!["configure", "get_run"].includes(name)) {
     return managementHttp(app, name, args)
   }
@@ -63,7 +63,7 @@ beforeEach(async () => {
   await writeFile(join(projectRoot, "compose.yaml"), "services:\n  app:\n    image: alpine:3.21\n")
   await writeFile(
     join(projectRoot, ".redpact/settings.json"),
-    JSON.stringify({ composeFiles: ["compose.yaml"] }),
+    JSON.stringify({ composeFiles: ["compose.yaml"], services: ["app"] }),
   )
   storage = openStore(join(root, "state"))
   const settings = createSettingsService(projectRoot)
@@ -179,7 +179,11 @@ test("an approved request with changed settings cannot refresh an environment be
   const refresh = vi.spyOn(environments, "prepare")
   await writeFile(
     join(root, "project/.redpact/settings.json"),
-    JSON.stringify({ composeFiles: ["compose.yaml"], tests: { timeoutMs: 1234 } }),
+    JSON.stringify({
+      composeFiles: ["compose.yaml"],
+      tests: { timeoutMs: 1234 },
+      services: ["app"],
+    }),
   )
   await expect(runs.start(submissionId, selection, expectedSettingsDigest)).rejects.toThrow(
     "Settings changed after approval",

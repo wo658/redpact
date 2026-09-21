@@ -164,8 +164,8 @@ test("project integration execution explains its project defaults and exposes th
       scope: "all",
     }),
   )
-  assert.match(html, /Integration defaults/)
-  assert.match(html, /project integration defaults/)
+  assert.doesNotMatch(html, /Integration defaults/)
+  assert.match(html, /fixed project configuration/)
   assert.doesNotMatch(html, /saved worktree environment choices/)
 })
 

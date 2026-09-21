@@ -71,6 +71,7 @@ test("선언된 Playwright 앱 서비스가 Compose에 없으면 공통 설정 �
       service: "missing",
       port: 3000,
     },
+    services: ["app"],
   })
   const result = planContainers(settings, { services: { app: {} } })
   expect(result.issues).toEqual(

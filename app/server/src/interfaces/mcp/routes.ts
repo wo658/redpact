@@ -4,7 +4,7 @@ import { McpServer, WebStandardStreamableHTTPServerTransport } from "@modelconte
 import { z } from "zod"
 import { problem } from "../../core/problems.js"
 import { publicSettings } from "../../core/settings.js"
-import { projectPath, testSelectionSchema } from "../../core/settings-schema.js"
+import { projectPath } from "../../core/settings-schema.js"
 import type { SettingsResult } from "../../core/types/settings.js"
 import { configure, configureInput } from "../../workflows/configure.js"
 import type { Services } from "../../workflows/services.js"
@@ -95,7 +95,7 @@ export function mcpRoutes(services: Services) {
       "configure",
       {
         description:
-          "Configure Redpact through local files: first call action=describe with the absolute checkout path for the current schema, examples and rulesRoot. Inspect existing files, edit rulesRoot/.redpact/settings.json directly, then call action=validate with path and optional selection. Use action=inspect for current settings and discovered tests. Linked worktrees may author scoped dependencies.override.json as described by specification.dependencyOverrides; inspect returns a read-only promotion candidate. Shared settings and checkout-local execution choices are separate. This read-only tool never saves files, starts containers or tests, or grants approval; validation does not prove readiness.",
+          "Configure Redpact through local files: first call action=describe with the absolute checkout path for the current schema, examples and rulesRoot. Inspect existing files, edit rulesRoot/.redpact/settings.json directly, then call action=validate with path. Use action=inspect for current settings and discovered tests. All worktrees share one fixed project configuration; execution inputs resolve in the requested checkout. This read-only tool never saves files, starts containers or tests, or grants approval; validation does not prove readiness.",
         inputSchema: configureInput.extend({
           path: pathInput
             .optional()
@@ -121,7 +121,7 @@ export function mcpRoutes(services: Services) {
         const preview = {
           kind: "environment",
           path,
-          selection: input.selection,
+
           dependencies: value.dependencies,
           valid: validation?.valid,
           issues: validation?.issues ?? [],
@@ -148,12 +148,11 @@ export function mcpRoutes(services: Services) {
       "run_tests",
       {
         description:
-          "Run managed Integration tests from tests.directory in the project at path. This MCP tool never runs Unit commands or Playwright targets; use the Redpact viewer or HTTP execution routes for those separate runtimes. Snapshots Integration sources and returns a run ID while the server prepares the selected Compose environment and executes Vitest. Omit selection to use saved worktree choices; supply selection for the first run or to replace them. Temporary environments are removed after execution, with logs and results preserved. No registration or submission calls are required.",
+          "Run managed Integration tests from tests.directory in the project at path. This MCP tool never runs Unit commands or Playwright targets; use the Redpact viewer or HTTP execution routes for those separate runtimes. Snapshots Integration sources and returns a run ID while the server prepares the selected Compose environment and executes Vitest. Execution uses the fixed shared project configuration. Temporary environments are removed after execution, with logs and results preserved. No registration or submission calls are required.",
         _meta: uiMeta(testsResource),
         inputSchema: z.strictObject({
           path: pathInput,
           tests: z.array(projectPath).min(1).max(50).optional(),
-          selection: testSelectionSchema.optional(),
         }),
         annotations: {
           readOnlyHint: false,

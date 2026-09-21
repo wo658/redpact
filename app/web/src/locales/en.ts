@@ -1,4 +1,14 @@
 export const en = {
+  "Dependency kinds": "Dependency kinds",
+  "Runs current integration sources with the fixed project configuration.":
+    "Runs current integration sources with the fixed project configuration.",
+  "Each dependency has one fixed definition shared by all worktrees. Edit the project configuration to change future executions.":
+    "Each dependency has one fixed definition shared by all worktrees. Edit the project configuration to change future executions.",
+  "Dependencies cannot write or unset the same variable on the same service, even if their values match.":
+    "Dependencies cannot write or unset the same variable on the same service, even if their values match.",
+  "An environment override does not start its target service. Declare the service in the fixed project configuration or Compose prerequisites.":
+    "An environment override does not start its target service. Declare the service in the fixed project configuration or Compose prerequisites.",
+
   "App shortcuts": "App shortcuts",
   "GitHub repository": "GitHub repository",
   "Star on GitHub": "Star on GitHub",

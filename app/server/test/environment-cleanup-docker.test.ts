@@ -67,7 +67,7 @@ volumes:
     )
     await writeFile(
       join(project, ".redpact/settings.json"),
-      JSON.stringify({ composeFiles: ["compose.yaml"] }),
+      JSON.stringify({ composeFiles: ["compose.yaml"], services: ["app", "named"] }),
     )
     const settings = createSettingsService(project)
     const storage = openStore(data)

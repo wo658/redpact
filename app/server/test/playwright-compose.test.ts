@@ -11,12 +11,12 @@ import { createCaptureRunner } from "../src/adapters/playwright/runner.js"
 import { createSettingsService } from "../src/adapters/settings/json.js"
 import { createCaptureStore } from "../src/adapters/storage/captures.js"
 import { openStore } from "../src/adapters/storage/files.js"
-import { createVitestRunner } from "../src/adapters/test-runner/vitest.js"
 import { createCaptureWorkflow } from "../src/workflows/capture-ui.js"
 import { createEnvironments } from "../src/workflows/environments.js"
 import { createCaptures } from "../src/workflows/playwright.js"
 import { createRuns } from "../src/workflows/runs.js"
 import { createStopEnvironment } from "../src/workflows/stop-environment.js"
+import { createTestVitestRunner as createVitestRunner } from "./helpers/container-runner.js"
 import { createTestWorktrees } from "./helpers/worktrees.js"
 
 test.skipIf(process.env.REDPACT_DOCKER_TESTS !== "1")(
@@ -44,6 +44,7 @@ test.skipIf(process.env.REDPACT_DOCKER_TESTS !== "1")(
           service: "app",
           port: 3000,
         },
+        services: ["app"],
       }),
     )
     await writeFile(
@@ -64,7 +65,7 @@ test.skipIf(process.env.REDPACT_DOCKER_TESTS !== "1")(
     )
     await writeFile(
       join(project, "server.cjs"),
-      "require('http').createServer((q,s)=>s.end(require('fs').readFileSync('page.html'))).listen(3000,'127.0.0.1')",
+      "require('http').createServer((q,s)=>s.end(require('fs').readFileSync('page.html'))).listen(3000,'0.0.0.0')",
     )
     await writeFile(join(project, ".dockerignore"), "ui-tests\nnoise.txt\n.git\n")
     await writeFile(join(project, "page.html"), "<h1>Before</h1>")

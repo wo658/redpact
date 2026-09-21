@@ -206,20 +206,9 @@ export type ServiceRelationship = {
   description: string
   evidence: SourceEvidence[]
 }
-export type DependencyDefinition = {
+export type DependencyDefinition = DependencyMode & {
   description?: string
-  modes: Record<string, DependencyMode>
-  assessments?: Partial<
-    Record<
-      DependencyModeName,
-      {
-        status: "unavailable" | "implementation-needed"
-        reason: string
-        evidence: SourceEvidence[]
-      }
-    >
-  >
-  recommendation?: { mode: DependencyModeName; reason: string }
+  kind: DependencyModeName
 }
 export type DependencyMode = {
   services?: string[]
@@ -560,42 +549,16 @@ export function createApi(fetcher: typeof fetch = fetch) {
         throw error
       }
     },
-    projectIntegrationDefaults: (projectId: string, signal?: AbortSignal) =>
-      request<{ selection: TestSelection; saved: boolean }>(
-        `/projects/${encodeURIComponent(projectId)}/integration-defaults`,
-        undefined,
-        signal,
-      ),
-    setProjectIntegrationDefaults: (projectId: string, selection: TestSelection) =>
-      request<{ selection: TestSelection }>(
-        `/projects/${encodeURIComponent(projectId)}/integration-defaults`,
-        selection,
-        undefined,
-        "PUT",
-      ),
-    worktreeSelection: (worktreeId: string, signal?: AbortSignal) =>
-      request<{ selection: TestSelection | null }>(
-        `/worktrees/${encodeURIComponent(worktreeId)}/selection`,
-        undefined,
-        signal,
-      ),
-    setWorktreeSelection: (worktreeId: string, selection: TestSelection) =>
-      request<{ selection: TestSelection }>(
-        `/worktrees/${encodeURIComponent(worktreeId)}/selection`,
-        selection,
-        undefined,
-        "PUT",
-      ),
     worktreeDependencies: (worktreeId: string, signal?: AbortSignal) =>
       request<DependencySettings>(
         `/worktrees/${encodeURIComponent(worktreeId)}/dependencies`,
         undefined,
         signal,
       ),
-    planEnvironment: (worktreeId: string, selection: TestSelection) =>
+    planEnvironment: (worktreeId: string) =>
       request<DependencySettings>(
         `/worktrees/${encodeURIComponent(worktreeId)}/dependencies/plan`,
-        selection,
+        {},
       ),
     stopEnvironment: (id: string) =>
       request<WorktreeEnvironment>(`/environments/${encodeURIComponent(id)}/stop`, {}),
@@ -754,14 +717,8 @@ export function createApi(fetcher: typeof fetch = fetch) {
         inputDigest?: string
         error?: string
       }>(`/worktrees/${encodeURIComponent(id)}/playwright`, undefined, signal),
-    runPlaywright: (
-      id: string,
-      selection?: TestSelection,
-      viewport?: { width: number; height: number },
-      target?: string,
-    ) =>
+    runPlaywright: (id: string, viewport?: { width: number; height: number }, target?: string) =>
       request<CaptureRun>(`/worktrees/${encodeURIComponent(id)}/playwright/run`, {
-        selection,
         viewport,
         target,
       }),

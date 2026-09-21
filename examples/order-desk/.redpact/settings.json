@@ -2,19 +2,12 @@
   "composeFiles": ["compose.yaml"],
   "dependencies": {
     "payments": {
-      "modes": {
-        "mock": {
-          "env": {
-            "app": {
-              "PAYMENTS_MODE": "mock"
-            }
-          }
+      "env": {
+        "app": {
+          "PAYMENTS_MODE": "mock"
         }
       },
-      "recommendation": {
-        "mode": "mock",
-        "reason": "The example implements an in-process payment mock"
-      }
+      "kind": "mock"
     }
   },
   "tests": {
@@ -26,7 +19,8 @@
         "scheme": "http"
       },
       "TZ": "UTC"
-    }
+    },
+    "directory": "tests"
   },
   "applicationServices": {
     "app": {
@@ -116,5 +110,6 @@
         }
       ]
     }
-  ]
+  ],
+  "services": ["app"]
 }

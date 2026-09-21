@@ -24,9 +24,7 @@ export type WorktreeService = {
   exclusive<T>(operation: (admission: WorktreeAdmission) => Promise<T> | T): Promise<T>
   resolve(id: string): Promise<{ worktree: Worktree; settings: SettingsService; git: GitService }>
   getIntegrationDefaults(projectId: string): Promise<{ selection: TestSelection; saved: boolean }>
-  setIntegrationDefaults(projectId: string, selection: TestSelection): Promise<TestSelection>
   getSelection(id: string): Promise<TestSelection | null>
-  setSelection(id: string, selection: TestSelection): Promise<TestSelection>
   settingsForPath(path: string): Promise<SettingsService>
   projectSettings(id: string): Promise<SettingsService>
   getProject(id: string): ProjectRecord

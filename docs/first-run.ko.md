@@ -7,12 +7,12 @@ description: 포함된 HTTP 시나리오를 실행하고 기록된 결과를 확
 
 이 안내는 함께 제공되는 Order Desk 애플리케이션을 사용합니다. 실제 결제 게이트웨이를 호출하지 않고 구현된 결제 mock과 함께 HTTP 애플리케이션을 Docker에서 실행합니다. [실행 중인 서버와 연결된 에이전트](installation.md), Compose를 포함한 Docker가 필요합니다.
 
-직접 개발하는 애플리케이션에는 [프로젝트 설정](first-project.md)을 완료한 뒤 예제 경로, 테스트 파일, 선택을 작성한 값으로 바꿔 적용하세요.
+직접 개발하는 애플리케이션에는 [프로젝트 설정](first-project.md)을 완료한 뒤 예제 경로와 테스트 파일을 작성한 값으로 바꿔 적용하세요.
 
 예제의 `tools/review.mjs`로 실행 중인 서버에 HTTP 검증을 제출할 수도 있습니다.
 저장소 루트에서
 `REDPACT_URL=http://127.0.0.1:54318 node examples/order-desk/tools/review.mjs http`를 실행하세요.
-이 명령은 예제 체크아웃의 `app` / `payments: mock` 선택을 저장하고 시나리오를 제출한 뒤
+이 명령은 예제의 고정 `app` / `payments: mock` 구성을 사용하고 시나리오를 제출한 뒤
 실행 자원 정리를 기다립니다. `all`은 전체 예제 시나리오를 실행합니다. 각 시나리오는
 새 환경을 사용하며 수동 Project Container를 재사용하지 않습니다.
 
@@ -20,18 +20,14 @@ description: 포함된 HTTP 시나리오를 실행하고 기록된 결과를 확
 
 예제는 Redpact 체크아웃의 `examples/order-desk`에 있습니다. 도구 호출에는 `/absolute/path/to/redpact/examples/order-desk`처럼 절대 경로를 사용하세요.
 
-예제 설정은 `compose.yaml`을 참조하고 `payments`의 `mock` 모드를 정의하며 테스트에 서비스 연결을 제공합니다. `tests/http.test.js`는 결제 요청이 HTTP 200과 함께 `quantity: 1`, `totalCents: 250`을 반환하는지 검증합니다. 로컬 픽스처가 관리형 서비스 주소를 확인하므로 할당된 호스트 포트를 추측할 필요가 없습니다.
+예제 설정은 `compose.yaml`을 참조하고 `payments`의 고정 `mock` 의존성을 정의하며 테스트에 서비스 연결을 제공합니다. `tests/http.test.js`는 결제 요청이 HTTP 200과 함께 `quantity: 1`, `totalCents: 250`을 반환하는지 검증합니다. 로컬 픽스처가 관리형 서비스 주소를 확인하므로 할당된 호스트 포트를 추측할 필요가 없습니다.
 
 예제 경로와 `action: "describe"`로 `configure`를 호출한 뒤 검증하세요.
 
 ```json
 {
   "action": "validate",
-  "path": "/absolute/path/to/redpact/examples/order-desk",
-  "selection": {
-    "services": ["app"],
-    "select": { "payments": "mock" }
-  }
+  "path": "/absolute/path/to/redpact/examples/order-desk"
 }
 ```
 
@@ -44,11 +40,7 @@ MCP `run_tests` 도구를 호출하세요.
 ```json
 {
   "path": "/absolute/path/to/redpact/examples/order-desk",
-  "tests": ["http.test.js"],
-  "selection": {
-    "services": ["app"],
-    "select": { "payments": "mock" }
-  }
+  "tests": ["http.test.js"]
 }
 ```
 
@@ -101,7 +93,7 @@ expect(await response.json()).toMatchObject({ quantity: 1, totalCents: 250 })
 | 반환된 실행 식별자 | 뷰어와 에이전트가 같은 시도를 가리킬 수 있음 |
 | 절대 체크아웃 경로 | 의도한 애플리케이션 소스가 선택됐는지 확인 |
 | 제출한 테스트와 케이스 | 무엇을 검증했는지 확인 |
-| 선택한 서비스와 의존성 모드 | 실제 의존성과 대체 구현 중 무엇을 사용했는지 설명 |
+| 설정된 서비스와 의존성 종류 | 실제 의존성과 대체 구현 중 무엇을 사용했는지 설명 |
 | 케이스 결과와 첫 관련 오류 | 단언 결과와 준비 실패를 구분 |
 | 정리 상태 | 임시 리소스가 제거됐는지 확인 |
 
@@ -117,7 +109,7 @@ expect(await response.json()).toMatchObject({ quantity: 1, totalCents: 250 })
 
 실행마다 새 임시 환경을 준비하고 종료 후 해당 리소스를 제거합니다. 기록된 소스, 결과, 로그는 남습니다. 정리 상태는 테스트 판정과 별개입니다. 테스트가 통과했더라도 리소스 제거에 실패했다면 확인이 필요할 수 있습니다.
 
-모든 테스트 실행은 자체 임시 환경을 사용하며 독립적인 테스트 환경 준비·재사용은 지원하지 않습니다. 수동 점검용 Project Container는 별도 환경을 명시적으로 시작하며 테스트가 재사용할 수 없습니다. 독립 관리 서비스에는 shared-local 또는 remote 모드를 사용합니다. 사용자는 웹 제어로 실행을 취소하거나 정리를 재시도합니다. MCP는 별도 수명주기 도구를 제공하지 않습니다.
+모든 테스트 실행은 자체 임시 환경을 사용하며 독립적인 테스트 환경 준비·재사용은 지원하지 않습니다. 수동 점검용 Project Container는 별도 환경을 명시적으로 시작하며 테스트가 재사용할 수 없습니다. 독립 관리 서비스에는 shared-local 또는 remote 종류를 사용합니다. 사용자는 웹 제어로 실행을 취소하거나 정리를 재시도합니다. MCP는 별도 수명주기 도구를 제공하지 않습니다.
 
 ## 내 애플리케이션에 적용
 

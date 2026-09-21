@@ -3,7 +3,7 @@ import { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
 import { captureRunSchema } from "../../core/playwright-schema.js"
-import { name, testSelectionSchema } from "../../core/settings-schema.js"
+import { name } from "../../core/settings-schema.js"
 import type {
   CaptureService,
   CaptureWorkflow,
@@ -12,7 +12,6 @@ import type {
 import { jsonResponse, localErrors } from "./docs/metadata.js"
 
 const captureInputSchema = z.strictObject({
-  selection: testSelectionSchema.optional(),
   target: name.optional(),
   viewport: z
     .strictObject({
@@ -92,7 +91,7 @@ export function playwrightRoutes(
       async (c) => {
         const input = c.req.valid("json")
         return c.json(
-          await workflow.start(c.req.param("id"), input.selection, input.viewport, input.target),
+          await workflow.start(c.req.param("id"), undefined, input.viewport, input.target),
         )
       },
     )

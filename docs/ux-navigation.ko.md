@@ -55,8 +55,6 @@ Redpact
 │   │   │   │   ├── Code [탭]
 │   │   │   │   ├── Execution results [탭]
 │   │   │   │   │   └── 기록된 케이스, 단계와 판정
-│   │   │   │   ├── Integration defaults [대화상자]
-│   │   │   │   │   └── 루트 서비스와 의존성 모드 선택
 │   │   │   │   └── Run Tests [작업]
 │   │   │   └── Playwright [탭]
 │   │   │       ├── Screenshots [탭]
@@ -84,11 +82,11 @@ Redpact
 │   │   │   ├── Overview [탭]
 │   │   │   │   └── 서비스 관계 → 선택한 서비스 상세
 │   │   │   ├── Configuration [탭]
-│   │   │   │   └── 선택한 의존성 → 설정된 모드
+│   │   │   │   └── 선택한 의존성 → 고정 종류
 │   │   │   │       ├── Per-environment / Shared local / Remote connection / Mock
 │   │   │   │       ├── Additional services
 │   │   │   │       └── 환경 override와 비밀값 입력
-│   │   │   └── Dependency modes and environment overrides [대화상자]
+│   │   │   └── Fixed dependencies and environment bindings [대화상자]
 │   │   └── Project settings [페이지]
 │   │       ├── General [섹션]
 │   │       │   └── Git 프로젝트의 메인 브랜치 선택
@@ -121,7 +119,7 @@ Redpact
 │   │   │   ├── Log [탭; 조건부]
 │   │   │   │   └── 실행 이력과 복사 가능한 상세
 │   │   │   ├── Environment [탭; 조건부]
-│   │   │   │   ├── 워크트리 서비스와 의존성 모드 선택
+│   │   │   │   ├── 프로젝트 고정 실행 구성
 │   │   │   │   └── 기록된 환경 상태, 리소스와 정리 제어
 │   │   │   └── Git 툴바 작업
 │   │   │       ├── Uncommitted [대화상자; 변경사항이 있을 때만]
@@ -181,7 +179,7 @@ Redpact
   실행 제어 없이 커밋 diff만 보여 줍니다.
 - Playwright는 현재 워크트리 캡처 초안과 변경된 프로젝트 캡처 파일을 실행 전에도 나열합니다.
   Desktop·Mobile은 최신 대응 실행의 이미지를 기록된 viewport로 필터링하며 소스 파일은 숨기지 않습니다. 기능 결과는 Tests와 실행 이력에 있습니다.
-- Container는 수동 유지 앱 환경이며 프로젝트 Integration 기본 선택을 사용합니다.
+- Container는 수동 유지 앱 환경이며 프로젝트 고정 실행 설정을 사용합니다.
   테스트 실행 증거와는 별개입니다.
 - 브라우저 데스크톱은 사이드바를 연 상태로 유지하며, 헤더에는 사이드바 전환, 페이지
   제목이나 이력 제어 대신 열린 작업공간 탭만 둡니다. 좁은 모바일 화면은 사이드바 전환을

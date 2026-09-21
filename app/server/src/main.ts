@@ -213,6 +213,7 @@ const command = new Command()
           instance.id,
           (record) => Object.values(projectSecrets.resolve(record)),
           readTestResources,
+          (record) => projectSecrets.resolve(record),
         ),
         baseline: createCaptureBaselineCleanup(directory),
         worktrees,

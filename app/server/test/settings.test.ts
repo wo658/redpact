@@ -27,12 +27,12 @@ test("fixed modes allow remote APIs and container-backed mock implementations", 
       composeFiles: ["compose.yaml"],
       dependencies: {
         payments: {
-          modes: {
-            remote: { env: { app: { PAYMENTS_MODE: "sandbox" } } },
-            mock: { services: ["payments-stub"] },
-          },
+          kind: "mock",
+          services: ["payments-stub"],
+          env: { app: { PAYMENTS_MODE: "sandbox" } },
         },
       },
+      services: ["app"],
     }),
     "settings.json",
   )
@@ -56,7 +56,13 @@ test("captured project rules validate against target Compose even without a loca
     await mkdir(stage)
     const source = JSON.stringify({
       composeFiles: ["compose.yaml"],
-      dependencies: { payment: { modes: { mock: { env: { app: { PAYMENT: "mock" } } } } } },
+      dependencies: {
+        payment: {
+          kind: "mock",
+          env: { app: { PAYMENT: "mock" } },
+        },
+      },
+      services: ["app"],
     })
     await writeFile(join(primary, ".redpact/settings.json"), source)
     for (const path of [target, stage]) {
@@ -92,6 +98,7 @@ test("empty settings normalize to an unconfigured project", () => {
   expect(result.valid).toBe(true)
   expect(result.settings).toEqual({
     composeFiles: [],
+    services: [],
     dependencies: {},
     tests: { directory: "integration", timeoutMs: 10000, env: {} },
   })

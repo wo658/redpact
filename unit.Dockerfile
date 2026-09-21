@@ -10,4 +10,4 @@ COPY app/desktop/package.json ./app/desktop/package.json
 RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
 # Git fixtures create their own repositories; captured host Git metadata is excluded.
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm --filter @redpact/web build

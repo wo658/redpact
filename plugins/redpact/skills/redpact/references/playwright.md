@@ -16,7 +16,7 @@ application service, internal port and required named targets. Each target decla
 directory-relative `testMatch` globs. Scope defaults to project when omitted.
 Files must not belong to multiple targets. Viewport, locale, timezoneId,
 colorScheme, video and timeoutMs are optional. The actual application and dependencies use the
-existing Compose/service selection. Validate against the selected worktree. Missing
+fixed shared project configuration. Validate against the selected worktree. Missing
 app container definitions belong to authorized setup; preserve access controls.
 
 Author ordinary `@playwright/test` scenarios matching the declared target patterns
@@ -95,8 +95,7 @@ For app service, dependency or connection changes, read [Project dependencies](d
 ## Execute and inspect
 
 Resolve the actual worktree on the connected instance. For authorized execution,
-POST /api/worktrees/:id/playwright/run with an explicit selection or valid saved
-choices and the target name (required when multiple targets exist). Optional viewport
+POST /api/worktrees/:id/playwright/run with the target name (required when multiple targets exist). Optional viewport
 overrides apply to this execution. Read
 GET /api/playwright-runs/:id until terminal, inspect case/step evidence and distinct
 cleanup errors. MCP run_tests remains Vitest integration execution and does not

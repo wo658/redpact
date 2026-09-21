@@ -27,9 +27,9 @@ explicit action, never a silent recovery strategy.
 | Work item | Captured intent targeting that project/worktree |
 | Submission | Immutable exact test/helper source, digest, parsed intent and runner identity |
 | Integration run | Submission, accepted target/settings/Git, execution state and results |
-| Environment | Selected services/modes, source identity, owned resources and lifecycle |
+| Environment | Fixed services/dependency kinds, source identity, owned resources and lifecycle |
 | Work start | Durable managed-checkout creation input and planned outputs |
-| Review | Captured MCP policy, approvals, selection, revision and eventual run linkage |
+| Review | Captured MCP policy, approvals, captured configuration, revision and eventual run linkage |
 | Unit run | Captured command/runtime identity, output, terminal and cleanup state |
 | Playwright run | Target/scenario results and recorded browser artifacts |
 | Merge attempt | Inspected source/target identities, progress and recovery outcome |

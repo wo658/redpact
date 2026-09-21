@@ -4,7 +4,7 @@ Combine immediate local Git isolation with the bundled [Redpact workflow](../SKI
 
 ## Request and scope
 
-`$redpact <feature or fix>` defaults to this workflow. `$redpact current <feature or fix>` uses the current-checkout section below on the existing branch. The default workflow authorizes worktree preparation, selection of existing dependency modes, tests, implementation, verification, and a local commit. Begin without a separate plan approval. Questions about the workflow or requests to edit the skill do not start feature execution.
+`$redpact <feature or fix>` defaults to this workflow. `$redpact current <feature or fix>` uses the current-checkout section below on the existing branch. The default workflow authorizes worktree preparation, reuse of the fixed project configuration, tests, implementation, verification, and a local commit. Begin without a separate plan approval. Questions about the workflow or requests to edit the skill do not start feature execution.
 
 `$redpact auto <feature or fix>` or an explicit request to verify and finish through
 local merge authorizes implementation, required verification, a local commit and
@@ -53,12 +53,12 @@ Integration and frontend Playwright functional tests. Read the applicable
 [Integration](integration-tests.md), supporting [Unit](unit-tests.md) or
 [Playwright](playwright.md) guide before authoring or execution; follow its completion
 criteria. Do not load unselected layers. Reuse existing Docker/Compose and dependency
-definitions unchanged; select modes only. If setup blocks execution, inspect
-[Dependencies](dependencies.md) and resolve a project-level setup change with the user.
+definitions unless the task requires a shared configuration change. If setup blocks execution, inspect
+[Dependencies](dependencies.md) and resolve setup within the authorized task scope.
 Do not repair infrastructure as an incidental part of feature work.
 Use this checkout's absolute application path for configure and execution, preserving
 any monorepo subdirectory. Shared rules can live at a different returned rulesRoot;
-do not edit its infrastructure without an explicit project-level setup request.
+edit shared infrastructure only when the task explicitly requires that project-wide change.
 
 Worktree preparation is not completion. Continue through implementation, selected
 verification and required repository checks. Auto mode uses the same selected evidence and required checks as the default.

@@ -7,6 +7,7 @@ import {
 } from "../core/environment-policy.js"
 import { executionSettingsSchema } from "../core/execution-settings.js"
 import { problem } from "../core/problems.js"
+import { runnerEnvironment } from "../core/runner-environment.js"
 import { testSelectionSchema } from "../core/settings-schema.js"
 import type { Store } from "../core/types/contracts.js"
 import type { Environment, EnvironmentAdapter } from "../core/types/environment.js"
@@ -314,31 +315,7 @@ export function createEnvironments(deps: {
       ) {
         problem("configuration_error", "Application inputs changed while queued")
       }
-      const values: Record<string, string> = {}
-      for (const [key, binding] of Object.entries(record.settings.tests.env)) {
-        if ("value" in binding && !("service" in binding)) {
-          values[key] = binding.value
-        } else if ("secret" in binding) {
-          const value = secretValues(record)[binding.secret]
-          if (value === undefined) {
-            problem("environment_error", "Required secret is unavailable")
-          }
-          values[key] = value
-        } else if ("service" in binding) {
-          const endpoint = record.endpoints[`${binding.service}:${binding.port}`]
-          if (!endpoint) {
-            problem("environment_error", "Required endpoint is unavailable")
-          }
-          if (binding.value === "host") {
-            values[key] = endpoint.host
-          } else if (binding.value === "port") {
-            values[key] = String(endpoint.port)
-          } else {
-            values[key] = `${binding.scheme ?? "http"}://${endpoint.host}:${endpoint.port}`
-          }
-        }
-      }
-      return values
+      return runnerEnvironment(record.settings, secretValues(record))
     },
     async healthy(id: string) {
       return (await refresh(id)).state === "in_use"

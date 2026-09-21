@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import { setTimeout as delay } from "node:timers/promises"
 import { problem } from "../core/problems.js"
 import { decideRunResult, executionFailureOutcome } from "../core/run-policy.js"
+import { runnerConnections } from "../core/runner-environment.js"
 import type { Run, RunResult, Scheduler } from "../core/types/contracts.js"
 import type { GitService } from "../core/types/git.js"
 import type {
@@ -117,7 +118,7 @@ export function createExecuteTests(deps: {
         if (submission.projectRoot && submission.projectRoot !== settingsService.projectRoot) {
           problem("invalid_input", "Submission belongs to a different project")
         }
-        if (!selection && worktreeId) {
+        if (worktreeId) {
           selection = (await deps.worktrees?.getSelection(worktreeId)) ?? undefined
         }
         const settings = await settingsService.read(selection)
@@ -144,10 +145,10 @@ export function createExecuteTests(deps: {
         }
         const runId = randomUUID()
         if (!selection || !deps.environments || !worktreeId) {
-          problem("environment_conflict", "Select services and dependency modes for this worktree")
-        }
-        if (selection && deps.worktrees) {
-          await deps.worktrees.setSelection(worktreeId, selection)
+          problem(
+            "environment_conflict",
+            "Configure fixed root services in shared settings.json before execution",
+          )
         }
         if (closing) {
           problem("closing", "Server is shutting down")
@@ -235,19 +236,16 @@ export function createExecuteTests(deps: {
               ? deps.environments?.get(run.environmentId)
               : undefined
             const connections: TestConnections = {
-              version: 1,
-              services: Object.fromEntries(
-                (environment?.plan?.activeServices ?? []).map((name) => [
-                  name,
-                  {
-                    ports: Object.fromEntries(
-                      Object.entries(environment?.endpoints ?? {})
-                        .filter(([key]) => key.startsWith(`${name}:`))
-                        .map(([key, endpoint]) => [key.slice(name.length + 1), endpoint]),
-                    ),
-                  },
-                ]),
-              ),
+              ...runnerConnections(environment),
+              ...(environment
+                ? {
+                    runtime: {
+                      ownerId: environment.ownerId,
+                      environmentId: environment.id,
+                      network: `${environment.projectName}_redpact-runner`,
+                    },
+                  }
+                : {}),
             }
             let environmentLost = false
             let checking = false
