@@ -676,7 +676,7 @@ test("실행 결과에서 저장된 소스를 열고 돌아올 수 있다", asyn
   assert.ok(screen.getByText(/expected 422, received 201/))
 })
 
-test("헤더 작업 탭은 프로젝트와 워크트리를 열고 닫아도 실제 작업을 끝내지 않는다", async () => {
+test("사이드바 이동은 현재 탭을 바꾸고 명시적으로 연 탭만 닫는다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
@@ -697,22 +697,16 @@ test("헤더 작업 탭은 프로젝트와 워크트리를 열고 닫아도 실�
       initialProjects: [project],
     }),
   )
-  const workspace = await screen.findByRole("tablist", { name: "Open workspaces" })
-  assert.ok(within(workspace).getByRole("tab", { name: project.name }))
+  const tabs = () => within(screen.getByRole("tablist", { name: "Open workspaces" }))
+  await screen.findByRole("button", { name: "feature/second", exact: true })
+  await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
+  assert.equal(tabs().getAllByRole("tab").length, 2)
+  await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
   await user.click(screen.getByRole("button", { name: "feature/second", exact: true }))
-  const updatedWorkspace = screen.getByRole("tablist", { name: "Open workspaces" })
-  await waitFor(() =>
-    assert.ok(within(updatedWorkspace).getByRole("tab", { name: "feature/second" })),
-  )
-  await user.click(within(updatedWorkspace).getByRole("button", { name: "Close feature/second" }))
-  await waitFor(() =>
-    assert.equal(
-      within(screen.getByRole("tablist", { name: "Open workspaces" })).queryByRole("tab", {
-        name: "feature/second",
-      }),
-      null,
-    ),
-  )
+  await waitFor(() => assert.equal(tabs().getAllByRole("tab").length, 2))
+  assert.equal(tabs().getAllByRole("tab")[1].getAttribute("aria-selected"), "true")
+  await user.click(tabs().getAllByRole("button", { name: /Close / })[1])
+  assert.equal(tabs().getAllByRole("tab").length, 1)
   assert.ok(screen.getByRole("button", { name: "feature/second", exact: true }))
 })
 

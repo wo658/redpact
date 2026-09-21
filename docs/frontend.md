@@ -86,12 +86,15 @@ preview never executes project code.
 The app header owns open-workspace tabs and native drag space outside the rounded content
 frame; it does not repeat the current page title or expose history controls. Workspace tabs use
 a fixed width, left-aligned icons and truncated titles, with a subtle outline and a brighter
-selected surface. The adjacent plus button opens a new project tab and remains reachable
+selected surface. The adjacent plus button opens the current page location in a fresh tab and remains reachable
 when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The
 browser desktop keeps the sidebar open rather than offering a collapse control; compact mobile
 screens retain the sidebar trigger. The native macOS desktop keeps its sidebar control.
 The sidebar remains on the canvas. Preserve desktop
 gutters, collapsed state, full-width mobile content and macOS toolbar positioning.
+Workspace IDs are independent of project/worktree IDs. Each tab records its page and target;
+sidebar navigation updates the active tab, and labels reflect its current location. See
+[UX navigation](ux-navigation.md) for new-tab and close behavior.
 Open workspace tabs retain their React state and DOM through React Activity. Hidden tabs
 release effect subscriptions; activating a tab restarts reads without discarding its view state.
 Sidebar providers belong to each workspace tab. This retention is session-only and ends when

@@ -11,7 +11,9 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
   }, project.id)
   await page.goto("/")
   const workspaceTabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
-  await expect(workspaceTabs.getByRole("tab", { name: project.name, exact: true })).toBeVisible()
+  await expect(workspaceTabs.getByRole("tab")).toHaveCount(1)
+  await page.getByRole("button", { name: "Settings", exact: true }).click()
+  await page.getByRole("button", { name: "New tab", exact: true }).click()
   const worktree = page
     .getByRole("navigation", { name: "Worktrees", exact: true })
     .getByRole("button")
@@ -22,7 +24,7 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
   await expect(workspaceTabs.getByRole("tab", { name: worktreeName ?? "" })).toBeVisible()
   await page.setViewportSize({ width: 1440, height: 900 })
   await expect(page.getByRole("button", { name: "Toggle Sidebar", exact: true })).toBeHidden()
-  const projectTab = workspaceTabs.getByRole("tab", { name: project.name, exact: true })
+  const projectTab = workspaceTabs.getByRole("tab").first()
   const worktreeTab = workspaceTabs.getByRole("tab", { name: worktreeName ?? "" })
   const projectTabWidth = await projectTab.evaluate((element) => element.parentElement?.clientWidth)
   const worktreeTabWidth = await worktreeTab.evaluate(

@@ -193,13 +193,21 @@ Redpact
   strip rather than a sidebar toggle, page title or history controls. Compact mobile
   screens retain the sidebar trigger; the native macOS desktop keeps its sidebar control.
   Workspace tabs use a fixed width, left-aligned icons and truncated labels with subtle outlines.
-  The header plus button opens another project tab on the current project’s default review
-  screen without replacing existing tabs. Each open tab retains its sidebar and current view state when switching tabs, including
-  expanded folders, selected files, nested test tabs, drafts and scroll positions. Hidden
-  tabs suspend subscriptions and refresh when reactivated. Closing a tab releases its state. New tabs are
-  session-only; reloading resets the strip. Selecting a project opens or activates its project tab;
-  selecting a worktree adds a worktree tab. Closing either tab only removes it from
-  the strip and never stops an execution or disconnects a project.
+  Every workspace tab has an identity independent of its project or worktree and records
+  its current page, project and applicable worktree or branch. Sidebar page, project,
+  worktree and branch selections navigate within the active tab. Only explicitly choosing
+  another tab activates it; multiple tabs may show the same target independently.
+  Labels follow the current page and target. The header plus button opens the current
+  page location in a new tab with fresh detail state. Selecting a different project
+  opens that project's default review page within the current tab.
+  Each open tab retains its sidebar and current view state when switching tabs, including
+  expanded folders, selected files, nested test tabs, drafts and scroll positions. Navigating
+  away from a page may release its detail state; there is no per-tab navigation history.
+  Hidden tabs suspend subscriptions and refresh when reactivated. Closing a tab releases
+  its state. Closing the active tab selects the preceding tab, or the next tab when
+  closing the first; closing an inactive tab preserves the active tab. The last tab stays open. Closing never stops execution or disconnects a project.
+  Tabs and page locations are session-only; reload or application restart resets the strip.
+  Pinning, reordering and complete UI-state persistence are not supported.
 - Settings sections and actions can depend on available API capabilities. The MCP
   approval preference shown here does not imply a separate approval-inbox page.
 
