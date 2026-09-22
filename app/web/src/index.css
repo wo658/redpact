@@ -532,7 +532,7 @@
 @media (min-width: 768px) {
   :root:not([data-desktop])
     [data-slot="sidebar-wrapper"][data-desktop-toggle="false"]
-    .app-header-controls {
+    .sidebar-workspace-toggle {
     display: none;
   }
 }
@@ -555,17 +555,11 @@
     padding-left: 16px;
   }
 
-  :root[data-desktop="macos"] .app-header-controls {
-    position: fixed;
-    top: 10px;
-    left: 88px;
-  }
-
   :root[data-desktop="macos"]
     [data-slot="sidebar-wrapper"]:has(> [data-slot="sidebar"][data-state="collapsed"])
     .app-header {
     left: 0;
-    padding-left: 196px;
+    padding-left: 88px;
   }
 }
 

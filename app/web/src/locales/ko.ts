@@ -1,9 +1,29 @@
 import type { en } from "./en"
 
 export const ko = {
+  "Dependency kinds": "의존성 종류",
+  "Runs current integration sources with the fixed project configuration.":
+    "프로젝트의 고정 구성으로 현재 통합 테스트 소스를 실행합니다.",
+  "Each dependency has one fixed definition shared by all worktrees. Edit the project configuration to change future executions.":
+    "각 의존성은 모든 워크트리가 공유하는 하나의 고정 정의를 사용합니다. 이후 실행을 변경하려면 프로젝트 설정을 편집하세요.",
+  "Dependencies cannot write or unset the same variable on the same service, even if their values match.":
+    "값이 같더라도 여러 의존성이 같은 서비스의 동일한 변수를 설정하거나 제거할 수 없습니다.",
+  "An environment override does not start its target service. Declare the service in the fixed project configuration or Compose prerequisites.":
+    "환경변수 설정은 대상 서비스를 시작하지 않습니다. 고정 프로젝트 설정이나 Compose 선행 조건에 서비스를 선언하세요.",
+
   "App shortcuts": "앱 바로가기",
   "GitHub repository": "GitHub 저장소",
   "Star on GitHub": "GitHub에서 Star 주기",
+  "Install the update and restart Redpact? Active work will defer installation.":
+    "업데이트를 설치하고 Redpact를 다시 시작할까요? 진행 중인 작업이 있으면 설치를 보류합니다.",
+  "Automatic installation is unavailable. Update with the original package manager, then restart Redpact. For npx, stop this process and run npx redpact@latest serve with the same options.":
+    "자동 설치를 사용할 수 없습니다. 처음 설치한 패키지 관리자로 업데이트한 뒤 Redpact를 다시 시작하세요. npx는 현재 프로세스를 종료하고 같은 옵션으로 npx redpact@latest serve를 실행하세요.",
+  "Updating and restarting…": "업데이트 및 재시작 중…",
+  "Install and restart": "설치 후 다시 시작",
+  "Current version: {{version}}": "현재 버전: {{version}}",
+  Updates: "업데이트",
+  "Redpact is up to date.": "Redpact가 최신 버전입니다.",
+  "Could not check for updates.": "업데이트를 확인하지 못했습니다.",
   "Check for updates": "업데이트 확인",
   "Could not open GitHub. Try again.": "GitHub를 열지 못했습니다. 다시 시도하세요.",
   Update: "Update",

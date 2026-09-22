@@ -20,7 +20,7 @@ import { createTestWorktrees } from "./helpers/worktrees.js"
 const dockerTest = process.env.REDPACT_DOCKER_TESTS === "1" ? test : test.skip
 
 dockerTest(
-  "dependency modes assembles six-service Compose, resolves host bindings and removes each execution environment",
+  "fixed configuration revisions assemble Compose, resolve runner bindings and remove each execution environment",
   async () => {
     const root = await mkdtemp(join(tmpdir(), "redpact-modes-docker-"))
     const project = join(root, "project"),
@@ -125,8 +125,26 @@ dockerTest(
           },
         },
         tests: { env: { APP_URL: { service: "api", port: 3000, scheme: "http" } } },
+        services: ["app"],
       }),
     )
+    const variants = JSON.parse(await readFile(join(project, ".redpact/settings.json"), "utf8"))
+    async function configureFixed(selection: TestSelection) {
+      const dependencies = Object.fromEntries(
+        Object.entries(selection.select).map(([name, kind]) => [
+          name,
+          { kind, ...variants.dependencies[name].modes[kind] },
+        ]),
+      )
+      await writeFile(
+        join(project, ".redpact/settings.json"),
+        JSON.stringify({ ...variants, services: selection.services, dependencies }),
+      )
+    }
+    await configureFixed({
+      services: ["api", "worker"],
+      select: { "payments-api": "mock", "payments-worker": "mock" },
+    })
     const storage = openStore(data),
       secrets: NodeJS.ProcessEnv = {}
     const worktrees = createTestWorktrees({
@@ -176,7 +194,8 @@ dockerTest(
         if (index === 1) {
           secrets.TEST_DB_PASSWORD = randomUUID()
         }
-        const validation = await createSettingsService(project).read(selection)
+        await configureFixed(selection)
+        const validation = await createSettingsService(project).read()
         expect(validation.valid, JSON.stringify(validation.issues)).toBe(true)
         if (!validation.digest) {
           throw new Error("Missing settings identity")
@@ -227,6 +246,7 @@ dockerTest(
       await runs.stopEnvironment.idle()
       expect(ids.every((id) => environments.get(id).state === "stopped")).toBe(true)
 
+      await configureFixed(selections[0])
       for (let i = 0; i < 2; i++) {
         const run = await runs.start(submission.id, selections[0])
         await expect.poll(() => runs.get(run.id).state, { timeout: 15000 }).toBe("finished")
@@ -279,25 +299,22 @@ dockerTest(
         composeFiles: ["compose.yaml"],
         dependencies: {
           database: {
-            modes: {
-              isolated: {
-                services: ["db"],
-                env: {
-                  db: {
-                    POSTGRES_PASSWORD: {
-                      secret: "TEST_DB_PASSWORD",
-                    },
-                  },
-                  migrate: {
-                    PGPASSWORD: {
-                      secret: "TEST_DB_PASSWORD",
-                    },
-                  },
-                  app: {
-                    PGPASSWORD: {
-                      secret: "TEST_DB_PASSWORD",
-                    },
-                  },
+            kind: "isolated",
+            services: ["db"],
+            env: {
+              db: {
+                POSTGRES_PASSWORD: {
+                  secret: "TEST_DB_PASSWORD",
+                },
+              },
+              migrate: {
+                PGPASSWORD: {
+                  secret: "TEST_DB_PASSWORD",
+                },
+              },
+              app: {
+                PGPASSWORD: {
+                  secret: "TEST_DB_PASSWORD",
                 },
               },
             },
@@ -312,6 +329,7 @@ dockerTest(
             },
           },
         },
+        services: ["app"],
       }),
     )
     const storage = openStore(data),

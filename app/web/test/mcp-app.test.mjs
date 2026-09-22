@@ -140,17 +140,17 @@ test("configuration cards distinguish an empty catalog from invalid settings", (
   }
 })
 
-test("execution snapshots keep unselected modes visible beside the selected mode", () => {
+test("execution snapshots display their captured fixed kind", () => {
   const data = snapshotSchema.parse({
     ...snapshot,
     review: {
       ...snapshot.review,
       policy: "auto",
       state: "started",
-      dependencies: { database: ["isolated", "remote"] },
+      dependencies: { database: ["isolated"] },
     },
   })
   const html = renderToStaticMarkup(createElement(EnvironmentCard, { data, actions }))
-  assert.match(html, /Remote connection/)
-  assert.match(html, /Selected: Per-environment/)
+  assert.doesNotMatch(html, /Remote connection/)
+  assert.match(html, /Per-environment/)
 })

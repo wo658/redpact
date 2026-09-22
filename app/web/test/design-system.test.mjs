@@ -168,6 +168,6 @@ test("workspace header stays outside the framed main content", async () => {
     headerStart >= 0 && headerEnd < insetStart,
     "The title and sidebar controls must precede the main frame",
   )
-  assert.match(source.slice(headerStart, headerEnd), /<SidebarTrigger \/>/)
+  assert.doesNotMatch(source.slice(headerStart, headerEnd), /<SidebarTrigger/)
   assert.match(source.slice(insetStart), /md:rounded-xl md:ring-1 md:ring-border/)
 })

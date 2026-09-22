@@ -35,6 +35,7 @@ import { submissionRoutes } from "./interfaces/http/submissions.js"
 import { testContainerRoutes } from "./interfaces/http/test-container.js"
 import { uiRoutes } from "./interfaces/http/ui.js"
 import { unitTestRoutes } from "./interfaces/http/unit-tests.js"
+import { updateRoutes } from "./interfaces/http/updates.js"
 import { worktreeRoutes } from "./interfaces/http/worktrees.js"
 import { mcpRoutes } from "./interfaces/mcp/routes.js"
 import { createDefaultInspection } from "./workflows/inspection.js"
@@ -129,6 +130,9 @@ export function createApp(services: Services, options: { uiDirectory?: string } 
     }
     return c.json({ error: "Internal server error" }, 500)
   })
+  if (services.updates) {
+    app.route("/api", updateRoutes(services.updates))
+  }
   if (services.reviewContent) {
     app.route("/api", reviewContentRoutes(services.reviewContent))
   }

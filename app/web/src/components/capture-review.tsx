@@ -132,7 +132,7 @@ function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureRev
       const next =
         cancel && activeRun
           ? await api.cancelPlaywright(activeRun.id)
-          : await api.runPlaywright(worktreeId, undefined, viewport, target)
+          : await api.runPlaywright(worktreeId, viewport, target)
       setSelectedRun(next.id)
       setData((value) =>
         value ? { ...value, runs: [next, ...value.runs.filter((r) => r.id !== next.id)] } : value,

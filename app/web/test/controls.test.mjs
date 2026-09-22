@@ -163,9 +163,8 @@ test("환경변수 표에서 원문을 보고 key value를 추가하고 수정�
     composeFiles: ["compose.yaml"],
     dependencies: {
       payment: {
-        modes: {
-          mock: { env: { app: { URL: "https://example.test", TOKEN: { secret: "CLOUD_KEY" } } } },
-        },
+        kind: "mock",
+        env: { app: { URL: "https://example.test", TOKEN: { secret: "CLOUD_KEY" } } },
       },
     },
     tests: { timeoutMs: 1234 },
@@ -204,7 +203,7 @@ test("환경변수 표에서 원문을 보고 key value를 추가하고 수정�
   await user.type(screen.getByRole("textbox", { name: "value" }), "enabled")
   await user.click(screen.getByRole("button", { name: "Save" }))
   await screen.findByText("enabled")
-  assert.equal(source.dependencies.payment.modes.mock.env.app.MOCK_MODE, "enabled")
+  assert.equal(source.dependencies.payment.env.app.MOCK_MODE, "enabled")
   assert.deepEqual(source.tests, { timeoutMs: 1234 })
   assert.equal(writes[0].revision, "revision")
   await user.click(screen.getByRole("button", { name: "Edit URL" }))
@@ -213,7 +212,7 @@ test("환경변수 표에서 원문을 보고 key value를 추가하고 수정�
   await user.type(value, "http://mock:3000")
   await user.click(screen.getByRole("button", { name: "Save" }))
   await screen.findByText("http://mock:3000")
-  assert.equal(source.dependencies.payment.modes.mock.env.app.URL, "http://mock:3000")
+  assert.equal(source.dependencies.payment.env.app.URL, "http://mock:3000")
 })
 
 test("invalid dependency settings retain centered diagnostics without requesting secrets", async () => {
@@ -676,7 +675,7 @@ test("실행 결과에서 저장된 소스를 열고 돌아올 수 있다", asyn
   assert.ok(screen.getByText(/expected 422, received 201/))
 })
 
-test("헤더 작업 탭은 프로젝트와 워크트리를 열고 닫아도 실제 작업을 끝내지 않는다", async () => {
+test("사이드바 이동은 현재 탭을 바꾸고 명시적으로 연 탭만 닫는다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
@@ -697,22 +696,16 @@ test("헤더 작업 탭은 프로젝트와 워크트리를 열고 닫아도 실�
       initialProjects: [project],
     }),
   )
-  const workspace = await screen.findByRole("tablist", { name: "Open workspaces" })
-  assert.ok(within(workspace).getByRole("tab", { name: project.name }))
+  const tabs = () => within(screen.getByRole("tablist", { name: "Open workspaces" }))
+  await screen.findByRole("button", { name: "feature/second", exact: true })
+  await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
+  assert.equal(tabs().getAllByRole("tab").length, 2)
+  await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
   await user.click(screen.getByRole("button", { name: "feature/second", exact: true }))
-  const updatedWorkspace = screen.getByRole("tablist", { name: "Open workspaces" })
-  await waitFor(() =>
-    assert.ok(within(updatedWorkspace).getByRole("tab", { name: "feature/second" })),
-  )
-  await user.click(within(updatedWorkspace).getByRole("button", { name: "Close feature/second" }))
-  await waitFor(() =>
-    assert.equal(
-      within(screen.getByRole("tablist", { name: "Open workspaces" })).queryByRole("tab", {
-        name: "feature/second",
-      }),
-      null,
-    ),
-  )
+  await waitFor(() => assert.equal(tabs().getAllByRole("tab").length, 2))
+  assert.equal(tabs().getAllByRole("tab")[1].getAttribute("aria-selected"), "true")
+  await user.click(tabs().getAllByRole("button", { name: /Close / })[1])
+  assert.equal(tabs().getAllByRole("tab").length, 1)
   assert.ok(screen.getByRole("button", { name: "feature/second", exact: true }))
 })
 
@@ -758,34 +751,26 @@ const dependencyCatalog = {
   bundle: { files: [{ path: "compose.yaml", sha256: "compose-identity" }] },
   dependencies: {
     payments: {
-      modes: {
-        isolated: { services: ["payments"], env: { app: { URL: "http://payments:8080" } } },
-        mock: {
-          env: {
-            app: {
-              MODE: "mock",
-              OLD_KEY: { unset: true },
-              TOKEN: { secret: "PAYMENT_TOKEN" },
-              EMPTY: "",
-            },
-          },
+      kind: "isolated",
+      services: ["payments"],
+      env: {
+        app: {
+          URL: "http://payments:8080",
+          OLD_KEY: { unset: true },
+          TOKEN: { secret: "PAYMENT_TOKEN" },
+          EMPTY: "",
         },
       },
     },
-    llm: { modes: { mock: {} } },
+    llm: {
+      kind: "mock",
+    },
   },
 }
 
-async function chooseDependencyMode(user, dependency, mode) {
+async function chooseDependencyMode(user, dependency) {
   await user.click(screen.getByRole("button", { name: "Select dependency" }))
   await user.click(await screen.findByRole("menuitemradio", { name: dependency, exact: true }))
-  await user.click(
-    screen.getByRole("tab", {
-      name:
-        { isolated: "Per-environment", mock: "Mock", remote: "Remote connection" }[mode] ?? mode,
-      exact: true,
-    }),
-  )
 }
 
 test("project catalog browses definitions without execution, preserves values and resets sources", async () => {
@@ -994,18 +979,13 @@ test("worktree labels prefer the current branch and fall back for detached check
 test("dependency overrides show every target in separate groups and follow the mode", async () => {
   await i18n.changeLanguage("en")
   const { DependencyCatalog } = await server.ssrLoadModule("/src/components/dependency-viewer.tsx")
-  const user = userEvent.setup({ document })
+  const _user = userEvent.setup({ document })
   render(
     createElement(DependencyCatalog, {
       dependencies: {
         payments: {
-          modes: {
-            mock: {
-              env: { app: { APP_FLAG: "app-value" }, worker: { WORKER_FLAG: "worker-value" } },
-            },
-            isolated: { env: { app: { SINGLE_FLAG: "single-value" } } },
-            remote: {},
-          },
+          kind: "mock",
+          env: { app: { APP_FLAG: "app-value" }, worker: { WORKER_FLAG: "worker-value" } },
         },
       },
     }),
@@ -1018,15 +998,7 @@ test("dependency overrides show every target in separate groups and follow the m
   assert.ok(!app.textContent.includes("worker-value"))
   assert.ok(worker.textContent.includes("worker-value"))
   assert.ok(!worker.textContent.includes("app-value"))
-  await chooseDependencyMode(user, "payments", "isolated")
-  assert.ok(screen.getByText("single-value"))
-  assert.equal(screen.queryByRole("tablist", { name: "Target service" }), null)
-  assert.ok(screen.getByText("app", { selector: "code" }))
-  await chooseDependencyMode(user, "payments", "remote")
-  assert.ok(screen.getByText("No environment overrides."))
-  await chooseDependencyMode(user, "payments", "mock")
-  assert.ok(screen.getByText("app-value"))
-  assert.ok(screen.getByText("worker-value"))
+  assert.equal(screen.queryByRole("tablist", { name: "Dependency modes" }), null)
 })
 
 test("many override targets remain visible in separate groups without a selector", async () => {
@@ -1035,16 +1007,13 @@ test("many override targets remain visible in separate groups without a selector
     createElement(DependencyCatalog, {
       dependencies: {
         payments: {
-          modes: {
-            mock: {
-              env: Object.fromEntries(
-                Array.from({ length: 5 }, (_, index) => [
-                  `service-${index}`,
-                  { VALUE: `value-${index}` },
-                ]),
-              ),
-            },
-          },
+          kind: "mock",
+          env: Object.fromEntries(
+            Array.from({ length: 5 }, (_, index) => [
+              `service-${index}`,
+              { VALUE: `value-${index}` },
+            ]),
+          ),
         },
       },
     }),
@@ -1060,64 +1029,44 @@ test("many override targets remain visible in separate groups without a selector
 test("mode details show authored services without redundant headings", async () => {
   await i18n.changeLanguage("en")
   const { DependencyCatalog } = await server.ssrLoadModule("/src/components/dependency-viewer.tsx")
-  const user = userEvent.setup({ document })
+  const _user = userEvent.setup({ document })
   render(
     createElement(DependencyCatalog, {
       dependencies: {
         payments: {
-          modes: {
-            mock: { env: { app: { MODE: "mock" } } },
-            isolated: { services: ["payment-gateway"] },
-          },
+          kind: "mock",
+          services: ["payment-gateway"],
+          env: { app: { MODE: "mock" } },
         },
       },
     }),
   )
   assert.equal(Boolean(screen.queryByText("No additional services.")), false)
   assert.equal(Boolean(screen.queryByText("Services started with this mode")), false)
-  await chooseDependencyMode(user, "payments", "isolated")
   assert.equal(Boolean(screen.queryByText("Services started with this mode")), false)
   assert.ok(screen.getByText("payment-gateway"))
-  await chooseDependencyMode(user, "payments", "mock")
   assert.equal(Boolean(screen.queryByRole("heading", { name: "Environment overrides" })), false)
   assert.ok(screen.getByText("MODE"))
 })
 
-test("dependency dropdown sits beside content-sized mode segments with keyboard navigation", async () => {
+test("고정 의존성 목록은 키보드로 탐색하고 종류 전환 컨트롤을 표시하지 않는다", async () => {
   await i18n.changeLanguage("en")
   const { DependencyCatalog } = await server.ssrLoadModule("/src/components/dependency-viewer.tsx")
-  const user = userEvent.setup({ document })
   render(
     createElement(DependencyCatalog, {
       dependencies: {
-        payments: {
-          modes: {
-            mock: { env: { app: { MODE: "mock-value" } } },
-            isolated: { env: { app: { MODE: "multi-value" } } },
-            remote: {},
-          },
-        },
+        payments: { kind: "mock", env: { app: { MODE: "mock-value" } } },
+        search: { kind: "remote" },
       },
     }),
   )
-  const controls = screen.getByRole("group", { name: "Dependencies" })
-  assert.ok(controls.contains(screen.getByRole("button", { name: "Select dependency" })))
-  const list = screen.getByRole("tablist", { name: "Dependency modes" })
-  assert.ok(controls.contains(list))
-  assert.ok(list.querySelector('[data-slot="tab-indicator"]'))
-  for (const mode of ["Mock", "Per-environment", "Remote connection"]) {
-    const tab = screen.getByRole("tab", { name: mode, exact: true })
-    assert.ok(tab.className.includes("shrink-0"))
-    assert.ok(!tab.className.includes("flex-1"))
-  }
-  await user.click(screen.getByRole("tab", { name: "Per-environment", exact: true }))
-  assert.ok(screen.getByText("multi-value"))
-  assert.equal(Boolean(screen.queryByText("mock-value")), false)
-  await user.keyboard("{ArrowRight}")
-  await waitFor(() =>
-    assert.ok(screen.getByRole("tab", { name: "Remote connection", selected: true })),
-  )
-  assert.ok(screen.getByText("No environment overrides."))
+  const user = userEvent.setup({ document })
+  await user.click(screen.getByRole("button", { name: "Select dependency" }))
+  ;(await screen.findByRole("menuitemradio", { name: "search" })).focus()
+  await user.keyboard("{Enter}")
+  assert.equal(screen.getByRole("button", { name: "Select dependency" }).textContent, "search")
+  assert.ok(screen.getByText("Remote connection"))
+  assert.equal(screen.queryByRole("tablist", { name: "Dependency modes" }), null)
 })
 
 test("environment columns keep key and value in both interface languages", async () => {
@@ -1937,48 +1886,25 @@ test("언어를 바꿔도 실행한 소스를 그대로 보여주고 주석 설�
   }
   await i18n.changeLanguage("en")
 })
-test("environment pickers preserve invalid choices for explicit recovery in both languages", async () => {
+test("고정 실행 화면은 오래된 워크트리 선택을 읽거나 편집하지 않는다", async () => {
   const { WorktreeEnvironments } = await server.ssrLoadModule(
     "/src/components/worktree-environments.tsx",
   )
   for (const language of ["en", "ko"]) {
     await i18n.changeLanguage(language)
-    const writes = []
     const view = render(
       createElement(WorktreeEnvironments, {
-        worktreeId: "a",
+        worktreeId: "w",
         api: {
           environments: async () => [],
-          worktreeSelection: async () => ({
-            selection: { services: ["app", "removed"], select: { payments: "retired" } },
-          }),
-          worktreeDependencies: async () => ({
-            valid: true,
-            services: ["app"],
-            dependencies: { payments: { modes: { mock: {}, remote: {} } } },
-          }),
-          setWorktreeSelection: async (_id, selection) => {
-            writes.push(selection)
-            return { selection }
-          },
+          worktreeSelection: () => assert.fail("Retired selections must not be read"),
+          setWorktreeSelection: () => assert.fail("Retired selections must not be written"),
         },
       }),
     )
-    const user = userEvent.setup({ document })
-    await screen.findByRole("button", { name: i18n.t("Remove unavailable choices") })
-    assert.equal(screen.queryByRole("button", { name: i18n.t("Start manual environment") }), null)
-    assert.equal(screen.getByRole("button", { name: i18n.t("Save selection") }).disabled, true)
-    await user.click(screen.getByRole("button", { name: i18n.t("Remove unavailable choices") }))
-    assert.equal(screen.getByRole("button", { name: i18n.t("Save selection") }).disabled, true)
-    const picker = screen.getByRole("combobox", { name: "payments" })
-    picker.focus()
-    await user.keyboard("{ArrowDown}")
-    await screen.findByRole("option", { name: i18n.t("Mock") })
-    await user.keyboard("{Home}{Enter}")
-    await waitFor(() => assert.equal(picker.value, i18n.t("Mock")))
-    await user.click(screen.getByRole("button", { name: i18n.t("Save selection") }))
-    await screen.findByText(i18n.t("Selection saved."))
-    assert.deepEqual(writes, [{ services: ["app"], select: { payments: "mock" } }])
+    await screen.findByText(i18n.t("No active environments."))
+    assert.equal(screen.queryByRole("combobox"), null)
+    assert.equal(screen.queryByRole("button", { name: i18n.t("Save selection") }), null)
     view.unmount()
   }
   await i18n.changeLanguage("en")
@@ -2054,47 +1980,6 @@ test("실패한 환경은 Agent에 전달할 보존 진단과 리소스 맥락�
   assert.ok(screen.getByText(/container:app-1/))
 })
 
-test("environment modes use compact pickers and save only the edited worktree selection", async () => {
-  await i18n.changeLanguage("en")
-  const { WorktreeEnvironments } = await server.ssrLoadModule(
-    "/src/components/worktree-environments.tsx",
-  )
-  const selection = { services: ["app"], select: { payments: "mock" } }
-  const writes = []
-  const api = {
-    environments: async () => [],
-    worktreeSelection: async () => ({ selection }),
-    worktreeDependencies: async () => ({
-      valid: true,
-      services: ["app"],
-      dependencies: { payments: { modes: { mock: {}, isolated: {}, remote: {} } } },
-    }),
-    setWorktreeSelection: async (id, next) => {
-      writes.push([id, next])
-      return { selection: next }
-    },
-    prepareEnvironment: async () => {
-      throw new Error("Selection must not start resources")
-    },
-  }
-  render(createElement(WorktreeEnvironments, { api, worktreeId: "a" }))
-  await screen.findByRole("button", { name: "Save selection" })
-  const picker = screen.queryByRole("combobox", { name: "payments" })
-  assert.ok(picker, "Each dependency exposes one compact mode picker")
-  const modes = screen.getByRole("group", { name: "Dependency modes" })
-  assert.ok(modes.contains(picker))
-  assert.equal(screen.queryByRole("table", { name: "Dependency modes" }), null)
-  assert.equal(picker.value, i18n.t("Mock"))
-  assert.equal(screen.queryByRole("radio", { name: "Per-environment" }), null)
-  const user = userEvent.setup({ document })
-  await user.click(picker)
-  await user.click(await screen.findByRole("option", { name: "Remote connection" }))
-  assert.deepEqual(writes, [])
-  await user.click(screen.getByRole("button", { name: "Save selection" }))
-  await screen.findByText("Selection saved.")
-  assert.deepEqual(writes, [["a", { services: ["app"], select: { payments: "remote" } }]])
-})
-
 test("environment summaries hide resource details and stopped history until expanded", async () => {
   await i18n.changeLanguage("en")
   const { WorktreeEnvironments } = await server.ssrLoadModule(
@@ -2130,12 +2015,16 @@ test("environment summaries hide resource details and stopped history until expa
         worktreeDependencies: async () => ({
           valid: true,
           services: ["app"],
-          dependencies: { payments: { modes: { mock: {} } } },
+          dependencies: {
+            payments: {
+              kind: "mock",
+            },
+          },
         }),
       },
     }),
   )
-  await screen.findByRole("button", { name: "Save selection" })
+  await screen.findByRole("region", { name: "Environments" })
   assert.equal(
     screen.queryByRole("list", { name: "Resources" }),
     null,
@@ -2186,21 +2075,22 @@ test("environment selection changes preserve the running execution evidence", as
         worktreeDependencies: async () => ({
           valid: true,
           services: ["app"],
-          dependencies: { payments: { modes: { mock: {}, remote: {} } } },
+          dependencies: {
+            payments: {
+              kind: "mock",
+            },
+          },
         }),
       },
     }),
   )
-  await screen.findByRole("button", { name: "Save selection" })
+  await screen.findByRole("region", { name: "Environments" })
   const message =
     "Selected choices differ from an existing environment. Start a new environment to apply them."
   assert.equal(screen.queryByText(message), null)
-  const picker = screen.queryByRole("combobox", { name: "payments" })
-  assert.ok(picker)
+  assert.equal(screen.queryByRole("combobox", { name: "payments" }), null)
   const user = userEvent.setup({ document })
-  await user.click(picker)
-  await user.click(await screen.findByRole("option", { name: "Remote connection" }))
-  assert.equal(screen.queryByText(message), null)
+  await screen.findByRole("button", { name: "Environment details running" })
   await user.click(screen.getByRole("button", { name: "Environment details running" }))
   assert.ok(
     within(screen.getByRole("list", { name: "Dependency modes" })).getByText(i18n.t("Mock"), {
@@ -2209,51 +2099,6 @@ test("environment selection changes preserve the running execution evidence", as
   )
 })
 
-test("worktree choices save independently and never prepare an environment", async () => {
-  await i18n.changeLanguage("en")
-  const { WorktreeEnvironments } = await server.ssrLoadModule(
-    "/src/components/worktree-environments.tsx",
-  )
-  const user = userEvent.setup({ document })
-  const saved = new Map([
-    ["a", { services: ["app"], select: { payments: "mock" } }],
-    ["b", { services: ["worker"], select: { payments: "isolated" } }],
-  ])
-  const writes = []
-  const api = {
-    environments: async () => [],
-    worktreeSelection: async (id) => ({ selection: saved.get(id) ?? null }),
-    worktreeDependencies: async () => ({
-      valid: true,
-      services: ["app", "worker"],
-      dependencies: { payments: { modes: { mock: {}, isolated: {} } } },
-    }),
-    setWorktreeSelection: async (id, selection) => {
-      writes.push(id)
-      saved.set(id, selection)
-      return { selection }
-    },
-  }
-  const view = render(createElement(WorktreeEnvironments, { api, worktreeId: "a" }))
-  await screen.findByRole("button", { name: "Save selection" })
-  assert.equal(
-    screen.getByRole("button", { name: "app", exact: true }).getAttribute("aria-pressed"),
-    "true",
-  )
-  await user.click(screen.getByRole("button", { name: "worker", exact: true }))
-  await user.click(screen.getByRole("button", { name: "Save selection" }))
-  await screen.findByText("Selection saved.")
-  assert.deepEqual(saved.get("a"), { services: ["app", "worker"], select: { payments: "mock" } })
-  view.rerender(createElement(WorktreeEnvironments, { api, worktreeId: "b" }))
-  await waitFor(() =>
-    assert.equal(
-      screen.getByRole("button", { name: "app", exact: true }).getAttribute("aria-pressed"),
-      "false",
-    ),
-  )
-  assert.deepEqual(saved.get("b"), { services: ["worker"], select: { payments: "isolated" } })
-  assert.deepEqual(writes, ["a"])
-})
 test("dependency 도움말은 기본적으로 숨겨지고 클릭으로 열고 닫힌다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectDependencies } = await server.ssrLoadModule(
@@ -2288,7 +2133,11 @@ test("dependency modes show their added services even without environment overri
   render(
     createElement(DependencyCatalog, {
       dependencies: {
-        database: { modes: { isolated: { services: ["postgres-service"], env: {} } } },
+        database: {
+          kind: "isolated",
+          services: ["postgres-service"],
+          env: {},
+        },
       },
     }),
   )
@@ -2349,7 +2198,7 @@ test("authored settings save changed fields without materializing defaults and r
   const snapshot = {
     file: "/project/.redpact/settings.json",
     source:
-      '{"composeFiles":["compose.yaml"],"dependencies":{"db":{"modes":{"isolated":{"services":["db"]}}}}}',
+      '{"composeFiles":["compose.yaml"],"dependencies":{"db":{"kind":"isolated","services":["db"]}}}',
     revision: "old",
     issues: [],
   }
@@ -2383,7 +2232,12 @@ test("authored settings save changed fields without materializing defaults and r
     await waitFor(() => assert.equal(saves.length, 1))
     assert.deepEqual(JSON.parse(saves[0].source), {
       composeFiles: ["compose.yaml"],
-      dependencies: { db: { modes: { isolated: { services: ["db"] } } } },
+      dependencies: {
+        db: {
+          kind: "isolated",
+          services: ["db"],
+        },
+      },
       tests: { timeoutMs: 20000 },
     })
     assert.equal(saves[0].revision, "old")
@@ -2802,7 +2656,7 @@ test("temporary environments have no manual start and cleanup failures can be re
     },
   }
   render(createElement(WorktreeEnvironments, { api, worktreeId: "a" }))
-  await screen.findByRole("button", { name: "Save selection" })
+  await screen.findByRole("region", { name: "Environments" })
   assert.equal(screen.queryByRole("button", { name: "Start manual environment" }), null)
   await user.click(await screen.findByRole("button", { name: "Environment details manual-1" }))
   assert.deepEqual(calls, [])
@@ -3962,7 +3816,12 @@ test("환경변수 저장 충돌은 초안을 유지하고 중복 key는 덮어�
   await i18n.changeLanguage("en")
   const { EnvironmentEditor } = await server.ssrLoadModule("/src/components/environment-editor.tsx")
   const source = {
-    dependencies: { api: { modes: { mock: { env: { app: { MODE: "mock", URL: "original" } } } } } },
+    dependencies: {
+      api: {
+        kind: "mock",
+        env: { app: { MODE: "mock", URL: "original" } },
+      },
+    },
   }
   let attempts = 0
   const api = {
@@ -3982,7 +3841,7 @@ test("환경변수 저장 충돌은 초안을 유지하고 중복 key는 덮어�
       projectId: "project",
       dependency: "api",
       modeName: "mock",
-      mode: source.dependencies.api.modes.mock,
+      mode: source.dependencies.api,
       refresh() {},
     }),
   )
@@ -4156,7 +4015,7 @@ test("프로젝트 Playwright 헤더에서 대상을 고른 뒤에만 테스트�
     within(screen.getByRole("dialog")).getByRole("button", { name: "Run Playwright" }),
   )
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", undefined, undefined, "functional"])
+  assert.deepEqual(calls[0], ["w", undefined, "functional"])
   assert.ok(screen.getByRole("dialog"))
   // Exercise a failed poll before completion without inspecting the DOM's React fiber graph.
   const closed = waitFor(() =>
@@ -4433,20 +4292,7 @@ test("의존성 Overview가 앱 관계와 미구현 권장을 설정 및 실행 
     applicationServices: { web: { services: ["next", "assets"] }, worker: { services: ["jobs"] } },
     dependencies: {
       portone: {
-        modes: { remote: {} },
-        assessments: {
-          isolated: {
-            status: "unavailable",
-            reason: "Hosted payment service",
-            evidence: [{ path: "lib/payment.ts", line: 12 }],
-          },
-          mock: {
-            status: "implementation-needed",
-            reason: "Implement payment adapter",
-            evidence: [{ path: "lib/payment.ts", line: 12 }],
-          },
-        },
-        recommendation: { mode: "mock", reason: "Local payment verification" },
+        kind: "remote",
       },
     },
     relationships: [
@@ -4476,10 +4322,7 @@ test("의존성 Overview가 앱 관계와 미구현 권장을 설정 및 실행 
   assert.ok(graph.textContent.includes("Application services"))
   await user.click(screen.getByRole("button", { name: "Dependency: portone", exact: true }))
   const details = screen.getByRole("region", { name: "Service details" })
-  assert.ok(details.textContent.includes("Implementation needed"))
-  assert.ok(details.textContent.includes("Unavailable"))
-  assert.ok(details.textContent.includes("Configured"))
-  assert.ok(details.textContent.includes("Local payment verification"))
+  assert.ok(details.textContent.includes("Remote connection"))
   assert.ok(details.textContent.includes("lib/payment.ts:12"))
   assert.ok(details.textContent.includes("worker"))
   assert.equal(details.textContent.includes("Running"), false)
@@ -4531,7 +4374,11 @@ test("Overview는 현재 의존성만 표시하고 워크트리 실행 이력을
     projectDependencies: async () => ({
       valid: true,
       issues: [],
-      dependencies: { payment: { modes: { mock: {}, remote: {} } } },
+      dependencies: {
+        payment: {
+          kind: "mock",
+        },
+      },
     }),
     worktreeSelection: async (id) => {
       calls.push(id)
@@ -4569,7 +4416,10 @@ test("프로젝트 설정은 오류가 있어도 항목별 그룹을 유지하�
   const initial = {
     composeFiles: ["compose.yaml"],
     dependencies: {
-      payments: { modes: { remote: { env: { app: { TOKEN: "private-config" } } } } },
+      payments: {
+        kind: "remote",
+        env: { app: { TOKEN: "private-config" } },
+      },
     },
     tests: { timeoutMs: 70000 },
   }
@@ -5161,7 +5011,7 @@ test("워크트리 캡처는 기본 FHD 16:9 해상도로 실행한다", async (
   await waitFor(() => assert.equal(button.disabled, false))
   await userEvent.setup().click(button)
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", undefined, { width: 1920, height: 1080 }, "captures"])
+  assert.deepEqual(calls[0], ["w", { width: 1920, height: 1080 }, "captures"])
   await screen.findByText("Stopped after recording request")
 })
 
@@ -5575,43 +5425,6 @@ test("프로젝트 기본 경로가 없으면 기능 워크트리의 테스트�
   assert.equal(screen.queryByRole("combobox", { name: "Worktree" }), null)
 })
 
-test("project integration defaults load automatic choices and save without starting tests", async () => {
-  await i18n.changeLanguage("en")
-  const { SelectionForm } = await server.ssrLoadModule("/src/components/worktree-environments.tsx")
-  const writes = []
-  const api = {
-    worktreeDependencies: async () => ({
-      valid: true,
-      services: ["app"],
-      dependencies: { payments: { modes: { mock: {}, remote: {} } } },
-    }),
-    projectIntegrationDefaults: async (id) => {
-      assert.equal(id, "project")
-      return { saved: false, selection: { services: ["app"], select: { payments: "mock" } } }
-    },
-    setProjectIntegrationDefaults: async (id, selection) => {
-      writes.push({ id, selection })
-      return { selection }
-    },
-    setWorktreeSelection: () => assert.fail("Project defaults must not save worktree choices"),
-    runIntegrationTests: () => assert.fail("Saving must not run tests"),
-  }
-  render(createElement(SelectionForm, { api, worktreeId: "primary", projectId: "project" }))
-  const user = userEvent.setup({ document })
-  await screen.findByRole("combobox", { name: "payments" })
-  assert.equal(
-    screen.getByRole("button", { name: "app", exact: true }).getAttribute("aria-pressed"),
-    "true",
-  )
-  await user.click(screen.getByRole("combobox", { name: "payments" }))
-  await user.click(await screen.findByRole("option", { name: "Remote connection" }))
-  await user.click(screen.getByRole("button", { name: "Save selection" }))
-  await screen.findByText("Selection saved.")
-  assert.deepEqual(writes, [
-    { id: "project", selection: { services: ["app"], select: { payments: "remote" } } },
-  ])
-})
-
 test("Capture 파일을 바꾸면 내부 탭 없이 해당 이미지를 바로 표시한다", async () => {
   await i18n.changeLanguage("en")
   const { CaptureReview } = await server.ssrLoadModule("/src/components/capture-review.tsx")
@@ -5997,7 +5810,7 @@ test("UI 리뷰는 모바일 모드 토글로 저장된 모바일과 데스크�
   assert.equal(screen.queryByAltText("desktop-shot"), null)
   await user.click(screen.getByRole("button", { name: "Run Playwright" }))
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", undefined, { width: 390, height: 844 }, "captures"])
+  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "captures"])
   await user.click(mobileMode)
   assert.equal(mobileMode.getAttribute("aria-checked"), "false")
   await screen.findByAltText("desktop-shot")
@@ -6565,7 +6378,7 @@ test("한 실행의 캡처를 실제 viewport로 분류하고 이름과 실행 �
   assert.equal(screen.queryByAltText("desktop-shot"), null)
   await user.click(screen.getByRole("button", { name: "Run Playwright" }))
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", undefined, { width: 390, height: 844 }, "captures"])
+  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "captures"])
   await user.click(mobileMode)
   assert.equal(mobileMode.getAttribute("aria-checked"), "false")
   await screen.findByAltText("desktop-shot")
@@ -6826,7 +6639,7 @@ test("캡처 소스는 실행 전에도 파일 선택과 실행 대상으로 남
   assert.equal(run.disabled, false)
   await user.click(run)
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", undefined, { width: 390, height: 844 }, "screens"])
+  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "screens"])
 })
 
 test("공유 파일 뷰어가 SVG 미리보기·원본 전환과 PNG·ICO 오류를 동일하게 제공한다", async () => {
@@ -6917,7 +6730,7 @@ test("새 버전이 있을 때 사이드바 하단에 Update를 표시하고 네
   }
 })
 
-test("브라우저에서는 Update를 숨기고 데스크톱에서는 새 버전이 없어도 확인할 수 있다", async () => {
+test("새 버전이 없으면 Update를 숨기고 설정 안에서만 수동 확인한다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
@@ -6937,6 +6750,8 @@ test("브라우저에서는 Update를 숨기고 데스크톱에서는 새 버전
   try {
     render(createElement(ProjectManager, props))
     await waitFor(() => assert.equal(checked, true))
+    assert.equal(screen.queryByRole("button", { name: "Check for updates" }), null)
+    await userEvent.click(screen.getByRole("button", { name: "Settings", exact: true }))
     assert.ok(screen.getByRole("button", { name: "Check for updates" }))
   } finally {
     delete window.__TAURI__
@@ -6992,9 +6807,10 @@ test("사이드바 하단 한 줄에 아이콘 설정과 GitHub·Star·업데이
     await userEvent.click(repository)
     await userEvent.click(star)
     assert.equal(calls.filter((command) => command === "desktop_open_repository").length, 2)
-    await userEvent.click(shortcuts.getByRole("button", { name: "Check for updates" }))
-    await waitFor(() => assert.ok(calls.includes("desktop_install_update")))
+    assert.equal(shortcuts.queryByRole("button", { name: "Check for updates" }), null)
     await userEvent.click(settings)
+    await userEvent.click(screen.getByRole("button", { name: "Check for updates" }))
+    await waitFor(() => assert.ok(calls.includes("desktop_check_update")))
     assert.equal(settings.getAttribute("aria-current"), "page")
   } finally {
     delete window.__TAURI__

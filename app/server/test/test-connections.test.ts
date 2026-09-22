@@ -1,8 +1,10 @@
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { expect, test } from "vitest"
-import { createVitestRunner } from "../src/adapters/test-runner/vitest.js"
+import { expect, test as unitTest } from "vitest"
+import { createTestVitestRunner as createVitestRunner } from "./helpers/container-runner.js"
+
+const test = unitTest.skipIf(process.env.REDPACT_DOCKER_TESTS !== "1")
 
 test("secret values are removed from stdout, stderr and failure evidence including overlapping keys", async () => {
   const root = await mkdtemp(join(tmpdir(), "redpact-redaction-"))
@@ -176,7 +178,19 @@ test("user fixtures run unchanged in Redpact and standalone Vitest and release c
       undefined,
       undefined,
       [],
-      connections,
+      {
+        ...connections,
+        services: {
+          app: {
+            ports: Object.fromEntries(
+              Object.entries(connections.services.app.ports).map(([key, value]) => [
+                key,
+                { ...value, host: "host.docker.internal" },
+              ]),
+            ),
+          },
+        },
+      },
     )
     expect(managed).toMatchObject({ outcome: "passed" })
     const standalone = join(root, "standalone")

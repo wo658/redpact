@@ -14,7 +14,7 @@ When an agent reports completion, you should be able to see what changed, whethe
 ```mermaid
 flowchart TD
     P["Connect project"] --> D["Define app and dependencies"]
-    D --> W["Choose worktree and execution selection"]
+    D --> W["Choose execution worktree"]
     W --> E["Prepare environment and execute tests"]
     E --> R["Review diff, intent, results and screens"]
     R --> F["Request another change"]
@@ -25,7 +25,7 @@ The agent investigates the repository and writes configuration, code, and tests.
 
 ## Two questions to understand first
 
-**Which environment ran the code?** Shared settings define the app's database, cache, and external API options. Each worktree can select dependency modes; execution uses that checkout's files. Shared configuration does not imply shared runtime resources or data. Start with [Dependencies and worktrees](dependencies.md).
+**Which environment ran the code?** Shared settings define the app's database, cache, and external API options. All worktrees share one fixed dependency configuration; execution uses that checkout's files. Shared configuration does not imply shared runtime resources or data. Start with [Dependencies and worktrees](dependencies.md).
 
 **What supports the completion claim?** A diff shows code changes, tests show intended checks and their results, and captures show application states during execution. [Review your first change](review-workflow.md) connects these in one example.
 
@@ -34,7 +34,7 @@ The agent investigates the repository and writes configuration, code, and tests.
 | Question | Evidence to inspect |
 |---|---|
 | Which checkout contains the requested change? | Actual worktree and diff |
-| Which dependencies were used? | Selected services and dependency modes, recorded environment information |
+| Which dependencies were used? | Configured services and dependency kinds, recorded environment information |
 | Were success and error behavior checked? | Test source, case intent and assertions |
 | How far did execution actually get? | Recorded case and step results, diagnostics |
 | What did the user see? | State-specific captures from the actual application |

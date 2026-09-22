@@ -2,15 +2,15 @@ import { expect, test } from "vitest"
 import { createSteps } from "./steps"
 import { http, node, rpc } from "./target"
 
-/** 환경 준비에 실패해도 실행 기록과 로그를 남기고 임시 환경 데이터를 제거한다. */
-test("통합테스트 환경 준비 실패 후 자동 정리와 로그 보존", async (context) => {
+/** Docker가 없는 대상에서는 입력 확인 실패를 기록하고 실행 환경을 생성하지 않는다. */
+test("Docker가 없는 앱에서 입력 확인 실패를 기록하고 환경을 생성하지 않는다", async (context) => {
   const step = createSteps(context)
   const path = await step("실제 서버에 테스트 프로젝트 파일을 준비한다", () =>
     node<string>(`
     import {mkdtempSync,mkdirSync,writeFileSync} from 'node:fs';
     const path = mkdtempSync('/tmp/cleanup-acceptance-');
     mkdirSync(path+'/.redpact'); mkdirSync(path+'/tests');
-    writeFileSync(path+'/.redpact/settings.json', JSON.stringify({composeFiles:['compose.yaml']}));
+    writeFileSync(path+'/.redpact/settings.json', JSON.stringify({composeFiles:['compose.yaml'],services:['app'],tests:{directory:'tests'}}));
     writeFileSync(path+'/compose.yaml','services:\\n  app:\\n    image: alpine:3.21\\n');
     writeFileSync(path+'/tests/check.test.ts','import {test,expect} from "vitest"; test("검증",()=>expect(true).toBe(true))');
     console.log(JSON.stringify(path));
@@ -22,7 +22,7 @@ test("통합테스트 환경 준비 실패 후 자동 정리와 로그 보존", 
       structuredContent: { id: string; state: string }
     }>("tools/call", {
       name: "run_tests",
-      arguments: { path, selection: { services: ["app"], select: {} } },
+      arguments: { path },
     }),
   )
   await step("실행 요청이 승인 대기 없이 접수됐는지 확인한다", () => {
@@ -30,37 +30,33 @@ test("통합테스트 환경 준비 실패 후 자동 정리와 로그 보존", 
     expect(response.structuredContent.state).not.toBe("awaiting_approval")
   })
   const id = response.structuredContent.id
-  let environmentId = ""
-  await step("준비 실패와 자동 정리 완료를 확인한다", async () => {
+  await step("입력 확인 실패가 실행 기록으로 남는지 확인한다", async () => {
     await expect
-      .poll(
-        async () => {
-          const result = await http<{
-            state: string
-            environmentId?: string
-            result?: { outcome: string }
-            environment?: { state: string }
-          }>(`/api/runs/${id}`)
-          environmentId = result.body.environmentId ?? ""
-          return {
-            run: result.body.state,
-            outcome: result.body.result?.outcome,
-            environment: result.body.environment?.state,
-          }
-        },
-        { timeout: 15000, interval: 300 },
-      )
-      .toEqual({ run: "finished", outcome: "environment_error", environment: "stopped" })
+      .poll(async () => (await http<{ state: string }>(`/api/runs/${id}`)).body.state, {
+        timeout: 15000,
+        interval: 300,
+      })
+      .toBe("finished")
+    const result = await http<{
+      result: { outcome: string }
+      environmentId?: string
+      environment?: unknown
+    }>(`/api/runs/${id}`)
+    expect(result.body.result.outcome).toBe("execution_error")
+    expect(result.body.environmentId).toBeFalsy()
+    expect(result.body.environment).toBeUndefined()
   })
-  await step("임시 소스는 삭제되고 준비 로그는 보존됐는지 확인한다", async () => {
-    const files = await node<{ source: boolean; log: boolean }>(
+  await step("실행이 소유하는 환경 기록이나 임시 소스가 생성되지 않았는지 확인한다", async () => {
+    const count = await node<number>(
       `
-      import {existsSync} from 'node:fs';
-      const id=JSON.parse(process.argv[1]); const root='/tmp/redpact-e2e-state/environments/'+id;
-      console.log(JSON.stringify({source:existsSync(root+'/source'),log:existsSync(root+'/preparation.log')}));
+      import {existsSync,readdirSync,readFileSync} from 'node:fs';
+      const directory='/tmp/redpact-e2e-state/environments';
+      const id=JSON.parse(process.argv[1]);
+      const records=existsSync(directory)?readdirSync(directory).filter(name=>name.endsWith('.json')).map(name=>JSON.parse(readFileSync(directory+'/'+name,'utf8'))):[];
+      console.log(JSON.stringify(records.filter(record=>record.requestId===id).length));
     `,
-      environmentId,
+      id,
     )
-    expect(files).toEqual({ source: false, log: true })
+    expect(count).toBe(0)
   })
 }, 60000)

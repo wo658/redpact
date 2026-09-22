@@ -99,7 +99,6 @@ test("MCP가 선택한 워크트리를 확인하고 테스트 결과 카드를 �
       arguments: {
         action: "validate",
         path: checkout,
-        selection: { services: ["app"], select: {} },
       },
     })
     expect(inspected.isError).not.toBe(true)

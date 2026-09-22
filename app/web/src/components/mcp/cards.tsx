@@ -1,6 +1,5 @@
 import { CheckIcon, ChevronDownIcon, CircleIcon, XIcon } from "lucide-react"
-import { useId, useState } from "react"
-import { SearchPicker } from "@/components/search-picker"
+import { useState } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,7 +34,7 @@ import {
 import { dependencyModeLabel } from "@/lib/dependency-modes"
 import { TestFileBrowser } from "../test-file-browser"
 import { UnifiedDiff } from "../unified-diff"
-import type { CardActions, Selection, Snapshot } from "./model"
+import type { CardActions, Snapshot } from "./model"
 import { keyedRows } from "./model"
 
 function PolicyMenu({ data, actions }: { data: Snapshot; actions: CardActions }) {
@@ -75,12 +74,10 @@ function Footer({
   data,
   actions,
   subject,
-  selection,
 }: {
   data: Snapshot
   actions: CardActions
   subject: "environment" | "tests"
-  selection?: Selection
 }) {
   const review = data.review
   const approved = subject === "environment" ? review?.environmentApproved : review?.testsApproved
@@ -90,7 +87,7 @@ function Footer({
     label = "Waiting for approval"
   }
   if (approved) {
-    label = "Approved selection"
+    label = "Approved configuration"
   }
   if (data.nextPolicy && data.nextPolicy !== data.policy) {
     label += ` · Next task: ${data.nextPolicy === "auto" ? "Auto" : "Ask first"}`
@@ -106,7 +103,7 @@ function Footer({
           <Button
             size="sm"
             disabled={actions.busy || (subject === "tests" && !review?.environmentApproved)}
-            onClick={() => actions.approve(subject, selection)}
+            onClick={() => actions.approve(subject)}
           >
             Approve {subject}
           </Button>
@@ -132,13 +129,9 @@ function environmentStatus(data: Snapshot) {
 }
 
 export function EnvironmentCard({ data, actions }: { data: Snapshot; actions: CardActions }) {
-  const id = useId()
   const review = data.review
-  const initial = review?.selection ?? data.selection
-  const [selection, setSelection] = useState(initial)
+  const selection = review?.selection ?? data.selection
   const dependencies = review?.dependencies ?? data.dependencies ?? {}
-  const editable =
-    review?.policy === "ask" && review.state === "pending" && !review.environmentApproved
   return (
     <Card size="sm" aria-label="Environment" className="w-full min-w-0 content-width-768">
       <CardHeader>
@@ -153,7 +146,7 @@ export function EnvironmentCard({ data, actions }: { data: Snapshot; actions: Ca
       <CardContent className="flex flex-col gap-3">
         {selection && (
           <p className="break-words text-sm">
-            Selected services: {selection.services.join(", ") || "None"}
+            Configured services: {selection.services.join(", ") || "None"}
           </p>
         )}
         <p className="text-sm font-medium">Dependencies</p>
@@ -166,28 +159,10 @@ export function EnvironmentCard({ data, actions }: { data: Snapshot; actions: Ca
               <FieldTitle className="min-w-0 [overflow-wrap:anywhere]">{name}</FieldTitle>
               <div className="flex min-w-0 flex-col gap-2">
                 <p className="break-words text-sm text-muted-foreground">
-                  Modes: {modes.map(dependencyModeLabel).join(", ")}
+                  Kind: {modes.map(dependencyModeLabel).join(", ")}
                 </p>
-                {editable && selection ? (
-                  <SearchPicker
-                    id={`${id}-${name}`}
-                    label={`${name} mode`}
-                    disabled={actions.busy}
-                    value={selection.select[name] ?? ""}
-                    options={modes.map((mode) => ({
-                      value: mode,
-                      label: dependencyModeLabel(mode),
-                    }))}
-                    onValueChange={(mode) =>
-                      setSelection({ ...selection, select: { ...selection.select, [name]: mode } })
-                    }
-                  />
-                ) : (
-                  selection?.select[name] && (
-                    <Badge variant="outline">
-                      Selected: {dependencyModeLabel(selection.select[name])}
-                    </Badge>
-                  )
+                {selection?.select[name] && (
+                  <Badge variant="outline">{dependencyModeLabel(selection.select[name])}</Badge>
                 )}
               </div>
             </Field>
@@ -209,7 +184,7 @@ export function EnvironmentCard({ data, actions }: { data: Snapshot; actions: Ca
           </Alert>
         )}
       </CardContent>
-      <Footer data={data} actions={actions} subject="environment" selection={selection} />
+      <Footer data={data} actions={actions} subject="environment" />
     </Card>
   )
 }

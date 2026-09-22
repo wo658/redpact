@@ -4,7 +4,7 @@ Read this guide from `redpact-init` for project setup, or from `redpact` when de
 
 ## Establish the minimum inputs
 
-Inspect repository facts before asking; dependency mode decisions require the interactive discussion in the dependency guide. Use the current checkout and repository evidence when unambiguous, and briefly state consequential assumptions.
+Inspect repository facts before asking; dependency topology decisions require the interactive discussion in the dependency guide. Use the current checkout and repository evidence when unambiguous, and briefly state consequential assumptions.
 
 | Information | How to obtain it | When user input is needed |
 | --- | --- | --- |
@@ -51,16 +51,13 @@ Initialize a complete valid configuration for the selected capabilities:
   empty commands or invented paths to fill a required field. Optional capabilities
   without valid required inputs remain absent and are reported as unconfigured;
   do not enable a capability merely to make every top-level key appear.
-- Optional descriptions, evidence, assessments and recommendations require real
-  facts. Omit them when unavailable and report the reason. Do not generate fictional
-  catalog entries, all dependency modes or conflicting union alternatives. Declare
+- Optional descriptions require real facts. Omit them when unavailable. Do not
+  generate fictional dependencies or conflicting union alternatives. Declare
   necessary secret references without reading or storing private values; request
-  missing selected credentials through secure input.
-- Keep project, instance, tracking, Integration defaults and worktree selection in
-  their respective files. Fill only fields supported by each file's own schema;
+  missing declared credentials through secure input.
+- Keep project, instance and tracking settings in their respective files. Fill only fields supported by each file's own schema;
   `projectsSchema` does not describe the entire instance file. Preserve existing
-  instance preferences. Selection requires real root services and is not an empty
-  placeholder. Browser display language is not a project setting.
+  instance preferences. The fixed execution configuration requires real root services. Browser display language is not a project setting.
 
 On repeated init, read existing files first, preserve explicit values (including
 `false`, `0` and allowed empty values), and fill missing defaults without replacing
@@ -70,7 +67,7 @@ need a targeted repair based on diagnostics, never silent stripping or replaceme
 of the whole file with an example.
 
 Read back the authored JSON, call `configure validate` for the same absolute checkout
-and intended selection, then inspect the normalized settings. Check that all
+and fixed configuration, then inspect the normalized settings. Check that all
 applicable defaulted fields are explicit and match the live schema; repair omissions
 and validate again if the file changes. Report capabilities or factual optional
 fields left absent and why. Validation proves configuration validity only; retain
@@ -82,10 +79,10 @@ application's required service, command, port or credentials without project ini
 Read only the relevant setup sections: [Unit](../../redpact/references/unit-tests.md#native-redgreen-and-connected-evidence),
 [Integration](../../redpact/references/integration-tests.md), or
 [Playwright](../../redpact/references/playwright.md#setup-and-authoring).
-For application containers, dependency relationships, modes, selections or connection
+For application containers, dependency relationships, fixed definitions or connection
 inputs, read [Project dependencies](../../redpact/references/dependencies.md).
 Draft-only init reads authoring/setup requirements. Dependency registration also reads
-the execution procedure needed for bounded mode verification.
+the execution procedure needed for bounded connection verification.
 
 ## Application Container baseline
 
@@ -93,9 +90,8 @@ For ordinary init of a runnable web application or server, reuse or implement a
 Dockerfile/image, suitable .dockerignore and Compose service for the actual app.
 Derive build/start commands, workspace packages and runtime files from the project;
 do not require the user to design Docker configuration. Register composeFiles and
-application metadata using the live schema so project Container can select the app
-through Integration defaults. Check the effective selection; preserve intentional
-saved defaults and resolve any selection that omits the intended application.
+root services and application metadata using the live schema. Check the fixed
+execution plan includes the intended application; preserve unrelated definitions.
 A frontend without a database still needs its own application service.
 
 Configure the application to listen on a container-reachable address such as
@@ -157,14 +153,14 @@ committing unrelated work. If changes cannot be committed within the user's scop
 report the remaining fresh-worktree readiness gap without claiming full completion.
 
 Verify the primary checkout and a fresh retained verification worktree created from
-the setup commit using the same complete baseline selection. Use a project-owned
+the setup commit using the same complete fixed baseline. Use a project-owned
 location such as `.codex/worktrees/init-verify-<slug>`. The fresh worktree must need
 no Mock/Compose/env repair, copied secrets or base-only untracked files. Normal
 package installation/build and managed provisioning remain allowed. If primary is
 on a different branch, do not silently switch or merge it; resolve its missing setup
 before claiming primary readiness. Existing feature worktrees need the setup commit
 incorporated before reuse; settings sharing does not propagate source changes.
-Record the base/setup commits, checkout paths, selection, actual operations and
+Record the base/setup commits, checkout paths, fixed configuration, actual operations and
 outcomes in ordinary setup documentation. Clean up only owned verification resources
 and clean disposable verification worktrees.
 
@@ -178,9 +174,9 @@ For ordinary runnable-application init, or when managed integration is selected,
 
 For the application Container baseline or selected managed integration, author a Dockerfile and .dockerignore when an application build is needed, or reuse a suitable existing application image. Compose must run the actual target application and required services, with correct build context, runtime files, writable storage, fixed internal ports and readiness checks. Check that listening addresses are reachable within the container network without weakening application access controls. Keep the installed Redpact service separate from the target. A project with no selectable service dependencies can use an empty dependency map; do not add a database or example service just to populate it. If the application cannot fit the supported environment contract, report the concrete incompatibility after investigation.
 
-Author project-owned dependency infrastructure for explicit setup in the base-branch checkout; follow the lifecycle above. Feature worktrees reuse existing Docker/Compose definitions and select modes only; a setup failure does not authorize local infrastructure edits.
+Author project-owned dependency infrastructure for explicit setup in the base-branch checkout; follow the lifecycle above. Feature worktrees reuse existing Docker/Compose definitions and the fixed configuration; a setup failure does not authorize local infrastructure edits.
 
-Write `.redpact/settings.json` directly at the shared `rulesRoot` returned by configure, using the live contract. Do not create a linked-checkout override; Compose and test paths remain relative to the target application directory. Keep the dependency catalog in settings and execution selection separate. Materialize applicable schema defaults as described above and preserve unrelated settings and omitted application environment bindings. Managed integration tests, helpers, and fixtures are project-owned Git-tracked sources under `tests.directory` (default `integration`), never under `.redpact`. Keep Unit patterns in a distinct directory so they cannot include Integration sources. Init does not invent unrelated test cases; agreed mock implementation requires relevant tests and bounded application verification. Use declared service connections instead of hard-coded allocated host ports.
+Write `.redpact/settings.json` directly at the shared `rulesRoot` returned by configure, using the live contract. Do not create a linked-checkout override; Compose and test paths remain relative to the target application directory. Keep fixed root services and dependency definitions in that shared settings file. Materialize applicable schema defaults as described above and preserve unrelated settings and omitted application environment bindings. Managed integration tests, helpers, and fixtures are project-owned Git-tracked sources under `tests.directory` (default `integration`), never under `.redpact`. Keep Unit patterns in a distinct directory so they cannot include Integration sources. Init does not invent unrelated test cases; agreed mock implementation requires relevant tests and bounded application verification. Use declared service connections instead of hard-coded allocated host ports.
 
 For unit setup, inspect the adopted runner and configure the supported unitTests dockerfile/command/cwd/patterns in the shared settings; use a finite command and preserve existing settings. For UI setup, follow the Playwright section below. Init does not run unrelated commands or captures; dependency registration follows the
 bounded verification exception in the dependency guide.
@@ -189,9 +185,9 @@ During init or a feature's first-time setup, project observation is required. Ad
 
 Verify that the connected server has discovered the project using its advertised read-only HTTP API. On the current server, read `GET /api/projects`, then the matching project's `GET /api/projects/:id/tracking` and `GET /api/projects/:id/worktrees`. Check the actual location and checkout paths, not just the project name. The tracking response's `projectRoot` supplies the viewer's Settings → Project root directory; it must match the primary-checkout application root. A linked worktree's execution path can differ from this shared root, including the preserved application subdirectory in a monorepo. Confirm the target checkout is present. Do not claim observation from a saved entry or successful configure validation alone. If discovery has not completed, use a bounded retry and report any remaining mismatch or unavailable API as an incomplete setup. Use the connected service's actual origin; do not guess a default port or inspect a different instance. These data checks require no browser or screenshots.
 
-Call `configure validate` with the target path and intended selection when known. Correct diagnostics before execution. Validation does not establish Docker readiness or approval. If prerequisites cannot be satisfied, report the exact blocker and complete unaffected work; never claim the feature was tested through an unavailable environment.
+Call `configure validate` with the target path and fixed configuration when known. Correct diagnostics before execution. Validation does not establish Docker readiness or approval. If prerequisites cannot be satisfied, report the exact blocker and complete unaffected work; never claim the feature was tested through an unavailable environment.
 
-For explicit draft-only requests, finish with draft files, validation and deferred checks without publishing unverified modes. Application Container setup includes the host-access verification above; dependency registration includes bounded temporary verification from the dependency guide. Missing Docker or other required access leaves registration incomplete; it does not prevent independent draft authoring or read-only validation. Do not run unrelated tests, unit commands or captures.
+For explicit draft-only requests, finish with draft files, validation and deferred checks without publishing unverified connections. Application Container setup includes the host-access verification above; dependency registration includes bounded temporary verification from the dependency guide. Missing Docker or other required access leaves registration incomplete; it does not prevent independent draft authoring or read-only validation. Do not run unrelated tests, unit commands or captures.
 
 ## Completion and return
 
@@ -199,17 +195,17 @@ Successful init requires all of the following evidence:
 
 - The absolute target application directory exists and is unambiguous; identify the shared primary-checkout settings root separately when different.
 - Shared `.redpact/settings.json` and the definitions needed for the selected capabilities exist and match the inspected project: command settings for unit execution, real application/Compose definitions for managed integration, and Playwright configuration for supported UI review.
-- For runnable applications in ordinary init, real application Compose definitions and effective app selection exist, and both primary and fresh-worktree executions have verified host endpoint responses. An empty composeFiles list or internal healthcheck alone cannot satisfy this gate.
+- For runnable applications in ordinary init, real application Compose definitions and fixed application roots exist, and both primary and fresh-worktree executions have verified host endpoint responses. An empty composeFiles list or internal healthcheck alone cannot satisfy this gate.
 - The connected instance's settings readback includes the project observation entry, and live viewer API data confirms the project root and target checkout.
-- Application/dependency roles, relationships and mode assessments reflect inspected evidence. When topology is present, include a Mermaid v12 flowchart in the handoff using the [dependency guide](../../redpact/references/dependencies.md#mermaid-dependency-overview). Report unresolved topology or mode questions and implementation recommendations separately from configured paths and execution readiness.
+- Application/dependency roles and relationships reflect inspected evidence. When topology is present, include a Mermaid v12 flowchart in the handoff using the [dependency guide](../../redpact/references/dependencies.md). Report unresolved topology or connection questions separately from configured paths and execution readiness.
 - The user has resolved required dependency choices through the Existing-connection-first flow, baseline agreement and per-app additions question, including selected credential needs and mock implementation scope. Agreed missing mocks are implemented and verified through the application; test-internal fakes do not establish readiness. Real-provider checks excluded from mock scope remain explicit.
-- The integrated primary checkout and a fresh worktree pass the complete baseline selection: at least one verified mode for every required dependency, with no missing keys, unimplemented mocks or checkout-specific environment repair. Init-worktree-only evidence is not full completion.
-- Every newly registered dependency mode passes the dependency guide registration checks, including primary/fresh-worktree resolution, actual runtime access and concurrent-use isolation. Required user inputs are resolved; private values never enter the agent conversation. Unverified candidates remain outside selectable modes.
+- The integrated primary checkout and a fresh worktree pass the complete fixed baseline: one verified fixed definition for every required dependency, with no missing keys, unimplemented mocks or checkout-specific environment repair. Init-worktree-only evidence is not full completion.
+- Every newly declared dependency passes the dependency guide registration checks, including primary/fresh-worktree resolution, actual runtime access and concurrent-use isolation. Required user inputs are resolved; private values never enter the agent conversation. Unverified candidates remain outside runnable configuration.
 - Live `configure validate` succeeds for the explicit target path. Resolve configuration diagnostics and test-discovery errors; an empty test directory is allowed for init and does not require inventing tests.
 
-If a required fact cannot be inferred, ask for that fact and continue independent setup work. If a required check cannot be completed, report init as incomplete with the exact blocker; do not proceed into dependent execution or describe authored-only setup as initialized. An unresolved future execution selection may remain deferred, but required dependency decisions and agreed mock implementation may not. Missing Docker or unproven readiness required by a proposed dependency mode blocks its registration; follow the bounded verification workflow rather than declaring it usable.
+If a required fact cannot be inferred, ask for that fact and continue independent setup work. If a required check cannot be completed, report init as incomplete with the exact blocker; do not proceed into dependent execution or describe authored-only setup as initialized. Required dependency decisions and agreed mock implementation may not remain deferred. Missing Docker or unproven readiness required by a proposed dependency blocks its registration; follow the bounded verification workflow rather than declaring it usable.
 
-Report the absolute execution path, shared project root, files changed (or valid files reused), verified observation status, actual validation outcome, known selection or unresolved choices, and deferred runtime checks. Provide the actual viewer URL and direct the user to select the project and open Settings → Project root directory so the resolved path is reviewable. Do not invent a deep link. If viewer access is unavailable, show the resolved paths in the response and state which live check is blocked. Do not write a separate onboarding-state file or store selections in project settings.
+Report the absolute execution path, shared project root, files changed (or valid files reused), verified observation status, actual validation outcome, fixed topology and unresolved connection facts, and deferred runtime checks. Provide the actual viewer URL and direct the user to select the project and open Settings → Project root directory so the resolved path is reviewable. Do not invent a deep link. If viewer access is unavailable, show the resolved paths in the response and state which live check is blocked. Do not write a separate onboarding-state file or worktree selection file.
 
 For init/configuration-only requests, stop here. For first-time setup within an authorized feature or test request, return to the main skill's implementation and execution workflow without requiring a separate redpact-init invocation.
 
@@ -219,7 +215,7 @@ For UI review, inspect actual application routes, Compose readiness and the live
 `configure describe` Playwright contract. Use [Playwright authoring](../../redpact/references/playwright.md).
 Configure optional `playwright` in the shared `.redpact/settings.json`: a scenario
 directory, selected application service and internal port. Preserve unrelated
-settings. The service must be part of a valid execution selection. Redpact owns the
+settings. The service must be part of the fixed execution service closure. Redpact owns the
 browser container; the project supplies the actual application container.
 
 Scenarios use ordinary `@playwright/test` and named PNG attachments. No component

@@ -52,69 +52,23 @@ const evidence = z
 export const dependencyDefinition = z
   .strictObject({
     description: explanation.optional(),
-    modes: bounded(
-      dependencyModeName,
-      z.strictObject({
-        services: names.default([]),
-        env: bounded(name, bounded(serviceVariableName, containerBinding, 100), 100).default({}),
-      }),
-      4,
-    ),
-    assessments: bounded(
-      dependencyModeName,
-      z.strictObject({
-        status: z.enum(["unavailable", "implementation-needed"]),
-        reason: explanation,
-        evidence,
-      }),
-      4,
-    ).optional(),
-    recommendation: z.strictObject({ mode: dependencyModeName, reason: explanation }).optional(),
+    kind: z.enum(["isolated", "mock", "shared-local", "remote"]),
+    services: names.default([]),
+    env: bounded(name, bounded(serviceVariableName, containerBinding, 100), 100).default({}),
   })
   .superRefine((dependency, ctx) => {
-    for (const [mode, definition] of Object.entries(dependency.modes)) {
-      if (mode === "isolated" && definition.services.length === 0) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["modes", mode, "services"],
-          message: "Isolated requires actual dependency Compose services",
-        })
-      }
-      if ((mode === "shared-local" || mode === "remote") && definition.services.length > 0) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["modes", mode, "services"],
-          message: "Connection modes use existing services and cannot provision Compose services",
-        })
-      }
-      if (Object.hasOwn(dependency.assessments ?? {}, mode)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["assessments", mode],
-          message: "A configured mode cannot also be unavailable or need implementation",
-        })
-      }
-    }
-    if (
-      Object.keys(dependency.modes).length === 0 &&
-      Object.keys(dependency.assessments ?? {}).length === 0
-    ) {
+    if (dependency.kind === "isolated" && !dependency.services.length) {
       ctx.addIssue({
         code: "custom",
-        path: ["modes"],
-        message: "Declare at least one configured mode or mode assessment",
+        path: ["services"],
+        message: "Isolated requires actual dependency Compose services",
       })
     }
-    const recommended = dependency.recommendation?.mode
-    if (
-      recommended &&
-      !Object.hasOwn(dependency.modes, recommended) &&
-      dependency.assessments?.[recommended]?.status !== "implementation-needed"
-    ) {
+    if (["shared-local", "remote"].includes(dependency.kind) && dependency.services.length) {
       ctx.addIssue({
         code: "custom",
-        path: ["recommendation", "mode"],
-        message: "Recommend a configured mode or one needing implementation",
+        path: ["services"],
+        message: "External connections cannot provision Compose services",
       })
     }
   })
@@ -123,6 +77,7 @@ export const testSelectionSchema = z.strictObject({
   select: bounded(name, dependencyModeName, 100),
 })
 export const settingsShape = z.strictObject({
+  services: names.default([]),
   applicationServices: bounded(
     name,
     z.strictObject({
@@ -256,15 +211,13 @@ function checkDependencyOwnership(
   ctx: z.RefinementCtx,
 ) {
   for (const [dependency, definition] of Object.entries(settings.dependencies)) {
-    for (const [mode, config] of Object.entries(definition.modes)) {
-      for (const service of config.services) {
-        if (owners.has(service)) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["dependencies", dependency, "modes", mode, "services"],
-            message: `Compose service ${service} belongs to application ${owners.get(service)}, not a dependency`,
-          })
-        }
+    for (const service of definition.services) {
+      if (owners.has(service)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["dependencies", dependency, "services"],
+          message: `Compose service ${service} belongs to application ${owners.get(service)}, not a dependency`,
+        })
       }
     }
   }

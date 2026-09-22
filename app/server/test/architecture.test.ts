@@ -7,6 +7,7 @@ import { expect, test } from "vitest"
 const root = fileURLToPath(new URL("../src/", import.meta.url))
 const pureImports = new Map<string, Set<string>>([
   ["zod", new Set(["z"])],
+  ["semver", new Set(["gt", "prerelease", "valid"])],
   ["node:path", new Set(["isAbsolute", "matchesGlob"])],
   ["node:crypto", new Set(["createHash", "timingSafeEqual"])],
   ["node:util", new Set(["isDeepStrictEqual"])],

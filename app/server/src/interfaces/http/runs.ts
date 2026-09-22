@@ -120,7 +120,7 @@ export function runRoutes(runs: RunQueries, executeTests: ExecuteTests) {
         summary: "Start a test run",
         tags: ["Runs"],
         description:
-          "Validates the submission settings and queues Vitest execution. Each execution prepares a fresh temporary environment using saved worktree choices and removes it after execution. Acceptance is not a passing result.",
+          "Validates the submission settings and queues Vitest execution. Each execution prepares a fresh temporary environment using fixed project configuration and removes it after execution. Acceptance is not a passing result.",
         requestBody: jsonBody(runInput),
         responses: {
           ...localErrors,

@@ -24,17 +24,60 @@ for (const theme of ["light", "dark"] as const) {
     }
     await page.getByRole("button", { name: "Settings", exact: true }).click()
     if ((page.viewportSize()?.width ?? 1920) < 768) {
-      await page.keyboard.press("Escape")
+      await page.locator('[data-slot="sheet-overlay"]').click({
+        position: { x: (page.viewportSize()?.width ?? 414) - 8, y: 100 },
+      })
     }
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible()
     if ((page.viewportSize()?.width ?? 1920) < 768) {
       await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
     }
     await expect(page.getByRole("button", { name: "Update to 0.2.0" })).toBeInViewport()
+    await expect(page.getByRole("button", { name: "Update to 0.2.0" })).toHaveText("Update")
     await page.evaluate(() => document.fonts.ready)
-    await testInfo.attach(`사이드바 / 아이콘 바로가기 / ${theme}`, {
-      body: await page.screenshot({ animations: "disabled" }),
+    await testInfo.attach(`업데이트 / 사이드바 / ${theme}`, {
+      body: await page.screenshot({ animations: "disabled", scale: "css" }),
+      contentType: "image/png",
+    })
+    if ((page.viewportSize()?.width ?? 1920) < 768) {
+      await page.locator('[data-slot="sheet-overlay"]').click({
+        position: { x: (page.viewportSize()?.width ?? 414) - 8, y: 100 },
+      })
+    }
+    await expect(page.getByRole("button", { name: "Check for updates", exact: true })).toBeVisible()
+    await testInfo.attach(`업데이트 / 설정 / ${theme}`, {
+      body: await page.screenshot({ animations: "disabled", scale: "css" }),
       contentType: "image/png",
     })
   })
 }
+
+test("npm 업데이트 설치 확인창을 촬영한다", async ({ page }, testInfo) => {
+  await page.route("**/api/updates", (route) =>
+    route.fulfill({
+      json: {
+        currentVersion: "0.2.0",
+        version: "0.3.0",
+        busy: false,
+        supported: true,
+        canInstall: true,
+      },
+    }),
+  )
+  await openApp(page, "en")
+  await expect(page.getByRole("tablist", { name: "Open workspaces", exact: true })).toBeVisible()
+  if ((page.viewportSize()?.width ?? 1920) < 768) {
+    await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+  }
+  await test.step("사용자의 설치 확인 전 상태를 준비한다", async () => {
+    await page.getByRole("button", { name: "Update to 0.3.0", exact: true }).click()
+    await expect(
+      page.getByRole("button", { name: "Install and restart", exact: true }),
+    ).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    await testInfo.attach("업데이트 / npm / 설치 확인", {
+      body: await page.screenshot({ animations: "disabled", scale: "css" }),
+      contentType: "image/png",
+    })
+  })
+})

@@ -7,11 +7,9 @@ import { useLiveRevision } from "./live-updates"
 import { TestCode } from "./test-code"
 import { TestFileBrowser } from "./test-file-browser"
 import { Badge } from "./ui/badge"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/coss-tabs"
 import { Item, ItemContent, ItemTitle } from "./ui/item"
 import { UnifiedDiff } from "./unified-diff"
-import { SelectionForm } from "./worktree-environments"
 import "@/locales"
 import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
@@ -29,7 +27,6 @@ export function TestObservation({
   api,
   worktreeId,
   scope = "changed",
-  projectId,
   actionsContainer,
 }: {
   api: Api
@@ -102,30 +99,6 @@ export function TestObservation({
       aria-label={t("Integration Test")}
       className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden"
     >
-      {scope === "all" && projectId && (
-        <Collapsible className="contents">
-          {actionsContainer ? (
-            createPortal(
-              <CollapsibleTrigger render={<Button variant="ghost" size="toolbar" />}>
-                {t("Integration defaults")}
-              </CollapsibleTrigger>,
-              actionsContainer,
-            )
-          ) : (
-            <CollapsibleTrigger render={<Button variant="ghost" size="toolbar" />}>
-              {t("Integration defaults")}
-            </CollapsibleTrigger>
-          )}
-          <CollapsibleContent className="max-h-80 overflow-auto py-3">
-            <SelectionForm
-              key={projectId}
-              api={api}
-              worktreeId={worktreeId}
-              projectId={projectId}
-            />
-          </CollapsibleContent>
-        </Collapsible>
-      )}
       <IntegrationRunControls
         key={worktreeId}
         api={api}
@@ -227,7 +200,7 @@ function IntegrationRunControls({
       variant="ghost"
       title={
         runCurrent
-          ? t("Runs current integration sources with project integration defaults.")
+          ? t("Runs current integration sources with the fixed project configuration.")
           : t("Runs the latest submission in full, not the selected current file.")
       }
       disabled={(!submissionId && !runCurrent) || pending || active || unavailable}
@@ -317,27 +290,23 @@ export function IntegrationTestFiles({
           {data.catalog.diagnostics.map((message) => (
             <Notice key={message}>{message}</Notice>
           ))}
-          {!selected ? (
+          {!selected && (
             <EmptyState>
               {scope === "all"
                 ? t("No integration test files.")
                 : t("No changed integration test files.")}
             </EmptyState>
-          ) : (
-            <>
-              {selected.source !== null ? (
-                <TestCode
-                  api={api}
-                  worktreeId={worktreeId}
-                  scope={scope}
-                  baseRevision={data.catalog.baseRevision}
-                  source={{ path: selected.path, content: selected.source }}
-                />
-              ) : (
-                <Notice>{selected.issue}</Notice>
-              )}
-            </>
           )}
+          {selected && selected.source !== null && (
+            <TestCode
+              api={api}
+              worktreeId={worktreeId}
+              scope={scope}
+              baseRevision={data.catalog.baseRevision}
+              source={{ path: selected.path, content: selected.source }}
+            />
+          )}
+          {selected && selected.source === null && <Notice>{selected.issue}</Notice>}
         </TabsContent>
         <TabsContent value="results" className="flex h-0 min-h-0 flex-col gap-3 overflow-auto">
           {selectedSubmission ? (
@@ -521,9 +490,7 @@ function TestEvidenceResults({
           )}
       </div>
       {!cases.length && (
-        <>
-          <p className="text-muted-foreground">{t("No individual test results were recorded.")}</p>
-        </>
+        <p className="text-muted-foreground">{t("No individual test results were recorded.")}</p>
       )}
     </section>
   )

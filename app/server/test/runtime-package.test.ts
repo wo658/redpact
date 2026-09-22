@@ -44,6 +44,9 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
       const contents = execFileSync("tar", ["-tzf", tarball], { encoding: "utf8" }).split("\n")
       expect(contents).toContain("package/dist/adapters/environment/compose-worker.js")
       expect(contents).toContain("package/dist/adapters/test-runner/reporter.mjs")
+      for (const asset of ["worker.js", "Dockerfile", "package.json", "pnpm-lock.yaml"]) {
+        expect(contents).toContain(`package/dist/adapters/test-runner/${asset}`)
+      }
       expect(contents).toContain("package/dist/runtime-lock.yaml")
       expect(contents).toContain("package/LICENSE")
       expect(contents).toContain("package/NOTICE")
@@ -119,6 +122,12 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
         return `http://127.0.0.1:${/"port":(\d+)/.exec(output)?.[1]}`
       }
       let base = await launch()
+      const updateStatus = await (await fetch(`${base}/api/updates`)).json()
+      expect(updateStatus).toMatchObject({
+        currentVersion: manifest.version,
+        supported: true,
+        canInstall: true,
+      })
       const ui = await fetch(base)
       expect(ui.status).toBe(200)
       const uiHtml = await ui.text()
@@ -162,6 +171,7 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
       expect(describe.result.structuredContent.specification.path).toBe(".redpact/settings.json")
       expect(JSON.parse(await readFile(join(project, ".redpact/settings.json"), "utf8"))).toEqual({
         composeFiles: [],
+        services: [],
         dependencies: {},
         tests: { directory: "integration", timeoutMs: 10000, env: {} },
       })
@@ -198,6 +208,7 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
           composeFiles: ["compose.yaml"],
           dependencies: {},
           tests: { env: { APP_URL: { service: "app", port: 3000, scheme: "http" } } },
+          services: ["app"],
         }),
       )
       const validation = await request("/mcp", {
@@ -221,12 +232,6 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
       })
       let runId: string | undefined
       if (process.env.REDPACT_DOCKER_TESTS === "1") {
-        const saved = await fetch(`${base}/api/worktrees/${work.worktreeId}/selection`, {
-          method: "PUT",
-          headers,
-          body: JSON.stringify({ services: ["app"], select: {} }),
-        })
-        expect(saved.ok).toBe(true)
         const environments: string[] = []
         for (let i = 0; i < 2; i++) {
           const run = await request("/api/runs", { submissionId: submission.id })
@@ -244,13 +249,6 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
             .toBe("stopped")
         }
         expect(environments[0]).not.toBe(environments[1])
-      } else {
-        const missing = await fetch(`${base}/api/runs`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ submissionId: submission.id }),
-        })
-        expect(missing.status).toBe(409)
       }
       const identity = await readFile(join(data, "instance.json"), "utf8")
       await stop?.()

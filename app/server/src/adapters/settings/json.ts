@@ -2,11 +2,6 @@ import { createHash } from "node:crypto"
 import { join, resolve } from "node:path"
 import { isNode, LineCounter, parseDocument } from "yaml"
 import { planContainers } from "../../core/container-plan.js"
-import {
-  applyDependencyOverrides,
-  dependencyOverridePath,
-  dependencyOverrideSchema,
-} from "../../core/dependency-overrides.js"
 import { settingsSchema } from "../../core/settings-schema.js"
 import type {
   SettingsIssue,
@@ -127,53 +122,6 @@ export function parseSettings(source: string, file: string): SettingsResult {
     }
   }
 }
-function parseEffectiveSettings(
-  source: string,
-  file: string,
-  overlay?: { file: string; source: string },
-): SettingsResult {
-  const base = parseSettings(source, file)
-  if (!base.valid || !overlay) {
-    return base
-  }
-  try {
-    const doc = document(overlay.source, overlay.file)
-    const checked = dependencyOverrideSchema.safeParse(doc.value)
-    if (!checked.success) {
-      return {
-        valid: false,
-        file: overlay.file,
-        issues: checked.error.issues.map((issue) => ({
-          ...doc.locate(issue.path.join(".")),
-          message: issue.message,
-        })),
-      }
-    }
-    const effective = JSON.stringify(
-      applyDependencyOverrides(
-        JSON.parse(source),
-        doc.value as Parameters<typeof applyDependencyOverrides>[1],
-      ),
-      null,
-      2,
-    )
-    return parseSettings(effective, overlay.file)
-  } catch (error) {
-    return {
-      valid: false,
-      file: overlay.file,
-      issues: [
-        {
-          code: "json",
-          path: "",
-          file: overlay.file,
-          message: error instanceof Error ? error.message : "Invalid override",
-        },
-      ],
-    }
-  }
-}
-
 export async function readJsonSettings(
   root: string,
   selection?: TestSelection,
@@ -184,28 +132,13 @@ export async function readJsonSettings(
   let parsedSettings: SettingsResult["settings"]
   try {
     const source = projectRules?.source ?? (await readProjectFile(root, entry))
-    const overlay = projectRules?.override
-    const result = parseEffectiveSettings(source, file, overlay)
+    const result = parseSettings(source, file)
     if (!result.valid || !result.settings) {
       return result
     }
     const effective = result.source ?? source
     parsedSettings = result.settings
     const files = [{ path: entry, source, sha256: hash(source) }]
-    if (overlay) {
-      files.push({
-        path: dependencyOverridePath,
-        source: overlay.source,
-        sha256: hash(overlay.source),
-      })
-      result.digest = hash(JSON.stringify(files.map((value) => [value.path, value.sha256])))
-      result.promotion = {
-        file,
-        baseSha256: hash(source),
-        overrideSha256: hash(overlay.source),
-        source: effective,
-      }
-    }
     if (projectRules) {
       result.projectRules = projectRules
     }
@@ -218,7 +151,7 @@ export async function readJsonSettings(
     const { model } = await readComposeModel(root, result.settings.composeFiles)
     const planned = planContainers(result.settings, model, selection)
     if (planned.issues.length) {
-      const doc = document(effective, overlay?.file ?? file)
+      const doc = document(effective, file)
       return {
         valid: false,
         file,
@@ -264,17 +197,7 @@ export function createSettingsService(projectPath: string, sharedRoot?: string):
       const file = join(rulesRoot, ".redpact/settings.json")
       try {
         const source = await readProjectFile(rulesRoot, ".redpact/settings.json")
-        const override = await readOverride(projectRoot)
-        const result = await readJsonSettings(projectRoot, selection, {
-          file,
-          source,
-          ...(override === undefined
-            ? {}
-            : { override: { file: join(projectRoot, dependencyOverridePath), source: override } }),
-        })
-        if (override !== (await readOverride(projectRoot))) {
-          throw new Error("Worktree override changed while reading")
-        }
+        const result = await readJsonSettings(projectRoot, selection, { file, source })
         if (source !== (await readProjectFile(rulesRoot, ".redpact/settings.json"))) {
           throw new Error("Project rules changed while reading")
         }
@@ -294,16 +217,5 @@ export function createSettingsService(projectPath: string, sharedRoot?: string):
         }
       }
     },
-  }
-}
-
-async function readOverride(root: string): Promise<string | undefined> {
-  try {
-    return await readProjectFile(root, dependencyOverridePath)
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return undefined
-    }
-    throw Object.assign(error as Error, { overrideFile: join(root, dependencyOverridePath) })
   }
 }

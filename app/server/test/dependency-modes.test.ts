@@ -7,14 +7,14 @@ import { stageSelection } from "../src/adapters/environment/selection.js"
 import { createSettingsService } from "../src/adapters/settings/json.js"
 import { executionSettingsSchema } from "../src/core/execution-settings.js"
 import { settingsSchema } from "../src/core/settings-schema.js"
-import type { TestSelection } from "../src/core/types/settings.js"
 
 const roots: string[] = []
 it("allows ordinary literal keys and passwords without forcing secret references", async () => {
   const reader = await fixture({
     composeFiles: ["compose.yaml"],
+    services: ["app", "worker"],
     dependencies: {
-      auth: { modes: { mock: { env: { app: { API_KEY: "local-key", PASSWORD: "" } } } } },
+      auth: { kind: "mock", env: { app: { API_KEY: "local-key", PASSWORD: "" } } },
     },
     tests: { env: { API_TOKEN: "test-token" } },
   })
@@ -27,20 +27,13 @@ afterEach(async () => {
 })
 const configuration = {
   composeFiles: ["compose.yaml"],
+  services: ["app", "worker"],
   dependencies: {
     payments: {
-      modes: {
-        isolated: {
-          services: ["payments"],
-          env: { app: { PAYMENTS_URL: "http://payments:8080" } },
-        },
-        mock: {
-          env: {
-            app: { PAYMENTS_MODE: "mock" },
-            worker: { PAYMENT_BACKEND: "stub", STALE: { unset: true } },
-          },
-        },
-        remote: { env: { app: { PAYMENTS_API_KEY: { secret: "CLOUD_KEY" } } } },
+      kind: "mock",
+      env: {
+        app: { PAYMENTS_MODE: "mock" },
+        worker: { PAYMENT_BACKEND: "stub", STALE: { unset: true } },
       },
     },
   },
@@ -93,27 +86,32 @@ it("applies different app contracts and preserves omitted Compose defaults", asy
   expect(result.plan?.requiredSecrets).toEqual([])
 })
 it("starts selected containers and fixed prerequisites without consumer wait edges", async () => {
-  const result = await (await fixture()).read({
-    services: ["app"],
-    select: { payments: "isolated" },
-  })
+  const result = await (
+    await fixture({
+      ...configuration,
+      services: ["app"],
+      dependencies: {
+        payments: {
+          kind: "isolated",
+          services: ["payments"],
+          env: { app: { PAYMENTS_URL: "http://payments:8080" } },
+        },
+      },
+    })
+  ).read()
   expect(result.issues).toEqual([])
   expect(result.plan?.activeServices).toEqual(["app", "db", "payments"])
   expect(result.plan?.prerequisites.app).toEqual({})
   expect(result.plan?.bindings.app).toEqual({ PAYMENTS_URL: { value: "http://payments:8080" } })
 })
 it("rejects inactive injection targets and conflicting selected writes", async () => {
-  const reader = await fixture()
-  expect(
-    (await reader.read({ services: ["app"], select: { payments: "mock" } })).issues.some(
-      (i) => i.code === "inactive_target",
-    ),
-  ).toBe(true)
+  const reader = await fixture({ ...configuration, services: ["app"] })
+  expect((await reader.read()).issues.some((i) => i.code === "inactive_target")).toBe(true)
   const value = {
     ...configuration,
     dependencies: {
       ...configuration.dependencies,
-      llm: { modes: { mock: { env: { app: { PAYMENTS_MODE: "other" } } } } },
+      llm: { kind: "mock", env: { app: { PAYMENTS_MODE: "other" } } },
     },
   }
   const result = await (await fixture(value)).read({
@@ -178,23 +176,19 @@ it("stages array and map defaults while replacing unresolved inputs and explicit
 })
 it("rejects unknown references, incomplete selections, bounded input and symbolic links", async () => {
   const reader = await fixture()
-  for (const selection of [
-    { services: ["app"], select: {} },
-    { services: ["missing"], select: { payments: "isolated" } },
-    { services: ["app"], select: { payments: "unknown" } },
-  ] as TestSelection[]) {
-    expect((await reader.read(selection)).valid).toBe(false)
-  }
   const unknown = structuredClone(configuration)
-  unknown.dependencies.payments.modes["isolated"].services = ["missing"]
+  const invalidSettings = {
+    ...unknown,
+    dependencies: { payments: { kind: "isolated", services: ["missing"] } },
+  }
   await writeFile(
     join(reader.projectRoot, ".redpact/settings.json"),
-    JSON.stringify(unknown, null, 2),
+    JSON.stringify(invalidSettings, null, 2),
   )
   const invalid = await reader.read()
   expect(invalid.issues[0]).toMatchObject({
     code: "unknown_reference",
-    path: "dependencies.payments.modes.isolated.services",
+    path: "dependencies.payments.services",
   })
   expect(invalid.issues[0].line).toBeGreaterThan(1)
   await writeFile(join(reader.projectRoot, ".redpact/settings.json"), " ".repeat(256 * 1024 + 1))
@@ -210,9 +204,11 @@ it("rejects unknown references, incomplete selections, bounded input and symboli
 it("allows app environment names while protecting the host test runner", () => {
   const value = {
     composeFiles: ["compose.yaml"],
+    services: ["app", "worker"],
     dependencies: {
       runtime: {
-        modes: { mock: { env: { app: { NODE_ENV: "test", PATH: "/app/bin:/usr/bin" } } } },
+        kind: "mock",
+        env: { app: { NODE_ENV: "test", PATH: "/app/bin:/usr/bin" } },
       },
     },
   }
@@ -230,12 +226,13 @@ it("supports all four modes and keeps shared connections outside environment own
     remote: { env: { app: { PAYMENTS_URL: "https://payments.example.test" } } },
     mock: { env: { app: { PAYMENTS_MODE: "mock" } } },
   }
-  const reader = await fixture({
-    composeFiles: ["compose.yaml"],
-    dependencies: { payments: { modes } },
-  })
-  for (const mode of Object.keys(modes)) {
-    const result = await reader.read({ services: ["app"], select: { payments: mode } })
+  for (const [mode, definition] of Object.entries(modes)) {
+    const reader = await fixture({
+      composeFiles: ["compose.yaml"],
+      services: ["app"],
+      dependencies: { payments: { kind: mode, ...definition } },
+    })
+    const result = await reader.read()
     expect(result.issues).toEqual([])
     expect(result.plan?.activeServices).toEqual(
       mode === "isolated" ? ["app", "db", "payments"] : ["app"],
@@ -246,11 +243,11 @@ it("rejects provisioning for both connection modes and requires services for iso
   for (const mode of ["shared-local", "remote"]) {
     expect(
       settingsSchema.safeParse({
-        dependencies: { api: { modes: { [mode]: { services: ["api"] } } } },
+        dependencies: { api: { kind: mode, services: ["api"] } },
       }).success,
     ).toBe(false)
   }
-  expect(
-    settingsSchema.safeParse({ dependencies: { api: { modes: { isolated: {} } } } }).success,
-  ).toBe(false)
+  expect(settingsSchema.safeParse({ dependencies: { api: { kind: "isolated" } } }).success).toBe(
+    false,
+  )
 })

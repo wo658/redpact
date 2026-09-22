@@ -1,4 +1,23 @@
 export const en = {
+  "Dependency kinds": "Dependency kinds",
+  "Runs current integration sources with the fixed project configuration.":
+    "Runs current integration sources with the fixed project configuration.",
+  "Each dependency has one fixed definition shared by all worktrees. Edit the project configuration to change future executions.":
+    "Each dependency has one fixed definition shared by all worktrees. Edit the project configuration to change future executions.",
+  "Dependencies cannot write or unset the same variable on the same service, even if their values match.":
+    "Dependencies cannot write or unset the same variable on the same service, even if their values match.",
+  "An environment override does not start its target service. Declare the service in the fixed project configuration or Compose prerequisites.":
+    "An environment override does not start its target service. Declare the service in the fixed project configuration or Compose prerequisites.",
+  "Install the update and restart Redpact? Active work will defer installation.":
+    "Install the update and restart Redpact? Active work will defer installation.",
+  "Automatic installation is unavailable. Update with the original package manager, then restart Redpact. For npx, stop this process and run npx redpact@latest serve with the same options.":
+    "Automatic installation is unavailable. Update with the original package manager, then restart Redpact. For npx, stop this process and run npx redpact@latest serve with the same options.",
+  "Updating and restarting…": "Updating and restarting…",
+  "Install and restart": "Install and restart",
+  "Current version: {{version}}": "Current version: {{version}}",
+  Updates: "Updates",
+  "Redpact is up to date.": "Redpact is up to date.",
+  "Could not check for updates.": "Could not check for updates.",
   "App shortcuts": "App shortcuts",
   "GitHub repository": "GitHub repository",
   "Star on GitHub": "Star on GitHub",

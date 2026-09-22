@@ -6,6 +6,11 @@ import { fileURLToPath } from "node:url"
 import { execa } from "execa"
 import { z } from "zod"
 import { captureCaseSchema } from "../../core/playwright-schema.js"
+import {
+  runnerConnections,
+  runnerEnvironment,
+  runnerServiceHost,
+} from "../../core/runner-environment.js"
 import { testResourceSchema } from "../../core/test-resource-schema.js"
 import type { Environment } from "../../core/types/environment.js"
 import type { CaptureRun, CaptureRunner } from "../../core/types/playwright.js"
@@ -26,6 +31,7 @@ export function createCaptureRunner(
   ownerId: string,
   secretValues: (record: Environment) => string[] = () => [],
   readLimits: ReadTestResources = async () => testResourceSchema.parse({}),
+  runnerSecrets: (record: Environment) => Record<string, string> = () => ({}),
 ): CaptureRunner {
   const inputs = (id: string) => join(directory, "playwright-inputs", id)
   const output = (id: string, side: string) => join(directory, "playwright-runs", id, side)
@@ -123,7 +129,7 @@ export function createCaptureRunner(
         reporter: [["/review/reporter.mjs"]],
         use: {
           browserName: "chromium",
-          baseURL: `${run.settings.scheme}://127.0.0.1:${run.settings.port}`,
+          baseURL: `${run.settings.scheme}://${runnerServiceHost(run.settings.service)}:${run.settings.port}`,
           viewport: run.settings.viewport,
           deviceScaleFactor: 1,
           locale: run.settings.locale,
@@ -148,7 +154,12 @@ export function createCaptureRunner(
           ownerId,
           id: run.id,
           side,
-          targetId: target.id,
+          network: `${environment.projectName}_redpact-runner`,
+          environment: {
+            ...runnerEnvironment(environment.settings, runnerSecrets(environment)),
+            REDPACT_CONNECTIONS_FILE: "/review/connections.json",
+          },
+          connections: runnerConnections(environment),
           redactions,
           uiLanguage: run.settings.uiLanguage,
           limits,

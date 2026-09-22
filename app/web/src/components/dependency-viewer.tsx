@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import type { Api, DependencyMode, DependencySettings, SettingsIssue } from "@/lib/api"
 import { dependencyModeLabel } from "@/lib/dependency-modes"
 import { DataTable } from "./data-table"
-import { DependencyOverview, ModeAssessments } from "./dependency-overview"
+import { DependencyOverview } from "./dependency-overview"
 import { EnvironmentEditor } from "./environment-editor"
 import { EmptyState, Notice } from "./feedback"
 import { useLiveRevision } from "./live-updates"
@@ -80,10 +80,10 @@ function DependencyHelp() {
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <section className="flex flex-col gap-2">
-            <h3 className="font-medium">{t("Dependency modes")}</h3>
+            <h3 className="font-medium">{t("Dependency kinds")}</h3>
             <p>
               {t(
-                "Browse a dependency and its modes here. Browsing does not change execution choices. Each worktree selects one mode per dependency in Environment and saves its own selection.",
+                "Each dependency has one fixed definition shared by all worktrees. Edit the project configuration to change future executions.",
               )}
             </p>
             <p>
@@ -103,12 +103,12 @@ function DependencyHelp() {
               <li>{t("Use unset to remove a variable entirely, including its image default.")}</li>
               <li>
                 {t(
-                  "Selected modes cannot write or unset the same variable on the same service, even if their values match. Choose modes without conflicting overrides.",
+                  "Dependencies cannot write or unset the same variable on the same service, even if their values match.",
                 )}
               </li>
               <li>
                 {t(
-                  "An environment override does not start its target service. That service must already be included in the execution selection, a selected mode, or Compose prerequisites.",
+                  "An environment override does not start its target service. Declare the service in the fixed project configuration or Compose prerequisites.",
                 )}
               </li>
               <li>
@@ -240,64 +240,43 @@ export function DependencyCatalog({
   dependencies: NonNullable<DependencySettings["dependencies"]>
 }) {
   const { t } = useTranslation()
-  const [selection, setSelection] = useState({ dependency: "", mode: "" })
+  const [selection, setSelection] = useState("")
   const names = Object.keys(dependencies)
-  const name = names.includes(selection.dependency) ? selection.dependency : names[0]
+  const name = names.includes(selection) ? selection : names[0]
   if (!name) {
     return <EmptyState>{t("No dependencies declared.")}</EmptyState>
   }
-  const modes = dependencies[name].modes
-  const mode = Object.hasOwn(modes, selection.mode) ? selection.mode : Object.keys(modes)[0]
+  const definition = dependencies[name]
   return (
-    <ModeTabs
-      value={mode}
-      onValueChange={(value) => setSelection({ dependency: name, mode: String(value) })}
-      className="min-w-0 gap-4"
-    >
-      <fieldset
-        aria-label={t("Dependencies")}
-        className="flex min-w-0 flex-wrap items-center gap-3"
-      >
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            aria-label={t("Select dependency")}
-            render={<Button variant="outline" className="max-w-full" />}
+    <div className="flex min-w-0 flex-col gap-4">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label={t("Select dependency")}
+          render={<Button variant="outline" className="max-w-full self-start" />}
+        >
+          <span className="truncate">{name}</span>
+          <ChevronDownIcon data-icon="inline-end" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuRadioGroup
+            value={name}
+            onValueChange={(value) => setSelection(String(value))}
           >
-            <span className="truncate">{name}</span>
-            <ChevronDownIcon data-icon="inline-end" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="min-w-48 max-w-(--available-width)">
-            <DropdownMenuRadioGroup
-              value={name}
-              onValueChange={(value) => setSelection({ dependency: String(value), mode: "" })}
-            >
-              {names.map((dependency) => (
-                <DropdownMenuRadioItem key={dependency} value={dependency} closeOnClick>
-                  {dependency}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <div className="min-w-0 max-w-full overflow-x-auto">
-          <ModeTabsList aria-label={t("Dependency modes")} activateOnFocus>
-            {Object.keys(modes).map((value) => (
-              <ModeTab key={value} value={value}>
-                {t(dependencyModeLabel(value))}
-              </ModeTab>
+            {names.map((dependency) => (
+              <DropdownMenuRadioItem key={dependency} value={dependency} closeOnClick>
+                {dependency}
+              </DropdownMenuRadioItem>
             ))}
-          </ModeTabsList>
-        </div>
-      </fieldset>
-      {!Object.keys(modes).length && <ModeAssessments dependency={dependencies[name]} />}
-      {Object.entries(modes).map(([value, definition]) => (
-        <ModePanel key={`${name}:${value}`} value={value}>
-          <ModeDefinition mode={definition}>
-            {renderEnvironment?.(name, value, definition)}
-          </ModeDefinition>
-        </ModePanel>
-      ))}
-    </ModeTabs>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Badge variant="outline" className="self-start">
+        {t(dependencyModeLabel(definition.kind))}
+      </Badge>
+      <ModeDefinition mode={definition}>
+        {renderEnvironment?.(name, definition.kind, definition)}
+      </ModeDefinition>
+    </div>
   )
 }
 

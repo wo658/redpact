@@ -76,7 +76,7 @@ export type Policy = z.infer<typeof policy>
 export type Selection = z.infer<typeof selection>
 export type CardActions = {
   busy: boolean
-  approve(subject: "environment" | "tests", selection?: Selection): void
+  approve(subject: "environment" | "tests"): void
   changePolicy(policy: Policy): void
 }
 

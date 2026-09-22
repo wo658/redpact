@@ -10,7 +10,7 @@ description: Test runtimes, evidence, manual containers, limits and cleanup.
 | Entry | Runtime and inputs | Result |
 | --- | --- | --- |
 | Unit | Project Dockerfile and complete configured command in a temporary container | Command status, exit code, stdout/stderr and cleanup status |
-| Integration | Host Vitest against a fresh Testcontainers Compose application environment | Immutable submitted source, cases, steps and run/environment records |
+| Integration | Containerized Vitest against a fresh Testcontainers Compose application environment | Immutable submitted source, cases, steps and run/environment records |
 | Playwright | Containerized browser against a temporary application environment | Functional results or capture evidence, optional video/trace |
 | Container | Explicitly started manual project application environment | Inspection endpoints and lifecycle state; not test evidence |
 
@@ -48,7 +48,7 @@ completion and removal, retaining diagnostics on failure.
 Success, assertion failure, preparation failure, cancellation and interruption all
 request cleanup. Stop blocks admission, confirms execution cancellation, then removes
 owned containers, networks, volumes, per-run Unit images, temporary Compose build images and captured runtime
-source. Playwright keeps its shared runner image; temporary application images belong to
+source. Integration and Playwright keep their shared runner images; temporary application images belong to
 the run environment and are removed with it. Preserve metadata, logs, results and shared Docker build caches. A cleanup failure is `stop_failed`, distinct
 from the test verdict, and remains retryable. Startup reconciles labelled resources
 and removes interrupted environments; it never reruns tests automatically.
@@ -69,8 +69,7 @@ leave resources until successful recovery.
 
 Project Container uses the live checkout of the configured main branch, including
 uncommitted inputs; directory projects use their connected root. No substitute
-checkout is chosen when the required checkout is missing. Selection comes from
-project Integration defaults. One manual environment per project stays alive until
+checkout is chosen when the required checkout is missing. The fixed shared project configuration supplies the services and dependencies. One manual environment per project stays alive until
 Stop, Restart or server shutdown. It has `lifecycle: "manual"` and no test run IDs;
 it cannot be reused by test execution.
 
@@ -113,6 +112,23 @@ application snapshot. Queued/input changes can invalidate preparation.
 The pinned Testcontainers patch prevents failed-start automatic cleanup from skipping
 Redpact's final logs and ordered removal. Re-evaluate it when upgrading the library.
 
+## Runner connectivity
+
+Each execution creates a labelled runner network. Integration and Playwright join that
+network in their own network namespaces. Managed services have `<service>.redpact.test`
+DNS aliases; browser baseURL uses the configured scheme and port with that hostname.
+Applications must accept that origin and configure their own CORS, cookies and TLS
+accordingly. Redpact does not disable certificate checks or browser security, rewrite
+remote origins, or treat a successful host request as runner reachability.
+
+Declare shared-host URLs explicitly with `host.docker.internal`. The runner supplies a
+host-gateway mapping. Docker Desktop loopback access is tested from actual runners;
+Linux host-gateway access does not make a loopback-only listener reachable. Configure
+a reachable host listener or an explicit project-owned forwarding service and verify
+from the consuming runner. Never replace a runner URL with `localhost` blindly.
+Remote services keep their real URLs and authentication. Shared-local and remote data
+are not isolated by per-run Docker networks; fixtures must use independent data.
+
 ## Playwright evidence
 
 Targets declare maintenance `scope: "worktree" | "project"` and
@@ -142,12 +158,11 @@ and `testResources.timeoutSeconds: 600`. Allowed ranges are 1–4 concurrent man
 environments, 64–1048576 MiB and 1–86400 seconds. New operations capture new settings.
 Per-test/hook timeouts remain separate.
 
-Unit and Playwright use Docker memory/swap limits. Host Vitest uses a V8 heap bound
-and a 100ms process-group RSS sampler; an external timer enforces wall time.
-Limit violations are execution errors, not assertions or cancellation. Native
-sampling requires supported macOS/Linux process tools and can overshoot between
-samples. Application/dependency containers, builds, package installation and direct
-shell tests are outside this runner budget.
+Unit, Integration and Playwright use Docker memory/swap limits and an external wall-clock
+timer. Integration also bounds the V8 heap. Its submitted package installation executes
+inside the runner and consumes the same execution budget. Limit violations are execution
+errors, not assertions or cancellation. Application/dependency containers, image builds
+and direct shell tests are outside this runner budget.
 
 Distinguish passed/failed assertions from collection, configuration, environment,
 execution, cancellation, interruption and unknown outcomes. Parsing a test is not
@@ -157,10 +172,11 @@ can still require cleanup.
 ## Portable fixtures
 
 `REDPACT_CONNECTIONS_FILE` points to a private per-run JSON file with `version: 1`
-and `services.<name>.ports.<containerPort>: { host, port }`. Selected services without
+and `services.<name>.ports.<containerPort>: { host, port }`. Hosts are
+`<service>.redpact.test` aliases and ports are internal container ports. Services without
 published ports have empty maps. No credentials or container variables are included.
 Project fixtures create their own HTTP/DB clients and clean them up; no Redpact SDK
-or runtime API calls are needed. Host test URLs can also use `tests.env` bindings.
+or runtime API calls are needed. Both runners receive the same explicit `tests.env` bindings.
 
 For extra drivers, submit the supported root package manifest and frozen pnpm lockfile
 with helpers. The [Order Desk provider](../examples/order-desk/tests/connections.js)

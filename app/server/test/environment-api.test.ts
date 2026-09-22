@@ -23,7 +23,7 @@ let environments: ReturnType<typeof createEnvironments>
 let runs: ReturnType<typeof createTestExecution>
 let worktreeId: string
 let submissionId: string
-let expectedSettingsDigest: string
+let _expectedSettingsDigest: string
 const selection = { services: ["app"], select: {} }
 let stops = 0
 let executions = 0
@@ -63,7 +63,7 @@ beforeEach(async () => {
   await writeFile(join(projectRoot, "compose.yaml"), "services:\n  app:\n    image: alpine:3.21\n")
   await writeFile(
     join(projectRoot, ".redpact/settings.json"),
-    JSON.stringify({ composeFiles: ["compose.yaml"] }),
+    JSON.stringify({ composeFiles: ["compose.yaml"], services: ["app"] }),
   )
   storage = openStore(join(root, "state"))
   const settings = createSettingsService(projectRoot)
@@ -71,7 +71,7 @@ beforeEach(async () => {
   if (!validation.digest) {
     throw new Error(JSON.stringify(validation.issues))
   }
-  expectedSettingsDigest = validation.digest
+  _expectedSettingsDigest = validation.digest
   const worktrees = createWorktrees({
     store: storage.store,
     git: createGitAdapter(),
@@ -218,12 +218,11 @@ async function writeModes() {
       ],
       dependencies: {
         payments: {
-          modes: {
-            mock: { env: { app: { MODE: "mock" } } },
-            remote: { env: { app: { API_KEY: { secret: "MISSING_CLOUD_KEY" } } } },
-          },
+          kind: "mock",
+          env: { app: { MODE: "mock" } },
         },
       },
+      services: ["app"],
     }),
   )
 }
@@ -233,7 +232,7 @@ test("HTTP dependency discovery agrees with MCP configure selection preview", as
   const response = await request(`/api/worktrees/${worktreeId}/dependencies`)
   expect(response.status).toBe(200)
   const catalog = await response.json()
-  expect(catalog.dependencies.payments.modes.mock.env.app).toEqual({ MODE: "mock" })
+  expect(catalog.dependencies.payments.env.app).toEqual({ MODE: "mock" })
   expect(catalog.applicationServices).toEqual({ web: { services: ["app"] } })
   expect(catalog.relationships).toEqual([
     {
@@ -247,13 +246,10 @@ test("HTTP dependency discovery agrees with MCP configure selection preview", as
   expect((await request(`/api/worktrees/${worktreeId}/dependencies/payments`)).status).toBe(200)
   expect((await request(`/api/worktrees/${worktreeId}/dependencies/missing`)).status).toBe(404)
   const selection = { services: ["app"], select: { payments: "mock" } }
-  const preview = await (
-    await request(`/api/worktrees/${worktreeId}/dependencies/plan`, selection)
-  ).json()
+  const preview = await (await request(`/api/worktrees/${worktreeId}/dependencies/plan`, {})).json()
   expect(preview.plan.bindings.app).toEqual({ MODE: { value: "mock" } })
   expect(
-    (await operation("configure", { action: "validate", worktreeId, selection })).structuredContent
-      .plan,
+    (await operation("configure", { action: "validate", worktreeId })).structuredContent.plan,
   ).toEqual(preview.plan)
   const run = await runs.start(submissionId, selection)
   await expect.poll(() => runs.get(run.id).state).toBe("running")
@@ -261,7 +257,7 @@ test("HTTP dependency discovery agrees with MCP configure selection preview", as
   runs.cancel(run.id)
   await expect.poll(() => environments.get(runs.get(run.id).environmentId!).state).toBe("stopped")
 })
-test("retired format/scenario parameters and missing execution selection are rejected", async () => {
+test("retired parameters are rejected and fixed configuration needs no execution selection", async () => {
   expect((await operation("configure", { action: "describe", version: 4 })).isError).toBe(true)
   expect(
     (await operation("configure", { action: "validate", worktreeId, scenario: "old" })).isError,
@@ -269,7 +265,7 @@ test("retired format/scenario parameters and missing execution selection are rej
   expect((await request("/api/environments", { worktreeId, requestId: randomUUID() })).status).toBe(
     404,
   )
-  expect((await request("/api/runs", { submissionId })).status).toBe(409)
+  expect((await request("/api/runs", { submissionId })).status).toBe(202)
 })
 
 for (const action of ["cancel", "close"] as const) {

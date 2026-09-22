@@ -1,6 +1,6 @@
 ---
 title: Review your first change
-description: Follow one feature from dependency selection through code, test and screen review.
+description: Follow one feature from fixed execution configuration through code, test and screen review.
 ---
 
 # Review your first change
@@ -13,7 +13,7 @@ Complete [Installation](installation.md) and [Project setup](first-project.md), 
 
 Ask the agent to produce evidence alongside the implementation.
 
-> Use Redpact to verify order quantity changes. Valid quantities must update the total; invalid quantities must leave the existing order unchanged. Explain this worktree's execution selection and test intent, and record actual API results. Also capture the initial, updated, and input-error states from the real app for screen review.
+> Use Redpact to verify order quantity changes. Valid quantities must update the total; invalid quantities must leave the existing order unchanged. Explain the fixed project execution configuration and test intent, and record actual API results. Also capture the initial, updated, and input-error states from the real app for screen review.
 
 | Requirement | Evidence |
 |---|---|
@@ -21,11 +21,11 @@ Ask the agent to produce evidence alongside the implementation.
 | Reject invalid quantity | Error response and unchanged stored values |
 | Show the result to users | Updated total and error-state captures |
 
-## 2. Check the worktree and dependency selection
+## 2. Check the worktree and fixed execution configuration
 
 Confirm the checkout to execute. Inspect whether the database is prepared per execution, payments use a mock, or an external service is selected. With external services, check whether their data is shared with other work.
 
-See [Dependencies and worktrees](dependencies.md) for shared definitions and task-specific choices. Project **Tests** targets the primary checkout. Inspect feature-work evidence through that worktree's review surfaces and execution history.
+See [Dependencies and worktrees](dependencies.md) for shared definitions and checkout-specific execution. Project **Tests** targets the primary checkout. Inspect feature-work evidence through that worktree's review surfaces and execution history.
 
 ## 3. Read code changes and test intent
 

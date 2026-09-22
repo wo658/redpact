@@ -173,7 +173,7 @@ function TargetExecution({
     setPending(true)
     setFailure("")
     try {
-      onRun(await api.runPlaywright(worktreeId, undefined, undefined, target))
+      onRun(await api.runPlaywright(worktreeId, undefined, target))
     } catch (cause) {
       setFailure(String(cause))
     } finally {

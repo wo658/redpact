@@ -17,10 +17,8 @@ test("empty dependency settings can be inspected without configuring execution",
     expect(inspection.issues).toEqual([])
     expect(inspection.settings?.dependencies).toEqual({})
     const execution = await readJsonSettings(root, { services: ["app"], select: {} })
-    expect(execution.valid).toBe(false)
-    expect(execution.issues).toEqual([
-      expect.objectContaining({ code: "environment_unconfigured", path: "composeFiles" }),
-    ])
+    expect(execution.valid).toBe(true)
+    expect(execution.issues).toEqual([])
     expect(execution.plan).toBeUndefined()
   } finally {
     await rm(root, { recursive: true, force: true })

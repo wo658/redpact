@@ -1,46 +1,53 @@
-import { execFile } from "node:child_process"
 import { readFile } from "node:fs/promises"
-import { promisify } from "node:util"
 
-const execute = promisify(execFile)
-let container: string | undefined
-export async function target() {
-  if (container) {
-    return container
-  }
+export async function node<T>(source: string, input: unknown = null): Promise<T> {
   const file = process.env.REDPACT_CONNECTIONS_FILE
   if (!file) {
-    throw new Error(
-      "Run these E2E tests with Redpact run_tests and services: [app]; see e2e/README.md",
-    )
+    throw new Error("Run through Redpact; see e2e/README.md")
   }
   const connections = JSON.parse(await readFile(file, "utf8"))
-  const port = connections.services?.app?.ports?.["54318"]?.port
-  if (!Number.isInteger(port)) {
-    throw new Error("The selected app service has no observed 54318 port")
+  const endpoint = connections.services?.app?.ports?.["54319"]
+  if (!endpoint) {
+    throw new Error("Managed fixture endpoint 54319 is unavailable")
   }
-  const result = await execute(
-    "docker",
-    ["ps", "--filter", `publish=${port}`, "--format", "{{.ID}}"],
-    { timeout: 10000 },
-  )
-  const ids = result.stdout.trim().split(/\s+/).filter(Boolean)
-  if (ids.length !== 1) {
-    throw new Error(`Expected one managed app container, found ${ids.length}`)
+  const response = await fetch(`http://${endpoint.host}:${endpoint.port}/node`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ source, input }),
+    signal: AbortSignal.timeout(65000),
+  })
+  if (!response.ok) {
+    throw new Error(await response.text())
   }
-  container = ids[0]
-  return container
+  return response.json() as Promise<T>
 }
 
-// Requests originate inside the selected container to preserve Redpact's loopback boundary.
-export async function node<T>(source: string, input: unknown = null): Promise<T> {
-  const result = await execute(
-    "docker",
-    ["exec", await target(), "node", "--input-type=module", "-e", source, JSON.stringify(input)],
-    { timeout: 15000, maxBuffer: 4 * 1024 * 1024 },
+export async function browser(source: string) {
+  return node<{
+    stats: { expected: number; unexpected: number }
+    suites: { specs: { tests: { results: { steps: { title: string }[] }[] }[] }[] }[]
+  }>(
+    `
+    import {mkdtempSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
+    import {execFileSync} from 'node:child_process';
+    const directory=mkdtempSync('/e2e-browser/run-');
+    try {
+      writeFileSync(directory+'/test.spec.cjs',JSON.parse(process.argv[1]));
+      writeFileSync(directory+'/playwright.config.cjs',"module.exports={testDir:__dirname,testMatch:'test.spec.cjs',reporter:'json',use:{headless:true},workers:1}");
+      let report;
+      try {report=execFileSync('/e2e-browser/node_modules/.bin/playwright',['test','--config',directory+'/playwright.config.cjs'],{encoding:'utf8',timeout:45000,maxBuffer:4*1024*1024})}
+      catch(error){if(!error.stdout)throw error;report=error.stdout}
+      const parsed=JSON.parse(report);
+      for (const suite of parsed.suites??[]) for(const spec of suite.specs??[]) for(const test of spec.tests??[]) for(const result of test.results??[]) {
+        if(result.status!=='passed') for(const attachment of result.attachments??[]) if(attachment.name==='error-context') result.context=readFileSync(attachment.path,'utf8').slice(0,16000);
+      }
+      console.log(JSON.stringify(parsed));
+    } finally {rmSync(directory,{recursive:true,force:true})}
+  `,
+    source,
   )
-  return JSON.parse(result.stdout)
 }
+
 export async function http<T = Record<string, unknown>>(
   path: string,
   method = "GET",

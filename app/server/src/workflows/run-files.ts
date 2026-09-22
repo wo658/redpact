@@ -12,8 +12,7 @@ export function createCollectTests(deps: {
   return async (input: { path: string; tests?: string[]; selection?: TestSelection }) => {
     const project = await deps.worktrees.connect(input.path)
     const worktree = await deps.worktrees.ensure(project.id, input.path)
-    const selection =
-      input.selection ?? (await deps.worktrees.getSelection(worktree.id)) ?? undefined
+    const selection = (await deps.worktrees.getSelection(worktree.id)) ?? undefined
     const settings = await (await deps.worktrees.settingsForPath(input.path)).read(selection)
     if (!settings.valid || !settings.settings) {
       throw Object.assign(new Error("Project settings are invalid"), {
@@ -22,7 +21,10 @@ export function createCollectTests(deps: {
       })
     }
     if (!selection) {
-      problem("invalid_input", "Select services and modes for this worktree first")
+      problem(
+        "invalid_input",
+        "Configure fixed root services in shared settings.json before execution",
+      )
     }
     const files = await deps.files.readTests(
       input.path,

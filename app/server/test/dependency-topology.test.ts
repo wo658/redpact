@@ -5,20 +5,14 @@ import { planContainers } from "../src/core/container-plan.js"
 const evidence = [{ path: "src/payment.ts", line: 12 }]
 const topology = {
   composeFiles: ["compose.yaml"],
+  services: ["app"],
   applicationServices: {
     web: { services: ["app"], description: "Customer application" },
     jobs: { services: ["worker"] },
   },
   dependencies: {
-    database: { modes: { isolated: { services: ["db", "auth"] } } },
-    payments: {
-      modes: { remote: { env: { app: { API_URL: "https://example.com" } } } },
-      assessments: {
-        isolated: { status: "unavailable", reason: "Hosted provider only", evidence },
-        mock: { status: "implementation-needed", reason: "Add client injection", evidence },
-      },
-      recommendation: { mode: "mock", reason: "Deterministic local payment review" },
-    },
+    database: { kind: "isolated", services: ["db", "auth"] },
+    payments: { kind: "remote", env: { app: { API_URL: "https://example.com" } } },
   },
   relationships: [
     {
@@ -62,35 +56,18 @@ test.each([
   expect(parse({ dependencies: { payments } }).valid).toBe(false)
 })
 
-test("allows assessment-only dependencies but does not execute the recommendation", () => {
-  const result = parse({
-    composeFiles: ["compose.yaml"],
-    dependencies: {
-      payments: {
-        modes: {},
-        assessments: { mock: { status: "implementation-needed", reason: "Add adapter", evidence } },
-        recommendation: { mode: "mock", reason: "Local review" },
+test("평가와 권장만으로 실행 가능한 의존성을 선언할 수 없다", () => {
+  expect(
+    parse({
+      dependencies: {
+        payments: {
+          assessments: {
+            mock: { status: "implementation-needed", reason: "Add adapter", evidence },
+          },
+        },
       },
-    },
-  })
-  expect(result.valid).toBe(true)
-  if (!result.settings) {
-    throw new Error("Expected parsed settings")
-  }
-  const planned = planContainers(
-    result.settings,
-    { services: { app: { image: "app" } } },
-    { services: ["app"], select: { payments: "mock" } },
-  )
-  expect(planned.plan).toBeUndefined()
-  expect(planned.issues).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        code: "selection_unimplemented",
-        path: "selection.select.payments",
-      }),
-    ]),
-  )
+    }).valid,
+  ).toBe(false)
 })
 
 test.each([

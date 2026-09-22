@@ -3,7 +3,6 @@ import { lstat, realpath, stat } from "node:fs/promises"
 import { basename, dirname, isAbsolute, join, relative } from "node:path"
 import { defaultIntegrationSelection } from "../core/integration-defaults.js"
 import { problem } from "../core/problems.js"
-import { testSelectionSchema } from "../core/settings-schema.js"
 import type { ProjectRecord, Store, Worktree } from "../core/types/contracts.js"
 import type { GitAdapter, GitDiff, GitScope, GitService } from "../core/types/git.js"
 import type { PreferenceFiles } from "../core/types/preferences.js"
@@ -12,7 +11,7 @@ import type {
   WorktreeAdmission,
   WorktreeService,
 } from "../core/types/services.js"
-import type { SettingsService, TestSelection } from "../core/types/settings.js"
+import type { SettingsService } from "../core/types/settings.js"
 
 export function createWorktrees(deps: {
   store: Store
@@ -317,10 +316,6 @@ export function createWorktrees(deps: {
     exclusive,
     async getIntegrationDefaults(projectId: string) {
       const settings = await projectSettings(projectId)
-      const selection = await deps.preferences.integrationDefaults(settings.projectRoot)
-      if (selection) {
-        return { selection, saved: true }
-      }
       const result = await settings.read()
       if (!result.valid || !result.settings) {
         throw Object.assign(new Error("Project settings are invalid"), {
@@ -333,41 +328,16 @@ export function createWorktrees(deps: {
         saved: false,
       }
     },
-    async setIntegrationDefaults(projectId: string, input: TestSelection) {
-      const selection = testSelectionSchema.parse(input)
-      const settings = await projectSettings(projectId)
-      const validation = await settings.read(selection)
-      if (!validation.valid) {
-        throw Object.assign(new Error("Project integration defaults are invalid"), {
+    async getSelection(id: string) {
+      const target = await resolve(id)
+      const result = await target.settings.read()
+      if (!result.valid || !result.settings) {
+        throw Object.assign(new Error("Project settings are invalid"), {
           code: "settings_invalid",
-          validation,
+          validation: result,
         })
       }
-      await deps.preferences.saveIntegrationDefaults(settings.projectRoot, selection)
-      return selection
-    },
-    async getSelection(id: string) {
-      const { worktree } = await resolve(id)
-      return deps.preferences.selection(
-        worktree.projectRoot,
-        deps.store.getWorktreeSelection(id)?.selection,
-      )
-    },
-    async setSelection(id: string, input: TestSelection) {
-      const selection = testSelectionSchema.parse(input)
-      const target = await resolve(id)
-      const validation = await target.settings.read(selection)
-      if (!validation.valid) {
-        throw Object.assign(
-          new Error("Worktree selection is invalid; select available services and modes"),
-          {
-            code: "settings_invalid",
-            validation,
-          },
-        )
-      }
-      await deps.preferences.saveSelection(target.worktree.projectRoot, selection)
-      return selection
+      return defaultIntegrationSelection(result.settings, result.containers ?? [])
     },
     resolve,
     projectSettings,

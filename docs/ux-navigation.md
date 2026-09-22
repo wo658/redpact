@@ -56,8 +56,6 @@ Redpact
 │   │   │   │   ├── Code [tab]
 │   │   │   │   ├── Execution results [tab]
 │   │   │   │   │   └── Recorded cases, steps and verdicts
-│   │   │   │   ├── Integration defaults [dialog]
-│   │   │   │   │   └── Root services and dependency mode selection
 │   │   │   │   └── Run Tests [action]
 │   │   │   └── Playwright [tab]
 │   │   │       ├── Screenshots [tab]
@@ -85,11 +83,11 @@ Redpact
 │   │   │   ├── Overview [tab]
 │   │   │   │   └── Service relationships → selected service details
 │   │   │   ├── Configuration [tab]
-│   │   │   │   └── Selected dependency → configured mode
+│   │   │   │   └── Selected dependency → fixed kind
 │   │   │   │       ├── Per-environment / Shared local / Remote connection / Mock
 │   │   │   │       ├── Additional services
 │   │   │   │       └── Environment overrides and secret value inputs
-│   │   │   └── Dependency modes and environment overrides [dialog]
+│   │   │   └── Fixed dependencies and environment bindings [dialog]
 │   │   └── Project settings [page]
 │   │       ├── General [section]
 │   │       │   └── Main branch selection for Git projects
@@ -122,7 +120,7 @@ Redpact
 │   │   │   ├── Log [tab; conditional]
 │   │   │   │   └── Execution history and copyable execution details
 │   │   │   ├── Environment [tab; conditional]
-│   │   │   │   ├── Worktree service and dependency mode selection
+│   │   │   │   ├── Fixed project execution configuration
 │   │   │   │   └── Recorded environment status, resources and cleanup controls
 │   │   │   └── Git toolbar actions
 │   │   │       ├── Uncommitted [dialog; conditional when changes exist]
@@ -136,8 +134,10 @@ Redpact
 │   │
 │   ├── GitHub repository [link; sidebar footer icon]
 │   ├── Star on GitHub [link; sidebar footer icon]
-│   ├── Check for updates / Update [action; desktop footer icon]
+│   ├── Update [action; newer desktop/npm version only]
 │   └── Settings [page; global, sidebar footer icon]
+│       ├── Updates [section]
+│       │   └── Check for updates [action; no installation]
 │       ├── Preferences [section]
 │       │   ├── Theme: Light / Dark / System
 │       │   ├── Word wrap
@@ -157,8 +157,9 @@ Redpact
 
 ## Navigation behavior
 
-- The sidebar footer places Settings, GitHub, Star and the desktop update action in
-  one compact row of icon controls with accessible names and tooltips. Settings
+- The sidebar footer places Settings, GitHub, Star and the available Update action in
+  one compact row with accessible names and tooltips. Update has a text label; the
+  remaining shortcuts use icons. Settings
   keeps its selected state. GitHub and Star open the public repository in a new
   browser tab or the desktop system browser; users give Stars on GitHub.
 
@@ -187,22 +188,33 @@ Redpact
   execution using recorded viewport metadata; it does not hide source files.
   Functional test results are available through Tests and execution history.
 - Container is a manually retained application environment. Its service/dependency
-  selection comes from project Integration defaults; it is separate from recorded
+  selection comes from fixed project configuration; it is separate from recorded
   test execution evidence.
 - Browser desktop keeps the sidebar open and the header exposes only the open-workspace
   strip rather than a sidebar toggle, page title or history controls. Compact mobile
-  screens retain the sidebar trigger; the native macOS desktop keeps its sidebar control.
+  screens and the native macOS desktop place the sidebar toggle beside the project selector,
+  before project display options. When closed, the reopen control appears below the header.
+  Worktree display options appear on hover anywhere in the Worktrees section, on keyboard
+  focus, while the menu is open, and for non-hover input.
   Workspace tabs use a fixed width, left-aligned icons and truncated labels with subtle outlines.
-  The header plus button opens another project tab on the current project’s default review
-  screen without replacing existing tabs. Each open tab retains its sidebar and current view state when switching tabs, including
-  expanded folders, selected files, nested test tabs, drafts and scroll positions. Hidden
-  tabs suspend subscriptions and refresh when reactivated. Closing a tab releases its state. New tabs are
-  session-only; reloading resets the strip. Selecting a project opens or activates its project tab;
-  selecting a worktree adds a worktree tab. Closing either tab only removes it from
-  the strip and never stops an execution or disconnects a project.
+  Every workspace tab has an identity independent of its project or worktree and records
+  its current page, project and applicable worktree or branch. Sidebar page, project,
+  worktree and branch selections navigate within the active tab. Only explicitly choosing
+  another tab activates it; multiple tabs may show the same target independently.
+  Labels follow the current page and target. The header plus button opens the current
+  page location in a new tab with fresh detail state. Selecting a different project
+  opens that project's default review page within the current tab.
+  Each open tab retains its sidebar and current view state when switching tabs, including
+  expanded folders, selected files, nested test tabs, drafts and scroll positions. Navigating
+  away from a page may release its detail state; there is no per-tab navigation history.
+  Hidden tabs suspend subscriptions and refresh when reactivated. Closing a tab releases
+  its state. Closing the active tab selects the preceding tab, or the next tab when
+  closing the first; closing an inactive tab preserves the active tab. The last tab stays open. Closing never stops execution or disconnects a project.
+  Tabs and page locations are session-only; reload or application restart resets the strip.
+  Pinning, reordering and complete UI-state persistence are not supported.
 - Settings sections and actions can depend on available API capabilities. The MCP
   approval preference shown here does not imply a separate approval-inbox page.
 
 See [frontend conventions](frontend.md) for composition rules and [execution](execution.md) for lifecycle semantics.
 
-See [desktop updates](desktop.md) for Update visibility and installation conditions.
+See [runtime updates](installation.md) for Update visibility, manual checking and installation conditions.

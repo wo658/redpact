@@ -4,6 +4,7 @@ import { settingsSchema } from "../src/core/settings-schema.js"
 const composeSettings = {
   composeFiles: ["compose.yaml"],
   tests: { env: { APP_BASE_URL: { service: "app", port: 3000, scheme: "http" } } },
+  services: ["app"],
 }
 test("rejects reserved variables and retired format fields", () => {
   expect(settingsSchema.safeParse(composeSettings).success).toBe(true)
@@ -57,34 +58,38 @@ test("does not expose standalone environment preparation over HTTP", async () =>
   expect(response.status).toBe(404)
 })
 
-import { createVitestRunner } from "../src/adapters/test-runner/vitest.js"
+import { createTestVitestRunner as createVitestRunner } from "./helpers/container-runner.js"
 
-test("injects declared runner variables and excludes server secrets", async () => {
-  const root = await mkdtemp(join(tmpdir(), "redpact-env-runner-"))
-  process.env.REDPACT_TEST_SENTINEL_SECRET = "do-not-inherit"
-  try {
-    const runner = createVitestRunner(root)
-    const result = await runner.execute(
-      {
-        files: [
-          {
-            path: "env.test.ts",
-            source:
-              'import { test, expect } from "vitest"; test("explicit environment", () => { expect(process.env.APP_BASE_URL).toBe("http://example.test"); expect(process.env.REDPACT_TEST_SENTINEL_SECRET).toBeUndefined() })',
-          },
-        ],
-      } as never,
-      "injection",
-      new AbortController().signal,
-      undefined,
-      { APP_BASE_URL: "http://example.test" },
-    )
-    expect(result.outcome).toBe("passed")
-  } finally {
-    delete process.env.REDPACT_TEST_SENTINEL_SECRET
-    await rm(root, { recursive: true, force: true })
-  }
-}, 15000)
+test.runIf(process.env.REDPACT_DOCKER_TESTS === "1")(
+  "injects declared runner variables and excludes server secrets",
+  async () => {
+    const root = await mkdtemp(join(tmpdir(), "redpact-env-runner-"))
+    process.env.REDPACT_TEST_SENTINEL_SECRET = "do-not-inherit"
+    try {
+      const runner = createVitestRunner(root)
+      const result = await runner.execute(
+        {
+          files: [
+            {
+              path: "env.test.ts",
+              source:
+                'import { test, expect } from "vitest"; test("explicit environment", () => { expect(process.env.APP_BASE_URL).toBe("http://example.test"); expect(process.env.REDPACT_TEST_SENTINEL_SECRET).toBeUndefined() })',
+            },
+          ],
+        } as never,
+        "injection",
+        new AbortController().signal,
+        undefined,
+        { APP_BASE_URL: "http://example.test" },
+      )
+      expect(result.outcome).toBe("passed")
+    } finally {
+      delete process.env.REDPACT_TEST_SENTINEL_SECRET
+      await rm(root, { recursive: true, force: true })
+    }
+  },
+  15000,
+)
 
 import { openStore } from "../src/adapters/storage/files.js"
 import { createSubmissions } from "../src/workflows/submissions.js"

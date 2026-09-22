@@ -85,16 +85,19 @@ TypeScript, Hono와 일반 함수를 사용합니다. controller 클래스, DI �
 - Testcontainers는 컨테이너 시작을 담당합니다. Redpact는 입력 캡처, 수락,
   상태 관찰, 리소스 식별, 취소와 정리를 담당합니다.
 - Unit 명령과 Playwright는 임시 컨테이너에서 실행합니다. Integration Vitest는
-  호스트에서 임시 Compose 애플리케이션 환경을 대상으로 실행합니다.
+  임시 컨테이너에서 실행합니다. Integration과 Playwright는 실행별 네트워크에서
+  서비스 이름으로 앱에 접근합니다.
 - MCP Apps는 요청 승인과 자격 증명 입력을 구현합니다. 클라이언트가 App 전용
   메타데이터를 모델 문맥에서 숨겨야 합니다. 코드 검토 수락이나 신뢰된 로컬
   프로세스로부터의 격리를 입증하는 기능은 아닙니다.
 - GitHub 게시에는 native Git과 인증된 `gh`를 재사용하며 PR 식별자는 GitHub가 소유합니다.
 
+독립 npm 설치는 CLI 부모가 소유 서버를 종료한 뒤 확인된 npm/pnpm 관리자에 패키지 교체를 맡깁니다. 네이티브 데스크톱은 Tauri 소유권을 유지합니다. 두 경로 모두 뷰어에 업데이트 상태를 제공하며 SemVer 비교는 기존 node-semver 구현을 사용합니다. 설치 제약과 재시작 동작은 [런타임 업데이트](installation.md)를 참고하세요.
+
 ## 범위와 증거
 
 현재 Git 체크아웃 발견과 불변 실행 식별자는 별개입니다. 체크아웃이 사라져도 과거
-결과는 남지만 새 실행은 불가능합니다. 공유 설정과 의존성 한정 override는
+결과는 남지만 새 실행은 불가능합니다. 공유 고정 설정은
 [설정 소유권](settings-reference.md)에서 정의하며 워크트리 식별 레코드에 복제하지 않습니다.
 
 세부 계약은 [실행](execution.md), [저장소](storage.md), [인터페이스](interfaces.md),

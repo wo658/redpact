@@ -1,20 +1,22 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { afterEach, beforeEach, expect, test, vi } from "vitest"
+import { afterEach, beforeEach, expect, test as unitTest, vi } from "vitest"
 import { createGitAdapter } from "../src/adapters/git/isomorphic.js"
 import { parseSource } from "../src/adapters/parser/source.js"
 import { createScheduler } from "../src/adapters/process/queue.js"
 import { createSettingsService } from "../src/adapters/settings/json.js"
 import { openStore } from "../src/adapters/storage/files.js"
-import { createVitestRunner } from "../src/adapters/test-runner/vitest.js"
 import { createSubmissions } from "../src/workflows/submissions.js"
+import { createTestVitestRunner as createVitestRunner } from "./helpers/container-runner.js"
 import {
   createTestApp as createApp,
   createTestExecution,
   type TestServices as Services,
 } from "./helpers/execution.js"
 import { createTestWorktrees } from "./helpers/worktrees.js"
+
+const test = unitTest.skipIf(process.env.REDPACT_DOCKER_TESTS !== "1")
 
 let directory: string
 let storage: ReturnType<typeof openStore>
@@ -27,7 +29,7 @@ beforeEach(async () => {
   await mkdir(join(directory, ".redpact"))
   await writeFile(
     join(directory, ".redpact/settings.json"),
-    '{"composeFiles": ["compose.yaml"], "dependencies": {}}',
+    '{"composeFiles": ["compose.yaml"], "services": ["app"], "dependencies": {}}',
   )
   await writeFile(join(directory, "compose.yaml"), "services:\n  app:\n    image: example/app\n")
   worktrees = createTestWorktrees({
@@ -87,9 +89,11 @@ test("container-only secrets redact test output without being inherited by the t
         composeFiles: ["compose.yaml"],
         dependencies: {
           payments: {
-            modes: { remote: { env: { app: { API_KEY: { secret: "PAYMENTS_KEY" } } } } },
+            kind: "remote",
+            env: { app: { API_KEY: { secret: "PAYMENTS_KEY" } } },
           },
         },
+        services: ["app"],
       }),
     )
     const submission = submit(`import { test, expect } from "vitest";
@@ -245,7 +249,8 @@ test("a test that changes its own source cannot receive a verified pass", async 
     'import { test } from "vitest"; import { writeFileSync } from "node:fs"; test("rewrite", () => { writeFileSync(process.cwd() + "/example.test.ts", "// changed") })',
   )
   const run = await completed((await services.runs.start(submission.id)).id)
-  expect(run.result?.outcome).toBe("unknown")
+  expect(run.result).toMatchObject({ outcome: "execution_error" })
+  expect(JSON.stringify(run.result)).toContain("EACCES: permission denied")
   expect(services.submissions.get(submission.id).files[0].source).toContain("writeFileSync")
 })
 
@@ -257,7 +262,7 @@ test("HTTP and MCP reject invalid settings before creating runs, then reread a c
   )
   await writeFile(
     join(directory, ".redpact/settings.json"),
-    '{"composeFiles": ["compose.yaml"], "dependencies": {}, "tests": {"timeoutMs": "wrong"}}',
+    '{"composeFiles": ["compose.yaml"], "services": ["app"], "dependencies": {}, "tests": {"timeoutMs": "wrong"}}',
   )
   const validation = await app.request("/api/settings", { headers })
   expect(validation.status).toBe(422)
@@ -286,7 +291,7 @@ test("HTTP and MCP reject invalid settings before creating runs, then reread a c
   expect(storage.store.unfinishedRuns()).toEqual([])
   await writeFile(
     join(directory, ".redpact/settings.json"),
-    '{"composeFiles": ["compose.yaml"], "dependencies": {}, "tests": {"timeoutMs": 1234}}',
+    '{"composeFiles": ["compose.yaml"], "services": ["app"], "dependencies": {}, "tests": {"timeoutMs": 1234}}',
   )
   const run = await services.runs.start(submission.id)
   expect((await completed(run.id)).result?.outcome).toBe("passed")
@@ -327,7 +332,7 @@ test("queued work cannot execute against settings changed after acceptance", asy
   const run = await runs.start(submission.id)
   await writeFile(
     join(directory, ".redpact/settings.json"),
-    '{"composeFiles": ["compose.yaml"], "dependencies": {}, "tests": {"timeoutMs": 2000}}',
+    '{"composeFiles": ["compose.yaml"], "services": ["app"], "dependencies": {}, "tests": {"timeoutMs": 2000}}',
   )
   await jobs[0]()
   expect(runner.execute).not.toHaveBeenCalled()
@@ -470,7 +475,7 @@ test("execution supplies the selected service manifest through run core", async 
      import { readFileSync } from "node:fs";
      test("selected services", () => {
        expect(JSON.parse(readFileSync(process.env.REDPACT_CONNECTIONS_FILE!, "utf8")))
-         .toEqual({version: 1, services: {app: {ports: {"3000": {host: "127.0.0.1", port: 41001}, "9000": {host: "127.0.0.1", port: 41002}}}}});
+         .toEqual({version: 1, services: {app: {ports: {"3000": {host: "app.redpact.test", port: 3000}, "9000": {host: "app.redpact.test", port: 9000}}}}});
      });
    `)
   const run = await services.runs.start(submission.id)

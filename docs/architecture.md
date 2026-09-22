@@ -87,18 +87,20 @@ between record files.
   Static parsing does not prove assertion execution or full import coverage.
 - Testcontainers owns container startup. Redpact owns input capture, admission,
   health observations, resource identities, cancellation and cleanup.
-- Unit commands and Playwright execute in temporary containers. Integration Vitest
-  executes on the host against temporary Compose application environments.
+- Unit, Integration Vitest and Playwright execute in temporary containers. Integration
+  and Playwright join a per-execution network with service-name access to the application.
 - MCP Apps implement request approval and credential inputs. Their capabilities
   rely on the client keeping App-only metadata out of model context; this does not
   establish code-review acceptance or isolation from trusted local processes.
 - GitHub publication reuses native Git and authenticated `gh`; GitHub owns PR identity.
 
+Standalone npm installs use a CLI parent to stop the owned server before delegating package replacement to its detected npm/pnpm owner. Native desktop keeps Tauri ownership. Both expose update availability to the viewer; SemVer comparison uses the existing node-semver implementation. See [runtime updates](installation.md) for installation limits and restart behavior.
+
 ## Scope and evidence
 
 Live Git checkout discovery and immutable execution identities are separate. A
 missing checkout can keep historical results while becoming unavailable for new
-execution. Shared configuration and scoped dependency overrides are described in
+execution. Shared fixed configuration is described in
 [settings ownership](settings-reference.md), not copied into worktree identity.
 
 Use [execution](execution.md), [storage](storage.md), [interfaces](interfaces.md),

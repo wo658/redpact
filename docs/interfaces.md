@@ -22,12 +22,12 @@ normal preconditions even when called outside the viewer. See [architecture](arc
 | Tool | Contract |
 | --- | --- |
 | `configure` | `describe`, `inspect` or `validate` for an absolute execution `path`; returns schema, roots, diagnostics and optional plan |
-| `run_tests` | Absolute `path`, optional exact `tests` paths and explicit or saved `selection`; submits and executes Integration |
+| `run_tests` | Absolute `path`, optional exact `tests` paths; submits and executes Integration |
 | `get_run` | Returned execution or review `id`; reads state, results and environment cleanup |
 | `request_keys` | Observed `projectId` and required declared credential `names`; requests direct user input and returns availability |
 
-`selection` is allowed for inspect/validate, not describe. Configure does not read
-saved selection automatically, save configuration, start containers or approve tests.
+Execution derives from the shared fixed project settings; `selection` is rejected.
+Configure does not save configuration, start containers or approve tests.
 Call describe, edit the authored files, then validate the same checkout. Use the
 viewer or HTTP for Unit and Playwright: Unit executes its configured command,
 while Playwright selects a functional or capture target and retains its UI-review evidence.
@@ -52,7 +52,7 @@ A new `run_tests` captures the immutable submission and instance `approval` poli
 - `ask` returns an `awaiting_approval` review ID. Environment approval precedes test
   bundle approval. No container or test process starts until both are accepted.
 
-Approval binds the captured submission, selection, revision and settings digest.
+Approval binds the captured submission, fixed execution plan, revision and settings digest.
 Admission and queued execution revalidate settings. Later file edits do not replace
 captured tests. This does not freeze every application input, prove sufficient tests,
 record a TDD red, or approve a Git merge.
@@ -95,3 +95,5 @@ Implementation: [MCP registration](../app/server/src/interfaces/mcp/routes.ts),
 [App metadata](../app/server/src/interfaces/mcp/apps.ts),
 [HTTP documentation](../app/server/src/interfaces/http/docs/routes.ts),
 [review workflow](../app/server/src/workflows/review-tests.ts).
+
+Runtime update status and explicit check/install actions use `GET /api/updates`, `POST /api/updates/check` and `POST /api/updates/install`. Installation requires `{ version }` matching the discovered version and a recognized CLI supervisor; cached `canInstall`, `busy`, `error` and `installError` distinguish capability, work and failures. Reads never install. These HTTP routes retain the same-origin/local-host boundary and expose no arbitrary command or registry URL. See [runtime updates](installation.md).

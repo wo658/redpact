@@ -92,6 +92,7 @@ export function WorktreeDisplayOptions({
           <Button
             variant="ghost"
             size="icon-xs"
+            className="opacity-0 pointer-events-none group-hover/worktrees:opacity-100 group-hover/worktrees:pointer-events-auto group-focus-within/worktrees:opacity-100 group-focus-within/worktrees:pointer-events-auto data-popup-open:opacity-100 data-popup-open:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto"
             aria-label={t("Worktree display options")}
             title={t("Worktree display options")}
           />

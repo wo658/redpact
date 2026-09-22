@@ -7,12 +7,12 @@ description: Execute the included HTTP scenario, inspect its recorded result, an
 
 This walkthrough uses the included Order Desk application. It runs an HTTP application in Docker with an implemented payment mock, without calling a real gateway. You need a [running server and connected agent](installation.md), plus Docker with Compose.
 
-For your application, complete [project setup](first-project.md), then replace the sample path, test file, and selection with your authored values.
+For your application, complete [project setup](first-project.md), then replace the sample path and test file with your authored values.
 
 The example also provides `tools/review.mjs` for a scripted HTTP check against your
 running server. From the repository root, run
 `REDPACT_URL=http://127.0.0.1:54318 node examples/order-desk/tools/review.mjs http`.
-It saves the example checkout's `app` / `payments: mock` selection, submits the
+It uses the example's fixed `app` / `payments: mock` configuration, submits the
 scenario and waits for execution cleanup. Use `all` for the fixture catalog; each
 scenario receives a fresh environment, never the manual Project Container.
 
@@ -20,18 +20,14 @@ scenario receives a fresh environment, never the manual Project Container.
 
 The sample lives at `examples/order-desk` inside the Redpact checkout. Use its absolute path in tool calls, for example `/absolute/path/to/redpact/examples/order-desk`.
 
-Its settings reference `compose.yaml`, define `payments` with a `mock` mode, and provide service connections to tests. `tests/http.test.js` verifies that checkout returns HTTP 200 with `quantity: 1` and `totalCents: 250`. Local fixtures resolve the managed service address; no allocated host port needs to be guessed.
+Its settings reference `compose.yaml`, define `payments` with a fixed `mock` dependency, and provide service connections to tests. `tests/http.test.js` verifies that checkout returns HTTP 200 with `quantity: 1` and `totalCents: 250`. Local fixtures resolve the managed service address; no allocated host port needs to be guessed.
 
 Call `configure` with `action: "describe"` and the sample path, then validate:
 
 ```json
 {
   "action": "validate",
-  "path": "/absolute/path/to/redpact/examples/order-desk",
-  "selection": {
-    "services": ["app"],
-    "select": { "payments": "mock" }
-  }
+  "path": "/absolute/path/to/redpact/examples/order-desk"
 }
 ```
 
@@ -44,11 +40,7 @@ Call the MCP `run_tests` tool:
 ```json
 {
   "path": "/absolute/path/to/redpact/examples/order-desk",
-  "tests": ["http.test.js"],
-  "selection": {
-    "services": ["app"],
-    "select": { "payments": "mock" }
-  }
+  "tests": ["http.test.js"]
 }
 ```
 
@@ -101,7 +93,7 @@ After the request finishes, collect these details from the actual record:
 | Returned execution identity | Lets the viewer and agent refer to the same attempt |
 | Absolute checkout path | Confirms the intended application sources were selected |
 | Submitted test and case | Shows what was checked |
-| Selected services and dependency modes | Explains whether a real dependency or substitute was involved |
+| Configured services and dependency kinds | Explains whether a real dependency or substitute was involved |
 | Case outcome and first relevant error | Separates an assertion result from preparation failure |
 | Cleanup status | Shows whether temporary resources were removed |
 
@@ -117,7 +109,7 @@ Submit a new request after fixing the relevant inputs. Use `get_run` only to rea
 
 Each run prepares a temporary environment and removes its resources after execution. Recorded sources, results, and logs remain. Cleanup status is separate from the test verdict: a passing test can still require attention if resource removal fails.
 
-Every test execution gets its own environment; standalone test-environment preparation and reuse are unavailable. For manual inspection, Project Container explicitly starts a separate environment that cannot supply test runs. Independently managed services use shared-local or remote modes. Users cancel runs or retry cleanup through web controls; MCP does not expose separate lifecycle tools.
+Every test execution gets its own environment; standalone test-environment preparation and reuse are unavailable. For manual inspection, Project Container explicitly starts a separate environment that cannot supply test runs. Independently managed services use shared-local or remote kinds. Users cancel runs or retry cleanup through web controls; MCP does not expose separate lifecycle tools.
 
 ## Move to your application
 

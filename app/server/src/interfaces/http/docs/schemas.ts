@@ -228,9 +228,7 @@ export const settingsSpecificationResponse = z
     path: z.literal(".redpact/settings.json"),
     format: z.literal("json"),
     schema: jsonSchema,
-    selectionSchema: jsonSchema,
     example: z.string(),
-    selectionExample: testSelectionSchema,
     workflow: strings,
     limits: strings,
   })

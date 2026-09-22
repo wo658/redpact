@@ -27,6 +27,7 @@ test("같은 Playwright 파일을 두 목적에 연결하면 설정 검증에서
             checks: { purpose: "functional", testMatch: ["settings.ts"] },
           },
         },
+        services: ["app"],
       }),
     )
     const result = await readJsonSettings(root)

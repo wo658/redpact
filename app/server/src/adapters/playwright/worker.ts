@@ -29,11 +29,16 @@ try {
     .withResourcesQuota({ memory: spec.limits.memoryMiB / 1024 })
     .withAutoCleanup(false)
     .withAutoRemove(false)
-    .withNetworkMode(`container:${spec.targetId}`)
+    .withNetworkMode(spec.network)
+    .withEnvironment(spec.environment ?? {})
+    .withExtraHosts([{ host: "host.docker.internal", ipAddress: "host-gateway" }])
     .withSharedMemorySize(Math.min(1024, Math.floor(spec.limits.memoryMiB / 2)) * 1024 * 1024)
     // Private host snapshots must remain readable by the container's unprivileged user.
     .withCopyDirectoriesToContainer([{ source: spec.tests, target: "/review/tests", mode: 0o755 }])
-    .withCopyContentToContainer([{ content: spec.config, target: "/review/playwright.config.cjs" }])
+    .withCopyContentToContainer([
+      { content: spec.config, target: "/review/playwright.config.cjs" },
+      { content: JSON.stringify(spec.connections), target: "/review/connections.json" },
+    ])
     .withEntrypoint(["/bin/sh", "-c"])
     .withCommand(["trap 'exit 0' TERM; echo redpact-capture-ready; while :; do sleep 1; done"])
     .withWaitStrategy(Wait.forLogMessage("redpact-capture-ready"))

@@ -23,7 +23,7 @@ let environments: ReturnType<typeof createEnvironments>
 let executions = 0
 let preparations = 0
 let preparation: (signal: AbortSignal) => Promise<void>
-const selection = { services: ["app"], select: {} }
+const _selection = { services: ["app"], select: {} }
 const source = 'import { test, expect } from "vitest"; test("observed", () => expect(1).toBe(1))'
 async function mcp(name: string, args: object) {
   const response = await app.request("/mcp", {
@@ -49,7 +49,11 @@ beforeEach(async () => {
   await writeFile(join(root, "compose.yaml"), "services:\n  app:\n    image: alpine:3.21\n")
   await writeFile(
     join(root, ".redpact/settings.json"),
-    JSON.stringify({ composeFiles: ["compose.yaml"], tests: { directory: "tests" } }),
+    JSON.stringify({
+      composeFiles: ["compose.yaml"],
+      tests: { directory: "tests" },
+      services: ["app"],
+    }),
   )
   await writeFile(join(root, "tests/example.test.ts"), source)
   executions = 0
@@ -106,7 +110,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true })
 })
 test("path-based configure remains read-only and previews selection plus files", async () => {
-  const result = await mcp("configure", { action: "inspect", path: root, selection })
+  const result = await mcp("configure", { action: "inspect", path: root })
   expect(result.isError).not.toBe(true)
   expect(result.structuredContent.validation.valid).toBe(true)
   expect(result.structuredContent.plan.activeServices).toEqual(["app"])
@@ -115,7 +119,7 @@ test("path-based configure remains read-only and previews selection plus files",
   expect(preparations).toBe(0)
 })
 test("run_tests discovers a directory, snapshots files and prepares an environment without registration", async () => {
-  const result = await mcp("run_tests", { path: root, selection })
+  const result = await mcp("run_tests", { path: root })
   expect(result.isError).not.toBe(true)
   expect(result.structuredContent.id).toEqual(expect.any(String))
   const id = result.structuredContent.id
@@ -131,7 +135,7 @@ test("run_tests discovers a directory, snapshots files and prepares an environme
   })
   await writeFile(join(root, "tests/example.test.ts"), `${source}\n// edited`)
   expect(storage.store.getSubmission(run.submissionId)?.files[0].source).toBe(source)
-  const reused = await mcp("run_tests", { path: root, selection })
+  const reused = await mcp("run_tests", { path: root })
   expect(reused.isError).not.toBe(true)
   await expect.poll(() => runs.get(reused.structuredContent.id).state).toBe("finished")
   expect(preparations).toBe(2)
@@ -149,7 +153,7 @@ test("cancellation during preparation finishes the run without invoking the runn
         signal.addEventListener("abort", () => resolve(), { once: true })
       }
     })
-  const result = await mcp("run_tests", { path: root, selection })
+  const result = await mcp("run_tests", { path: root })
   expect(result.isError).not.toBe(true)
   const id = result.structuredContent.id
   await expect.poll(() => preparations).toBe(1)
@@ -159,7 +163,7 @@ test("cancellation during preparation finishes the run without invoking the runn
 })
 test("invalid paths and symlinked sources are rejected before preparing containers", async () => {
   await symlink(join(root, "compose.yaml"), join(root, "tests/leak.json"))
-  expect((await mcp("run_tests", { path: root, selection })).isError).toBe(true)
+  expect((await mcp("run_tests", { path: root })).isError).toBe(true)
   expect(preparations).toBe(0)
   expect(storage.store.listRuns()).toEqual([])
   expect(await readFile(join(root, "tests/example.test.ts"), "utf8")).toBe(source)
@@ -171,7 +175,7 @@ test("settings changed during preparation cannot reach the runner", async () => 
     new Promise<void>((resolve) => {
       release = resolve
     })
-  const result = await mcp("run_tests", { path: root, selection })
+  const result = await mcp("run_tests", { path: root })
   expect(result.isError).not.toBe(true)
   const id = result.structuredContent.id
   await expect.poll(() => preparations).toBe(1)
@@ -180,6 +184,7 @@ test("settings changed during preparation cannot reach the runner", async () => 
     JSON.stringify({
       composeFiles: ["compose.yaml"],
       tests: { directory: "tests", timeoutMs: 4321 },
+      services: ["app"],
     }),
   )
   release()
@@ -199,7 +204,7 @@ test("cancellation racing reservation releases the acquired environment", async 
     })
     return reserve(...args)
   }
-  const result = await mcp("run_tests", { path: root, selection })
+  const result = await mcp("run_tests", { path: root })
   expect(result.isError).not.toBe(true)
   const id = result.structuredContent.id
   await expect.poll(() => entered).toBe(true)
@@ -219,7 +224,7 @@ test("preparation failure preserves environment evidence without claiming an ass
   preparation = async () => {
     throw new Error("Container unavailable")
   }
-  const result = await mcp("run_tests", { path: root, selection })
+  const result = await mcp("run_tests", { path: root })
   expect(result.isError).not.toBe(true)
   const id = result.structuredContent.id
   await expect.poll(() => runs.get(id).state).toBe("finished")
@@ -237,7 +242,7 @@ test("explicit environment stop cancels its queued preparation run", async () =>
         signal.addEventListener("abort", () => resolve(), { once: true })
       }
     })
-  const result = await mcp("run_tests", { path: root, selection })
+  const result = await mcp("run_tests", { path: root })
   expect(result.isError).not.toBe(true)
   const id = result.structuredContent.id
   await expect.poll(() => runs.get(id).environmentId).toBeDefined()
@@ -259,13 +264,13 @@ test("path-based configure and run_tests use shared rules without registering du
   const linked = join(root, "linked")
   git("worktree", "add", "-b", "feature", linked)
   await writeFile(join(linked, ".redpact/settings.json"), "invalid local copy")
-  const inspected = await mcp("configure", { action: "inspect", path: linked, selection })
+  const inspected = await mcp("configure", { action: "inspect", path: linked })
   expect(inspected.isError).not.toBe(true)
   expect(inspected.structuredContent.validation.valid).toBe(true)
   expect(inspected.structuredContent.validation.file).toContain("/.redpact/settings.json")
   expect(inspected.structuredContent.tests.files).toContain("example.test.ts")
   expect(storage.store.listProjects()).toEqual([])
-  const accepted = await mcp("run_tests", { path: linked, selection })
+  const accepted = await mcp("run_tests", { path: linked })
   expect(accepted.isError).not.toBe(true)
   await expect.poll(() => executions).toBe(1)
   const environment = storage.store.listEnvironments()[0]
@@ -273,41 +278,40 @@ test("path-based configure and run_tests use shared rules without registering du
   expect(environment.target.projectRoot).toContain("/linked")
 })
 
-test("run_tests remembers worktree selection and rejects stale saved choices before execution", async () => {
-  const initial = await mcp("run_tests", { path: root })
-  expect(initial.isError).toBe(true)
-  expect(preparations).toBe(0)
-  const first = await mcp("run_tests", { path: root, selection })
+test("run_tests uses fixed settings and rejects changed invalid Compose before provisioning", async () => {
+  const first = await mcp("run_tests", { path: root })
   expect(first.isError).not.toBe(true)
   await expect.poll(() => runs.get(first.structuredContent.id).state).toBe("finished")
-  const again = await mcp("run_tests", { path: root })
-  expect(again.isError).not.toBe(true)
-  await expect.poll(() => runs.get(again.structuredContent.id).state).toBe("finished")
   const prior = storage.store.listEnvironments().map((item) => JSON.stringify(item))
   await writeFile(join(root, "compose.yaml"), "services:\n  replacement:\n    image: alpine:3.21\n")
   const stale = await mcp("run_tests", { path: root })
   expect(stale.isError).toBe(true)
-  expect(executions).toBe(2)
+  expect(executions).toBe(1)
   expect(storage.store.listEnvironments().map((item) => JSON.stringify(item))).toEqual(prior)
-  const corrected = await mcp("run_tests", {
-    path: root,
-    selection: { services: ["replacement"], select: {} },
-  })
+  await writeFile(
+    join(root, ".redpact/settings.json"),
+    JSON.stringify({
+      composeFiles: ["compose.yaml"],
+      services: ["replacement"],
+      tests: { directory: "tests" },
+    }),
+  )
+  const corrected = await mcp("run_tests", { path: root })
   expect(corrected.isError).not.toBe(true)
   await expect.poll(() => runs.get(corrected.structuredContent.id).state).toBe("finished")
-  expect(
-    JSON.parse(await readFile(join(root, ".redpact/selection.json"), "utf8")).services,
-  ).toEqual(["replacement"])
+  await expect(readFile(join(root, ".redpact/selection.json"))).rejects.toMatchObject({
+    code: "ENOENT",
+  })
 })
 
 test("MCP rejects explicit environment reuse without changing saved choices", async () => {
-  const first = await mcp("run_tests", { path: root, selection })
+  const first = await mcp("run_tests", { path: root })
   await expect.poll(() => runs.get(first.structuredContent.id).state).toBe("finished")
   const environmentId = runs.get(first.structuredContent.id).environmentId!
   const reused = await mcp("run_tests", { path: root, environmentId })
   expect(reused.isError).toBe(true)
-  expect(JSON.parse(await readFile(join(root, ".redpact/selection.json"), "utf8"))).toEqual(
-    selection,
-  )
+  await expect(readFile(join(root, ".redpact/selection.json"))).rejects.toMatchObject({
+    code: "ENOENT",
+  })
   await expect.poll(() => environments.get(environmentId).state).toBe("stopped")
 })

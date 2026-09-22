@@ -17,9 +17,7 @@ export function createProjectSecrets(deps: {
       problem("invalid_input", "Repair project settings before editing secrets")
     }
     const bindings = Object.values(result.settings.dependencies).flatMap((dependency) =>
-      Object.values(dependency.modes).flatMap((mode) =>
-        Object.values(mode.env).flatMap(Object.values),
-      ),
+      Object.values(dependency.env).flatMap(Object.values),
     )
     return [
       ...new Set(

@@ -7,7 +7,7 @@ function fixture() {
   let valid = true
   const read = vi.fn(async () => ({
     valid,
-    settings: { tests: { directory }, composeFiles: ["compose.yaml"] },
+    settings: { tests: { directory }, composeFiles: ["compose.yaml"], services: ["app"] },
     issues: [],
     file: "/repo/.redpact/settings.json",
   }))

@@ -1,79 +1,48 @@
 ---
 title: Dependencies and worktrees
-description: Understand how shared dependency definitions become worktree selections and execution environments.
+description: One fixed project configuration with separate worktree execution resources.
 ---
 
 # Dependencies and worktrees
 
-Imagine an order application using PostgreSQL and a payments API. Checking out its code is only part of running it. You also need to decide how to provide the database, whether to call the payment provider or a substitute, and which connection values to deliver to the app.
+An application may use an isolated PostgreSQL database, a managed payment mock, shared
+local search and a remote API together. Define that fixed topology once in the primary
+checkout's `.redpact/settings.json`; all linked worktrees use it. Dependencies describe
+integrated services, not npm packages installed by Docker builds.
 
-Redpact stores these options in the project and lets a worktree select an execution configuration. Adding a dependency definition and starting its service are separate steps.
+| Kind | Provisioning and cleanup |
+| --- | --- |
+| `isolated` | Compose starts the declared dependency services for each execution |
+| `mock` | Compose starts an implemented substitute, or bindings enable an in-process mock |
+| `shared-local` | Existing host infrastructure; Redpact never starts or removes it |
+| `remote` | Existing remote endpoint; Redpact never starts or removes it |
 
-## What belongs in the dependency list?
+A kind does not install software or implement a mock. Declare only working connections.
+Each dependency has one fixed definition; there are no selectable modes or recommendations.
+The primary settings file supplies root services, dependency services and bindings.
+Compose prerequisites extend that service set. Binding a variable does not start its target.
 
-Dependencies here are services the app integrates with. Code libraries such as npm packages are installed through the project's build definitions, including Dockerfiles.
+## Shared configuration, independent execution
 
-| Example dependency | Available approach | Required preparation |
-|---|---|---|
-| PostgreSQL | `isolated` | Compose service, readiness check and connection bindings |
-| Payments API | `mock` | An implemented substitute and its connection configuration |
-| Local shared database or API | `shared-local` | Reachable local address and shared test data |
-| Remote database or API | `remote` | Reachable address, authentication and test data |
+`rulesRoot` identifies the shared settings location. Compose, Dockerfile, app and test
+paths resolve in the executing checkout, so a feature uses its own code. Each execution
+owns fresh containers and networks; configuration sharing does not permit environment
+reuse. Worktree selection files and dependency overlays do not affect execution.
 
-Declare only the `isolated`, `shared-local`, `remote`, and `mock` modes your project supports. A mode name does not install a database or implement a mock. Use `shared-local` for an existing service on the local machine; use `remote` for Cloud or independently hosted remote servers. Neither mode starts or cleans up the dependency.
+Validate with `configure` using the actual checkout. Validation does not start services,
+prove connectivity or grant approval. Execution captures settings, prepares resources,
+checks readiness, runs tests and removes only its owned resources. Independently operated
+shared-local and remote services remain alive; tests must isolate their fixture data.
 
-## Projects share definitions; worktrees select options
-
-The primary checkout holds shared `.redpact/settings.json`. Confirm its location through `rulesRoot` returned by `configure`. Each checkout can save root service and dependency choices in `.redpact/selection.json`.
-
-```mermaid
-flowchart TD
-    P["Shared project settings.json<br/>App, dependencies, modes and bindings"]
-    P --> A["Worktree A<br/>Order feature code"]
-    P --> B["Worktree B<br/>Payment fix code"]
-    A --> SA["Selection A<br/>DB isolated, payments mock"]
-    B --> SB["Selection B<br/>DB isolated, payments remote"]
-    SA --> EA["Temporary environment for run A"]
-    SB --> EB["Temporary environment for run B"]
-```
-
-This example illustrates configuration relationships; each selected mode must exist in the project. Explicit execution input takes precedence over saved selection. Saving a selection does not start an environment.
-
-| Item | Owner or location |
-|---|---|
-| Available dependency and mode definitions | Shared project settings |
-| Modes chosen for the task | Saved worktree selection or explicit execution input |
-| Compose, Dockerfile, app and test sources | Executing checkout |
-| Managed resources created during execution | That execution |
-| Results and recorded source | Preserved execution history |
-
-A shared declaration of `compose.yaml` resolves to the feature checkout's file during feature work. Working in the primary checkout does not establish that the necessary files exist in a feature worktree.
-
-## When do installation and connection happen?
-
-```mermaid
-sequenceDiagram
-    participant U as User or agent
-    participant R as Redpact
-    participant E as Execution environment
-    U->>R: Write definitions and validate selection
-    R-->>U: Configuration diagnostics
-    U->>R: Request tests for the actual worktree
-    Note over R: Proceed after required review gates
-    R->>E: Build or prepare images and start services
-    R->>E: Deliver app and test connection values
-    R->>E: Check readiness and execute tests
-    E-->>R: Results and diagnostics
-    R->>E: Remove execution-owned temporary resources
-    R-->>U: Inspect preserved results
-```
-
-This is an overview of managed integration execution. Preparation obtains required images and packages; existing build caches may be reused. Validation alone does not check Docker access, credentials, or service readiness. Configured target environment variables deliver connection values, so avoid hardcoded allocated ports in tests.
-
-Each execution uses temporary resources and removes them at termination. Separately operated external services are outside that cleanup. Two worktrees selecting the same external database can share data; arrange test data isolation in that service as well.
+Application bindings and the common runner environment are explicit and separate. Both
+Integration and Playwright receive `tests.env` and the same connection-file format.
+See [configuration](configuration.md) for declarations and [runner connectivity](execution.md#runner-connectivity)
+for DNS, shared-host reachability and browser origins.
 
 ## Ask your agent
 
-> Investigate this project's startup process and database, cache, and external API dependencies. Define implemented modes in shared Redpact settings and explain the selection for this worktree. Check where each connection value reaches the app and tests. Separate configuration validation results from anything that still requires execution.
+> Inspect the application's database, cache and external API connections. Configure one
+> fixed Redpact topology shared by all worktrees. Verify each connection from its actual
+> consumer and distinguish configuration validation from runtime evidence.
 
-Follow [Project setup](first-project.md) to write the definitions. See [Configuration](configuration.md) for exact fields and [Review your first change](review-workflow.md) for the workflow after setup.
+Continue with [project setup](first-project.md) or [review your first change](review-workflow.md).
