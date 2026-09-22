@@ -62,7 +62,7 @@ export function DesktopUpdate() {
               {update.status.canInstall
                 ? t("Install the update and restart Redpact? Active work will defer installation.")
                 : t(
-                    "Automatic installation is unavailable. Update with the original package manager, then restart Redpact. For npx, stop this process and run npx redpact@latest serve with the same options.",
+                    "Automatic installation is unavailable. Update with the original package manager, then restart Redpact. For npx, stop this process and run npx @wo658/redpact@latest serve with the same options.",
                   )}
             </DialogDescription>
           </DialogHeader>

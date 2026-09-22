@@ -17,15 +17,17 @@ afterEach(async () => {
 async function fixture(manager: "npm" | "pnpm", development = false) {
   const root = await realpath(await mkdtemp(join(tmpdir(), "redpact-owner-")))
   roots.push(root)
-  const installed = join(root, "node_modules/redpact")
+  const installed = join(root, "node_modules/@wo658/redpact")
   await mkdir(installed, { recursive: true })
   await writeFile(
     join(installed, "package.json"),
-    JSON.stringify({ name: "redpact", version: "0.2.0" }),
+    JSON.stringify({ name: "@wo658/redpact", version: "0.2.0" }),
   )
   await writeFile(
     join(root, "package.json"),
-    JSON.stringify({ [development ? "devDependencies" : "dependencies"]: { redpact: "0.2.0" } }),
+    JSON.stringify({
+      [development ? "devDependencies" : "dependencies"]: { "@wo658/redpact": "0.2.0" },
+    }),
   )
   await writeFile(join(root, manager === "npm" ? "package-lock.json" : "pnpm-lock.yaml"), "")
   run.mockResolvedValue({ stdout: "/not-the-installation" })
@@ -40,7 +42,7 @@ test("로컬 npm 설치는 전역 설치로 바꾸지 않고 명시한 버전과
     if (args[0] === "install") {
       await writeFile(
         join(installed, "package.json"),
-        JSON.stringify({ name: "redpact", version: "0.3.0" }),
+        JSON.stringify({ name: "@wo658/redpact", version: "0.3.0" }),
       )
     }
     return { stdout: "/not-the-installation" }
@@ -51,7 +53,12 @@ test("로컬 npm 설치는 전역 설치로 바꾸지 않고 명시한 버전과
   await installRuntime(owner, "0.3.0")
   expect(run).toHaveBeenCalledWith(
     "npm",
-    ["install", "redpact@0.3.0", "--ignore-scripts", "--registry=https://registry.npmjs.org/"],
+    [
+      "install",
+      "@wo658/redpact@0.3.0",
+      "--ignore-scripts",
+      "--registry=https://registry.npmjs.org/",
+    ],
     expect.objectContaining({ cwd: root }),
   )
   expect(JSON.parse(await readFile(join(installed, "package.json"), "utf8")).version).toBe("0.3.0")
@@ -67,11 +74,11 @@ test("npx 캐시와 소유자를 확인할 수 없는 설치는 자동 교체하
   const { root, installed } = await fixture("npm")
   await rm(join(root, "package-lock.json"))
   expect(await detectInstallation(installed)).toBeNull()
-  const cached = join(root, "_npx/node_modules/redpact")
+  const cached = join(root, "_npx/node_modules/@wo658/redpact")
   await mkdir(cached, { recursive: true })
   await writeFile(
     join(cached, "package.json"),
-    JSON.stringify({ name: "redpact", version: "0.2.0" }),
+    JSON.stringify({ name: "@wo658/redpact", version: "0.2.0" }),
   )
   expect(await detectInstallation(cached)).toBeNull()
 })

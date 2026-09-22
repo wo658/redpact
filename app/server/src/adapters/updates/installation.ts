@@ -3,6 +3,7 @@ import { dirname, join, resolve, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { execa } from "execa"
 import { valid } from "semver"
+import { runtimePackageName, runtimePackagePath } from "./package.js"
 
 export type Installation = {
   manager: "npm" | "pnpm"
@@ -29,7 +30,7 @@ async function exists(path: string) {
 }
 export async function detectInstallation(reference = packageRoot): Promise<Installation | null> {
   const manifest = JSON.parse(await readFile(join(reference, "package.json"), "utf8"))
-  if (manifest.name !== "redpact") {
+  if (manifest.name !== runtimePackageName) {
     return null
   }
   const root = await realpath(reference)
@@ -40,12 +41,12 @@ export async function detectInstallation(reference = packageRoot): Promise<Insta
     try {
       const result = await execa(manager, ["root", "--global"], { timeout: 5000 })
       const modules = result.stdout.trim()
-      if (await samePackage(join(modules, "redpact"), reference)) {
+      if (await samePackage(runtimePackagePath(modules), reference)) {
         return {
           manager,
           global: true,
           cwd: process.cwd(),
-          entry: join(modules, "redpact/dist/main.js"),
+          entry: join(runtimePackagePath(modules), "dist/main.js"),
         }
       }
     } catch {
@@ -62,11 +63,14 @@ async function detectLocal(root: string, reference: string): Promise<Installatio
     return null
   }
   const cwd = root.slice(0, index)
-  if (!(await samePackage(join(cwd, "node_modules/redpact"), reference))) {
+  if (!(await samePackage(runtimePackagePath(join(cwd, "node_modules")), reference))) {
     return null
   }
   const project = JSON.parse(await readFile(join(cwd, "package.json"), "utf8"))
-  if (!project.dependencies?.redpact && !project.devDependencies?.redpact) {
+  if (
+    !project.dependencies?.[runtimePackageName] &&
+    !project.devDependencies?.[runtimePackageName]
+  ) {
     return null
   }
   const manager = (await exists(join(cwd, "pnpm-lock.yaml"))) ? "pnpm" : "npm"
@@ -84,9 +88,11 @@ async function detectLocal(root: string, reference: string): Promise<Installatio
   return {
     manager,
     global: false,
-    development: Boolean(project.devDependencies?.redpact && !project.dependencies?.redpact),
+    development: Boolean(
+      project.devDependencies?.[runtimePackageName] && !project.dependencies?.[runtimePackageName],
+    ),
     cwd,
-    entry: join(cwd, "node_modules/redpact/dist/main.js"),
+    entry: join(runtimePackagePath(join(cwd, "node_modules")), "dist/main.js"),
   }
 }
 
@@ -111,7 +117,11 @@ export async function installRuntime(installation: Installation, version: string
   if (installation.development) {
     args.push("--save-dev")
   }
-  args.push(`redpact@${version}`, "--ignore-scripts", "--registry=https://registry.npmjs.org/")
+  args.push(
+    `${runtimePackageName}@${version}`,
+    "--ignore-scripts",
+    "--registry=https://registry.npmjs.org/",
+  )
   await execa(installation.manager, args, {
     cwd: installation.cwd,
     timeout: 180000,
@@ -120,7 +130,7 @@ export async function installRuntime(installation: Installation, version: string
   const manifest = JSON.parse(
     await readFile(join(dirname(dirname(installation.entry)), "package.json"), "utf8"),
   )
-  if (manifest.name !== "redpact" || manifest.version !== version) {
+  if (manifest.name !== runtimePackageName || manifest.version !== version) {
     throw new Error("Installed version does not match the requested update")
   }
 }

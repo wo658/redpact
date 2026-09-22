@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises"
 import { z } from "zod"
+import { runtimePackageName } from "./package.js"
 
 export async function runtimePackage() {
   return z
@@ -8,7 +9,8 @@ export async function runtimePackage() {
 }
 
 export async function readRegistryTags(signal: AbortSignal) {
-  const response = await fetch("https://registry.npmjs.org/-/package/redpact/dist-tags", {
+  const packageName = encodeURIComponent(runtimePackageName)
+  const response = await fetch(`https://registry.npmjs.org/-/package/${packageName}/dist-tags`, {
     signal,
     redirect: "error",
     headers: { Accept: "application/json" },
