@@ -134,8 +134,10 @@ Redpact
 │   │
 │   ├── GitHub repository [link; sidebar footer icon]
 │   ├── Star on GitHub [link; sidebar footer icon]
-│   ├── Check for updates / Update [action; desktop footer icon]
+│   ├── Update [action; newer desktop/npm version only]
 │   └── Settings [page; global, sidebar footer icon]
+│       ├── Updates [section]
+│       │   └── Check for updates [action; no installation]
 │       ├── Preferences [section]
 │       │   ├── Theme: Light / Dark / System
 │       │   ├── Word wrap
@@ -155,8 +157,9 @@ Redpact
 
 ## Navigation behavior
 
-- The sidebar footer places Settings, GitHub, Star and the desktop update action in
-  one compact row of icon controls with accessible names and tooltips. Settings
+- The sidebar footer places Settings, GitHub, Star and the available Update action in
+  one compact row with accessible names and tooltips. Update has a text label; the
+  remaining shortcuts use icons. Settings
   keeps its selected state. GitHub and Star open the public repository in a new
   browser tab or the desktop system browser; users give Stars on GitHub.
 
@@ -203,4 +206,4 @@ Redpact
 
 See [frontend conventions](frontend.md) for composition rules and [execution](execution.md) for lifecycle semantics.
 
-See [desktop updates](desktop.md) for Update visibility and installation conditions.
+See [runtime updates](installation.md) for Update visibility, manual checking and installation conditions.

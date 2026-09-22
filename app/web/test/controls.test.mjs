@@ -6736,7 +6736,7 @@ test("새 버전이 있을 때 사이드바 하단에 Update를 표시하고 네
   }
 })
 
-test("브라우저에서는 Update를 숨기고 데스크톱에서는 새 버전이 없어도 확인할 수 있다", async () => {
+test("새 버전이 없으면 Update를 숨기고 설정 안에서만 수동 확인한다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
@@ -6756,6 +6756,8 @@ test("브라우저에서는 Update를 숨기고 데스크톱에서는 새 버전
   try {
     render(createElement(ProjectManager, props))
     await waitFor(() => assert.equal(checked, true))
+    assert.equal(screen.queryByRole("button", { name: "Check for updates" }), null)
+    await userEvent.click(screen.getByRole("button", { name: "Settings", exact: true }))
     assert.ok(screen.getByRole("button", { name: "Check for updates" }))
   } finally {
     delete window.__TAURI__
@@ -6811,9 +6813,10 @@ test("사이드바 하단 한 줄에 아이콘 설정과 GitHub·Star·업데이
     await userEvent.click(repository)
     await userEvent.click(star)
     assert.equal(calls.filter((command) => command === "desktop_open_repository").length, 2)
-    await userEvent.click(shortcuts.getByRole("button", { name: "Check for updates" }))
-    await waitFor(() => assert.ok(calls.includes("desktop_install_update")))
+    assert.equal(shortcuts.queryByRole("button", { name: "Check for updates" }), null)
     await userEvent.click(settings)
+    await userEvent.click(screen.getByRole("button", { name: "Check for updates" }))
+    await waitFor(() => assert.ok(calls.includes("desktop_check_update")))
     assert.equal(settings.getAttribute("aria-current"), "page")
   } finally {
     delete window.__TAURI__

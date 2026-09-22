@@ -69,6 +69,9 @@ importers:
       redoc:
         specifier: 2.5.3
         version: 2.5.3(core-js@3.50.0)(mobx@6.16.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(styled-components@6.5.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8))
+      semver:
+        specifier: 7.8.5
+        version: 7.8.5
       swagger-ui-dist:
         specifier: 5.32.15
         version: 5.32.15
@@ -94,6 +97,9 @@ importers:
       '@types/node':
         specifier: ^24.13.3
         version: 24.13.3
+      '@types/semver':
+        specifier: 7.7.1
+        version: 7.7.1
       tsx:
         specifier: 4.23.13
         version: 4.23.13
@@ -1662,6 +1668,9 @@ packages:
 
   '@types/refractor@3.4.1':
     resolution: {integrity: sha512-wYuorIiCTSuvRT9srwt+taF6mH/ww+SyN2psM0sjef2qW+sS8GmshgDGTEDgWB1sTVGgYVE6EK7dBA2MxQxibg==}
+
+  '@types/semver@7.7.1':
+    resolution: {integrity: sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA==}
 
   '@types/ssh2-streams@0.1.13':
     resolution: {integrity: sha512-faHyY3brO9oLEA0QlcO8N2wT7R0+1sHWZvQ+y3rMLwdY1ZyS1z0W3t65j9PqT4HmQ6ALzNe7RZlNuCNE0wBSWA==}
@@ -5779,6 +5788,8 @@ snapshots:
   '@types/refractor@3.4.1':
     dependencies:
       '@types/prismjs': 1.26.6
+
+  '@types/semver@7.7.1': {}
 
   '@types/ssh2-streams@0.1.13':
     dependencies:

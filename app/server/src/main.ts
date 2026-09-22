@@ -1,5 +1,6 @@
 import { mkdir } from "node:fs/promises"
 import { join, resolve } from "node:path"
+import { PassThrough } from "node:stream"
 import { serve } from "@hono/node-server"
 import { Command, Option } from "commander"
 import envPaths from "env-paths"
@@ -40,6 +41,7 @@ import { createReviewStore } from "./adapters/storage/reviews.js"
 import { createRunLogReader } from "./adapters/storage/run-logs.js"
 import { createUnitRunStore } from "./adapters/storage/unit-runs.js"
 import { createVitestRunner } from "./adapters/test-runner/vitest.js"
+import { readRegistryTags, runtimePackage } from "./adapters/updates/registry.js"
 import { createApp } from "./app.js"
 import { instanceSettingsSchema, serverPortSchema } from "./core/instance-schema.js"
 import { testSelectionSchema } from "./core/settings-schema.js"
@@ -76,10 +78,16 @@ import { createStopEnvironment } from "./workflows/stop-environment.js"
 import { createSubmissions } from "./workflows/submissions.js"
 import { createTestContainer } from "./workflows/test-container.js"
 import { createUnitTests } from "./workflows/unit-tests.js"
+import { createUpdates } from "./workflows/updates.js"
 import { createWorktrees } from "./workflows/worktrees.js"
 
 const desktopMode = process.env.REDPACT_DESKTOP_CONTROL === "1"
 delete process.env.REDPACT_DESKTOP_CONTROL
+const runtimeSupervised =
+  process.env.REDPACT_RUNTIME_SUPERVISED === "1" && Boolean(process.send) && !desktopMode
+const updateError = process.env.REDPACT_UPDATE_ERROR
+delete process.env.REDPACT_RUNTIME_SUPERVISED
+delete process.env.REDPACT_UPDATE_ERROR
 
 const command = new Command()
   .name("redpact-server")
@@ -308,7 +316,32 @@ const command = new Command()
         directory,
       })
       const directoryPicker = createDirectoryPicker(createNativeDirectoryPicker())
+      const installed = await runtimePackage()
+      const updates = createUpdates({
+        currentVersion: installed.version,
+        supported: !desktopMode && installed.name === "redpact",
+        installError: updateError,
+        requestInstall: runtimeSupervised
+          ? (version) =>
+              new Promise<void>((resolve, reject) => {
+                if (!process.send || !process.connected) {
+                  reject(new Error("CLI supervisor disconnected"))
+                  return
+                }
+                process.send({ runtimeUpdate: version }, (error) => {
+                  if (error) {
+                    reject(error)
+                  } else {
+                    resolve()
+                  }
+                })
+              })
+          : undefined,
+        readTags: readRegistryTags,
+        now: () => new Date().toISOString(),
+      })
       const app = createApp({
+        updates,
         reviewContent: createReviewContent({
           worktrees,
           projects: projectSettings,
@@ -383,24 +416,55 @@ const command = new Command()
         environments,
       })
 
-      const desktop = desktopMode
-        ? createDesktopControl({
-            input: process.stdin,
-            busy: () =>
-              captures.all().some((run) => run.state !== "finished") ||
-              merges.busy() ||
-              pullRequests.busy() ||
-              storage.store.listRuns().some((run) => run.state !== "finished") ||
-              storage.store
-                .listEnvironments()
-                .some((environment) =>
-                  ["preparing", "in_use", "stopping"].includes(environment.state),
-                ) ||
-              unitStore.list().some((run) => run.state === "running"),
-            stop: () => stop(),
-            send: (message) => process.stdout.write(`${JSON.stringify(message)}\n`),
-          })
-        : undefined
+      const runtimeInput = runtimeSupervised ? new PassThrough() : undefined
+      if (runtimeInput) {
+        process.on("message", (message: unknown) => {
+          if (!message || typeof message !== "object") {
+            return
+          }
+          if (
+            "runtimeControl" in message &&
+            (message.runtimeControl === "update" || message.runtimeControl === "shutdown")
+          ) {
+            runtimeInput.write(`${message.runtimeControl}\n`)
+          }
+          if ("runtimeUpdateError" in message && typeof message.runtimeUpdateError === "string") {
+            updates.installationFailed(message.runtimeUpdateError)
+          }
+        })
+        process.once("disconnect", () => runtimeInput.end())
+      }
+      const desktop =
+        desktopMode || runtimeSupervised
+          ? createDesktopControl({
+              input: runtimeInput ?? process.stdin,
+              busy: () =>
+                captures.all().some((run) => run.state !== "finished") ||
+                merges.busy() ||
+                pullRequests.busy() ||
+                storage.store.listRuns().some((run) => run.state !== "finished") ||
+                storage.store
+                  .listEnvironments()
+                  .some((environment) =>
+                    ["preparing", "in_use", "stopping"].includes(environment.state),
+                  ) ||
+                unitStore.list().some((run) => run.state === "running"),
+              stop: () => stop(),
+              send: (message) => {
+                if (runtimeSupervised) {
+                  if (process.connected) {
+                    process.send?.({ runtimeControl: message.desktop }, () => {
+                      if (message.desktop === "stopped" && process.connected) {
+                        process.disconnect()
+                      }
+                    })
+                  }
+                } else {
+                  process.stdout.write(`${JSON.stringify(message)}\n`)
+                }
+              },
+            })
+          : undefined
       const server = serve(
         {
           fetch: (request, env) =>
@@ -415,17 +479,22 @@ const command = new Command()
               ? "Redpact listening on loopback"
               : "Redpact listening in container mode",
           )
-          if (desktop) {
+          if (runtimeSupervised) {
+            process.send?.({ runtimeReady: address.port })
+          }
+          if (desktopMode) {
             process.stdout.write(`${JSON.stringify({ desktop: "ready", port: address.port })}\n`)
           }
         },
       )
+      updates.start()
       let stopping = false
       const stop = async () => {
         if (stopping) {
           return
         }
         stopping = true
+        updates.close()
         await directoryPicker.close()
         desktop?.close()
         await projectObserver.close()

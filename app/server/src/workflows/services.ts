@@ -30,8 +30,10 @@ import type { SettingsService, TestSelection } from "../core/types/settings.js"
 import type { SettingsEditor } from "../core/types/settings-editor.js"
 import type { TestContainer } from "../core/types/test-container.js"
 import type { UnitTestsService } from "../core/types/unit-tests.js"
+import type { Updates } from "../core/types/updates.js"
 
 export type Services = {
+  updates?: Updates
   reviewContent?: ReviewContentService
   testContainer?: TestContainer
   projectFiles?: ProjectFiles

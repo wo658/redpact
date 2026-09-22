@@ -22,6 +22,7 @@ import { ApprovalSettings } from "./approval-settings"
 import { AuthoredSettings } from "./authored-settings"
 import { BranchReview } from "./branch-review"
 import { ProjectDependencies } from "./dependency-viewer"
+import { UpdateSettings } from "./desktop-update"
 import { EmptyState, Notice } from "./feedback"
 import { GitHubSettings } from "./github-settings"
 import { LanguageSelector } from "./language-selector"
@@ -744,6 +745,7 @@ export function GlobalSettings({ api }: { api: Api }) {
   const [wordWrap, setWordWrap] = useWordWrap()
   return (
     <div className="flex min-w-0 flex-col gap-8">
+      <UpdateSettings />
       <SettingsSection title={t("Preferences")}>
         <ThemeSettings />
         <SettingsRow title={t("Word wrap")}>

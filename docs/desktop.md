@@ -8,8 +8,8 @@ description: Native process ownership, local installation and signed update boun
 Tauri 2 hosts the connected React interface in the OS WebView. Bundled Node 24 runs
 the Hono HTTP/MCP server as a child process; Core remains independent of Tauri.
 Native Rust owns lifecycle and updates. The main WebView can read cached update
-status, request native update confirmation, and open the fixed public GitHub
-repository in the default browser through three scoped commands.
+status, check without installing, request native update confirmation, and open the fixed public GitHub
+repository in the default browser through four scoped commands.
 End users do not need a separate Node installation for Redpact itself.
 
 ## Build and verify
@@ -129,28 +129,28 @@ AppImage/RPM, ARM builds and an updater feed are not configured for these previe
 
 ## Signed updates
 
-The desktop checks for updates at startup and every six hours. Its sidebar footer
-contains a compact **Check for updates** icon beside Settings, GitHub and Star. The
-check icon remains available even without a new version or configured feed; an
-unconfigured build reports that when clicked. Ordinary browsers omit this desktop
-action. A discovered version changes the icon to an upward arrow with a small dot
-and a version tooltip. The viewer reads cached native status every five seconds;
-it does not fetch the feed.
-Clicking the icon rechecks the release and opens native install/restart confirmation
-when a newer version exists. Checking or installing disables the icon and shows a
-spinner. Canceling or deferring preserves the version indicator. Failed native status
-reads clear the indicator but retain manual checking. Background feed check failures
-are silent and preserve a previously discovered version; a successful no-update
-response restores the ordinary check icon.
+The desktop checks at startup and every six hours. The sidebar shows a text
+**Update** button only when a newer version has been discovered. Settings → Updates
+owns **Check for updates**; neither the sidebar nor the native menu has a permanent
+manual-check action. Settings checks do not install or request installation approval.
+A successful check updates the shared version indicator; an unavailable feed or failed
+check reports an error instead of claiming the installation is current.
 
+Clicking **Update** rechecks the release and opens native install/restart confirmation.
+Checking or installing disables the update action. Cancellation or active-work deferral
+preserves the available version. Native status is polled every five seconds; failed
+status reads hide the sidebar indicator until a successful read. Background feed
+failures preserve a previously discovered version. A successful no-update check hides
+the button. npm installations share the button and settings placement but use their
+own [runtime installation and restart path](installation.md).
 
-Check for Updates remains in the native menu. Release builds use
+Release builds retain
 `https://github.com/wo658/redpact/releases/latest/download/latest.json`.
-The checked-in `tauri.release.conf.json` enables updater artifacts and pins the
-public verification key. Ordinary local builds omit that overlay and report that
-updates are not configured. Release preparation passes the overlay's endpoint and
-public key to the existing native updater through `REDPACT_UPDATE_ENDPOINT` and
-`REDPACT_UPDATE_PUBLIC_KEY` at compile time.
+`tauri.release.conf.json` enables updater artifacts and pins the verification key.
+Local builds without the release overlay report unconfigured updates. Release
+preparation supplies `REDPACT_UPDATE_ENDPOINT` and `REDPACT_UPDATE_PUBLIC_KEY` at
+compile time. The main WebView can read status, check without installation, request
+installation confirmation and open the fixed repository through scoped native commands.
 
 The release public key is configured and its matching private key is stored in the
 repository's `TAURI_SIGNING_PRIVATE_KEY` Actions Secret. The current key has no

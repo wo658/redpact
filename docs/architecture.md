@@ -94,6 +94,8 @@ between record files.
   establish code-review acceptance or isolation from trusted local processes.
 - GitHub publication reuses native Git and authenticated `gh`; GitHub owns PR identity.
 
+Standalone npm installs use a CLI parent to stop the owned server before delegating package replacement to its detected npm/pnpm owner. Native desktop keeps Tauri ownership. Both expose update availability to the viewer; SemVer comparison uses the existing node-semver implementation. See [runtime updates](installation.md) for installation limits and restart behavior.
+
 ## Scope and evidence
 
 Live Git checkout discovery and immutable execution identities are separate. A
