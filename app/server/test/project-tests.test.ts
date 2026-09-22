@@ -46,7 +46,7 @@ test("current integration execution captures all sources from the resolved workt
       resolve: async () => ({ worktree: { projectRoot: "/feature", projectId: "project" } }),
       connect,
       ensure: async () => ({ id: "feature" }),
-      getSelection: vi.fn(async () => ({ services: ["unrelated"], select: {} })),
+      getSelection: vi.fn(async () => selection),
       getIntegrationDefaults: vi.fn(async () => ({ selection, saved: true })),
       settingsForPath: async () => ({
         read: async () => ({ valid: true, settings: { tests: { directory: "acceptance" } } }),
@@ -62,11 +62,11 @@ test("current integration execution captures all sources from the resolved workt
   expect(readTests).toHaveBeenCalledWith("/feature", "acceptance", undefined)
   expect(submitForWork).toHaveBeenCalledWith("work", sources)
   expect(start).toHaveBeenCalledWith("fresh", selection)
-  expect(deps.worktrees.getSelection).not.toHaveBeenCalled()
+  expect(deps.worktrees.getSelection).toHaveBeenCalledWith("feature")
   expect(deps.worktrees.getIntegrationDefaults).toHaveBeenCalledWith("project")
   readTests.mockClear()
   start.mockClear()
-  deps.worktrees.getIntegrationDefaults.mockRejectedValueOnce(
+  deps.worktrees.getSelection.mockRejectedValueOnce(
     Object.assign(new Error("Invalid defaults"), { code: "invalid_input" }),
   )
   await expect(execute("feature")).rejects.toMatchObject({ code: "invalid_input" })

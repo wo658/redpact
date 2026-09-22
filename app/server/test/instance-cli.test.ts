@@ -167,14 +167,14 @@ test.each([
   expect(existsSync(join(path, ".writer.lock"))).toBe(false)
 })
 
-test("CLI retains worktree choices across restart and MCP captures them under Ask", async () => {
+test("CLI reads shared fixed settings after restart and MCP captures them under Ask", async () => {
   const data = await directory()
   const project = await directory()
   await mkdir(join(project, ".redpact"))
   await mkdir(join(project, "integration"))
   await writeFile(
     join(project, ".redpact/settings.json"),
-    JSON.stringify({ composeFiles: ["compose.yaml"] }),
+    JSON.stringify({ composeFiles: ["compose.yaml"], services: ["app"] }),
   )
   await writeFile(join(project, "compose.yaml"), "services:\n  app:\n    image: alpine:3.21\n")
   await writeFile(
@@ -196,7 +196,7 @@ test("CLI retains worktree choices across restart and MCP captures them under As
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(selection),
   })
-  expect(saved.status).toBe(200)
+  expect(saved.status).toBe(404)
   await first.stop()
   const restarted = launch(data, ["--port", "0"])
   const nextPort = await restarted.ready()

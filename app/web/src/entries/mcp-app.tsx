@@ -70,7 +70,7 @@ function McpView() {
   }
   const actions: CardActions = {
     busy,
-    approve: (subject, selection) => {
+    approve: (subject) => {
       if (data?.review) {
         void call(
           "review_action",
@@ -79,7 +79,6 @@ function McpView() {
             revision: data.review.revision,
             token: data.token,
             subject,
-            ...(selection ? { selection } : {}),
           },
           true,
         )

@@ -55,14 +55,6 @@ async function configure(action) {
 }
 await configure("describe")
 await configure("validate")
-await request(
-  `/api/worktrees/${worktree.id}/selection`,
-  {
-    services: ["app"],
-    select: { payments: "mock" },
-  },
-  "PUT",
-)
 
 async function waitForCleanup(runId) {
   const deadline = Date.now() + 60000

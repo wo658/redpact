@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-test("의존성 개요에서 구현 권장과 연결 근거를 읽고 실제 설정 편집으로 이동한다", async ({
+test("의존성 개요에서 고정 종류와 연결 근거를 읽고 실제 설정 편집으로 이동한다", async ({
   page,
   request,
 }) => {
@@ -23,20 +23,8 @@ test("의존성 개요에서 구현 권장과 연결 근거를 읽고 실제 설
         },
         dependencies: {
           payment: {
-            modes: { remote: { env: { app: { PAYMENT_URL: "https://example.test" } } } },
-            assessments: {
-              isolated: {
-                status: "unavailable",
-                reason: "Provider has no self-hosted service",
-                evidence,
-              },
-              mock: {
-                status: "implementation-needed",
-                reason: "Implement payment adapter",
-                evidence,
-              },
-            },
-            recommendation: { mode: "mock", reason: "Local payment verification" },
+            kind: "remote",
+            env: { app: { PAYMENT_URL: "https://example.test" } },
           },
         },
         relationships: [
@@ -58,7 +46,13 @@ test("의존성 개요에서 구현 권장과 연결 근거를 읽고 실제 설
     }, project.id)
     await page.goto("/")
     await test.step("개요에서 앱과 의존 서비스의 연결을 확인한다", async () => {
+      if (!(await page.getByRole("button", { name: "Dependencies", exact: true }).isVisible())) {
+        await page.getByRole("button", { name: "사이드바 전환", exact: true }).click()
+      }
       await page.getByRole("button", { name: "Dependencies", exact: true }).click()
+      if ((page.viewportSize()?.width ?? 1920) < 768) {
+        await page.keyboard.press("Escape")
+      }
       await expect(page.getByRole("tab", { name: "개요", selected: true })).toBeVisible()
       await expect(page.getByRole("button", { name: "앱 서비스: web", exact: true })).toBeVisible()
       const graph = page.getByRole("region", { name: "서비스 의존 관계" })
@@ -67,12 +61,8 @@ test("의존성 개요에서 구현 권장과 연결 근거를 읽고 실제 설
       ).toHaveCount(1)
       await page.getByRole("button", { name: "의존 서비스: payment", exact: true }).click()
     })
-    await test.step("미구현 권장과 설정됨을 구분하고 코드 근거를 확인한다", async () => {
+    await test.step("서비스 상세에서 연결의 코드 근거를 확인한다", async () => {
       const details = page.getByRole("region", { name: "서비스 상세" })
-      await expect(details.getByText("구현 필요", { exact: true })).toBeVisible()
-      await expect(details.getByText("사용 불가", { exact: true })).toBeVisible()
-      await expect(details.getByText("Mode configured", { exact: true })).toBeVisible()
-      await expect(details.getByText("Local payment verification", { exact: false })).toBeVisible()
       await expect(
         details.getByText("ui-tests/project/tests/dependencies.spec.ts:3").first(),
       ).toBeVisible()
@@ -80,7 +70,11 @@ test("의존성 개요에서 구현 권장과 연결 근거를 읽고 실제 설
     })
     await test.step("설정 탭에서 기존 환경변수 편집 기능을 사용한다", async () => {
       await page.getByRole("tab", { name: "설정", exact: true }).click()
-      await expect(page.getByRole("tab", { name: "원격 연결", exact: true })).toBeVisible()
+      await expect(
+        page
+          .getByRole("tabpanel", { name: "설정", exact: true })
+          .getByText("원격 연결", { exact: true }),
+      ).toBeVisible()
       await expect(page.getByText("https://example.test", { exact: true })).toBeVisible()
       await expect(page.getByRole("button", { name: "환경변수 추가" })).toBeVisible()
       await page.getByRole("button", { name: "PAYMENT_URL 수정" }).click()

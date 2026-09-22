@@ -63,7 +63,7 @@ beforeEach(async () => {
   await mkdir(join(repository, ".redpact"), { recursive: true })
   await writeFile(
     join(repository, ".redpact/settings.json"),
-    '{"composeFiles": ["compose.yaml"], "dependencies": {}, "tests": {"timeoutMs": 1234}}',
+    '{"composeFiles": ["compose.yaml"], "services": ["app"], "dependencies": {}, "tests": {"timeoutMs": 1234}}',
   )
   await writeFile(join(repository, "compose.yaml"), "services:\n  app:\n    image: example/app\n")
   git("init", "-q")
@@ -72,7 +72,7 @@ beforeEach(async () => {
   git("worktree", "add", "-q", "--detach", linked)
   await writeFile(
     join(linked, ".redpact/settings.json"),
-    '{"composeFiles": ["compose.yaml"], "dependencies": {}, "tests": {"timeoutMs": 2345}}',
+    '{"composeFiles": ["compose.yaml"], "services": ["app"], "dependencies": {}, "tests": {"timeoutMs": 2345}}',
   )
   storage = openStore(join(directory, "state"))
   const settings = createSettingsService(repository)
@@ -298,44 +298,50 @@ test("rejects persisted run target mutation and corrupted parent references", as
   await writeFile(path, JSON.stringify({ ...record, data: final }))
 })
 
-test("runs a real submitted Vitest test with the shared timeout and durable worktree target", async () => {
-  const { createVitestRunner } = await import("../src/adapters/test-runner/vitest.js")
-  const runner = createVitestRunner(join(directory, "state"))
-  await services.runs.close()
-  services.runs = createTestExecution({
-    worktrees: services.worktrees,
-    store: storage.store,
-    settings: services.settings,
-    runner,
-    scheduler: createScheduler(),
-  })
-  services.submissions = createSubmissions({
-    worktrees: services.worktrees,
-    store: storage.store,
-    parse: parseSource,
-    runnerVersion: runner.version,
-  })
-  const project = await services.worktrees.connect(repository)
-  const worktree = await services.worktrees.ensure(project.id, linked)
-  const work = await services.submissions.createWork("Observe linked execution", worktree.id)
-  const submission = await services.submissions.submitForWork(work.id, [
-    {
-      path: "example.test.ts",
-      source:
-        'import { test, expect } from "vitest"; test("observed assertion", () => expect(1).toBe(1))',
-    },
-  ])
-  const run = await services.runs.start(submission.id)
-  await expect.poll(() => services.runs.get(run.id).state, { timeout: 15000 }).toBe("finished")
-  expect(services.runs.get(run.id).result?.outcome).toBe("passed")
-  const { readFile } = await import("node:fs/promises")
-  expect(
-    await readFile(join(directory, "state/runs", run.id, "vitest.config.mjs"), "utf8"),
-  ).toContain('"testTimeout":1234')
-  expect(
-    JSON.parse(await readFile(join(directory, "state/runs", run.id, "state.json"), "utf8")),
-  ).toMatchObject({ version: 1, data: { target: { worktreeId: worktree.id } } })
-}, 20000)
+test.runIf(process.env.REDPACT_DOCKER_TESTS === "1")(
+  "runs a real submitted Vitest test with the shared timeout and durable worktree target",
+  async () => {
+    const { createTestVitestRunner: createVitestRunner } = await import(
+      "./helpers/container-runner.js"
+    )
+    const runner = createVitestRunner(join(directory, "state"))
+    await services.runs.close()
+    services.runs = createTestExecution({
+      worktrees: services.worktrees,
+      store: storage.store,
+      settings: services.settings,
+      runner,
+      scheduler: createScheduler(),
+    })
+    services.submissions = createSubmissions({
+      worktrees: services.worktrees,
+      store: storage.store,
+      parse: parseSource,
+      runnerVersion: runner.version,
+    })
+    const project = await services.worktrees.connect(repository)
+    const worktree = await services.worktrees.ensure(project.id, linked)
+    const work = await services.submissions.createWork("Observe linked execution", worktree.id)
+    const submission = await services.submissions.submitForWork(work.id, [
+      {
+        path: "example.test.ts",
+        source:
+          'import { test, expect } from "vitest"; test("observed assertion", () => expect(1).toBe(1))',
+      },
+    ])
+    const run = await services.runs.start(submission.id)
+    await expect.poll(() => services.runs.get(run.id).state, { timeout: 15000 }).toBe("finished")
+    expect(services.runs.get(run.id).result?.outcome).toBe("passed")
+    const { readFile } = await import("node:fs/promises")
+    expect(
+      await readFile(join(directory, "state/runs", run.id, "vitest.config.mjs"), "utf8"),
+    ).toContain('"testTimeout":1234')
+    expect(
+      JSON.parse(await readFile(join(directory, "state/runs", run.id, "state.json"), "utf8")),
+    ).toMatchObject({ version: 1, data: { target: { worktreeId: worktree.id } } })
+  },
+  20000,
+)
 
 test("rejects broken Git metadata instead of connecting it as a directory project", async () => {
   await writeFile(join(repository, ".git/HEAD"), "invalid-ref\n")
@@ -853,12 +859,18 @@ test("unchanged attachment and discovery do not rewrite the identity registry", 
 
 test("project dependency catalog is independent of the selected worktree", async () => {
   const project = await connect()
-  const rules = { payments: { modes: { mock: { env: { app: { PAYMENT_MODE: "mock" } } } } } }
+  const rules = {
+    payments: {
+      kind: "mock",
+      env: { app: { PAYMENT_MODE: "mock" } },
+    },
+  }
   await writeFile(
     join(repository, ".redpact/settings.json"),
     JSON.stringify({
       composeFiles: ["compose.yaml"],
       dependencies: rules,
+      services: ["app"],
     }),
   )
   const response = await request(`/api/projects/${project.id}/dependencies`)
@@ -866,7 +878,7 @@ test("project dependency catalog is independent of the selected worktree", async
   const catalog = await response.json()
   expect(catalog.projectId).toBe(project.id)
   expect(catalog.file).toBe(await realpath(join(repository, ".redpact/settings.json")))
-  expect(catalog.dependencies.payments.modes.mock.env.app.PAYMENT_MODE).toBe("mock")
+  expect(catalog.dependencies.payments.env.app.PAYMENT_MODE).toBe("mock")
   expect(catalog.worktreeId).toBeUndefined()
   await rm(join(repository, ".redpact/settings.json"))
   const missing = await request(`/api/projects/${project.id}/dependencies`)
@@ -883,33 +895,40 @@ test("worktrees share all project settings and ignore retained checkout-local co
     join(repository, ".redpact/settings.json"),
     JSON.stringify({
       composeFiles: ["compose.yaml"],
-      dependencies: { payment: { modes: { mock: { env: { app: { PAYMENT_MODE: "mock" } } } } } },
+      dependencies: {
+        payment: {
+          kind: "mock",
+          env: { app: { PAYMENT_MODE: "mock" } },
+        },
+      },
       tests: { timeoutMs: 1234 },
+      services: ["app"],
     }),
   )
   const result = await operation("configure", {
     action: "inspect",
     worktreeId: worktree.id,
-    selection: { services: ["app"], select: { payment: "mock" } },
   })
   expect(result.structuredContent.validation.valid).toBe(true)
   expect(result.structuredContent.settings.tests.timeoutMs).toBe(1234)
-  expect(
-    result.structuredContent.settings.dependencies.payment.modes.mock.env.app.PAYMENT_MODE,
-  ).toBe("mock")
+  expect(result.structuredContent.settings.dependencies.payment.env.app.PAYMENT_MODE).toBe("mock")
   const firstDigest = result.structuredContent.validation.digest
   await writeFile(
     join(repository, ".redpact/settings.json"),
     JSON.stringify({
       composeFiles: ["compose.yaml"],
-      dependencies: { payment: { modes: { mock: { env: { app: { PAYMENT_MODE: "stub" } } } } } },
+      dependencies: {
+        payment: {
+          kind: "mock",
+          env: { app: { PAYMENT_MODE: "stub" } },
+        },
+      },
+      services: ["app"],
     }),
   )
   const changed = await operation("configure", { action: "inspect", worktreeId: worktree.id })
   expect(changed.structuredContent.validation.digest).not.toBe(firstDigest)
-  expect(
-    changed.structuredContent.settings.dependencies.payment.modes.mock.env.app.PAYMENT_MODE,
-  ).toBe("stub")
+  expect(changed.structuredContent.settings.dependencies.payment.env.app.PAYMENT_MODE).toBe("stub")
   await rm(join(repository, ".redpact/settings.json"))
   const missing = await request(`/api/worktrees/${worktree.id}/settings`)
   expect(missing.status).toBe(422)
@@ -1006,50 +1025,25 @@ function withoutBranch<T extends { branch?: string | null }>(value: T) {
   return identity
 }
 
-test("persists isolated worktree selections without changing rules or checkout identities", async () => {
+test("worktrees share fixed execution inputs and expose no selection API", async () => {
   const project = await connect()
   const a = await services.worktrees.ensure(project.id, repository)
   const b = await services.worktrees.ensure(project.id, linked)
-  const rules = JSON.stringify({
-    composeFiles: ["compose.yaml"],
-    dependencies: {
-      payments: { modes: { mock: {}, remote: {} } },
-    },
-  })
-  await writeFile(join(repository, ".redpact/settings.json"), rules)
-  const identity = await readFile(join(directory, "state/worktrees", `${a.id}.json`), "utf8")
-  const save = (id: string, mode: string) =>
-    app.request(`/api/worktrees/${id}/selection`, {
-      method: "PUT",
-      headers,
-      body: JSON.stringify({ services: ["app"], select: { payments: mode } }),
-    })
-  expect((await request(`/api/worktrees/${a.id}/selection`)).status).toBe(200)
-  expect(await (await request(`/api/worktrees/${a.id}/selection`)).json()).toEqual({
-    selection: null,
-  })
-  const results = await Promise.all([save(a.id, "mock"), save(b.id, "remote")])
-  expect(results.map((result) => result.status)).toEqual([200, 200])
-  expect(await (await request(`/api/worktrees/${a.id}/selection`)).json()).toMatchObject({
-    selection: { select: { payments: "mock" } },
-  })
-  expect(await (await request(`/api/worktrees/${b.id}/selection`)).json()).toMatchObject({
-    selection: { select: { payments: "remote" } },
-  })
-  expect((await save(a.id, "removed-mode")).status).toBe(400)
-  expect((await save(a.id, "isolated")).status).toBe(422)
-  expect(await readFile(join(repository, ".redpact/settings.json"), "utf8")).toBe(rules)
-  expect(await readFile(join(directory, "state/worktrees", `${a.id}.json`), "utf8")).toBe(identity)
-  storage.close()
-  storage = openStore(join(directory, "state"))
-  expect(
-    JSON.parse(await readFile(join(repository, ".redpact/selection.json"), "utf8")).select,
-  ).toEqual({ payments: "mock" })
-  expect(
-    JSON.parse(await readFile(join(linked, ".redpact/selection.json"), "utf8")).select,
-  ).toEqual({
-    payments: "remote",
-  })
+  for (const item of [a, b]) {
+    expect((await app.request(`/api/worktrees/${item.id}/selection`)).status).toBe(404)
+    expect(
+      (
+        await app.request(`/api/worktrees/${item.id}/selection`, {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({ services: ["app"], select: {} }),
+        })
+      ).status,
+    ).toBe(404)
+  }
+  expect(await services.worktrees.getSelection(a.id)).toEqual(
+    await services.worktrees.getSelection(b.id),
+  )
 })
 
 test("tracking settings do not discover worktrees or inspect file changes", async () => {
@@ -1137,13 +1131,12 @@ test("agent-authored tracking and selections are read from project files", async
   const selection = { services: ["app"], select: {} }
   await writeFile(join(linked, ".redpact/selection.json"), JSON.stringify(selection))
   expect(await services.worktrees.getSelection(worktree.id)).toEqual(selection)
-  await services.worktrees.setSelection(worktree.id, selection)
   expect(JSON.parse(await readFile(join(linked, ".redpact/selection.json"), "utf8"))).toEqual(
     selection,
   )
   expect(storage.store.getWorktreeSelection(worktree.id)).toBeUndefined()
   await writeFile(join(linked, ".redpact/selection.json"), '{"services": []}')
-  await expect(services.worktrees.getSelection(worktree.id)).rejects.toThrow()
+  expect(await services.worktrees.getSelection(worktree.id)).toEqual(selection)
 })
 
 test("tracking UI writes the primary project file without rewriting identity", async () => {
@@ -1158,43 +1151,27 @@ test("tracking UI writes the primary project file without rewriting identity", a
   )
 })
 
-test("recovers legacy preferences once while preserving runtime evidence and authored files", async () => {
+test("retired execution preference records do not become project configuration", async () => {
   const project = await connect()
   const worktree = await services.worktrees.ensure(project.id, repository)
-  const tracking = { mainBranch: "main", hideMerged: false }
-  const selection = { services: ["app"], select: {} }
-  storage.store.updateProject({ ...storage.store.getProject(project.id)!, tracking })
   storage.store.saveWorktreeSelection({
     id: worktree.id,
-    selection,
+    selection: { services: ["missing"], select: {} },
     updatedAt: new Date().toISOString(),
   })
-  const record = join(directory, "state/worktree-selections", `${worktree.id}.json`)
-  const previous = await readFile(record, "utf8")
-  expect((await services.worktrees.getTracking(project.id)).tracking).toEqual(tracking)
-  expect(await services.worktrees.getSelection(worktree.id)).toEqual(selection)
-  expect(JSON.parse(await readFile(join(repository, ".redpact/tracking.json"), "utf8"))).toEqual(
-    tracking,
-  )
-  expect(JSON.parse(await readFile(join(repository, ".redpact/selection.json"), "utf8"))).toEqual(
-    selection,
-  )
-  const changed = { services: ["replacement"], select: {} }
-  await writeFile(join(repository, ".redpact/selection.json"), JSON.stringify(changed))
-  expect(await services.worktrees.getSelection(worktree.id)).toEqual(changed)
-  expect(await readFile(record, "utf8")).toBe(previous)
-  await writeFile(
-    join(repository, ".redpact/tracking.json"),
-    '{"mainBranch":null,"hideMerged":true}',
-  )
-  await expect(services.worktrees.getTracking(project.id)).rejects.toThrow("tracking.json")
+  expect(await services.worktrees.getSelection(worktree.id)).toEqual({
+    services: ["app"],
+    select: {},
+  })
+  await expect(readFile(join(repository, ".redpact/selection.json"))).rejects.toMatchObject({
+    code: "ENOENT",
+  })
 })
 
 test("a separate Redpact instance reads the same authored preferences", async () => {
   const project = await connect()
   const worktree = await services.worktrees.ensure(project.id, linked)
   const selection = { services: ["app"], select: {} }
-  await services.worktrees.setSelection(worktree.id, selection)
   const tracking = { mainBranch: git("branch", "--show-current"), hideMerged: false }
   await services.worktrees.setTracking(project.id, tracking)
   const other = openStore(join(directory, "other-state"))
@@ -1256,6 +1233,7 @@ test("connection initializes missing primary settings and preserves authored fil
   expect((await settings.read()).valid).toBe(true)
   expect(JSON.parse(await readFile(file, "utf8"))).toEqual({
     composeFiles: [],
+    services: [],
     dependencies: {},
     tests: { directory: "integration", timeoutMs: 10000, env: {} },
   })
@@ -1263,8 +1241,8 @@ test("connection initializes missing primary settings and preserves authored fil
     JSON.parse(await readFile(join(linked, ".redpact/settings.json"), "utf8")).tests.timeoutMs,
   ).toBe(2345)
   const selected = await settings.read({ services: ["app"], select: {} })
-  expect(selected.valid).toBe(false)
-  expect(selected.issues[0].code).toBe("environment_unconfigured")
+  expect(selected.valid).toBe(true)
+  expect(selected.plan).toBeUndefined()
   await writeFile(file, "invalid authored content")
   await services.worktrees.connect(repository)
   expect(await readFile(file, "utf8")).toBe("invalid authored content")
@@ -1560,58 +1538,20 @@ test("Git promotion keeps nested project paths and refuses unrelated identity ch
   expect(() => storage.store.updateProject({ ...promoted, location: project.location })).toThrow()
 })
 
-test("project integration defaults prefer configured mocks and persist independently of worktree choices", async () => {
+test("project execution has no independent defaults API", async () => {
   const project = await services.worktrees.connect(repository)
-  const worktree = await services.worktrees.ensure(project.id, linked)
-  await writeFile(
-    join(repository, ".redpact/settings.json"),
-    JSON.stringify({
-      composeFiles: ["compose.yaml"],
-      applicationServices: { web: { services: ["app"] } },
-      dependencies: {
-        first: {
-          modes: {
-            remote: {},
-            isolated: { services: ["db"] },
-            mock: { env: { app: { MOCK: "yes" } } },
-          },
-        },
-        second: { modes: { remote: {}, isolated: { services: ["db"] } } },
-        third: { modes: { remote: {} } },
-      },
-    }),
-  )
-  await writeFile(
-    join(repository, "compose.yaml"),
-    "services:\n  app:\n    image: example/app\n  db:\n    image: example/db\n",
-  )
   const url = `/api/projects/${project.id}/integration-defaults`
-  const initial = await app.request(url)
-  expect(initial.status).toBe(200)
-  expect(await initial.json()).toEqual({
-    saved: false,
-    selection: {
-      services: ["app"],
-      select: { first: "mock", second: "isolated", third: "remote" },
-    },
-  })
-  const selection = {
-    services: ["app"],
-    select: { first: "remote", second: "remote", third: "remote" },
-  }
-  const saved = await app.request(url, { method: "PUT", headers, body: JSON.stringify(selection) })
-  expect(saved.status).toBe(200)
+  expect((await app.request(url)).status).toBe(404)
   expect(
-    JSON.parse(await readFile(join(repository, ".redpact/integration-defaults.json"), "utf8")),
-  ).toEqual(selection)
-  expect(await services.worktrees.getSelection(worktree.id)).toBeNull()
-  await writeFile(join(linked, ".redpact/integration-defaults.json"), "invalid local override")
-  expect(await (await app.request(url)).json()).toEqual({ saved: true, selection })
-  const invalid = await app.request(url, {
-    method: "PUT",
-    headers,
-    body: JSON.stringify({ services: ["missing"], select: selection.select }),
-  })
-  expect(invalid.status).toBe(422)
-  expect(await (await app.request(url)).json()).toEqual({ saved: true, selection })
+    (
+      await app.request(url, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ services: ["app"], select: {} }),
+      })
+    ).status,
+  ).toBe(404)
+  await expect(
+    readFile(join(repository, ".redpact/integration-defaults.json")),
+  ).rejects.toMatchObject({ code: "ENOENT" })
 })

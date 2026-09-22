@@ -29,7 +29,7 @@ type Draft = {
 
 export function EnvironmentEditor(props: Props) {
   const { t } = useTranslation()
-  const { api, projectId, dependency, modeName, mode, refresh } = props
+  const { api, projectId, dependency, mode, refresh } = props
   const [draft, setDraft] = useState<Draft>()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
@@ -117,7 +117,7 @@ export function EnvironmentEditor(props: Props) {
         setValues((previous) => ({ ...previous, [draft.secret as string]: draft.value }))
       } else {
         const source = JSON.parse(draft.document.source as string)
-        const definition = source.dependencies[dependency].modes[modeName]
+        const definition = source.dependencies[dependency]
         const entries = { ...(definition.env?.[draft.target] ?? {}) }
         if (!remove && draft.key !== draft.original && Object.hasOwn(entries, draft.key)) {
           throw new Error(t("This key already exists."))

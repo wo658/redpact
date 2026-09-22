@@ -94,7 +94,11 @@ test("editing project roots discovers native Git worktrees and live test changes
     await mkdir(join(root, ".redpact"))
     await writeFile(
       join(root, ".redpact/settings.json"),
-      JSON.stringify({ composeFiles: ["compose.yaml"], tests: { directory: "tests" } }),
+      JSON.stringify({
+        composeFiles: ["compose.yaml"],
+        tests: { directory: "tests" },
+        services: ["app"],
+      }),
     )
     await writeFile(join(root, "compose.yaml"), "services:\n  app:\n    image: alpine:3.21\n")
     await writeFile(join(root, "tests/a.test.ts"), "// first")

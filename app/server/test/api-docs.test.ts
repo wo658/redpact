@@ -105,12 +105,12 @@ describe("local API documentation", () => {
     await SwaggerParser.validate(spec, { resolve: { external: false } })
   })
 
-  test("JSON dependency selection and the default specification are documented", async () => {
+  test("Fixed execution configuration and the specification are documented", async () => {
     expect(settingsSpecificationResponse.safeParse(describeSettings()).success).toBe(true)
     const spec = await (await documentedApp().request("/openapi.json")).json()
     const plan = spec.paths["/api/worktrees/{id}/dependencies/plan"].post
     expect(plan.summary).toBeTruthy()
-    expect(plan.requestBody.content["application/json"].schema.properties.services).toBeDefined()
+    expect(plan.requestBody.content["application/json"].schema.properties).toEqual({})
     expect(plan.responses).toHaveProperty("422")
     expect(
       spec.paths["/api/worktrees/{id}/dependencies/{dependency}"].get.responses,

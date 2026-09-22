@@ -68,10 +68,15 @@ Observe a real assertion failure before implementation; collection/environment e
 are not a functional red. Do not weaken reviewed assertions or claim unobserved runs.
 
 The default server suite leaves Docker, installed-package and actual-application
-checks opt-in. To execute those checks too, prepare their artifacts and enable all
+checks opt-in, including actual Integration runner, source-integrity, redaction and
+resource-limit adapter tests. These tests require a host Docker daemon; managed Unit
+containers do not mount that daemon. To execute those checks too, prepare their artifacts and enable all
 four switches. Run builds before tests; packaging rebuilds `dist`, which active
 CLI and runner tests read. Serialize the full opt-in suite to limit Docker network
 and memory pressure without disabling assertions:
+
+The managed Unit image builds the viewer before running the server suite because
+runtime packaging tests require the real web output.
 
 ```sh
 pnpm pack:runtime

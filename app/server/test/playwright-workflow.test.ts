@@ -311,13 +311,14 @@ test("Playwright 접수와 조회는 준비할 Compose 선택의 지문을 사�
   await workflow.close()
 })
 
-test("저장된 선택이 없으면 최근 실행의 선택으로 입력을 확인하고 조회 오류에도 기록을 유지한다", async () => {
+test("고정 설정이 없으면 이전 실행 선택으로 대체하지 않고 조회 오류에도 기록을 유지한다", async () => {
   const f = fixture()
   const workflow = createCaptureWorkflow(f.deps as never)
   const run = await workflow.start("w")
   await finished(f, run.id)
   Object.assign(f.deps.worktrees, { getSelection: async () => undefined })
-  expect((await workflow.inspect("w")).inputDigest).toBe(run.appDigest)
+  expect((await workflow.inspect("w")).inputDigest).toBeUndefined()
+  Object.assign(f.deps.worktrees, { getSelection: async () => ({ services: ["app"], select: {} }) })
   f.deps.environments.fingerprint = async () => {
     throw new Error("Docker input inspection unavailable")
   }

@@ -11,7 +11,7 @@ test("the repository root uses its own self-E2E environment instead of Order Des
   expect(catalog.settings?.tests.directory).toBe("e2e/tests")
   const selected = await reader.read({ services: ["app"], select: {} })
   expect(selected.valid, JSON.stringify(selected.issues)).toBe(true)
-  expect(selected.plan?.activeServices).toEqual(["app"])
+  expect(selected.plan?.activeServices).toEqual(catalog.settings?.services)
 })
 
 for (const relative of ["../../../examples/order-desk/"]) {
@@ -26,13 +26,7 @@ for (const relative of ["../../../examples/order-desk/"]) {
       port: 3000,
       scheme: "http",
     })
-    const optional = ["checkout-seoul", "checkout-london", "retail-store", "wholesale-store"]
-    for (let mask = 0; mask < 16; mask++) {
-      const services = ["app", ...optional.filter((_, index) => mask & (1 << index))]
-      const result = await reader.read({ services, select: { payments: "mock" } })
-      expect(result.valid, JSON.stringify({ services, issues: result.issues })).toBe(true)
-      expect(result.plan?.activeServices).toEqual([...services].sort())
-      expect(result.plan?.bindings.app.PAYMENTS_MODE).toEqual({ value: "mock" })
-    }
+    expect(catalog.plan?.activeServices).toEqual(["app"])
+    expect(catalog.plan?.bindings.app.PAYMENTS_MODE).toEqual({ value: "mock" })
   })
 }

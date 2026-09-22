@@ -33,7 +33,7 @@ beforeEach(async () => {
   await writeFile(join(projectRoot, "compose.yaml"), "services:\n  app:\n    image: alpine:3.21\n")
   await writeFile(
     join(projectRoot, ".redpact/settings.json"),
-    JSON.stringify({ composeFiles: ["compose.yaml"] }),
+    JSON.stringify({ composeFiles: ["compose.yaml"], services: ["app"] }),
   )
   await writeFile(
     join(projectRoot, ".redpact/tracking.json"),

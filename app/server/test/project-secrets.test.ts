@@ -13,7 +13,8 @@ test("declared blanks, user edits, isolation and pinned execution secrets surviv
     const settings = settingsSchema.parse({
       dependencies: {
         payment: {
-          modes: { remote: { env: { app: { API_KEY: { secret: "CLOUD_KEY" } } } }, mock: {} },
+          kind: "remote",
+          env: { app: { API_KEY: { secret: "CLOUD_KEY" } } },
         },
       },
       tests: { env: { TEST_TOKEN: { secret: "TEST_KEY" } } },

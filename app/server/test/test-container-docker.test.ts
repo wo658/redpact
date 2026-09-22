@@ -43,6 +43,7 @@ dockerTest.each(["0.0.0.0", "127.0.0.1"])(
       JSON.stringify({
         composeFiles: ["compose.yaml"],
         tests: { env: { APP_URL: { service: "app", port: 8080, scheme: "http" } } },
+        services: ["app"],
       }),
     )
     await symlink("/missing-cache-target", join(projectRoot, "unrelated-cache-link"))
@@ -80,7 +81,7 @@ dockerTest.each(["0.0.0.0", "127.0.0.1"])(
           "ps",
           "-a",
           "--filter",
-          `label=com.docker.compose.project=${state.environment!.projectName}`,
+          `label=com.docker.compose.project=${state.environment?.projectName}`,
           "--format",
           "{{.Status}} {{.Names}}",
         ])

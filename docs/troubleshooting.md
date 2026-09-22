@@ -43,27 +43,27 @@ Compare `rulesRoot` and `projectRoot`. Shared settings belong to the primary che
 
 ## Settings will not validate or save
 
-Follow the diagnostic's file and field path. Common causes are duplicate keys, unknown fields, non-relative paths, missing Compose services, and invalid modes. Only `isolated`, `shared-local`, `remote`, and `mock` are accepted.
+Follow the diagnostic's file and field path. Common causes are duplicate keys, unknown fields, non-relative paths, missing Compose services, and invalid dependency kinds. Only `isolated`, `shared-local`, `remote`, and `mock` are accepted.
 
-Malformed or duplicate-key JSON needs file repair and reload. On a save conflict, preserve the draft, load current source, and reconcile edits. Another editor may have changed the file since loading. Repeat `configure validate` with the actual execution checkout and intended selection.
+Malformed or duplicate-key JSON needs file repair and reload. On a save conflict, preserve the draft, load current source, and reconcile edits. Another editor may have changed the file since loading. Repeat `configure validate` with the actual execution checkout .
 
 ## Validation passes but preparation fails
 
 An empty Compose list is valid for inspection but produces `environment_unconfigured` for managed environments. Add the application's Compose files or use the unit command path for unit-only work.
 
-Check Docker availability, its CLI, build/image errors, published TCP ports, listening interfaces, and healthcheck diagnostics. A URL declaration does not make an application listen on that port. Container addresses use Compose names; host integration tests use resolved `tests.env` URLs.
+Check Docker availability, its CLI, build/image errors, published TCP ports, listening interfaces, and healthcheck diagnostics. A URL declaration does not make an application listen on that port. Container addresses use Compose names; both container runners use resolved `tests.env` URLs.
 
-For selection errors, choose a nonempty root-service list and one configured mode for every dependency. Update stale saved choices through Environment. Every override must target an active service; selected modes cannot modify the same variable twice. Recommendations and assessments do not provide runnable implementations.
+Configure nonempty root services and one fixed definition per dependency in shared settings. Bindings must target active services; two dependencies cannot write the same variable. See [configuration](configuration.md).
 
 ## A credential is missing
 
 Enter its value directly in Project Dependencies. Use that editor if the client cannot show an input card. Give the agent availability information, not the value.
 
-Check the exact reference name and selected mode. An explicitly saved empty value blocks server-env fallback. Start a new test execution after replacing a value; running executions keep their captured values.
+Check the exact reference name and configured dependency kind. An explicitly saved empty value blocks server-env fallback. Start a new test execution after replacing a value; running executions keep their captured values.
 
 ## Previous environments cannot be reused
 
-Test-environment reuse and standalone preparation are not supported. Start a new execution for a fresh temporary environment. Project Container separately supports manual inspection. Independently managed services use shared-local or remote modes. Previous execution evidence remains available.
+Test-environment reuse and standalone preparation are not supported. Start a new execution for a fresh temporary environment. Project Container separately supports manual inspection. Independently managed services use shared-local or remote kinds. Previous execution evidence remains available.
 
 ## Tests fail before assertions
 

@@ -21,12 +21,12 @@ HTTP와 MCP는 같은 애플리케이션 workflow로 진입하고 실행·설정
 | 도구 | 계약 |
 | --- | --- |
 | `configure` | 절대 실행 `path`의 `describe`, `inspect`, `validate`. 스키마, 루트, 진단과 선택적 계획 반환 |
-| `run_tests` | 절대 `path`, 선택적 정확한 `tests` 경로, 명시적 또는 저장된 `selection`. Integration 제출·실행 |
+| `run_tests` | 절대 `path`, 선택적 정확한 `tests` 경로. Integration 제출·실행 |
 | `get_run` | 반환된 실행 또는 검토 `id`로 상태, 결과와 환경 정리 조회 |
 | `request_keys` | 관찰된 `projectId`와 필요한 선언 자격 증명 `names`. 직접 사용자 입력 요청과 가용성 반환 |
 
-`selection`은 inspect/validate에서 허용되며 describe에서는 사용할 수 없습니다.
-Configure는 저장된 선택 자동 읽기, 설정 저장, 컨테이너 시작, 테스트 승인을 하지 않습니다.
+실행은 공유된 고정 프로젝트 설정에서 도출하며 `selection` 입력은 거부합니다.
+Configure는 설정 저장, 컨테이너 시작, 테스트 승인을 하지 않습니다.
 Describe 후 파일을 작성하고 같은 체크아웃을 validate하세요. Unit과 Playwright는 뷰어나
 HTTP에서 실행합니다. Unit은 설정된 명령을 실행하고, Playwright는 기능 또는 캡처 target을
 선택해 UI Review 증거를 보존합니다. MCP에는 취소·정리가 없으며 사용자가 뷰어에서 조기 종료와 재시도를 관리합니다.
@@ -48,7 +48,7 @@ snapshot을 제공합니다. 실행 이력과 리소스 제어는 지속적인 �
 - `ask`: `awaiting_approval` 검토 ID를 반환합니다. 환경 승인 후 테스트 묶음을
   승인하며, 두 승인 전에는 컨테이너나 테스트 프로세스를 시작하지 않습니다.
 
-승인은 캡처된 제출·선택·revision·설정 digest에 결합됩니다. 수락과 대기 실행 시 설정을
+승인은 캡처된 제출·고정 실행 계획·revision·설정 digest에 결합됩니다. 수락과 대기 실행 시 설정을
 다시 검증합니다. 나중의 파일 변경은 캡처 테스트를 대체하지 않습니다. 모든 앱 입력의
 동결, 충분한 테스트, TDD red나 Git 머지 승인을 입증하지는 않습니다.
 

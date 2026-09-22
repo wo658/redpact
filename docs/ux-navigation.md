@@ -56,8 +56,6 @@ Redpact
 │   │   │   │   ├── Code [tab]
 │   │   │   │   ├── Execution results [tab]
 │   │   │   │   │   └── Recorded cases, steps and verdicts
-│   │   │   │   ├── Integration defaults [dialog]
-│   │   │   │   │   └── Root services and dependency mode selection
 │   │   │   │   └── Run Tests [action]
 │   │   │   └── Playwright [tab]
 │   │   │       ├── Screenshots [tab]
@@ -85,11 +83,11 @@ Redpact
 │   │   │   ├── Overview [tab]
 │   │   │   │   └── Service relationships → selected service details
 │   │   │   ├── Configuration [tab]
-│   │   │   │   └── Selected dependency → configured mode
+│   │   │   │   └── Selected dependency → fixed kind
 │   │   │   │       ├── Per-environment / Shared local / Remote connection / Mock
 │   │   │   │       ├── Additional services
 │   │   │   │       └── Environment overrides and secret value inputs
-│   │   │   └── Dependency modes and environment overrides [dialog]
+│   │   │   └── Fixed dependencies and environment bindings [dialog]
 │   │   └── Project settings [page]
 │   │       ├── General [section]
 │   │       │   └── Main branch selection for Git projects
@@ -122,7 +120,7 @@ Redpact
 │   │   │   ├── Log [tab; conditional]
 │   │   │   │   └── Execution history and copyable execution details
 │   │   │   ├── Environment [tab; conditional]
-│   │   │   │   ├── Worktree service and dependency mode selection
+│   │   │   │   ├── Fixed project execution configuration
 │   │   │   │   └── Recorded environment status, resources and cleanup controls
 │   │   │   └── Git toolbar actions
 │   │   │       ├── Uncommitted [dialog; conditional when changes exist]
@@ -187,7 +185,7 @@ Redpact
   execution using recorded viewport metadata; it does not hide source files.
   Functional test results are available through Tests and execution history.
 - Container is a manually retained application environment. Its service/dependency
-  selection comes from project Integration defaults; it is separate from recorded
+  selection comes from fixed project configuration; it is separate from recorded
   test execution evidence.
 - Browser desktop keeps the sidebar open and the header exposes only the open-workspace
   strip rather than a sidebar toggle, page title or history controls. Compact mobile

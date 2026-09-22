@@ -51,7 +51,7 @@ It does not reduce verification requirements or imply human review approval.
 Follow [Worktree and checkout lifecycle](references/worktree.md) for scope limits,
 merge target selection and completion.
 
-Ordinary feature worktrees select existing verified dependency modes and reuse project Docker/Compose
+Ordinary feature worktrees reuse the fixed verified project configuration and reuse project Docker/Compose
 and runtime definitions unchanged. Feature work does not authorize infrastructure
 edits, even to fix a failing environment. Resolve gaps with the user as project-level
 setup in the intended base-branch checkout; see the dependency guide before any such change.
@@ -72,7 +72,7 @@ load every guide at kickoff. Load another only when the work reaches its boundar
 | Frontend and backend behavior changed together | Playwright user flow plus Integration for changed API/persistence contracts not adequately covered by that flow |
 | Complex pure calculations, branches or edge cases | [Unit tests](references/unit-tests.md) as focused supporting coverage |
 | User-visible UI change | [Playwright](references/playwright.md) and its capture guide by default; retain captures for human review, separate from functional assertions |
-| Project dependencies, service topology, modes, connections or app containers | [Project dependencies](references/dependencies.md) |
+| Project dependencies, service topology, connections or app containers | [Project dependencies](references/dependencies.md) |
 | Missing/invalid setup or initial project observation | [Configuration](../redpact-init/references/configuration.md), then return to the selected work |
 | Existing evidence review or final handoff | [Review evidence](references/review-evidence.md) |
 | Results, cancellation or cleanup | Only the guide owning that execution or resource |
@@ -130,10 +130,9 @@ Explain any Integration or Playwright omission by relevance or an explicit restr
 the fact that a guide was not selected is not an exemption. Local checks, connected evidence, visual
 inspection and human approval are separate claims.
 
-## Worktree dependency overrides
+## Shared configuration changes
 
-For task-required dependency additions or repairs, read
-[Worktree dependency changes](references/dependency-overrides.md). This guide takes
-precedence over selection-only or separate-setup restrictions in other guides.
-Implement and verify scoped WT overrides without changing primary during development;
-promote the reviewed candidate only as part of the authorized final merge.
+Task-required dependency changes use the one shared project settings file. Read
+[Project dependencies](references/dependencies.md), preserve unrelated inputs and
+report effects on future executions. There are no worktree overlays or promotion
+steps. Execution still uses the selected checkout and fresh runtime resources.

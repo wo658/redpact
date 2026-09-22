@@ -10,7 +10,7 @@ description: 테스트 런타임, 실행 증거, 수동 컨테이너, 제한과 
 | 진입점 | 런타임과 입력 | 결과 |
 | --- | --- | --- |
 | Unit | 프로젝트 Dockerfile과 전체 설정 명령을 임시 컨테이너에서 실행 | 명령 상태, 종료 코드, stdout/stderr와 정리 상태 |
-| Integration | 호스트 Vitest가 새 Testcontainers Compose 앱 환경을 검증 | 불변 제출 소스, 케이스, 단계와 실행·환경 레코드 |
+| Integration | 컨테이너 Vitest가 새 Testcontainers Compose 앱 환경을 검증 | 불변 제출 소스, 케이스, 단계와 실행·환경 레코드 |
 | Playwright | 임시 앱 환경을 대상으로 컨테이너 브라우저 실행 | 기능 결과 또는 캡처 증거, 선택적 비디오·trace |
 | Container | 명시적으로 시작한 수동 프로젝트 앱 환경 | 점검 엔드포인트와 수명주기 상태. 테스트 증거는 아님 |
 
@@ -43,7 +43,7 @@ target을 선택해 시작합니다. 스크린샷, UI Review 산출물, 실행 �
 
 성공, 어설션 실패, 준비 실패, 취소, 중단 모두 정리를 요청합니다. Stop은 수락을 막고
 실행 취소를 확인한 다음 소유한 컨테이너·네트워크·볼륨·실행별 Unit 이미지·임시 Compose 빌드 이미지·캡처 런타임 소스를 제거합니다.
-Playwright는 공유 러너 이미지를 유지하고, 임시 앱 이미지는 실행 환경에 속해 환경과 함께 제거합니다.
+Integration과 Playwright는 공유 러너 이미지를 유지하고, 임시 앱 이미지는 실행 환경에 속해 환경과 함께 제거합니다.
 메타데이터, 로그, 결과와 공유 Docker 빌드 캐시는 보존합니다. 정리 실패인 `stop_failed`는
 테스트 판정과 다르며 재시도할 수 있습니다. 시작 시 label로 리소스를 대조하고 중단된
 환경을 제거하며 테스트를 자동 재실행하지 않습니다.
@@ -62,7 +62,7 @@ Redpact는 관계없는 Docker 리소스를 prune하지 않습니다. Shared-loc
 
 프로젝트 Container는 설정된 메인 브랜치의 실제 체크아웃과 미커밋 입력을 사용합니다.
 디렉터리 프로젝트는 연결된 루트를 사용합니다. 필요한 체크아웃이 없으면 다른 것으로
-대체하지 않습니다. 프로젝트 Integration 기본 선택을 사용하며 프로젝트당 하나가
+대체하지 않습니다. 프로젝트의 고정 실행 설정을 사용하며 프로젝트당 하나가
 Stop·Restart·서버 종료까지 유지됩니다. `lifecycle: "manual"`이고 테스트 실행 ID가
 없으며 테스트 실행에서 재사용할 수 없습니다.
 
@@ -102,6 +102,23 @@ ignore 규칙을 따릅니다. 이미지 전용 서비스는 소스를 스캔하
 고정된 Testcontainers patch는 시작 실패 시 자동 정리가 Redpact의 최종 로그와 순서 있는
 제거를 건너뛰지 않도록 합니다. 라이브러리를 갱신할 때 다시 평가해야 합니다.
 
+## 러너 연결
+
+실행마다 소유권 레이블이 있는 러너 네트워크를 만들고 Integration과 Playwright는
+각자 별도의 네트워크 네임스페이스로 연결합니다. 관리 서비스의 DNS 별칭은
+`<service>.redpact.test`이며 브라우저 baseURL은 이 이름과 설정된 scheme·port를
+사용합니다. 앱은 이 origin을 허용하고 자체 CORS·쿠키·TLS를 구성해야 합니다.
+Redpact는 인증서 검사나 브라우저 보안을 끄거나 원격 origin을 변경하지 않습니다.
+호스트 요청의 성공만으로 러너에서 접근 가능하다고 판단하지 않습니다.
+
+공유 호스트 URL은 `host.docker.internal`로 명시합니다. 러너는 host-gateway 매핑을
+제공합니다. 실제 러너에서 Docker Desktop의 loopback 접근을 검증합니다. Linux의
+host-gateway만으로 loopback 전용 리스너에 접근할 수는 없습니다. 접근 가능한 호스트
+리스너나 프로젝트가 명시적으로 관리하는 전달 서비스를 구성하고 소비하는 러너에서
+검증하세요. 러너 URL을 무조건 localhost로 바꾸지 마세요. 원격 서비스는 실제 URL과
+인증을 유지합니다. 실행별 Docker 네트워크가 공유·원격 데이터를 격리하지 않으므로
+fixture에서 독립적인 데이터를 사용해야 합니다.
+
 ## Playwright 증거
 
 타깃은 유지 범위 `scope: "worktree" | "project"`와 목적
@@ -129,11 +146,10 @@ Screenshots 탭도 실행 가능한 capture 코드를 숨기지 않습니다. �
 64–1048576 MiB, 시간 1–86400초입니다. 새 작업은 새 설정을 캡처하며 테스트·hook별
 timeout은 별개입니다.
 
-Unit과 Playwright는 Docker 메모리·swap 제한을 사용합니다. 호스트 Vitest는 V8 heap
-제한과 100ms 프로세스 그룹 RSS 표본 수집을 사용하며 외부 timer로 시간을 제한합니다.
-제한 초과는 실행 오류이며 어설션이나 사용자 취소가 아닙니다. Native 표본 수집에는
-지원되는 macOS/Linux 프로세스 도구가 필요하고 표본 사이에 초과할 수 있습니다.
-앱·의존성 컨테이너, 빌드, 패키지 설치, 직접 shell 테스트는 이 실행기 예산 밖입니다.
+Unit, Integration, Playwright는 Docker 메모리·swap 제한과 외부 실행 시간 제한을
+사용합니다. Integration은 V8 heap도 제한합니다. 제출한 패키지 설치는 러너 안에서
+같은 실행 예산을 사용합니다. 제한 초과는 실행 오류이며 어설션이나 사용자 취소가
+아닙니다. 앱·의존성 컨테이너, 이미지 빌드, 직접 shell 테스트는 이 예산 밖입니다.
 
 어설션 통과·실패와 수집·설정·환경·실행 오류, 취소·중단·미확인을 구분하세요.
 파싱은 실행이 아니고, 강제 종료 후 보고서가 없다고 성공이 아닙니다. 완료된 실행도
@@ -142,10 +158,11 @@ Unit과 Playwright는 Docker 메모리·swap 제한을 사용합니다. 호스�
 ## 이식 가능한 fixture
 
 `REDPACT_CONNECTIONS_FILE`은 실행별 비공개 JSON 파일을 가리킵니다. `version: 1`과
-`services.<name>.ports.<containerPort>: { host, port }`가 들어 있습니다. 포트를 공개하지
+`services.<name>.ports.<containerPort>: { host, port }`가 들어 있습니다.
+호스트는 `<service>.redpact.test` 별칭, 포트는 컨테이너 내부 포트입니다. 포트를 공개하지
 않은 선택 서비스는 빈 맵이며 자격 증명이나 컨테이너 변수는 없습니다. 프로젝트 fixture가
 HTTP/DB 클라이언트와 정리를 소유합니다. Redpact SDK나 런타임 API 호출은 필요 없으며
-호스트 테스트 URL에는 `tests.env` 바인딩도 사용할 수 있습니다.
+Integration과 Playwright는 `tests.env`를 공유하고 서비스 URL을 내부 DNS와 포트로 해석합니다.
 
 추가 driver는 지원되는 루트 manifest와 고정 pnpm lockfile을 helper와 함께 제출합니다.
 [Order Desk provider](../examples/order-desk/tests/connections.js)와

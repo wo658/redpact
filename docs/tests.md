@@ -60,7 +60,7 @@ test("Application responds successfully", async (context) => {
 
 Await each step in order. Put the operation or assertion inside its callback and let failures propagate. Use separate steps for meaningful actions and checks. Titles and comments explain intent; observed steps show what execution reached. Write submitted scenario titles and steps in the task's language. Changing viewer language does not translate recorded sources.
 
-Ask the agent to call `run_tests` with the absolute working-checkout path, an explicit dependency selection when needed, and optional exact test paths relative to `tests.directory`. Helpers stay in the collected bundle. `run_tests` handles integration; unit commands and Playwright sources use their own execution paths.
+Ask the agent to call `run_tests` with the absolute working-checkout path, and optional exact test paths relative to `tests.directory`. Helpers stay in the collected bundle. `run_tests` handles integration; unit commands and Playwright sources use their own execution paths.
 
 Read the returned state, then inspect execution through `get_run`. Preserve its identity and verify evidence belongs to the intended worktree on the connected instance. Running tests directly in a shell does not create a Redpact submission. The project Integration run action collects current sources into a fresh submission; recorded source remains separate from subsequent edits.
 
@@ -126,7 +126,7 @@ Use stable names in the form `Page / Group / Capture name`. The exact ` / ` sepa
 
 For functional targets, use `test.step` and assertions on observable results: navigate, submit a form, then verify the resulting state and relevant persistence. Screenshots are optional diagnostics. Functional screenshots do not populate the project's capture gallery.
 
-Open **Tests → Playwright → Run Tests** and select a worktree and target, or use worktree **Playwright** controls. Select the application's service and dependency choices. The default viewport is 1920 × 1080; settings or run options can override it. Viewing a saved image never starts execution.
+Open **Tests → Playwright → Run Tests** and select a worktree and target, or use worktree **Playwright** controls. The fixed project configuration supplies application and dependency services. The default viewport is 1920 × 1080; settings or run options can override it. Viewing a saved image never starts execution.
 
 ## Design assertions that answer the task
 
@@ -137,7 +137,7 @@ Write down the behavior before choosing assertions. “The request returned 200�
 | Save a preference | Read the new value through the public API or after reload | Capture the saved state |
 | Reject invalid input | Observe the intended error and unchanged stored data | Capture the validation message |
 | Filter a list | Matching entries remain and known nonmatching entries disappear | Capture empty and populated results |
-| Recover from dependency failure | Observe the application's defined error or retry behavior | Record the selected dependency mode |
+| Recover from dependency failure | Observe the application's defined error or retry behavior | Record the configured dependency kind |
 
 Use fixture data with recognizable values so an unrelated default cannot accidentally satisfy the assertion. Keep tests independent of execution order. If a scenario creates data, clean up through the application's supported interface when appropriate, especially when connecting to shared external infrastructure.
 
@@ -153,7 +153,7 @@ The new execution matters: moving the file does not convert an old worktree reco
 
 For Integration, a useful request is:
 
-> Add a focused test for the reported behavior using the project's public API and captured helpers. Demonstrate the intended failing assertion before the fix, then submit a passing run from the actual working checkout. Keep the assertion's intent and report both run IDs, the selected dependency modes, and any preparation or cleanup issues.
+> Add a focused test for the reported behavior using the project's public API and captured helpers. Demonstrate the intended failing assertion before the fix, then submit a passing run from the actual working checkout. Keep the assertion's intent and report both run IDs, the configured dependency kinds, and any preparation or cleanup issues.
 
 For user-visible UI work, the Redpact plugin defaults to both interaction verification
 when behavior changes and task-specific visual captures at desktop and mobile

@@ -87,8 +87,8 @@ between record files.
   Static parsing does not prove assertion execution or full import coverage.
 - Testcontainers owns container startup. Redpact owns input capture, admission,
   health observations, resource identities, cancellation and cleanup.
-- Unit commands and Playwright execute in temporary containers. Integration Vitest
-  executes on the host against temporary Compose application environments.
+- Unit, Integration Vitest and Playwright execute in temporary containers. Integration
+  and Playwright join a per-execution network with service-name access to the application.
 - MCP Apps implement request approval and credential inputs. Their capabilities
   rely on the client keeping App-only metadata out of model context; this does not
   establish code-review acceptance or isolation from trusted local processes.
@@ -98,7 +98,7 @@ between record files.
 
 Live Git checkout discovery and immutable execution identities are separate. A
 missing checkout can keep historical results while becoming unavailable for new
-execution. Shared configuration and scoped dependency overrides are described in
+execution. Shared fixed configuration is described in
 [settings ownership](settings-reference.md), not copied into worktree identity.
 
 Use [execution](execution.md), [storage](storage.md), [interfaces](interfaces.md),

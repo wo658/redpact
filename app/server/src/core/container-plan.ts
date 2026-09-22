@@ -1,4 +1,3 @@
-import { testSelectionSchema } from "./settings-schema.js"
 import type { ComposeModel } from "./types/compose.js"
 import type { EnvironmentPlan } from "./types/environment-plan.js"
 import type { Settings, SettingsIssue, TestSelection } from "./types/settings.js"
@@ -14,7 +13,7 @@ export function hasPort(service: ComposeModel["services"][string] | undefined, p
 export function planContainers(
   settings: Settings,
   model: ComposeModel,
-  selection?: TestSelection,
+  _selection?: TestSelection,
 ): { issues: SettingsIssue[]; plan?: EnvironmentPlan } {
   const issues: SettingsIssue[] = []
   const issue = (code: string, path: string, message: string) =>
@@ -60,8 +59,8 @@ export function planContainers(
   }
   Object.keys(model.services).forEach(cycle)
   for (const [dependency, definition] of Object.entries(settings.dependencies)) {
-    for (const [mode, config] of Object.entries(definition.modes)) {
-      const path = `dependencies.${dependency}.modes.${mode}`
+    for (const config of [definition]) {
+      const path = `dependencies.${dependency}`
       for (const id of config.services) {
         exists(id, `${path}.services`)
       }
@@ -82,61 +81,7 @@ export function planContainers(
       }
     }
   }
-  if (!selection || issues.length) {
-    return { issues }
-  }
-  if (settings.composeFiles.length === 0) {
-    issue(
-      "environment_unconfigured",
-      "composeFiles",
-      "Configure Compose services before running tests",
-    )
-    return { issues }
-  }
-  const parsed = testSelectionSchema.safeParse(selection)
-  if (!parsed.success) {
-    return {
-      issues: parsed.error.issues.map((i) => ({
-        code: "selection_invalid",
-        path: `selection.${i.path.join(".")}`,
-        message: i.message,
-      })),
-    }
-  }
-  selection = parsed.data
-  for (const dependency of Object.keys(settings.dependencies)) {
-    if (!Object.hasOwn(selection.select, dependency)) {
-      issue(
-        "selection_missing",
-        `selection.select.${dependency}`,
-        "Select one mode for each dependency",
-      )
-    }
-  }
-  for (const [dependency, mode] of Object.entries(selection.select)) {
-    if (
-      !Object.hasOwn(settings.dependencies, dependency) ||
-      !Object.hasOwn(settings.dependencies[dependency].modes, mode)
-    ) {
-      const assessment = settings.dependencies[dependency]?.assessments?.[mode]
-      if (assessment) {
-        issue(
-          assessment.status === "implementation-needed"
-            ? "selection_unimplemented"
-            : "selection_unavailable",
-          `selection.select.${dependency}`,
-          `${dependency}/${mode}: ${assessment.reason}. Select a configured mode after completing its required setup.`,
-        )
-      } else {
-        issue(
-          "selection_unknown",
-          `selection.select.${dependency}`,
-          `Unknown dependency or mode: ${dependency}/${mode}. Configured modes: ${Object.keys(settings.dependencies[dependency]?.modes ?? {}).join(", ") || "none"}`,
-        )
-      }
-    }
-  }
-  if (issues.length) {
+  if (issues.length || !settings.composeFiles.length) {
     return { issues }
   }
   const plan: EnvironmentPlan = {
@@ -150,7 +95,7 @@ export function planContainers(
   const active = new Set<string>(),
     secrets = new Set<string>()
   function visit(id: string, reason: string) {
-    exists(id, "selection.services")
+    exists(id, "settings.services")
     if (!Object.hasOwn(model.services, id)) {
       return
     }
@@ -166,17 +111,17 @@ export function planContainers(
       visit(other, `${id}: fixed prerequisite`)
     }
   }
-  for (const id of selection.services) {
+  for (const id of settings.services) {
     visit(id, "test target")
   }
-  for (const [dependency, mode] of Object.entries(selection.select)) {
-    for (const id of settings.dependencies[dependency].modes[mode].services) {
-      visit(id, `${dependency}: ${mode}`)
+  for (const [dependency, definition] of Object.entries(settings.dependencies)) {
+    for (const id of definition.services) {
+      visit(id, `${dependency}: ${definition.kind}`)
     }
   }
-  for (const [dependency, mode] of Object.entries(selection.select)) {
-    for (const [target, env] of Object.entries(settings.dependencies[dependency].modes[mode].env)) {
-      const path = `dependencies.${dependency}.modes.${mode}.env.${target}`
+  for (const [dependency, definition] of Object.entries(settings.dependencies)) {
+    for (const [target, env] of Object.entries(definition.env)) {
+      const path = `dependencies.${dependency}.env.${target}`
       if (!active.has(target)) {
         issue("inactive_target", path, `Environment target ${target} is not selected for execution`)
         continue
@@ -186,7 +131,7 @@ export function planContainers(
           issue(
             "binding_conflict",
             `${path}.${key}`,
-            `Multiple selected modes write ${target}.${key}`,
+            `Multiple dependencies write ${target}.${key}`,
           )
           continue
         }
@@ -219,7 +164,7 @@ export function planContainers(
       issue(
         "compose_input",
         `compose.services.${id}`,
-        "Resolve Compose interpolation in project inputs or override the variable through the selected mode",
+        "Resolve Compose interpolation in project inputs or override the variable through dependency environment bindings",
       )
     }
   }

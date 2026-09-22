@@ -65,6 +65,13 @@ pnpm lint
 빌드는 테스트 전에 실행합니다. 패키징은 CLI·runner 테스트가 읽는 `dist`를 다시 만듭니다.
 전체 opt-in 테스트는 순차 실행하여 어설션을 끄지 않고 Docker 네트워크와 메모리 부하를 제한합니다.
 
+실제 Integration 러너·소스 무결성·마스킹·리소스 제한 어댑터 테스트도 Docker opt-in
+검증에 포함됩니다. 호스트 Docker 데몬이 필요하며 관리형 Unit 컨테이너에는 데몬을
+마운트하지 않습니다.
+
+관리형 Unit 이미지는 서버 테스트 전에 뷰어를 빌드합니다. 런타임 패키징 테스트가
+실제 웹 빌드 결과를 필요로 하기 때문입니다.
+
 ```sh
 pnpm pack:runtime
 docker build -f e2e/Dockerfile -t redpact-test-app:current .

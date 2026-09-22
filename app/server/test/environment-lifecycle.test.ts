@@ -27,7 +27,7 @@ const observation: EnvironmentObservation = {
   endpoints: {},
   healthy: true,
 }
-const settings = settingsSchema.parse({ composeFiles: ["compose.yaml"] })
+const settings = settingsSchema.parse({ composeFiles: ["compose.yaml"], services: ["app"] })
 const source = JSON.stringify(settings)
 const sourceHash = createHash("sha256").update(source).digest("hex")
 const settingsDigest = createHash("sha256")

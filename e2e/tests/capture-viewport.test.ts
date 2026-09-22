@@ -1,11 +1,7 @@
-import { execFile } from "node:child_process"
 import { randomUUID } from "node:crypto"
-import { promisify } from "node:util"
 import { expect, test } from "vitest"
 import { createSteps } from "./steps"
-import { http, node, target } from "./target"
-
-const execute = promisify(execFile)
+import { browser, http, node } from "./target"
 
 /** 저장된 캡처별 크기를 공개 API로 읽고 실제 앱의 Mobile 필터를 조작한다. */
 test("같은 실행의 모바일과 데스크톱 캡처를 실제 크기로 분리한다", async (context) => {
@@ -91,7 +87,7 @@ test("같은 실행의 모바일과 데스크톱 캡처를 실제 크기로 분�
         await page.addInitScript((id)=>{localStorage.setItem('redpact:language','en');localStorage.setItem('redpact:project',id)},${JSON.stringify(fixture.projectId)});
         await page.goto('http://127.0.0.1:54318/');
         await page.getByRole('navigation',{name:'Worktrees',exact:true}).getByRole('button').first().click();
-        await page.getByRole('tab',{name:'UI Review',exact:true}).click();
+        await page.getByRole('tab',{name:'Playwright',exact:true}).click();
         const mobile=page.getByRole('switch',{name:'Mobile',exact:true});
         await test.step('PNG 없는 파일과 실행하지 않은 파일도 선택하고 준비 오류를 확인한다',async()=>{
           await page.getByRole('treeitem',{name:'empty.spec.ts',exact:true}).click();
@@ -124,28 +120,8 @@ test("같은 실행의 모바일과 데스크톱 캡처를 실제 크기로 분�
           await expect(page.getByAltText('Container / light / 414',{exact:true})).toHaveCount(0);
         });
       });`
-    const result = await execute(
-      "docker",
-      [
-        "run",
-        "--rm",
-        "--network",
-        `container:${await target()}`,
-        "--entrypoint",
-        "node",
-        "redpact-playwright:1.63.0-v1",
-        "-e",
-        `const fs=require('fs'),{execFileSync}=require('child_process');fs.writeFileSync('/review/tests/filter.spec.cjs',process.argv[1]);fs.writeFileSync('/review/filter.config.cjs',"module.exports={testDir:'/review/tests',testMatch:'filter.spec.cjs',reporter:'json',use:{headless:true},workers:1}");try{process.stdout.write(execFileSync('/review/node_modules/.bin/playwright',['test','--config','/review/filter.config.cjs'],{encoding:'utf8'}))}catch(e){process.stdout.write(e.stdout||'');process.stderr.write(e.stderr||'');process.exitCode=1}`,
-        source,
-      ],
-      { timeout: 45000, maxBuffer: 2 * 1024 * 1024 },
-    ).catch((error) => {
-      if (error.stdout) {
-        return { stdout: String(error.stdout) }
-      }
-      throw error
-    })
-    const report = JSON.parse(result.stdout)
+    const report = await browser(source)
+
     expect(report.stats.unexpected, JSON.stringify(report.suites)).toBe(0)
     expect(report.stats.expected).toBe(1)
     expect(

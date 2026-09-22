@@ -49,7 +49,8 @@ beforeEach(async () => {
     join(root, ".redpact/settings.json"),
     JSON.stringify({
       composeFiles: ["compose.yaml"],
-      dependencies: { payment: { modes: { mock: {}, remote: {} } } },
+      dependencies: { payment: { kind: "mock" } },
+      services: ["app"],
     }),
   )
   await writeFile(
@@ -135,7 +136,7 @@ test("MCP Ask exposes real snapshots and UI-only controls, then starts only afte
       .map((tool: { name: string }) => tool.name)
       .sort(),
   ).toEqual(["review_action", "set_approval_policy"])
-  let result = await call("run_tests", { path: root, selection })
+  let result = await call("run_tests", { path: root })
   expect(result.structuredContent.state).toBe("awaiting_approval")
   const id = result.structuredContent.id
   expect(result._meta.redpact.submission.parsed[0].review.scenarios[0].title).toBe(
@@ -161,10 +162,9 @@ test("MCP Ask exposes real snapshots and UI-only controls, then starts only afte
     token,
     revision: 0,
     subject: "environment",
-    selection: { ...selection, select: { payment: "remote" } },
   })
   expect(result.isError).not.toBe(true)
-  expect(result._meta.redpact.review.selection.select.payment).toBe("remote")
+  expect(result._meta.redpact.review.selection.select.payment).toBe("mock")
   expect(preparations).toBe(0)
   await writeFile(
     join(root, "integration/order.test.ts"),
@@ -186,7 +186,7 @@ test("MCP Ask exposes real snapshots and UI-only controls, then starts only afte
 })
 
 test("Ask to Auto changes future requests without granting the pending request approval", async () => {
-  const pending = await call("run_tests", { path: root, selection })
+  const pending = await call("run_tests", { path: root })
   const response = await call("set_approval_policy", {
     token: pending._meta.redpact.token,
     policy: "auto",
@@ -195,7 +195,7 @@ test("Ask to Auto changes future requests without granting the pending request a
   expect(
     (await call("get_run", { id: pending.structuredContent.id })).structuredContent.state,
   ).toBe("awaiting_approval")
-  const next = await call("run_tests", { path: root, selection })
+  const next = await call("run_tests", { path: root })
   await expect.poll(() => execution.get(next.structuredContent.id).state).toBe("finished")
   expect(next._meta.redpact.review.policy).toBe("auto")
   expect(next._meta.redpact.review.testsApproved).toBe(false)
@@ -231,31 +231,24 @@ test("Settings API persists policy and enforces the existing browser origin boun
   expect(createReviewStore(join(root, "state")).policy()).toBe("auto")
 })
 
-test("saved choices supply a review snapshot without bypassing approval or following later edits", async () => {
-  const first = await call("run_tests", { path: root, selection })
-  const worktree = storage.store.listWorktrees()[0]
-  const save = async (mode: string) => {
-    const response = await app.request(`/api/worktrees/${worktree.id}/selection`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...selection, select: { payment: mode } }),
-    })
-    expect(response.status).toBe(200)
-  }
-  expect(storage.store.getWorktreeSelection(worktree.id)).toBeUndefined()
-  await save("mock")
+test("fixed settings supply a review snapshot and later changes require fresh review", async () => {
   const pending = await call("run_tests", { path: root })
   expect(pending.isError).not.toBe(true)
   expect(pending.structuredContent.state).toBe("awaiting_approval")
-  await save("remote")
+  await writeFile(
+    join(root, ".redpact/settings.json"),
+    JSON.stringify({
+      composeFiles: ["compose.yaml"],
+      services: ["app"],
+      dependencies: { payment: { kind: "remote" } },
+    }),
+  )
   expect(reviews.get(pending.structuredContent.id)?.review.selection).toEqual(selection)
   expect(preparations).toBe(0)
   const id = pending.structuredContent.id
   const token = pending._meta.redpact.token
-  await call("review_action", { id, token, revision: 0, subject: "environment" })
-  const approved = await call("review_action", { id, token, revision: 1, subject: "tests" })
-  expect(approved.isError).not.toBe(true)
-  await expect.poll(() => execution.get(approved.structuredContent.id).state).toBe("finished")
-  expect(storage.store.listEnvironments()[0].selection).toEqual(selection)
-  expect(reviews.get(first.structuredContent.id)?.review.state).toBe("pending")
+  const changed = await call("review_action", { id, token, revision: 0, subject: "environment" })
+  expect(changed.isError).toBe(true)
+  expect(preparations).toBe(0)
+  expect(executions).toBe(0)
 })

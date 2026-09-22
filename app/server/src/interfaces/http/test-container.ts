@@ -57,7 +57,7 @@ export function testContainerRoutes(service: TestContainer) {
         summary: `${action} the project's manual Test Container`,
         tags: ["Environments"],
         description:
-          "Uses the configured main branch checkout and project Integration defaults. Restart waits for owned-resource removal before capturing current inputs. Stop remains available when the checkout is missing. Poll inspection for preparation state.",
+          "Uses the configured main branch checkout and fixed project settings. Restart waits for owned-resource removal before capturing current inputs. Stop remains available when the checkout is missing. Poll inspection for preparation state.",
         responses: {
           ...localErrors,
           ...notFound,

@@ -19,3 +19,15 @@ for (const name of ["Dockerfile", "reporter.mjs", "viewport.cjs", "capture-viewp
     new URL(`../dist/adapters/playwright/${name}`, import.meta.url),
   )
 }
+
+await cp(
+  new URL("../src/adapters/test-runner/Dockerfile", import.meta.url),
+  new URL("../dist/adapters/test-runner/Dockerfile", import.meta.url),
+)
+
+for (const name of ["package.json", "pnpm-lock.yaml"]) {
+  await cp(
+    new URL(`../src/adapters/test-runner/${name}`, import.meta.url),
+    new URL(`../dist/adapters/test-runner/${name}`, import.meta.url),
+  )
+}

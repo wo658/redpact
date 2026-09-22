@@ -44,10 +44,9 @@ test("a fresh project receives container authoring guidance and validates agent-
   await writeFile(join(directory, "compose.yaml"), "services:\n  app:\n    image: node:24\n")
   await writeFile(
     join(directory, ".redpact/settings.json"),
-    JSON.stringify({ composeFiles: ["compose.yaml"], dependencies: {} }),
+    JSON.stringify({ composeFiles: ["compose.yaml"], dependencies: {}, services: ["app"] }),
   )
-  const result = (await configure("validate", { selection: { services: ["app"], select: {} } }))
-    .structuredContent
+  const result = (await configure("validate")).structuredContent
   expect(result.validation.valid).toBe(true)
   expect(result.plan).toBeDefined()
   expect(result.environment.readiness).toBe("not_checked")
@@ -62,7 +61,7 @@ test("one read-only configure tool describes the schema before settings exist", 
   expect(tool.description).toContain("validate")
   expect(tool.inputSchema.properties.action.description).toContain("inspect")
   expect(tool.inputSchema.properties.path.description).toContain("absolute")
-  expect(tool.inputSchema.properties.selection.description).toContain("not saved")
+  expect(tool.inputSchema.properties).not.toHaveProperty("selection")
   expect(tool.annotations.readOnlyHint).toBe(true)
   expect(tool.inputSchema.properties.action.enum).toEqual(["describe", "inspect", "validate"])
   const result = await configure("describe")
@@ -77,9 +76,7 @@ test("one read-only configure tool describes the schema before settings exist", 
     "compose.yaml",
   ])
   expect((await configure("describe", { version: 4 })).isError).toBe(true)
-  expect(result.structuredContent.specification.workflow.join(" ")).toContain(
-    "isolated, shared-local, remote and mock",
-  )
+  expect(result.structuredContent.specification.workflow.join(" ")).toContain("fixed definition")
   expect(result.structuredContent.nextSteps.length).toBeGreaterThan(0)
   const missing = await configure("validate")
   expect(missing.isError).toBe(true)
@@ -104,14 +101,18 @@ test("configure rereads edits and shares HTTP diagnostics without writing files"
     file,
     JSON.stringify({
       composeFiles: ["compose.yaml"],
-      dependencies: { payments: { modes: { mock: { env: { app: { MODE: "mock" } } } } } },
+      dependencies: {
+        payments: {
+          kind: "mock",
+          env: { app: { MODE: "mock" } },
+        },
+      },
+      services: ["app"],
     }),
   )
   const inspection = await configure("inspect")
   expect(inspection.isError).not.toBe(true)
-  expect(inspection.structuredContent.settings.dependencies.payments.modes.mock.env.app.MODE).toBe(
-    "mock",
-  )
+  expect(inspection.structuredContent.settings.dependencies.payments.env.app.MODE).toBe("mock")
   expect(inspection.structuredContent.environment).toEqual({
     readiness: "not_checked",
     provisioning: "unsupported",

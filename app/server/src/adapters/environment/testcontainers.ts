@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url"
 import { isDeepStrictEqual } from "node:util"
 import { execa } from "execa"
 import { stringify } from "yaml"
+import { runnerServiceHost } from "../../core/runner-environment.js"
 import { testSelectionSchema } from "../../core/settings-schema.js"
 import type {
   Environment,
@@ -278,11 +279,16 @@ export function createComposeAdapter(
             host_ip: "127.0.0.1",
             protocol: "tcp",
           }))
-          override.services[name] = { labels, ...(ports.length ? { ports } : {}) }
+          override.services[name] = {
+            labels,
+            networks: { "redpact-runner": { aliases: [runnerServiceHost(name)] } },
+            ...(ports.length ? { ports } : {}),
+          }
         }
         for (const name of Object.keys(model.networks ?? { default: {} })) {
           override.networks[name] = { labels }
         }
+        override.networks["redpact-runner"] = { labels }
         for (const name of Object.keys(model.volumes ?? {})) {
           override.volumes[name] = { labels }
         }
@@ -437,6 +443,23 @@ export function createComposeAdapter(
       }
       const secrets = typeof secretSource === "function" ? secretSource(record) : secretSource
       await runtime(record)
+      const runners = (
+        await docker([
+          "ps",
+          "-aq",
+          "--filter",
+          `label=io.redpact.owner=${record.ownerId}`,
+          "--filter",
+          `label=io.redpact.environment=${record.id}`,
+          "--filter",
+          "label=io.redpact.integration",
+        ])
+      )
+        .split(/\s+/)
+        .filter(Boolean)
+      for (const id of runners) {
+        await docker(["rm", "-fv", id])
+      }
       const observed = await inspect(record)
       const deadline = Date.now() + record.settings.environment.stopTimeoutMs
       const failures: string[] = []

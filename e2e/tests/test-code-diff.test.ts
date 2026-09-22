@@ -1,10 +1,6 @@
-import { execFile } from "node:child_process"
-import { promisify } from "node:util"
 import { expect, test } from "vitest"
 import { createSteps } from "./steps"
-import { http, node, target } from "./target"
-
-const execute = promisify(execFile)
+import { browser, http, node } from "./target"
 
 test("테스트 코드는 전체 코드 전환 없이 변경 구간만 보여준다", async (context) => {
   const step = createSteps(context)
@@ -61,28 +57,8 @@ test("테스트 코드는 전체 코드 전환 없이 변경 구간만 보여준
         await expect(mobilePanel.locator('.diff-code').filter({hasText:'UNCHANGED_HEADER'})).toHaveCount(0);
         expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
       });`
-    const result = await execute(
-      "docker",
-      [
-        "run",
-        "--rm",
-        "--network",
-        `container:${await target()}`,
-        "--entrypoint",
-        "node",
-        "redpact-playwright:1.63.0-v1",
-        "-e",
-        `const fs=require('fs'),{execFileSync}=require('child_process');fs.writeFileSync('/review/tests/filter.spec.cjs',process.argv[1]);fs.writeFileSync('/review/filter.config.cjs',"module.exports={testDir:'/review/tests',testMatch:'filter.spec.cjs',reporter:'json',use:{headless:true},workers:1}");try{process.stdout.write(execFileSync('/review/node_modules/.bin/playwright',['test','--config','/review/filter.config.cjs'],{encoding:'utf8'}))}catch(e){process.stdout.write(e.stdout||'');process.stderr.write(e.stderr||'');process.exitCode=1}`,
-        source,
-      ],
-      { timeout: 45000, maxBuffer: 2 * 1024 * 1024 },
-    ).catch((error) => {
-      if (error.stdout) {
-        return { stdout: String(error.stdout) }
-      }
-      throw error
-    })
-    const report = JSON.parse(result.stdout)
+    const report = await browser(source)
+
     expect(report.stats.unexpected, JSON.stringify(report.suites)).toBe(0)
     expect(report.stats.expected).toBe(1)
   })
