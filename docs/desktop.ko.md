@@ -170,7 +170,7 @@ MCP 및 소유 서버 종료를 검증합니다. 모든 desktop job이 성공하
    암호가 있으면 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`도 등록합니다.
 3. `app/desktop/src-tauri/tauri.conf.json`, `app/desktop/src-tauri/Cargo.toml`,
    `app/desktop/package.json`, `app/server/package.json`의 버전을 맞추고
-   `Cargo.lock`을 갱신한 뒤 커밋합니다. 검증한 제품 스냅샷 태그 `v0.4.0` 하나를
+   `Cargo.lock`을 갱신한 뒤 커밋합니다. 검증한 제품 스냅샷 태그 `v0.4.1` 하나를
    push합니다. 수동 실행도 일치하는 태그를
    선택해야 합니다. 버전 불일치, prerelease 태그, 서명 설정 누락은 패키징 전에 실패합니다.
 4. 모든 job의 성공 후 `latest.json`에 해당 버전의 `darwin-aarch64`, `darwin-x86_64`,

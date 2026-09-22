@@ -34,7 +34,11 @@ test("every documentation page has both languages and is in website navigation",
       const name = `${slug}${language === "ko" ? ".ko" : ""}.md`
       assert.ok(files.includes(name), `${name}: translation required`)
       const source = readFileSync(resolve(directory, name), "utf8")
-      assert.match(source, /^---\ntitle: .+\ndescription: .+\n---\n/, `${name}: page metadata`)
+      assert.match(
+        source,
+        /^---\r?\ntitle: .+\r?\ndescription: .+\r?\n---\r?\n/,
+        `${name}: page metadata`,
+      )
     }
   }
   assert.equal(files.length, slugs.length * 2, "no orphan translations")

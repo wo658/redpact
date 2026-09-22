@@ -183,7 +183,7 @@ Maintainer setup and release procedure:
 3. Update the version in `app/desktop/src-tauri/tauri.conf.json`,
    `app/desktop/src-tauri/Cargo.toml`, `app/desktop/package.json` and
    `app/server/package.json`, refresh `Cargo.lock`, and commit. Tag the verified product
-   snapshot `v0.4.0` and push that single tag. Manual workflow dispatch must also select
+   snapshot `v0.4.1` and push that single tag. Manual workflow dispatch must also select
    the matching tag. Mismatched versions,
    prerelease tags and missing signing configuration fail before packaging.
 4. Wait for all jobs to succeed. Verify `latest.json` has `darwin-aarch64`,
