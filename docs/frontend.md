@@ -89,7 +89,12 @@ a fixed width, left-aligned icons and truncated titles, with a subtle outline an
 selected surface. The adjacent plus button opens a new project tab and remains reachable
 when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The
 browser desktop keeps the sidebar open rather than offering a collapse control; compact mobile
-screens retain the sidebar trigger. The native macOS desktop keeps its sidebar control.
+screens retain the sidebar trigger. The native macOS desktop keeps its sidebar control. In mobile and native layouts,
+the open sidebar places this control beside the project selector, immediately before
+project display options. When closed, a reopening control sits below the workspace
+header. Worktree display options appear while hovering anywhere in the Worktrees
+section, including its remaining space above the footer. Keyboard focus, an open
+options menu and non-hover input keep the control available.
 The sidebar remains on the canvas. Preserve desktop
 gutters, collapsed state, full-width mobile content and macOS toolbar positioning.
 Open workspace tabs retain their React state and DOM through React Activity. Hidden tabs

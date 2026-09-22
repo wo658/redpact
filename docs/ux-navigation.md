@@ -192,7 +192,10 @@ Redpact
   test execution evidence.
 - Browser desktop keeps the sidebar open and the header exposes only the open-workspace
   strip rather than a sidebar toggle, page title or history controls. Compact mobile
-  screens retain the sidebar trigger; the native macOS desktop keeps its sidebar control.
+  screens and the native macOS desktop place the sidebar toggle beside the project selector,
+  before project display options. When closed, the reopen control appears below the header.
+  Worktree display options appear on hover anywhere in the Worktrees section, on keyboard
+  focus, while the menu is open, and for non-hover input.
   Workspace tabs use a fixed width, left-aligned icons and truncated labels with subtle outlines.
   The header plus button opens another project tab on the current project’s default review
   screen without replacing existing tabs. Each open tab retains its sidebar and current view state when switching tabs, including

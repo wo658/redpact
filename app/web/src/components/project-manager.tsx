@@ -429,7 +429,7 @@ export function WorktreePanel({
   onOpenWorktree?: (project: Project, worktree: Worktree) => void
 }) {
   const { t } = useTranslation()
-  const { isMobile, setOpenMobile } = useSidebar()
+  const { isMobile, open, openMobile, setOpenMobile } = useSidebar()
 
   const [worktrees, setWorktrees] = useState<Worktree[]>([])
   const [navigation, setNavigation] = useState({
@@ -587,9 +587,6 @@ export function WorktreePanel({
           data-tauri-drag-region
           className="app-header flex min-w-0 shrink-0 items-center gap-2 p-2"
         >
-          <div className="app-header-controls flex shrink-0 items-center gap-2">
-            <SidebarTrigger />
-          </div>
           <div
             className="flex min-w-0 items-center gap-1 overflow-x-auto py-1"
             role="tablist"
@@ -655,6 +652,11 @@ export function WorktreePanel({
           )}
           <div className="h-8 min-w-4 flex-1" data-tauri-drag-region />
         </header>
+        {(isMobile ? !openMobile : !open) && (
+          <div className="sidebar-reopen flex shrink-0 px-2 pb-2">
+            <SidebarTrigger />
+          </div>
+        )}
         <SidebarInset
           className={cn(
             "min-h-0 min-w-0 overflow-auto md:rounded-xl md:ring-1 md:ring-border",
@@ -822,6 +824,7 @@ export function WorktreeSidebar({
   projectSettingsActive?: boolean
 }) {
   const { t } = useTranslation()
+  const { isMobile, open } = useSidebar()
   const menuDisplay = useProjectMenuOptions(projectId)
   const menuItems = [
     {
@@ -937,6 +940,7 @@ export function WorktreeSidebar({
       <SidebarHeader className="py-1">
         <div className="flex min-w-0 items-center gap-1">
           <div className="min-w-0 flex-1">{projectMenu}</div>
+          {(isMobile || open) && <SidebarTrigger className="sidebar-workspace-toggle" />}
           {menuItems.length > 0 && (
             <ProjectMenuOptions items={menuItems} display={menuDisplay} disabled={pending} />
           )}
@@ -964,7 +968,7 @@ export function WorktreeSidebar({
           </SidebarGroup>
         )}
         {onRefresh && (
-          <SidebarGroup className="pt-0">
+          <SidebarGroup className="group/worktrees flex-1 pt-0">
             <div className="flex items-center justify-between">
               <SidebarGroupLabel>{t("Worktrees")}</SidebarGroupLabel>
               {displayOptions}
