@@ -119,6 +119,12 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
         return `http://127.0.0.1:${/"port":(\d+)/.exec(output)?.[1]}`
       }
       let base = await launch()
+      const updateStatus = await (await fetch(`${base}/api/updates`)).json()
+      expect(updateStatus).toMatchObject({
+        currentVersion: manifest.version,
+        supported: true,
+        canInstall: true,
+      })
       const ui = await fetch(base)
       expect(ui.status).toBe(200)
       const uiHtml = await ui.text()

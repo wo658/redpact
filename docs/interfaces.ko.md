@@ -88,3 +88,5 @@ Bearer token은 필요 없습니다. 신뢰된 로컬 프로세스는 HTTP와 �
 [App 메타데이터](../app/server/src/interfaces/mcp/apps.ts),
 [HTTP 문서](../app/server/src/interfaces/http/docs/routes.ts),
 [검토 workflow](../app/server/src/workflows/review-tests.ts).
+
+런타임 업데이트 상태와 명시적 확인·설치는 `GET /api/updates`, `POST /api/updates/check`, `POST /api/updates/install`을 사용합니다. 설치에는 발견된 버전과 일치하는 `{ version }`과 확인된 CLI 부모 프로세스가 필요합니다. 캐시의 `canInstall`, `busy`, `error`, `installError`는 기능 지원·작업·실패를 구분합니다. 조회는 설치하지 않습니다. 같은 출처·로컬 호스트 경계를 유지하고 임의 명령이나 레지스트리 URL을 받지 않습니다. [런타임 업데이트](installation.md)를 참고하세요.

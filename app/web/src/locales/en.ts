@@ -1,4 +1,14 @@
 export const en = {
+  "Install the update and restart Redpact? Active work will defer installation.":
+    "Install the update and restart Redpact? Active work will defer installation.",
+  "Automatic installation is unavailable. Update with the original package manager, then restart Redpact. For npx, stop this process and run npx redpact@latest serve with the same options.":
+    "Automatic installation is unavailable. Update with the original package manager, then restart Redpact. For npx, stop this process and run npx redpact@latest serve with the same options.",
+  "Updating and restarting…": "Updating and restarting…",
+  "Install and restart": "Install and restart",
+  "Current version: {{version}}": "Current version: {{version}}",
+  Updates: "Updates",
+  "Redpact is up to date.": "Redpact is up to date.",
+  "Could not check for updates.": "Could not check for updates.",
   "App shortcuts": "App shortcuts",
   "GitHub repository": "GitHub repository",
   "Star on GitHub": "Star on GitHub",

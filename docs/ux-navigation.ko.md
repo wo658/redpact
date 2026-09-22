@@ -135,8 +135,10 @@ Redpact
 │   │
 │   ├── GitHub repository [링크; 사이드바 하단 아이콘]
 │   ├── Star on GitHub [링크; 사이드바 하단 아이콘]
-│   ├── Check for updates / Update [작업; 데스크톱 하단 아이콘]
+│   ├── Update [작업; 데스크톱/npm 새 버전만 표시]
 │   └── Settings [페이지; 전역, 사이드바 하단 아이콘]
+│       ├── Updates [섹션]
+│       │   └── Check for updates [작업; 설치 없음]
 │       ├── Preferences [섹션]
 │       │   ├── Theme: Light / Dark / System
 │       │   ├── Word wrap
@@ -156,8 +158,8 @@ Redpact
 
 ## 탐색 동작
 
-- 사이드바 하단은 Settings, GitHub, Star와 데스크톱 업데이트 동작을 작은 아이콘 한 줄로
-  배치합니다. 접근 가능한 이름과 툴팁을 제공하고 Settings의 선택 상태를 유지합니다.
+- 사이드바 하단은 Settings, GitHub, Star와 사용 가능한 Update 동작을 한 줄로
+  배치합니다. Update는 텍스트 버튼이며 나머지 바로가기는 아이콘입니다. 접근 가능한 이름과 툴팁을 제공하고 Settings의 선택 상태를 유지합니다.
   GitHub와 Star는 공개 저장소를 새 브라우저 탭 또는 데스크톱 기본 브라우저로 열며,
   사용자는 GitHub에서 직접 Star를 추가합니다.
 
@@ -200,4 +202,4 @@ Redpact
 
 조합 규칙은 [프런트엔드](frontend.md), 수명주기는 [실행](execution.md)을 참고하세요.
 
-데스크톱 Update 표시와 설치 조건은 [데스크톱 업데이트](desktop.ko.md)를 참고하세요.
+Update 표시, 수동 확인과 설치 조건은 [런타임 업데이트](installation.md)를 참고하세요.

@@ -95,3 +95,5 @@ Implementation: [MCP registration](../app/server/src/interfaces/mcp/routes.ts),
 [App metadata](../app/server/src/interfaces/mcp/apps.ts),
 [HTTP documentation](../app/server/src/interfaces/http/docs/routes.ts),
 [review workflow](../app/server/src/workflows/review-tests.ts).
+
+Runtime update status and explicit check/install actions use `GET /api/updates`, `POST /api/updates/check` and `POST /api/updates/install`. Installation requires `{ version }` matching the discovered version and a recognized CLI supervisor; cached `canInstall`, `busy`, `error` and `installError` distinguish capability, work and failures. Reads never install. These HTTP routes retain the same-origin/local-host boundary and expose no arbitrary command or registry URL. See [runtime updates](installation.md).

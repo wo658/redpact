@@ -71,9 +71,28 @@ fn desktop_update_status(window: tauri::WebviewWindow) -> Result<serde_json::Val
         .map_err(|e| e.to_string())?
         .clone();
     Ok(serde_json::json!({
+        "currentVersion": window.app_handle().package_info().version.to_string(),
         "version": version,
         "busy": state.updating.load(Ordering::SeqCst)
     }))
+}
+
+#[tauri::command]
+async fn desktop_check_update(window: tauri::WebviewWindow) -> Result<(), String> {
+    verify_desktop_caller(&window)?;
+    let app = window.app_handle().clone();
+    if option_env!("REDPACT_UPDATE_ENDPOINT").is_none()
+        || option_env!("REDPACT_UPDATE_PUBLIC_KEY").is_none()
+    {
+        return Err("Updates are not configured for this development build.".into());
+    }
+    let state = app.state::<Runtime>();
+    if state.updating.swap(true, Ordering::SeqCst) {
+        return Err("An update operation is already running.".into());
+    }
+    let result = update(&app, false).await;
+    state.updating.store(false, Ordering::SeqCst);
+    result
 }
 
 #[tauri::command]
@@ -201,7 +220,7 @@ fn main() {
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![desktop_update_status, desktop_install_update, desktop_open_repository])
+        .invoke_handler(tauri::generate_handler![desktop_update_status, desktop_check_update, desktop_install_update, desktop_open_repository])
         .manage(Runtime {
             backend: Mutex::new(None),
             exiting: AtomicBool::new(false),
@@ -211,14 +230,12 @@ fn main() {
         })
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Show Redpact", true, None::<&str>)?;
-            let updates =
-                MenuItem::with_id(app, "updates", "Check for Updates…", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit Redpact", true, Some("CmdOrCtrl+Q"))?;
             let product = Submenu::with_items(
                 app,
                 "Redpact",
                 true,
-                &[&show, &updates, &PredefinedMenuItem::separator(app)?, &quit],
+                &[&show, &PredefinedMenuItem::separator(app)?, &quit],
             )?;
             let edit = Submenu::with_items(
                 app,
@@ -237,7 +254,6 @@ fn main() {
             app.set_menu(Menu::with_items(app, &[&product, &edit])?)?;
             app.on_menu_event(|app, event| match event.id().as_ref() {
                 "show" => show_window(app),
-                "updates" => check_update(app.clone(), true),
                 "quit" => app.exit(0),
                 _ => {}
             });
@@ -259,7 +275,7 @@ fn main() {
                 "windows": ["main"],
                 "local": false,
                 "remote": { "urls": [origin.as_str()] },
-                "permissions": ["allow-desktop-update-status", "allow-desktop-install-update", "allow-desktop-open-repository"]
+                "permissions": ["allow-desktop-update-status", "allow-desktop-check-update", "allow-desktop-install-update", "allow-desktop-open-repository"]
             }).to_string())?;
             #[cfg(target_os = "macos")]
             app.add_capability(serde_json::json!({

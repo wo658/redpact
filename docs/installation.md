@@ -316,3 +316,41 @@ This builds the current checkout, installs `/Applications/Redpact.app`, launches
 The desktop owns a separate instance. Its first-launch MCP endpoint is `http://127.0.0.1:54321/mcp`; use the saved instance port if changed. Closing the window keeps the server available; quitting Redpact shuts it down. Development-server history does not automatically appear in the desktop.
 
 Continue with [your first project](first-project.md), or see [troubleshooting](troubleshooting.md).
+
+## Runtime updates
+
+Windows/macOS desktop apps and npm-installed browser viewers show **Update** in the
+sidebar only when a newer version is available. Manual **Check for updates** lives in
+Settings → Updates. Desktop installation uses the [signed native updater](desktop.md).
+
+The npm runtime queries the public `redpact` registry dist-tags at startup and every
+six hours; browser polling reads the server cache. Stable installations follow
+`latest`; prerelease installations consider `beta` and `latest` and never downgrade.
+Checks have a ten-second deadline. Registry absence, invalid metadata and network
+failure are errors, not proof that the installed version is current. Source checkouts
+and desktop-owned servers do not start npm checks.
+
+For recognized global npm/pnpm installations and direct local npm/pnpm dependencies,
+`redpact serve` keeps a CLI parent process outside the replaceable server. Clicking
+**Update** opens confirmation; **Install and restart** requests the displayed version.
+New requests pause while admitted requests finish. Active tests, environment operations
+and other tracked work defer installation and restore service. Only after the owned
+server stops does the parent run the original package manager against the explicit
+version with lifecycle scripts disabled. Local updates modify the owning project's
+package manifest and lockfile, preserving development-dependency classification.
+The parent verifies the installed package version and restarts with the same options
+and listening port; the browser reloads after observing that version.
+
+`npx` caches, unrecognized installation owners, source launches and direct `main.js`
+launches do not receive automatic installation authority. The dialog explains manual
+recovery instead of guessing a global install. For `npx`, stop the old process and
+run `npx redpact@latest serve` with the original options; prerelease users choose their
+intended explicit version/channel. Other installations use their original manager.
+
+Installation failures are surfaced when the server can restart. If package replacement
+or startup leaves it unavailable, reopen/reinstall using the original manager.
+Automatic binary or data rollback is not provided. The parent owns only its child:
+close other instances using the same package before updating it. Stored settings and
+evidence remain outside the package and follow the current storage-format policy.
+Publishing npm versions and native releases remains a separate release operation;
+this feature neither publishes packages nor configures npm credentials.
