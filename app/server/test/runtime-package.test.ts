@@ -30,10 +30,10 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
         encoding: "utf8",
         timeout: 120000,
       })
-      const installed = join(directory, "node_modules/redpact")
+      const installed = join(directory, "node_modules/@wo658/redpact")
       const published = JSON.parse(await readFile(join(installed, "package.json"), "utf8"))
       expect(published).toMatchObject({
-        name: "redpact",
+        name: "@wo658/redpact",
         private: false,
         bin: { redpact: "dist/cli.js" },
         publishConfig: { access: "public", registry: "https://registry.npmjs.org/" },

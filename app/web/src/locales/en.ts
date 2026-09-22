@@ -10,8 +10,8 @@ export const en = {
     "An environment override does not start its target service. Declare the service in the fixed project configuration or Compose prerequisites.",
   "Install the update and restart Redpact? Active work will defer installation.":
     "Install the update and restart Redpact? Active work will defer installation.",
-  "Automatic installation is unavailable. Update with the original package manager, then restart Redpact. For npx, stop this process and run npx redpact@latest serve with the same options.":
-    "Automatic installation is unavailable. Update with the original package manager, then restart Redpact. For npx, stop this process and run npx redpact@latest serve with the same options.",
+  "Automatic installation is unavailable. Update with the original package manager, then restart Redpact. For npx, stop this process and run npx @wo658/redpact@latest serve with the same options.":
+    "Automatic installation is unavailable. Update with the original package manager, then restart Redpact. For npx, stop this process and run npx @wo658/redpact@latest serve with the same options.",
   "Updating and restarting…": "Updating and restarting…",
   "Install and restart": "Install and restart",
   "Current version: {{version}}": "Current version: {{version}}",

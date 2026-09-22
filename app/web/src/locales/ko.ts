@@ -16,8 +16,8 @@ export const ko = {
   "Star on GitHub": "GitHub에서 Star 주기",
   "Install the update and restart Redpact? Active work will defer installation.":
     "업데이트를 설치하고 Redpact를 다시 시작할까요? 진행 중인 작업이 있으면 설치를 보류합니다.",
-  "Automatic installation is unavailable. Update with the original package manager, then restart Redpact. For npx, stop this process and run npx redpact@latest serve with the same options.":
-    "자동 설치를 사용할 수 없습니다. 처음 설치한 패키지 관리자로 업데이트한 뒤 Redpact를 다시 시작하세요. npx는 현재 프로세스를 종료하고 같은 옵션으로 npx redpact@latest serve를 실행하세요.",
+  "Automatic installation is unavailable. Update with the original package manager, then restart Redpact. For npx, stop this process and run npx @wo658/redpact@latest serve with the same options.":
+    "자동 설치를 사용할 수 없습니다. 처음 설치한 패키지 관리자로 업데이트한 뒤 Redpact를 다시 시작하세요. npx는 현재 프로세스를 종료하고 같은 옵션으로 npx @wo658/redpact@latest serve를 실행하세요.",
   "Updating and restarting…": "업데이트 및 재시작 중…",
   "Install and restart": "설치 후 다시 시작",
   "Current version: {{version}}": "현재 버전: {{version}}",

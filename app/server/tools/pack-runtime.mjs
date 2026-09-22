@@ -18,7 +18,7 @@ const lock = parse(await readFile(join(root, "pnpm-lock.yaml"), "utf8"))
 try {
   // Install the server's existing locked graph, independently of the development workspace.
   lock.importers = { ".": lock.importers["app/server"] }
-  manifest.name = "redpact"
+  manifest.name = "@wo658/redpact"
   manifest.private = false
   manifest.description = "Local development review with Vitest submissions and runtime evidence"
   manifest.bin = { redpact: "dist/cli.js" }

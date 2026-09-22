@@ -176,9 +176,17 @@ redpact serve --port 54321
 
 Use a user-writable global package directory. The terminal installer above avoids
 global directory setup and validates the release checksum automatically.
-`npm install -g redpact`, `pnpm add -g redpact`, and `npx redpact` by package name
-are not available until an npm registry release is published. GitHub tarball installation
-does not require npm publishing credentials. Dependencies still come from npm.
+The public registry package is `@wo658/redpact`. Install or run it by package name:
+
+```sh
+npm install --global @wo658/redpact
+# Alternatively:
+pnpm add --global @wo658/redpact
+npx @wo658/redpact@latest serve
+```
+
+The installed executable remains `redpact`. GitHub tarball installation does not require
+npm publishing credentials. Dependencies still come from npm.
 
 ## Install an agent plugin
 
@@ -323,7 +331,7 @@ Windows/macOS desktop apps and npm-installed browser viewers show **Update** in 
 sidebar only when a newer version is available. Manual **Check for updates** lives in
 Settings → Updates. Desktop installation uses the [signed native updater](desktop.md).
 
-The npm runtime queries the public `redpact` registry dist-tags at startup and every
+The npm runtime queries the public `@wo658/redpact` registry dist-tags at startup and every
 six hours; browser polling reads the server cache. Stable installations follow
 `latest`; prerelease installations consider `beta` and `latest` and never downgrade.
 Checks have a ten-second deadline. Registry absence, invalid metadata and network
@@ -344,7 +352,7 @@ and listening port; the browser reloads after observing that version.
 `npx` caches, unrecognized installation owners, source launches and direct `main.js`
 launches do not receive automatic installation authority. The dialog explains manual
 recovery instead of guessing a global install. For `npx`, stop the old process and
-run `npx redpact@latest serve` with the original options; prerelease users choose their
+run `npx @wo658/redpact@latest serve` with the original options; prerelease users choose their
 intended explicit version/channel. Other installations use their original manager.
 
 Installation failures are surfaced when the server can restart. If package replacement

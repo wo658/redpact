@@ -14,7 +14,7 @@ recorded Vitest test evidence.
 After the package has been published to npm:
 
 ```sh
-pnpm add --global redpact
+pnpm add --global @wo658/redpact
 redpact serve --project /absolute/path/to/your-project
 ```
 

@@ -41,6 +41,7 @@ import { createReviewStore } from "./adapters/storage/reviews.js"
 import { createRunLogReader } from "./adapters/storage/run-logs.js"
 import { createUnitRunStore } from "./adapters/storage/unit-runs.js"
 import { createVitestRunner } from "./adapters/test-runner/vitest.js"
+import { runtimePackageName } from "./adapters/updates/package.js"
 import { readRegistryTags, runtimePackage } from "./adapters/updates/registry.js"
 import { createApp } from "./app.js"
 import { instanceSettingsSchema, serverPortSchema } from "./core/instance-schema.js"
@@ -319,7 +320,7 @@ const command = new Command()
       const installed = await runtimePackage()
       const updates = createUpdates({
         currentVersion: installed.version,
-        supported: !desktopMode && installed.name === "redpact",
+        supported: !desktopMode && installed.name === runtimePackageName,
         installError: updateError,
         requestInstall: runtimeSupervised
           ? (version) =>

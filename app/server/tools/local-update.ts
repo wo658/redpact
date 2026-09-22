@@ -221,7 +221,14 @@ async function smokeRuntime(runtime: string) {
   const data = await mkdtemp(join(tmpdir(), "redpact-update-smoke-"))
   const child = spawn(
     process.execPath,
-    [join(runtime, "node_modules/redpact/dist/cli.js"), "serve", "--data-dir", data, "--port", "0"],
+    [
+      join(runtime, "node_modules/@wo658/redpact/dist/cli.js"),
+      "serve",
+      "--data-dir",
+      data,
+      "--port",
+      "0",
+    ],
     {
       cwd: runtime,
       stdio: ["ignore", "pipe", "pipe"],
@@ -264,7 +271,7 @@ async function launchAgent(base: string) {
   const config = JSON.parse((await exec("plutil", ["-convert", "json", "-o", "-", plist])).stdout)
   const args = config.ProgramArguments as string[]
   if (
-    args[1] !== join(base, "runtime/node_modules/redpact/dist/cli.js") ||
+    args[1] !== join(base, "runtime/node_modules/@wo658/redpact/dist/cli.js") ||
     args[args.indexOf("--data-dir") + 1] !== join(base, "data") ||
     args.includes("--port")
   ) {
@@ -367,7 +374,7 @@ async function updateRuntime(base: string) {
   await smokeRuntime(candidate)
   const identity = await readFile(join(data, "instance.json"), "utf8")
   const previousHadUi = await access(
-    join(base, "runtime/node_modules/redpact/dist/ui/index.html"),
+    join(base, "runtime/node_modules/@wo658/redpact/dist/ui/index.html"),
   ).then(
     () => true,
     () => false,
