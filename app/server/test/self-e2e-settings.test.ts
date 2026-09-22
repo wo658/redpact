@@ -41,6 +41,7 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/captures/desktop-update.spec.ts", purpose: "capture" },
       { path: "project/captures/problem-notice.spec.ts", purpose: "capture" },
       { path: "project/captures/word-wrap.spec.ts", purpose: "capture" },
+      { path: "project/captures/workspace-history.spec.ts", purpose: "capture" },
       { path: "project/tests/copy-handoff.spec.ts", purpose: "functional" },
       { path: "project/tests/dependencies.spec.ts", purpose: "functional" },
       { path: "project/tests/desktop-update.spec.ts", purpose: "functional" },
@@ -54,13 +55,14 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/tests/sidebar-controls.spec.ts", purpose: "functional" },
       { path: "project/tests/viewers.spec.ts", purpose: "functional" },
       { path: "project/tests/word-wrap.spec.ts", purpose: "functional" },
+      { path: "project/tests/workspace-history.spec.ts", purpose: "functional" },
       { path: "project/tests/workspace-tabs.spec.ts", purpose: "functional" },
     ])
     expect(browserFiles.every((file) => file.scope === "project")).toBe(true)
     expect(
       browserFiles.find((file) => file.path === "project/tests/product-demo.spec.ts")?.target,
     ).toBe("demo")
-    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(13)
+    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(14)
     const files = await createLocalFiles().readTests(root, result.settings.tests.directory)
     const scenarios = files
       .filter((file) => file.path.endsWith(".test.ts"))

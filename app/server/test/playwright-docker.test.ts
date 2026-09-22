@@ -226,6 +226,27 @@ test.skipIf(process.env.REDPACT_DOCKER_TESTS !== "1")(
           })
         ).ok,
       ).toBe(true)
+      const repeated = {
+        ...run,
+        id: randomUUID(),
+        after: { state: "running", cases: [] },
+      } as CaptureRun
+      try {
+        await runner.captureSources(repeated.id, root, settings)
+        const repeatedResult = await runner.execute(
+          repeated,
+          "after",
+          env,
+          new AbortController().signal,
+          (patch) => Object.assign(repeated.after, patch),
+        )
+        expect(repeatedResult.outcome).toBe("passed")
+        expect(repeated.after.imageId).toBe(run.after.imageId)
+        expect(repeated.after.containerId).not.toBe(run.after.containerId)
+      } finally {
+        await runner.stop(repeated, "after")
+        await runner.removeInputs(repeated.id)
+      }
       await docker(["rm", "-fv", target])
       target = ""
       const store = createCaptureStore(join(root, "runtime"))

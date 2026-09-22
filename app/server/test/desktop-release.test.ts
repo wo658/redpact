@@ -16,7 +16,7 @@ const config = {
     },
   },
 }
-const input = { version: "0.1.0", tag: "desktop-v0.1.0", config, privateKey: "secret" }
+const input = { version: "0.1.0", tag: "v0.1.0", config, privateKey: "secret" }
 
 test("저장소 릴리스 설정에 실제 공개 검증 키와 공개 다운로드 주소가 포함된다", async () => {
   const releaseConfig = JSON.parse(
@@ -41,9 +41,21 @@ test("릴리스 버전과 공개 키를 native updater 빌드에 전달하고 �
   })
 })
 test("다른 버전이나 prerelease 태그는 stable feed에 배포하지 않는다", () => {
-  for (const tag of ["desktop-v0.2.0", "v0.1.0", "desktop-v0.1.0-beta.1"]) {
+  for (const tag of ["v0.2.0", "desktop-v0.1.0", "v0.1.0-beta.1"]) {
     expect(() => releaseEnvironment({ ...input, tag })).toThrow("tag")
   }
+})
+
+test("제품 태그 하나가 macOS, Windows와 npm 공개를 함께 실행한다", async () => {
+  const workflow = await readFile(
+    new URL("../../../.github/workflows/desktop-release.yml", import.meta.url),
+    "utf8",
+  )
+  expect(workflow).toContain("tags: ['v*']")
+  expect(workflow).toContain("target: x86_64-pc-windows-msvc")
+  expect(workflow).toContain("id-token: write")
+  expect(workflow).toContain("node app/server/tools/publish-runtime.mjs")
+  expect(workflow).toContain("needs: build")
 })
 test("서명 키나 서명 아티팩트 설정이 없으면 빌드를 차단한다", () => {
   expect(() => releaseEnvironment({ ...input, privateKey: "" })).toThrow("private key")

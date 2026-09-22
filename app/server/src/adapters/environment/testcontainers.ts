@@ -283,6 +283,13 @@ export function createComposeAdapter(
             labels,
             networks: { "redpact-runner": { aliases: [runnerServiceHost(name)] } },
             ...(ports.length ? { ports } : {}),
+            ...(record.lifecycle === "run" && service.build
+              ? {
+                  image: `${record.projectName}-${name}`,
+                  pull_policy: "build",
+                  build: { labels, tags: [] },
+                }
+              : {}),
           }
         }
         for (const name of Object.keys(model.networks ?? { default: {} })) {
@@ -293,7 +300,9 @@ export function createComposeAdapter(
           override.volumes[name] = { labels }
         }
         // Override the complete port sequence; merging entries could otherwise expose an unbound address.
-        const yaml = stringify(override).replace(/^( {4}ports:)/gm, "$1 !override")
+        const yaml = stringify(override)
+          .replace(/^( {4}ports:)/gm, "$1 !override")
+          .replace(/^( {6}tags:) \[\]/gm, "$1 !override []")
         const overrideFile = ".redpact-runtime.yaml"
         await writeFile(join(stage, overrideFile), yaml, { mode: 0o600, flag: "wx" })
         update({
@@ -308,15 +317,15 @@ export function createComposeAdapter(
           }
         }
         if (record.lifecycle === "run") {
-          const localBuilds = Object.entries(model.services).filter(
-            ([, service]) => service.build && !service.image,
-          )
+          const localBuilds = Object.entries(model.services).filter(([, service]) => service.build)
           if (localBuilds.length) {
-            // Cleanup needs only Compose's implicit image names, never application variables.
+            // Capture only environment-owned tags; cleanup must not evaluate application variables.
             await writeFile(
               join(stage, ".redpact-image-cleanup.yaml"),
               stringify({
-                services: Object.fromEntries(localBuilds.map(([name]) => [name, { build: "." }])),
+                services: Object.fromEntries(
+                  localBuilds.map(([name]) => [name, { image: `${record.projectName}-${name}` }]),
+                ),
               }),
               { mode: 0o600, flag: "wx" },
             )
@@ -406,7 +415,14 @@ export function createComposeAdapter(
           )
           for (const image of previousBuildImages) {
             if (!currentImages.has(image)) {
-              await docker(["image", "rm", image])
+              const tags: string[] | null = JSON.parse(
+                await docker(["image", "inspect", "--format", "{{json .RepoTags}}", image]),
+              )
+              const users = await docker(["ps", "-aq", "--filter", `ancestor=${image}`])
+              // A replaced project tag does not confer ownership of other tags or containers.
+              if (!tags?.length && !users.trim()) {
+                await docker(["image", "rm", image])
+              }
             }
           }
         }
@@ -518,7 +534,7 @@ export function createComposeAdapter(
             imageCleanup,
             "down",
             "--rmi",
-            "local",
+            "all",
           ],
           Math.max(1, deadline - Date.now()),
         )

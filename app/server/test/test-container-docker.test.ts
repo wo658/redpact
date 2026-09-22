@@ -21,6 +21,7 @@ dockerTest.each(["0.0.0.0", "127.0.0.1"])(
     const root = await mkdtemp(join(tmpdir(), "redpact-manual-docker-"))
     const projectRoot = join(root, "project")
     const dataRoot = join(root, "data")
+    const preservedImage = `redpact-manual-preserved-${randomUUID()}`
     await mkdir(join(projectRoot, ".redpact"), { recursive: true })
     await writeFile(
       join(projectRoot, "Dockerfile"),
@@ -76,7 +77,11 @@ dockerTest.each(["0.0.0.0", "127.0.0.1"])(
     async function ready() {
       await environments.idle()
       const state = await service.inspect(project.id)
-      if (state.environment?.state !== "ready") {
+      const environment = state.environment
+      if (!environment) {
+        throw new Error("Manual environment was not created")
+      }
+      if (environment.state !== "ready") {
         const details = await execa("docker", [
           "ps",
           "-a",
@@ -85,17 +90,18 @@ dockerTest.each(["0.0.0.0", "127.0.0.1"])(
           "--format",
           "{{.Status}} {{.Names}}",
         ])
-        throw new Error(
+        expect(
+          environment.state,
           details.stdout +
             "\n" +
             (await readFile(
-              join(dataRoot, "environments", state.environment!.id, "preparation.log"),
+              join(dataRoot, "environments", environment.id, "preparation.log"),
               "utf8",
             )),
-        )
+        ).toBe("ready")
       }
-      const endpoint = state.environment.endpoints["app:8080"]
-      return { record: state.environment, url: `http://${endpoint.host}:${endpoint.port}` }
+      const endpoint = environment.endpoints["app:8080"]
+      return { record: environment, url: `http://${endpoint.host}:${endpoint.port}` }
     }
     try {
       await expect(service.start(project.id)).resolves.toMatchObject({
@@ -118,6 +124,7 @@ dockerTest.each(["0.0.0.0", "127.0.0.1"])(
       await writeFile(join(projectRoot, "arbitrary-cache/noise"), "changed")
       expect((await service.inspect(project.id)).changed).toBe(false)
       const container = first.record.resources.find((resource) => resource.kind === "container")!
+      await execa("docker", ["tag", container.image!, preservedImage])
       const copied = await execa("docker", [
         "exec",
         container.id,
@@ -132,15 +139,40 @@ dockerTest.each(["0.0.0.0", "127.0.0.1"])(
       await service.restart(project.id)
       const second = await ready()
       expect(second.record.id).not.toBe(first.record.id)
+      const preserved = await execa(
+        "docker",
+        ["image", "inspect", "--format", "{{.Id}}", preservedImage],
+        { reject: false },
+      )
+      expect(preserved.exitCode, "재시작은 다른 태그가 참조하는 이미지를 보존해야 한다").toBe(0)
+      expect(preserved.stdout.trim()).toBe(container.image)
       expect(await (await fetch(second.url)).text()).toBe("edited")
       expect(environments.get(first.record.id).state).toBe("stopped")
-      expect((await adapter.inspect(first.record)).resources).toEqual([])
+      // Manual restarts share a Compose name; check the retired environment's ownership label.
+      for (const kind of ["container", "network", "volume"]) {
+        const args = kind === "container" ? ["ps", "-aq"] : [kind, "ls", "-q"]
+        expect(
+          (
+            await execa("docker", [
+              ...args,
+              "--filter",
+              `label=io.redpact.environment=${first.record.id}`,
+            ])
+          ).stdout.trim(),
+        ).toBe("")
+      }
       await service.close()
       expect((await adapter.inspect(second.record)).resources).toEqual([])
     } finally {
       await service.close()
       await environments.close()
+      for (const name of new Set(
+        storage.store.listEnvironments().map((record) => record.projectName),
+      )) {
+        await execa("docker", ["image", "rm", `${name}-app`], { reject: false })
+      }
       storage.close()
+      await execa("docker", ["image", "rm", preservedImage], { reject: false })
       await rm(root, { recursive: true, force: true })
     }
   },

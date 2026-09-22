@@ -151,14 +151,14 @@ feed 미설정이나 확인 실패는 최신 상태가 아닌 오류로 표시�
 
 ### GitHub Release 워크플로
 
-[데스크톱 릴리스 워크플로](../.github/workflows/desktop-release.yml)는 Apple Silicon과
-Intel macOS의 native runner에서 빌드합니다. Windows·Linux 서명 updater 릴리스 job은 구성하지
-않았습니다. [Tauri Action](https://github.com/tauri-apps/tauri-action)이 Apple Silicon DMG,
-서명된 `.app.tar.gz` 업데이트 번들, 서명 파일과 `latest.json`을 하나의 **Draft**
-GitHub Release에 올립니다. 두 플랫폼의 manifest 항목을 보존하도록 순차 업로드합니다.
-Intel은 해당 runner의 DMG 생성 실패로 앱 ZIP을 제공합니다. 두 job은 native 테스트·린트와
-패키지 설치를 실행해 앱 시작, 번들 Node, HTTP 뷰어, MCP 및 소유 서버 종료를 검증합니다.
-앱의 updater에는 Draft 릴리스가 노출되지 않습니다.
+[제품 릴리스 워크플로](../.github/workflows/desktop-release.yml)는 Apple Silicon·Intel
+macOS native runner와 Windows Server 2022에서 빌드합니다.
+[Tauri Action](https://github.com/tauri-apps/tauri-action)이 Apple Silicon DMG, Intel 앱 ZIP,
+Windows NSIS installer, 서명된 updater 번들·서명과 `latest.json`을 하나의 **Draft**
+GitHub Release에 올립니다. 모든 manifest 플랫폼 항목을 보존하도록 순차 업로드합니다.
+각 job은 native 테스트·린트와 패키지 설치를 실행해 앱 시작, 번들 Node, HTTP 뷰어,
+MCP 및 소유 서버 종료를 검증합니다. 모든 desktop job이 성공하면 GitHub Release와
+같은 npm 버전을 trusted publishing으로 공개합니다. 앱 updater에는 완성 전 Draft가 노출되지 않습니다.
 
 유지관리자의 설정·릴리스 절차:
 
@@ -170,13 +170,13 @@ Intel은 해당 runner의 DMG 생성 실패로 앱 ZIP을 제공합니다. 두 j
    암호가 있으면 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`도 등록합니다.
 3. `app/desktop/src-tauri/tauri.conf.json`, `app/desktop/src-tauri/Cargo.toml`,
    `app/desktop/package.json`, `app/server/package.json`의 버전을 맞추고
-   `Cargo.lock`을 갱신한 뒤 커밋합니다. 제품 스냅샷 태그 `v0.2.0`과
-   일치하는 배포 태그 `desktop-v0.2.0`을 push합니다. 수동 실행도 해당 태그를
+   `Cargo.lock`을 갱신한 뒤 커밋합니다. 검증한 제품 스냅샷 태그 `v0.4.0` 하나를
+   push합니다. 수동 실행도 일치하는 태그를
    선택해야 합니다. 버전 불일치, prerelease 태그, 서명 설정 누락은 패키징 전에 실패합니다.
-4. 두 job의 성공 후 `latest.json`에 해당 버전의 `darwin-aarch64`, `darwin-x86_64`
-   항목, 비어 있지 않은 서명, 다운로드 가능한 태그별 아티팩트가 있는지 확인합니다.
-   두 아키텍처에서 설치와 이전 릴리스로부터의 업데이트를 검증한 뒤 Draft를 최신 stable
-   릴리스로 공개합니다. 공개한 버전의 파일을 교체하지 않습니다. GitHub의 최신 stable
+4. 모든 job의 성공 후 `latest.json`에 해당 버전의 `darwin-aarch64`, `darwin-x86_64`,
+   Windows 항목, 비어 있지 않은 서명, 다운로드 가능한 태그별 아티팩트가 있는지 확인합니다.
+   npm에 같은 버전이 공개됐는지 확인하고 이전 릴리스로부터의 업데이트를 검증합니다.
+   workflow가 완성된 Draft를 최신 stable 릴리스로 공개합니다. 공개한 버전의 파일을 교체하지 않습니다. GitHub의 최신 stable
    릴리스에는 데스크톱 파일이 있어야 하며 관계없는 릴리스가 최신이면 feed가 깨집니다.
 
 첫 릴리스는 수동 설치해야 합니다. 기존 개발 빌드에는 feed가 없습니다. 첫 릴리스 공개는

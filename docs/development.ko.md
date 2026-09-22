@@ -167,15 +167,16 @@ Tauri 설정, Cargo manifest와 Cargo lock의 데스크톱 패키지 항목을 �
 번호가 아닙니다.
 
 검증한 정확한 릴리스 커밋에 태그를 만드세요. 빌드, 로컬 설치, 태그 생성과 게시는
-별개 작업입니다. 현재 npm workflow는 수동 실행하며 버전 태그로 시작되지 않습니다.
-게시 스크립트는 `-beta.N`에 맞는 npm prerelease dist-tag를 자동 선택하지 않으므로
-해당 패키지를 게시하기 전에 prerelease 채널이 명시적으로 선택되었는지 확인하세요.
+별개 작업입니다. stable `v<version>` 태그는 제품 릴리스 workflow를 시작합니다.
+Apple Silicon macOS, Intel macOS와 Windows를 빌드·검증하고 완성된 GitHub Release를
+공개한 뒤 같은 버전을 trusted publishing으로 npm에 게시합니다. 모든 desktop matrix
+job이 성공할 때까지 GitHub Release는 Draft로 유지합니다. 게시 스크립트는 `-beta.N`에
+맞는 npm prerelease dist-tag를 자동 선택하지 않으므로 prerelease는 별도로 검토한
+채널이 필요합니다.
 
-제품 스냅샷 태그는 `v<version>`입니다. 기존 배포 워크플로는 각 아티팩트에
-`desktop-v<version>`, `desktop-preview-v<version>`,
-`desktop-platform-preview-v<version>`, `runtime-v<version>` 태그를 계속 사용합니다.
-채널 태그는 제품 스냅샷 태그를 대체하지 않습니다. 워크플로별 태그 검증과 공개된
-다운로드 URL을 유지합니다.
+제품 스냅샷과 stable 배포 태그는 `v<version>`입니다. Preview와 기존 아티팩트 검증
+workflow는 문서화된 곳에서 `desktop-preview-v<version>`,
+`desktop-platform-preview-v<version>`, `runtime-v<version>`을 유지합니다.
 
 ## 런타임 패키징과 업데이트
 

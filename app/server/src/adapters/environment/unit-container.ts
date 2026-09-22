@@ -158,20 +158,21 @@ export function createUnitContainer(
           await owned(id, run)
           await docker(["rm", "-fv", id])
         }
-        if (run.imageId) {
-          const result = await execa(
-            "docker",
-            ["image", "inspect", "--format", "{{.Id}}", image(run)],
-            {
-              env: minimalEnvironment(),
-              extendEnv: false,
-              timeout: 30000,
-              maxBuffer: 1024 * 1024,
-              reject: false,
-            },
-          )
+        {
+          const result = await execa("docker", ["image", "inspect", image(run)], {
+            env: minimalEnvironment(),
+            extendEnv: false,
+            timeout: 30000,
+            maxBuffer: 1024 * 1024,
+            reject: false,
+          })
           if (result.exitCode === 0) {
-            if (result.stdout.trim() !== run.imageId) {
+            const [built] = JSON.parse(result.stdout)
+            if (
+              built.Config.Labels?.["io.redpact.owner"] !== ownerId ||
+              built.Config.Labels?.["io.redpact.unit-run"] !== run.id ||
+              (run.imageId && built.Id !== run.imageId)
+            ) {
               throw new Error("Unit image ownership mismatch")
             }
             await docker(["image", "rm", image(run)])

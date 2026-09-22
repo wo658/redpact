@@ -8,8 +8,8 @@ export function releaseEnvironment({ version, tag, config, privateKey, mode = "s
     }
     return {}
   }
-  if (!/^\d+\.\d+\.\d+$/.test(version) || tag !== `desktop-v${version}`) {
-    throw new Error("Release tag must equal desktop-v followed by the stable Tauri version")
+  if (!/^\d+\.\d+\.\d+$/.test(version) || tag !== `v${version}`) {
+    throw new Error("Release tag must equal v followed by the stable Tauri version")
   }
   if (!privateKey?.trim()) {
     throw new Error("Missing updater private key: TAURI_SIGNING_PRIVATE_KEY")

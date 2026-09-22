@@ -84,17 +84,29 @@ preview never executes project code.
 ## Layout and reading width
 
 The app header owns open-workspace tabs and native drag space outside the rounded content
-frame; it does not repeat the current page title or expose history controls. Workspace tabs use
+frame; it does not repeat the current page title. Workspace tabs use
 a fixed width, left-aligned icons and truncated titles, with a subtle outline and a brighter
 selected surface. The adjacent plus button opens the current page location in a fresh tab and remains reachable
 when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The
-browser desktop keeps the sidebar open rather than offering a collapse control; compact mobile
-screens retain the sidebar trigger. The native macOS desktop keeps its sidebar control. In mobile and native layouts,
+browser desktop and native macOS provide a sidebar toggle; compact mobile screens retain
+the sidebar trigger. In mobile and native layouts,
 the open sidebar places this control beside the project selector, immediately before
 project display options. When closed, a reopening control sits below the workspace
 header. Worktree display options appear while hovering anywhere in the Worktrees
 section, including its remaining space above the footer. Keyboard focus, an open
-options menu and non-hover input keep the control available.
+options menu and non-hover input keep the control available. On native macOS, the toggle
+and Back/Forward buttons occupy the 48px titlebar beside the window controls; they remain
+accessible with the sidebar collapsed. Mobile keeps the sidebar sheet trigger. Browser
+desktops omit app Back/Forward buttons and use browser controls.
+
+Project/worktree tab activation and sidebar page selection use the browser session history.
+Native Back/Forward call the same History API as browser navigation, across workspace tabs.
+Repeated selection adds no duplicate entry; navigating after Back discards forward entries.
+History restores the destination page and reopens a closed destination tab while its project
+is connected. Reload restores the current destination, but not drafts or other tabs. File
+selection, review subtabs and scroll changes do not add history entries. The native buttons
+remain available because the History API does not expose complete traversal availability;
+at a history boundary traversal has no effect.
 The sidebar remains on the canvas. Preserve desktop
 gutters, collapsed state, full-width mobile content and macOS toolbar positioning.
 Workspace IDs are independent of project/worktree IDs. Each tab records its page and target;

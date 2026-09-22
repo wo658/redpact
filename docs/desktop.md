@@ -162,14 +162,15 @@ build configuration and need no Actions Variables.
 
 ### GitHub Release workflow
 
-The [desktop release workflow](../.github/workflows/desktop-release.yml) builds on
-native Apple Silicon and Intel macOS runners. Windows and Linux signed-updater release jobs are
-not configured; their manual preview workflow is separate. It uses [Tauri Action](https://github.com/tauri-apps/tauri-action)
-to upload the Apple Silicon DMG, signed `.app.tar.gz` updater bundles, signatures and `latest.json`
-to one **draft** GitHub Release. Uploads are serialized to preserve both manifest
-platform entries. Intel uses an app ZIP because DMG creation fails on that runner.
-Both jobs run native tests/lint and install their package to verify app launch,
-bundled Node, HTTP viewer, MCP and owned-server shutdown. No updater sees a draft release.
+The [product release workflow](../.github/workflows/desktop-release.yml) builds on
+native Apple Silicon and Intel macOS runners plus Windows Server 2022. It uses
+[Tauri Action](https://github.com/tauri-apps/tauri-action) to upload the Apple Silicon
+DMG, Intel app ZIP, Windows NSIS installer, signed updater bundles, signatures and
+`latest.json` to one **draft** GitHub Release. Uploads are serialized to preserve every
+manifest platform entry. Each job runs native tests/lint and installs its package to
+verify app launch, bundled Node, HTTP viewer, MCP and owned-server shutdown. After every
+desktop job succeeds, the workflow publishes the GitHub Release and the same npm version
+through trusted publishing. No updater sees a partial draft release.
 
 Maintainer setup and release procedure:
 
@@ -181,14 +182,14 @@ Maintainer setup and release procedure:
    contents, and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if it has a password.
 3. Update the version in `app/desktop/src-tauri/tauri.conf.json`,
    `app/desktop/src-tauri/Cargo.toml`, `app/desktop/package.json` and
-   `app/server/package.json`, refresh `Cargo.lock`, and commit. Tag the product
-   snapshot `v0.2.0` and push the matching distribution tag `desktop-v0.2.0`.
-   Manual workflow dispatch must also select that tag. Mismatched versions,
+   `app/server/package.json`, refresh `Cargo.lock`, and commit. Tag the verified product
+   snapshot `v0.4.0` and push that single tag. Manual workflow dispatch must also select
+   the matching tag. Mismatched versions,
    prerelease tags and missing signing configuration fail before packaging.
-4. Wait for both jobs to succeed. Verify `latest.json` has `darwin-aarch64` and
-   `darwin-x86_64` entries for this version, nonempty signatures and downloadable
-   tag-specific assets. Test installation and an update from the previous release
-   on both architectures, then publish the draft as the latest stable release.
+4. Wait for all jobs to succeed. Verify `latest.json` has `darwin-aarch64`,
+   `darwin-x86_64` and Windows entries for this version, nonempty signatures and
+   downloadable tag-specific assets. Confirm npm exposes the same version and test an
+   update from the previous release. The workflow publishes the completed draft as the latest stable release.
    Never replace assets of an already published version. Keep the latest stable
    GitHub Release desktop-compatible; an unrelated latest release breaks this feed.
 

@@ -55,6 +55,7 @@ const { LanguageSelector } = await server.ssrLoadModule("/src/components/languag
 const { i18n } = await server.ssrLoadModule("/src/locales/index.ts")
 afterEach(() => {
   cleanup()
+  window.history.replaceState(null, "")
   localStorage.removeItem("redpact:project")
   for (const key of Object.keys(localStorage)) {
     if (key.startsWith("redpact:project-navigation:")) {
@@ -519,7 +520,7 @@ test("프로젝트 추가는 바로 시스템 창을 열고 취소와 실패 시
   assert.equal(localStorage.getItem("redpact:project"), "p2")
 })
 
-test("웹 데스크톱은 사이드바를 열어 두고 프로젝트를 선택해 설정을 연다", async () => {
+test("웹 데스크톱은 사이드바를 접고 펼친 뒤 프로젝트 설정을 연다", async () => {
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const project = { id: "p1", name: "Actual project", location: { kind: "git" } }
   const api = {
@@ -532,6 +533,8 @@ test("웹 데스크톱은 사이드바를 열어 두고 프로젝트를 선택�
   const view = render(createElement(ProjectManager, { api, initialProjects: [project] }))
   const sidebar = view.container.querySelector('[data-slot="sidebar"]')
   assert.equal(sidebar.dataset.state, "expanded")
+  await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
+  assert.equal(sidebar.dataset.state, "collapsed")
   await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
   assert.equal(sidebar.dataset.state, "expanded")
   await user.click(screen.getByRole("button", { name: project.name, exact: true }))
@@ -563,7 +566,7 @@ test("웹 헤더는 열린 작업공간 탭을 제공하고 페이지 선택은 
   await user.click(screen.getByRole("button", { name: "Project settings", exact: true }))
   assert.ok(await screen.findByRole("combobox", { name: "Main branch" }))
   await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
-  assert.equal(view.container.querySelector('[data-slot="sidebar"]').dataset.state, "expanded")
+  assert.equal(view.container.querySelector('[data-slot="sidebar"]').dataset.state, "collapsed")
   assert.ok(screen.getByRole("button", { name: "Toggle Sidebar" }))
 })
 
@@ -6814,5 +6817,55 @@ test("사이드바 하단 한 줄에 아이콘 설정과 GitHub·Star·업데이
     assert.equal(settings.getAttribute("aria-current"), "page")
   } finally {
     delete window.__TAURI__
+  }
+})
+
+test("브라우저 방문 기록으로 메뉴와 작업공간 탭을 복원하고 새 이동은 앞으로 기록을 지운다", async () => {
+  await i18n.changeLanguage("en")
+  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
+  render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
+  const user = userEvent.setup({ document })
+  await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
+  await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
+  assert.equal(Boolean(screen.queryByRole("heading", { name: "Settings", exact: true })), false)
+  window.history.back()
+  await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
+  window.history.forward()
+  await waitFor(() =>
+    assert.equal(Boolean(screen.queryByRole("heading", { name: "Settings", exact: true })), false),
+  )
+  window.history.back()
+  await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
+  await user.click(screen.getByRole("button", { name: "Project settings", exact: true }))
+  await screen.findByRole("combobox", { name: "Main branch" })
+  const state = window.history.state
+  window.history.forward()
+  await new Promise((resolve) => setTimeout(resolve, 30))
+  assert.deepEqual(window.history.state, state)
+  assert.ok(screen.getByRole("combobox", { name: "Main branch" }))
+})
+
+test("macOS 앞뒤 버튼은 브라우저 방문 기록을 직접 이동한다", async () => {
+  await i18n.changeLanguage("en")
+  document.documentElement.dataset.desktop = "macos"
+  try {
+    const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+    const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
+    render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
+    const user = userEvent.setup({ document })
+    await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
+    await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
+    await user.click(screen.getByRole("button", { name: "Go back", exact: true }))
+    await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
+    await user.click(screen.getByRole("button", { name: "Go forward", exact: true }))
+    await waitFor(() =>
+      assert.equal(
+        Boolean(screen.queryByRole("heading", { name: "Settings", exact: true })),
+        false,
+      ),
+    )
+  } finally {
+    delete document.documentElement.dataset.desktop
   }
 })

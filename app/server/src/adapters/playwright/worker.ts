@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto"
+import { readFile } from "node:fs/promises"
+import { join } from "node:path"
+import { execa } from "execa"
 import { GenericContainer, Wait } from "testcontainers"
 
 process.once("disconnect", () => {
@@ -14,10 +18,25 @@ for await (const chunk of process.stdin) {
 }
 const spec = JSON.parse(input)
 try {
-  const image = await GenericContainer.fromDockerfile(spec.assets, "Dockerfile").build(
-    "redpact-playwright:1.63.0-v1",
-    { deleteOnExit: false },
-  )
+  const hash = createHash("sha256")
+  for (const file of ["Dockerfile", "reporter.mjs", "viewport.cjs", "capture-viewport.cjs"]) {
+    hash.update(file).update(await readFile(join(spec.assets, file)))
+  }
+  const digest = hash.digest("hex")
+  const existing = await execa("docker", [
+    "image",
+    "ls",
+    "--no-trunc",
+    "--quiet",
+    "--filter",
+    `label=io.redpact.playwright-inputs=${digest}`,
+  ])
+  const cached = existing.stdout.trim().split(/\s+/)[0]
+  const image = cached
+    ? new GenericContainer(cached)
+    : await GenericContainer.fromDockerfile(spec.assets, "Dockerfile")
+        .withBuildArgs({ REDPACT_PLAYWRIGHT_INPUTS: digest })
+        .build("redpact-playwright:1.63.0-v1", { deleteOnExit: false })
   const container = await image
     .withLabels({
       "io.redpact.owner": spec.ownerId,

@@ -7,3 +7,6 @@ RUN printf '{"private":true}' > package.json && pnpm add --ignore-scripts --save
 COPY reporter.mjs viewport.cjs capture-viewport.cjs /review/
 RUN mkdir -p /review/tests /review/results /review/output && chown -R pwuser:pwuser /review
 USER pwuser
+
+ARG REDPACT_PLAYWRIGHT_INPUTS
+LABEL io.redpact.playwright-inputs=$REDPACT_PLAYWRIGHT_INPUTS

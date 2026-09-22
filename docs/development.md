@@ -179,16 +179,16 @@ entry aligned in the same release change. Synchronization is currently manual;
 the private workspace root version is not the product release number.
 
 Tag the exact verified release commit. Building, installing locally, tagging and
-publishing are distinct operations. The current npm workflow requires manual
-dispatch and is not triggered by a version tag. Its publish script does not
-automatically select an npm prerelease dist-tag for `-beta.N`; verify explicit
-prerelease channel selection before publishing such a package.
+publishing are distinct operations. A stable `v<version>` tag starts the product
+release workflow: it builds and verifies Apple Silicon macOS, Intel macOS and Windows,
+publishes the completed GitHub Release, then publishes the same version to npm through
+trusted publishing. The workflow keeps the GitHub Release in draft state until every
+desktop matrix job succeeds. Its publish script does not automatically select an npm
+prerelease dist-tag for `-beta.N`; prereleases require a separately reviewed channel.
 
-The product snapshot tag is `v<version>`. Existing distribution workflows still use
-`desktop-v<version>`, `desktop-preview-v<version>`,
-`desktop-platform-preview-v<version>` and `runtime-v<version>` for their respective
-artifacts. These channel tags do not replace the product snapshot tag; preserve the
-workflow-specific tag validation and published download URLs.
+The product snapshot and stable distribution tag is `v<version>`. Preview and legacy
+artifact verification workflows retain `desktop-preview-v<version>`,
+`desktop-platform-preview-v<version>` and `runtime-v<version>` where documented.
 
 ## Runtime packaging and updates
 

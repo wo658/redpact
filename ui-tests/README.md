@@ -8,7 +8,7 @@ Dependencies empty overview is exercised in both entry flows.
 
 | Page | Captured states |
 | --- | --- |
-| Workspace | Navigation and open project menu |
+| Workspace | Navigation, open project menu, web/macOS-layout history controls and expanded/collapsed sidebar at desktop/mobile widths |
 | Settings | Complete light and dark pages |
 | Project settings | Execution configuration with page context |
 | Git Graph | Real repository commit history |
@@ -35,15 +35,19 @@ checkpoint names, exact viewport dimensions and retained bytes after cleanup.
 
 ## Coverage limits
 
-Populated execution results, retained screenshot history, failure dialogs, mobile
-layouts and native Tauri chrome are not covered by these scenarios. Their component
+Populated execution results, retained screenshot history, failure dialogs and native
+Tauri chrome are not covered by these scenarios. Workspace history scenarios cover
+1280px and 390px layouts; their macOS branch is rendered in Chromium and does not
+verify actual window controls or native dragging. Their component
 or API tests do not substitute for captured page evidence. Capture runs execute only the selected worktree.
 
 ## Functional tests
 
 The separate `project-tests` target checks theme persistence, dependency help and
-configuration interactions without producing named screenshots on success. Its
-two cases remain independent from capture scenarios. Capture preparation
+configuration interactions without producing named screenshots on success. Workspace
+history scenarios also cover browser/native-button traversal, forward-history replacement,
+closed-tab recovery, reload and responsive sidebar controls. Functional cases remain
+independent from capture scenarios. Capture preparation
 assertions establish the intended image state, not complete functional coverage.
 
 ## UI language contract

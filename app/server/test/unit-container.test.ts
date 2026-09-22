@@ -23,7 +23,7 @@ dockerTest(
       await writeFile(join(root, "nested/input.txt"), "uncommitted WT")
       await writeFile(
         join(root, "unit.Dockerfile"),
-        "FROM alpine:3.21\nWORKDIR /workspace\nCOPY . .\n",
+        "FROM alpine:3.21\nWORKDIR /workspace\nCOPY . .\nVOLUME /unit-state\n",
       )
       const run = (command: string): UnitRun => ({
         version: 2,
@@ -83,8 +83,18 @@ dockerTest(
       } finally {
         await execa("docker", ["rm", "-fv", foreign])
       }
+      const [inspected] = JSON.parse(
+        (await execa("docker", ["inspect", success.containerId!])).stdout,
+      )
+      const volumes = inspected.Mounts.filter((mount: { Type: string }) => mount.Type === "volume")
+      expect(volumes).toHaveLength(1)
       await adapter.stop(success)
       await expectImageRemoved(success)
+      for (const volume of volumes) {
+        expect(
+          (await execa("docker", ["volume", "inspect", volume.Name], { reject: false })).exitCode,
+        ).not.toBe(0)
+      }
       await expect(
         readFile(join(data, "unit-sources", success.id, "unit.Dockerfile")),
       ).rejects.toThrow()
@@ -109,6 +119,19 @@ dockerTest(
       expect((await pending).outcome).toBe("cancelled")
       await adapter.stop(cancelled)
       await expectImageRemoved(cancelled)
+      await writeFile(
+        join(root, "unit.Dockerfile"),
+        "FROM scratch\nCOPY nested/input.txt /input.txt\n",
+      )
+      const preparationFailure = run("true")
+      records.push(preparationFailure)
+      await expect(
+        adapter.execute(preparationFailure, new AbortController().signal, (change) =>
+          Object.assign(preparationFailure, change),
+        ),
+      ).rejects.toThrow("Unit container preparation failed")
+      await adapter.stop(preparationFailure)
+      await expectImageRemoved(preparationFailure)
       const remaining = await execa("docker", [
         "ps",
         "-aq",

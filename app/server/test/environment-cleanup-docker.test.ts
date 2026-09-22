@@ -19,12 +19,17 @@ import { createTestWorktrees } from "./helpers/worktrees.js"
 const dockerTest = process.env.REDPACT_DOCKER_TESTS === "1" ? test : test.skip
 
 dockerTest(
-  "자동 정리는 제외된 서비스의 필수 변수를 읽지 않고 실행 이미지와 데이터를 제거한다",
+  "반복 실행은 명시적 빌드 태그를 남기지 않고 이름 있는 볼륨과 익명 볼륨을 함께 제거한다",
   async () => {
     const root = await mkdtemp(join(tmpdir(), "redpact-cleanup-docker-"))
     const project = join(root, "project")
     const data = join(root, "data")
     const namedImage = `redpact-cleanup-preserved-${randomUUID()}`
+    const extraTag = `redpact-cleanup-extra-${randomUUID()}`
+    await execa("docker", ["tag", "alpine:3.21", namedImage])
+    const originalImage = (
+      await execa("docker", ["image", "inspect", "--format", "{{.Id}}", namedImage])
+    ).stdout.trim()
     await mkdir(join(project, ".redpact"), { recursive: true })
     await writeFile(
       join(project, "Dockerfile"),
@@ -50,6 +55,7 @@ dockerTest(
     build:
       context: .
       dockerfile: named.Dockerfile
+      tags: ["${extraTag}"]
     image: ${namedImage}
     command: [sh, -c, "sleep 300"]
     healthcheck:
@@ -156,7 +162,7 @@ volumes:
           ).not.toBe(0)
         }
         for (const resource of environment.resources.filter(
-          (item) => item.kind === "container" && item.service === "app" && item.image,
+          (item) => item.kind === "container" && item.image,
         )) {
           expect(
             (await execa("docker", ["image", "inspect", resource.image!], { reject: false }))
@@ -173,8 +179,13 @@ volumes:
       }
       expect(captured).toHaveLength(2)
       expect(
-        (await execa("docker", ["image", "inspect", namedImage], { reject: false })).exitCode,
-      ).toBe(0)
+        (
+          await execa("docker", ["image", "inspect", "--format", "{{.Id}}", namedImage])
+        ).stdout.trim(),
+      ).toBe(originalImage)
+      expect(
+        (await execa("docker", ["image", "inspect", extraTag], { reject: false })).exitCode,
+      ).not.toBe(0)
     } finally {
       await runs.close()
       for (const environment of environments.list(worktree.id)) {
@@ -183,7 +194,7 @@ volumes:
       await runs.stopEnvironment.idle()
       await environments.close()
       storage.close()
-      await execa("docker", ["image", "rm", namedImage], { reject: false })
+      await execa("docker", ["image", "rm", namedImage, extraTag], { reject: false })
       await rm(root, { recursive: true, force: true })
     }
   },

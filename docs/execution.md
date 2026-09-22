@@ -53,12 +53,25 @@ the run environment and are removed with it. Preserve metadata, logs, results an
 from the test verdict, and remains retryable. Startup reconciles labelled resources
 and removes interrupted environments; it never reruns tests automatically.
 
-Before starting a temporary Compose environment, Redpact captures the selected
-services that use implicitly named build images in an image-cleanup manifest.
-Image cleanup uses this captured list without re-evaluating the original Compose
-files, inactive services or required environment-variable expressions. It does not
-require application credentials to be supplied again. Explicitly named images are
-excluded from this manifest.
+Before starting a temporary Compose environment, Redpact assigns every selected
+build service an environment-owned image tag, including services that declare both
+`build` and `image`. It overrides additional build tags and captures these temporary
+tags in an image-cleanup manifest. Cleanup does not re-evaluate original Compose files,
+inactive services or required environment expressions. Existing project image tags and
+image-only dependencies are preserved; no application credentials are needed again.
+Unit build images carry owner/run labels so cleanup also finds them when container
+startup fails before an image ID is recorded.
+
+Playwright reuses its shared browser image when the Dockerfile and bundled reporter
+assets have the same digest. Warm captures skip the browser image build. Each capture
+still starts a fresh browser container and fresh application environment; their
+containers and application volumes are removed after execution. Runner image upgrades
+and Docker build caches are separate from per-run cleanup. Project Dockerfiles determine
+application image size; use separate build/runtime stages to avoid retaining build tools
+and caches in runtime layers. This repository's `e2e/Dockerfile` uses a separate build
+stage and the existing runtime packager, keeping production server dependencies, built
+UI and the editable Git fixture while excluding web development dependencies and the
+build stage's package store.
 
 Redpact does not prune unrelated Docker resources. Shared-local and remote services
 are independently managed and are not stopped by Redpact; tests own their fixture
@@ -75,8 +88,9 @@ it cannot be reused by test execution.
 
 Compose build images for a manual Container use a stable project-specific Compose name,
 so the latest tagged project image remains available between manual sessions. Temporary
-test environments remove only Compose's locally named build images; Redpact never removes
-an image explicitly named by the project's Compose file or a user's unrelated Docker image.
+test environments use separate owned build tags and remove those tags after execution;
+Redpact preserves existing project image tags and unrelated Docker images. A manual
+restart removes a superseded image only when no other tags or containers reference it.
 
 Local edits show input changes but never hot-reload or restart the session. Restart
 removes old owned resources before capturing current inputs; failed cleanup blocks
