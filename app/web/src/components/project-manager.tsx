@@ -88,7 +88,8 @@ type WorkspaceTab = {
   kind: "project" | "worktree"
   label: string
   projectId: string
-  worktreeId?: string
+  page: Page
+  selectedId: string
 }
 
 function initialProject(projects: Project[]) {
@@ -132,24 +133,24 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
 
   const [projects, setProjects] = useState(initialProjects)
   const [selectedId, setSelectedId] = useState(() => initialProject(initialProjects))
+  const [initialTabId] = useState(() => crypto.randomUUID())
   const [workspaceTabs, setWorkspaceTabs] = useState<WorkspaceTab[]>(() => {
     const id = initialProject(initialProjects)
     const project = initialProjects.find((item) => item.id === id)
     return project
       ? [
           {
-            id: `project:${project.id}`,
+            id: initialTabId,
             kind: "project",
             label: project.name,
             projectId: project.id,
+            page: "review",
+            selectedId: "",
           },
         ]
       : []
   })
-  const [activeWorkspaceTabId, setActiveWorkspaceTabId] = useState(() => {
-    const id = initialProject(initialProjects)
-    return id ? `project:${id}` : ""
-  })
+  const [activeWorkspaceTabId, setActiveWorkspaceTabId] = useState<string>(initialTabId)
   const pickerRequest = useRef<AbortController | null>(null)
   useEffect(() => () => pickerRequest.current?.abort(), [])
   const [pending, setPending] = useState(false)
@@ -192,45 +193,52 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
     if (!project) {
       return
     }
-    const tabId = `project:${id}`
-    setWorkspaceTabs((tabs) =>
-      tabs.some((tab) => tab.id === tabId)
-        ? tabs
-        : [...tabs, { id: tabId, kind: "project", label: project.name, projectId: id }],
-    )
-    setActiveWorkspaceTabId(tabId)
+    const tabId = activeWorkspaceTabId
+    setWorkspaceTabs((tabs) => {
+      const next: WorkspaceTab = {
+        id: tabId,
+        kind: "project",
+        label: project.name,
+        projectId: id,
+        page: "review",
+        selectedId: "",
+      }
+      return tabs.some((tab) => tab.id === tabId)
+        ? tabs.map((tab) => (tab.id === tabId ? next : tab))
+        : [...tabs, next]
+    })
     setSelectedId(id)
     setError("")
   }
-  function openWorktree(project: Project, worktree: Worktree) {
-    const tabId = `worktree:${project.id}:${worktree.id}`
-    setWorkspaceTabs((tabs) =>
-      tabs.some((tab) => tab.id === tabId)
-        ? tabs
-        : [
-            ...tabs,
-            {
-              id: tabId,
-              kind: "worktree",
-              label: worktreeName(worktree),
-              projectId: project.id,
-              worktreeId: worktree.id,
-            },
-          ],
-    )
-    setSelectedId(project.id)
-    setActiveWorkspaceTabId(tabId)
-    setError("")
-  }
+  const updateTabLocation = useCallback(
+    (id: string, page: Page, selectedId: string, label: string) => {
+      setWorkspaceTabs((tabs) =>
+        tabs.map((tab) => {
+          if (
+            tab.id !== id ||
+            (tab.page === page && tab.selectedId === selectedId && tab.label === label)
+          ) {
+            return tab
+          }
+          return {
+            ...tab,
+            page,
+            selectedId,
+            label,
+            kind: page === "review" && selectedId ? "worktree" : "project",
+          }
+        }),
+      )
+    },
+    [],
+  )
   function newWorkspaceTab() {
-    if (!selected) {
+    const current = workspaceTabs.find((tab) => tab.id === activeWorkspaceTabId)
+    if (!current) {
       return
     }
-    const id = `project:${selected.id}:${crypto.randomUUID()}`
-    setWorkspaceTabs((tabs) => [
-      ...tabs,
-      { id, kind: "project", label: selected.name, projectId: selected.id },
-    ])
+    const id = crypto.randomUUID()
+    setWorkspaceTabs((tabs) => [...tabs, { ...current, id }])
     setActiveWorkspaceTabId(id)
   }
   function activateWorkspaceTab(tab: WorkspaceTab) {
@@ -380,6 +388,10 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
             >
               <LiveUpdates projectId={project.id}>
                 <WorktreePanel
+                  key={project.id}
+                  workspaceId={tab.id}
+                  onLocationChange={updateTabLocation}
+                  initialPage={tab.page}
                   project={project}
                   active={tab.id === activeWorkspaceTabId}
                   api={api}
@@ -389,8 +401,7 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
                   onActivateWorkspaceTab={activateWorkspaceTab}
                   onCloseWorkspaceTab={closeWorkspaceTab}
                   onNewWorkspaceTab={newWorkspaceTab}
-                  onOpenWorktree={openWorktree}
-                  initialSelectedId={tab.worktreeId ?? ""}
+                  initialSelectedId={tab.selectedId}
                 />
               </LiveUpdates>
             </SidebarProvider>
@@ -411,7 +422,8 @@ export function WorktreePanel({
   onActivateWorkspaceTab,
   onCloseWorkspaceTab,
   onNewWorkspaceTab,
-  onOpenWorktree,
+  workspaceId,
+  onLocationChange,
   initialPage = "review",
   initialSelectedId = "",
 }: {
@@ -426,37 +438,28 @@ export function WorktreePanel({
   onActivateWorkspaceTab?: (tab: WorkspaceTab) => void
   onCloseWorkspaceTab?: (tabId: string) => void
   onNewWorkspaceTab?: () => void
-  onOpenWorktree?: (project: Project, worktree: Worktree) => void
+  workspaceId?: string
+  onLocationChange?: (id: string, page: Page, selectedId: string, label: string) => void
 }) {
   const { t } = useTranslation()
   const { isMobile, open, openMobile, setOpenMobile } = useSidebar()
 
   const [worktrees, setWorktrees] = useState<Worktree[]>([])
-  const [navigation, setNavigation] = useState({
-    entries: [{ page: initialPage as Page, selectedId: initialSelectedId }],
-    index: 0,
-  })
-  const { page, selectedId } = navigation.entries[navigation.index]
+  const [location, setLocation] = useState({ page: initialPage, selectedId: initialSelectedId })
+  const { page, selectedId } = location
   const activeTabRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     activeTabRef.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" })
   }, [])
   function setPage(page: Page, worktreeId = selectedId) {
-    setNavigation((current) => {
-      const previous = current.entries[current.index]
-      if (previous.page === page && previous.selectedId === worktreeId) {
-        return current
-      }
-      const entries = current.entries.slice(0, current.index + 1)
-      entries.push({ page, selectedId: worktreeId })
-      return { entries, index: entries.length - 1 }
-    })
+    setLocation({ page, selectedId: worktreeId })
+    setOpenMobile(false)
   }
   const setSelectedId = useCallback((select: (id: string) => string) => {
-    setNavigation((current) => ({
-      ...current,
-      entries: current.entries.map((entry) => ({ ...entry, selectedId: select(entry.selectedId) })),
-    }))
+    setLocation((current) => {
+      const selectedId = select(current.selectedId)
+      return current.selectedId === selectedId ? current : { ...current, selectedId }
+    })
   }, [])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -491,6 +494,23 @@ export function WorktreePanel({
   const selected =
     worktrees.find((worktree) => worktree.id === selectedId) ??
     (!display.tracking?.showBranches && selectedId.startsWith("branch:") ? worktrees[0] : undefined)
+  const pageTitles: Record<Page, string> = {
+    "test-container": t("Container"),
+    tests: t("Tests"),
+    files: t("File Viewer"),
+    "git-graph": t("Git Graph"),
+    review: selectedBranch || (selected ? worktreeName(selected) : project.name),
+    dependencies: t("Dependencies"),
+    "project-settings": t("Project settings"),
+    settings: t("Settings"),
+  }
+  const locationLabel =
+    page === "review" ? pageTitles.review : `${pageTitles[page]} · ${project.name}`
+  useEffect(() => {
+    if (workspaceId) {
+      onLocationChange?.(workspaceId, page, selectedId, locationLabel)
+    }
+  }, [workspaceId, page, selectedId, locationLabel, onLocationChange])
   const refreshWorktrees = useCallback(
     async (signal: AbortSignal) => {
       try {
@@ -567,15 +587,7 @@ export function WorktreePanel({
           settingsActive={page === "settings"}
           onProjectSettings={() => setPage("project-settings")}
           projectSettingsActive={page === "project-settings"}
-          onSelect={(id) => {
-            const worktree = worktrees.find((item) => item.id === id)
-            if (worktree && onOpenWorktree) {
-              setOpenMobile(false)
-              onOpenWorktree(project, worktree)
-              return
-            }
-            setPage("review", id)
-          }}
+          onSelect={(id) => setPage("review", id)}
           onRefresh={() => {
             setError("")
             setRevision((value) => value + 1)

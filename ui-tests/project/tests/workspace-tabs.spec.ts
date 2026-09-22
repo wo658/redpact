@@ -10,7 +10,7 @@ test("헤더에서 새 탭을 열고 전환하고 닫아도 기존 작업공간�
   await openApp(page, "ko")
   const tabs = page.getByRole("tablist", { name: "열린 작업공간", exact: true })
   await expect(tabs.getByRole("tab")).toHaveCount(1)
-  const original = await tabs.getByRole("tab").innerText()
+  let original = await tabs.getByRole("tab").innerText()
   const add = page.getByRole("button", { name: "새 탭", exact: true })
   await test.step("새 탭 버튼으로 독립된 프로젝트 탭을 연다", async () => {
     await expect(add).toBeVisible()
@@ -22,8 +22,9 @@ test("헤더에서 새 탭을 열고 전환하고 닫아도 기존 작업공간�
       await page.keyboard.press("Escape")
     }
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible()
+    original = await tabs.getByRole("tab").innerText()
     await add.click()
-    await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeHidden()
+    await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible()
     await expect(tabs.getByRole("tab")).toHaveCount(2)
     await expect(tabs.getByRole("tab").nth(1)).toHaveAttribute("aria-selected", "true")
     await expect(tabs.getByRole("tab").first()).toHaveText(original)
@@ -60,7 +61,7 @@ test("탭마다 파일 탐색 상태와 Test 하위 탭을 독립적으로 유�
   const tabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
   async function navigate(name: string) {
     const button = page.getByRole("button", { name, exact: true })
-    if (!(await button.isVisible())) {
+    if ((page.viewportSize()?.width ?? 1920) < 768) {
       await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
     }
     await button.click()
@@ -84,6 +85,7 @@ test("탭마다 파일 탐색 상태와 Test 하위 탭을 독립적으로 유�
   expect(scrollTop, "선택한 파일 본문을 실제로 스크롤한다").toBeGreaterThan(200)
   await test.step("새 탭에서는 Integration을 선택한다", async () => {
     await page.getByRole("button", { name: "New tab", exact: true }).click()
+    await expect(page.getByRole("treeitem", { name: "frontend.md", exact: true })).toHaveCount(0)
     await navigate("Tests")
     await page.getByRole("tab", { name: "Integration", exact: true }).click()
   })
@@ -110,19 +112,81 @@ test("탭마다 파일 탐색 상태와 Test 하위 탭을 독립적으로 유�
     )
     await expect(page.getByRole("treeitem", { name: "frontend.md", exact: true })).toHaveCount(0)
   })
-  await test.step("워크트리 탭을 열어도 원래 탭의 파일 화면은 바뀌지 않는다", async () => {
+  await test.step("워크트리 이동은 첫 탭만 바꾸고 두 번째 탭의 Tests는 유지한다", async () => {
     await tabs.getByRole("tab").first().click()
     const navigation = page.getByRole("navigation", { name: "Worktrees", exact: true })
-    if (!(await navigation.isVisible())) {
+    if ((page.viewportSize()?.width ?? 1920) < 768) {
       await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
     }
+    await expect(navigation).toBeVisible()
     await navigation.getByRole("button").first().click()
     await page.keyboard.press("Escape")
-    await expect(tabs.getByRole("tab")).toHaveCount(3)
-    await tabs.getByRole("tab").first().click()
-    await expect(page.getByRole("treeitem", { name: "frontend.md", exact: true })).toHaveAttribute(
+    await expect(tabs.getByRole("tab")).toHaveCount(2)
+    await expect(tabs.getByRole("tab").first()).toHaveAttribute("aria-selected", "true")
+    await expect(page.getByRole("treeitem", { name: "frontend.md", exact: true })).toHaveCount(0)
+    await tabs.getByRole("tab").nth(1).click()
+    await expect(page.getByRole("tab", { name: "Integration", exact: true })).toHaveAttribute(
       "aria-selected",
       "true",
     )
+  })
+})
+
+test("프로젝트를 선택해도 다른 탭으로 이동하지 않고 닫기는 연결을 유지한다", async ({
+  page,
+  request,
+}) => {
+  const first = await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })
+  const second = await request.post("/api/projects", {
+    data: { path: "/app/docs", name: "Documentation" },
+  })
+  expect(first.ok()).toBeTruthy()
+  expect(second.ok()).toBeTruthy()
+  const project = await first.json()
+  await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
+  await openApp(page, "en")
+  const tabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
+  await expect(tabs.getByRole("tab")).toHaveCount(1)
+  await page.getByRole("button", { name: "New tab", exact: true }).click()
+  async function chooseProject(current: string, next: string) {
+    if ((page.viewportSize()?.width ?? 1920) < 768) {
+      await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+    }
+    await page.getByRole("button", { name: current, exact: true }).click()
+    await page.getByRole("menuitemradio", { name: next, exact: true }).click()
+    await page.keyboard.press("Escape")
+  }
+  await test.step("둘째 탭에서 프로젝트를 바꾼 뒤 첫째 탭과 같은 프로젝트로 돌아온다", async () => {
+    await chooseProject("Redpact", "Documentation")
+    await expect(tabs.getByRole("tab")).toHaveCount(2)
+    await expect(tabs.getByRole("tab").nth(1)).toHaveAttribute("aria-selected", "true")
+    await chooseProject("Documentation", "Redpact")
+    await expect(tabs.getByRole("tab")).toHaveCount(2)
+    await expect(tabs.getByRole("tab").nth(1)).toHaveAttribute("aria-selected", "true")
+  })
+  await test.step("닫기 동작은 서버 변경 요청 없이 현재 탭만 제거한다", async () => {
+    const mutations: string[] = []
+    page.on("request", (req) => {
+      if (
+        !["GET", "HEAD"].includes(req.method()) &&
+        new URL(req.url()).pathname.startsWith("/api/")
+      ) {
+        mutations.push(req.url())
+      }
+    })
+    await tabs
+      .getByRole("button", { name: /Close / })
+      .last()
+      .click()
+    await expect(tabs.getByRole("tab")).toHaveCount(1)
+    expect(mutations, "닫기는 실행 중지나 프로젝트 연결 해제 API를 호출하지 않는다").toEqual([])
+    const projects = await (await request.get("/api/projects")).json()
+    expect(projects.some((item: { id: string }) => item.id === project.id)).toBeTruthy()
+  })
+  await test.step("새로고침하면 세션 탭 목록을 초기화한다", async () => {
+    await page.getByRole("button", { name: "New tab", exact: true }).click()
+    await expect(tabs.getByRole("tab")).toHaveCount(2)
+    await page.reload()
+    await expect(tabs.getByRole("tab")).toHaveCount(1)
   })
 })
