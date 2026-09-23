@@ -11,6 +11,9 @@ for (const native of [false, true]) {
         data: { path: "/app", name: "Redpact" },
       })
       expect(connected.ok()).toBeTruthy()
+      const project = await connected.json()
+      // 다른 시나리오가 연결한 프로젝트와 무관하게 이 시나리오의 대상을 선택한다.
+      await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
       await page.setViewportSize({ width, height: 900 })
       // Chromium에서 macOS 레이아웃 분기를 검증하며 실제 Tauri 창 검증과 구분한다.
       if (native) {
