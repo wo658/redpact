@@ -31,6 +31,6 @@ export type PullRequestService = {
   connection(): Promise<GitHubConnection>
   inspect(id: string): Promise<PullRequestInspection>
   publish(id: string, input: PublishPullRequest): Promise<PullRequest>
-  busy(): boolean
+  busy(ids?: string[]): boolean
   close(): Promise<void>
 }

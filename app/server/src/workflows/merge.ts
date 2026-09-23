@@ -25,6 +25,7 @@ export function createMergeService(deps: {
 }): MergeService {
   const records = new Map(deps.store.list().map((record) => [record.id, record]))
   const active = new Map<string, Promise<unknown>>()
+  const operating = new Map<string, number>()
   let closing = false
   function save(record: MergeRecord) {
     deps.store.save(record)
@@ -42,6 +43,19 @@ export function createMergeService(deps: {
     }
   }
   async function exclusive<T>(id: string, action: () => Promise<T>): Promise<T> {
+    operating.set(id, (operating.get(id) ?? 0) + 1)
+    try {
+      return await operate(id, action)
+    } finally {
+      const remaining = (operating.get(id) ?? 1) - 1
+      if (remaining) {
+        operating.set(id, remaining)
+      } else {
+        operating.delete(id)
+      }
+    }
+  }
+  async function operate<T>(id: string, action: () => Promise<T>): Promise<T> {
     if (closing) {
       problem("closing", "Redpact is stopping")
     }
@@ -216,7 +230,7 @@ export function createMergeService(deps: {
         return perform(record, inspected)
       })
     },
-    busy: () => active.size > 0,
+    busy: (ids) => [...operating.keys()].some((id) => !ids || ids.includes(id)),
     async close() {
       closing = true
       await Promise.allSettled(active.values())

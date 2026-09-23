@@ -9,6 +9,62 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { expect, test } from "vitest"
 
+test("serve preserves a disconnected default project across restart", async () => {
+  const root = await mkdtemp(join(tmpdir(), "redpact-disconnected-cli-"))
+  let projectId = ""
+  try {
+    for (const restarting of [false, true]) {
+      const child = spawn(
+        process.execPath,
+        [
+          fileURLToPath(new URL("../dist/cli.js", import.meta.url)),
+          "serve",
+          "--project",
+          root,
+          "--data-dir",
+          join(root, "state"),
+          "--port",
+          "0",
+        ],
+        { stdio: ["ignore", "pipe", "pipe"] },
+      )
+      const exit = once(child, "exit")
+      let output = ""
+      child.stdout.on("data", (chunk) => {
+        output += chunk
+      })
+      child.stderr.on("data", (chunk) => {
+        output += chunk
+      })
+      try {
+        await expect.poll(() => /"port":(\d+)/.exec(output)?.[1], { timeout: 10000 }).toBeTruthy()
+        const origin = `http://127.0.0.1:${/"port":(\d+)/.exec(output)?.[1]}`
+        const projects = await (await fetch(`${origin}/api/projects`)).json()
+        if (!restarting) {
+          expect(projects).toHaveLength(1)
+          projectId = projects[0].id
+          expect(
+            (await fetch(`${origin}/api/projects/${projectId}`, { method: "DELETE" })).status,
+          ).toBe(200)
+        } else {
+          expect(projects).toEqual([])
+          const retained = await (
+            await fetch(`${origin}/api/projects?includeDisconnected=true`)
+          ).json()
+          expect(retained).toHaveLength(1)
+          expect(retained[0]).toMatchObject({ id: projectId })
+          expect(retained[0].disconnectedAt).toBeTruthy()
+        }
+      } finally {
+        child.kill("SIGTERM")
+        await exit
+      }
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}, 25000)
+
 test.each(["missing", "invalid"])(
   "serve allows configuration with %s settings and releases the writer lock",
   async (state) => {

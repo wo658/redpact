@@ -19,6 +19,7 @@ export type ProjectTracking = {
   showBranches?: boolean
 }
 export type ProjectRecord = {
+  disconnectedAt?: string
   tracking?: ProjectTracking
   id: string
   name: string

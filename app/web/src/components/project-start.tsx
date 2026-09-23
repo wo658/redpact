@@ -12,8 +12,10 @@ export function ProjectStart({
   error = "",
   onConnect,
   pickDirectory,
+  onManage,
 }: {
   pickDirectory: Api["pickDirectory"]
+  onManage?: () => void
   pending: boolean
   error?: string
   onConnect: (path: string, name?: string) => Promise<void>
@@ -85,6 +87,11 @@ export function ProjectStart({
             </p>
           )}
           {visibleError && <Notice error>{visibleError}</Notice>}
+          {onManage && (
+            <Button variant="ghost" onClick={onManage}>
+              {t("Manage projects")}
+            </Button>
+          )}
         </div>
       </section>
     </main>

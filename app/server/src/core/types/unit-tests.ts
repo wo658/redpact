@@ -33,6 +33,7 @@ export type UnitCommand = {
 }
 export type UnitRunStore = { list(): UnitRun[]; save(run: UnitRun): void }
 export type UnitTestsService = {
+  busy(ids?: string[]): boolean
   inspect(
     worktreeId: string,
     scope?: "changed" | "all",

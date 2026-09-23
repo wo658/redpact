@@ -1,6 +1,32 @@
 import type { en } from "./en"
 
 export const ko = {
+  "Could not load projects.": "프로젝트를 불러오지 못했습니다.",
+  "No execution history.": "실행 기록이 없습니다.",
+  "Project history": "프로젝트 기록",
+  "Disconnect {{name}}? Files, settings and execution history are kept. Automatic observation and new executions stop until you reconnect.":
+    "{{name}} 연결을 해제할까요? 파일, 설정, 실행 기록은 유지됩니다. 다시 연결하기 전까지 자동 관찰과 새 실행이 중단됩니다.",
+  "Disconnect project?": "프로젝트 연결을 해제할까요?",
+  "Project name": "프로젝트 이름",
+  "The display name does not change the folder or project identity.":
+    "표시 이름을 바꿔도 폴더와 프로젝트 식별자는 유지됩니다.",
+  "Rename project": "프로젝트 이름 변경",
+  Disconnect: "연결 해제",
+  "View history": "기록 보기",
+  Rename: "이름 변경",
+  "Actions for {{name}}": "{{name}} 작업",
+  Open: "열기",
+  Reconnect: "다시 연결",
+  Folder: "폴더",
+  "Folder unavailable": "폴더를 사용할 수 없음",
+  "Original folder unavailable": "원래 폴더를 사용할 수 없음",
+  "No projects in this list.": "목록에 프로젝트가 없습니다.",
+  "No matching projects.": "검색 조건에 맞는 프로젝트가 없습니다.",
+  "Search by name or path": "이름 또는 경로로 검색",
+  "Search projects": "프로젝트 검색",
+  "Connect local folders and manage your project list.":
+    "로컬 폴더를 연결하고 프로젝트 목록을 관리하세요.",
+  "Manage projects": "프로젝트 관리",
   "Dependency kinds": "의존성 종류",
   "Runs current integration sources with the fixed project configuration.":
     "프로젝트의 고정 구성으로 현재 통합 테스트 소스를 실행합니다.",

@@ -1,4 +1,30 @@
 export const en = {
+  "Could not load projects.": "Could not load projects.",
+  "No execution history.": "No execution history.",
+  "Project history": "Project history",
+  "Disconnect {{name}}? Files, settings and execution history are kept. Automatic observation and new executions stop until you reconnect.":
+    "Disconnect {{name}}? Files, settings and execution history are kept. Automatic observation and new executions stop until you reconnect.",
+  "Disconnect project?": "Disconnect project?",
+  "Project name": "Project name",
+  "The display name does not change the folder or project identity.":
+    "The display name does not change the folder or project identity.",
+  "Rename project": "Rename project",
+  Disconnect: "Disconnect",
+  "View history": "View history",
+  Rename: "Rename",
+  "Actions for {{name}}": "Actions for {{name}}",
+  Open: "Open",
+  Reconnect: "Reconnect",
+  Folder: "Folder",
+  "Folder unavailable": "Folder unavailable",
+  "Original folder unavailable": "Original folder unavailable",
+  "No projects in this list.": "No projects in this list.",
+  "No matching projects.": "No matching projects.",
+  "Search by name or path": "Search by name or path",
+  "Search projects": "Search projects",
+  "Connect local folders and manage your project list.":
+    "Connect local folders and manage your project list.",
+  "Manage projects": "Manage projects",
   "Dependency kinds": "Dependency kinds",
   "Runs current integration sources with the fixed project configuration.":
     "Runs current integration sources with the fixed project configuration.",

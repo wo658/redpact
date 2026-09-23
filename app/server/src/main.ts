@@ -145,6 +145,26 @@ const command = new Command()
         preferences: preferenceFiles,
       })
       const worktrees = createWorktrees({
+        activity: (projectId) => {
+          const ids = storage.store
+            .listWorktrees()
+            .filter((item) => item.projectId === projectId)
+            .map((item) => item.id)
+          return (
+            unitTests.busy(ids) ||
+            merges.busy(ids) ||
+            pullRequests.busy(ids) ||
+            testContainer.busy(projectId) ||
+            projectGraph.busy(projectId) ||
+            captures
+              .all()
+              .some(
+                (run) =>
+                  run.projectId === projectId &&
+                  (run.state !== "finished" || Boolean(run.cleanupError)),
+              )
+          )
+        },
         initializeSettings,
         projects: projectSettings,
         preferences: preferenceFiles,
@@ -158,7 +178,14 @@ const command = new Command()
         git: createWorktreeAdapter(),
         worktrees,
       })
-      const project = options.project ? await worktrees.connect(options.project) : undefined
+      const project = options.project
+        ? await worktrees.connect(options.project).catch((error: unknown) => {
+            if ((error as { code?: string }).code === "project_disconnected") {
+              return undefined
+            }
+            throw error
+          })
+        : undefined
       const worktree = project ? await worktrees.ensure(project.id, options.project) : undefined
       const defaultWorktreeId = worktree?.id
       const settings = worktree
@@ -341,6 +368,13 @@ const command = new Command()
         readTags: readRegistryTags,
         now: () => new Date().toISOString(),
       })
+      const projectGraph = createProjectGraph({
+        image: readCommittedImage,
+        fetch: fetchRemotes,
+        store: storage.store,
+        read: readHistory,
+        diff: readCommitDiff,
+      })
       const app = createApp({
         updates,
         reviewContent: createReviewContent({
@@ -385,13 +419,7 @@ const command = new Command()
         projectSettings,
         testContainer,
         projectFiles: createProjectFiles({ projects: projectSettings, read: readProjectEntry }),
-        projectGraph: createProjectGraph({
-          image: readCommittedImage,
-          fetch: fetchRemotes,
-          store: storage.store,
-          read: readHistory,
-          diff: readCommitDiff,
-        }),
+        projectGraph,
         reviews,
         observation,
         localFiles,

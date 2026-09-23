@@ -17,6 +17,7 @@ export function createTestWorktrees(
 ) {
   const projects = createProjectSettings({ ...deps, preferences: preferenceFiles })
   const worktrees = createWorktrees({
+    activity: deps.activity,
     initializeSettings,
     projects,
     preferences: preferenceFiles,

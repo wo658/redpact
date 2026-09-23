@@ -20,6 +20,11 @@ explicit action, never a silent recovery strategy.
 
 ## Records
 
+Project records retain the display name and optional `disconnectedAt` timestamp
+alongside immutable identity/location. Disconnection never cascades into evidence,
+secret, worktree or source-file deletion. Reconnection clears that timestamp on the
+same record; see [project management](git.md).
+
 | Record | Meaning |
 | --- | --- |
 | Project | Connected repository/subdirectory or directory identity |

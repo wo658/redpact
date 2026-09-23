@@ -4,6 +4,7 @@ import { projectGraphRoutes } from "../src/interfaces/http/project-graph.js"
 
 test("Git graph exposes Fetch but not Pull or Push", async () => {
   const routes = projectGraphRoutes({
+    busy: () => false,
     image: async () => ({ before: null, after: null }),
     history: async () => ({ commits: [], refs: [], hasMore: false }),
     diff: async () => ({ available: true, patch: "", omitted: [] }),

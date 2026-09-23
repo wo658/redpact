@@ -98,6 +98,7 @@ export function createApp(services: Services, options: { uiDirectory?: string } 
         "environment_error",
         "project_mismatch",
         "worktree_unavailable",
+        "project_disconnected",
         "worktree_busy",
         "target_required",
       ].includes(String(code))

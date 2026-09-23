@@ -19,10 +19,17 @@ export function createProjectGraph(deps: {
     return project.location.commonGitdir
   }
   return {
+    busy: (id) => {
+      const project = deps.store.getProject(id)
+      return project?.location.kind === "git" && fetching.has(project.location.commonGitdir)
+    },
     async image(id, query) {
       return deps.image(root(id), query)
     },
     async fetch(id) {
+      if (deps.store.getProject(id)?.disconnectedAt) {
+        problem("project_disconnected", "Reconnect the project before fetching")
+      }
       const directory = root(id)
       if (fetching.has(directory)) {
         problem("worktree_busy", "Git fetch is already running")
