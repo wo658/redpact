@@ -537,29 +537,40 @@
   }
 }
 
-:root[data-desktop="macos"] .desktop-titlebar,
-:root[data-desktop="macos"] .app-header {
+:root[data-desktop="macos"] .desktop-titlebar {
   display: flex;
   position: fixed;
   z-index: 10;
   inset: 0 0 auto;
   height: 48px;
-  padding-left: 88px;
   background: var(--sidebar);
+  user-select: none;
+}
+
+:root[data-desktop="macos"] .native-sidebar-toolbar {
+  position: fixed;
+  z-index: 11;
+  top: 0;
+  left: 88px;
+  height: 48px;
   user-select: none;
 }
 
 @media (min-width: 768px) {
   :root[data-desktop="macos"] .app-header {
-    left: var(--sidebar-width);
-    padding-left: 16px;
+    position: fixed;
+    z-index: 10;
+    inset: 0 0 auto var(--sidebar-width);
+    height: 48px;
+    padding-left: 8px;
+    background: var(--sidebar);
+    user-select: none;
   }
 
   :root[data-desktop="macos"]
     [data-slot="sidebar-wrapper"]:has(> [data-slot="sidebar"][data-state="collapsed"])
     .app-header {
-    left: 0;
-    padding-left: 88px;
+    left: 196px;
   }
 }
 

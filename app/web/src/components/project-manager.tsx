@@ -600,35 +600,35 @@ export function WorktreePanel({
           }}
         />
       )}
+      {nativeDesktop && (
+        <div className="native-sidebar-toolbar flex items-center gap-2" data-tauri-drag-region>
+          {(!isMobile || !openMobile) && <SidebarTrigger />}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("Go back")}
+            title={t("Go back")}
+            onClick={() => window.history.back()}
+          >
+            <ArrowLeft aria-hidden="true" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("Go forward")}
+            title={t("Go forward")}
+            onClick={() => window.history.forward()}
+          >
+            <ArrowRight aria-hidden="true" />
+          </Button>
+        </div>
+      )}
+
       <div className="flex min-h-0 min-w-0 flex-1 flex-col md:my-2 md:mr-2 md:peer-data-[state=collapsed]:ml-2">
         <header
           data-tauri-drag-region
           className="app-header flex min-w-0 shrink-0 items-center gap-2 p-2"
         >
-          <div className="app-header-controls flex shrink-0 items-center gap-2">
-            {nativeDesktop && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("Go back")}
-                  title={t("Go back")}
-                  onClick={() => window.history.back()}
-                >
-                  <ArrowLeft aria-hidden="true" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("Go forward")}
-                  title={t("Go forward")}
-                  onClick={() => window.history.forward()}
-                >
-                  <ArrowRight aria-hidden="true" />
-                </Button>
-              </>
-            )}
-          </div>
           <div
             className="flex min-w-0 items-center gap-1 overflow-x-auto py-1"
             role="tablist"
@@ -694,7 +694,7 @@ export function WorktreePanel({
           )}
           <div className="h-8 min-w-4 flex-1" data-tauri-drag-region />
         </header>
-        {(isMobile ? !openMobile : !open) && (
+        {!nativeDesktop && (isMobile ? !openMobile : !open) && (
           <div className="sidebar-reopen flex shrink-0 px-2 pb-2">
             <SidebarTrigger />
           </div>
@@ -867,6 +867,8 @@ export function WorktreeSidebar({
 }) {
   const { t } = useTranslation()
   const { isMobile, open } = useSidebar()
+  const nativeDesktop =
+    typeof document !== "undefined" && document.documentElement.dataset.desktop === "macos"
   const menuDisplay = useProjectMenuOptions(projectId)
   const menuItems = [
     {
@@ -982,7 +984,9 @@ export function WorktreeSidebar({
       <SidebarHeader className="py-1">
         <div className="flex min-w-0 items-center gap-1">
           <div className="min-w-0 flex-1">{projectMenu}</div>
-          {(isMobile || open) && <SidebarTrigger className="sidebar-workspace-toggle" />}
+          {(isMobile || (open && !nativeDesktop)) && (
+            <SidebarTrigger className="sidebar-workspace-toggle" />
+          )}
           {menuItems.length > 0 && (
             <ProjectMenuOptions items={menuItems} display={menuDisplay} disabled={pending} />
           )}
@@ -1010,7 +1014,7 @@ export function WorktreeSidebar({
           </SidebarGroup>
         )}
         {onRefresh && (
-          <SidebarGroup className="pt-0">
+          <SidebarGroup className="group/worktrees flex-1 pt-0">
             <div className="flex items-center justify-between">
               <SidebarGroupLabel>{t("Worktrees")}</SidebarGroupLabel>
               {displayOptions}
