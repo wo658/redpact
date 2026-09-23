@@ -210,8 +210,10 @@ a development-service update must not rewrite that connection. The default serve
 port is 54318. Start a fresh client task/connection after plugin/schema changes.
 
 The runtime package includes web assets, MCP resources, notices, runner files and
-lockfile evidence. Preserve the bundled Testcontainers patch and licenses through
-installed-package verification. Workspace privacy flags do not make the OSS source
+lockfile evidence. Preserve the bundled Testcontainers patch, locked Umzug graph (including the AJV
+security override), and licenses through installed-package verification. Packaging
+retains workspace overrides in its staging install; consumers receive the bundled
+graph because they do not inherit workspace overrides. Workspace privacy flags do not make the OSS source
 private. Publishing needs a fresh package version and registry authorization;
 packing or previewing does not publish, push Git or create a release tag.
 

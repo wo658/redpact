@@ -17,3 +17,7 @@ minimumReleaseAgeExclude:
 patchedDependencies:
   '@web-git-graph/web@1.0.7': patches/@web-git-graph__web@1.0.7.patch
   testcontainers@12.1.0: patches/testcontainers@12.1.0.patch
+
+# Umzug's CLI dependency pins an older AJV minor with a published ReDoS advisory.
+overrides:
+  'ajv@>=8 <9': 8.20.0

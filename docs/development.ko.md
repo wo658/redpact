@@ -198,7 +198,9 @@ workflow는 문서화된 곳에서 `desktop-preview-v<version>`,
 task·연결을 시작하세요.
 
 패키지는 웹 에셋, MCP 리소스, 고지, 실행기 파일과 lockfile 증거를 포함합니다.
-설치 검증에서 Testcontainers patch와 라이선스를 보존하세요. Workspace private 표시는
+설치 검증에서 번들 Testcontainers patch, AJV 보안 override를 포함한 고정 Umzug
+의존성 그래프, 라이선스를 보존하세요. 패키징의 준비 설치는 workspace override를
+유지합니다. 설치 소비자는 workspace override를 상속하지 않으므로 번들 그래프를 받습니다. Workspace private 표시는
 OSS 소스를 비공개로 만드는 설정이 아닙니다. 게시에는 새 버전과 registry 권한이 필요하며
 pack·preview는 게시, Git push, release tag 생성을 하지 않습니다.
 

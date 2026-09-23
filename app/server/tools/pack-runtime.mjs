@@ -27,8 +27,8 @@ try {
   manifest.repository = { type: "git", url: "git+https://github.com/wo658/redpact.git" }
   manifest.homepage = "https://github.com/wo658/redpact#readme"
   manifest.bugs = { url: "https://github.com/wo658/redpact/issues" }
-  // pnpm workspace patches are not inherited by consumers. Ship the patched dependency.
-  manifest.bundledDependencies = ["testcontainers"]
+  // Consumers do not inherit workspace patches or overrides. Ship both locked graphs.
+  manifest.bundledDependencies = ["testcontainers", "umzug"]
   delete manifest.scripts
   await writeFile(join(stage, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`)
   await writeFile(join(stage, "pnpm-lock.yaml"), stringify(lock))
@@ -37,6 +37,7 @@ try {
     stringify({
       nodeLinker: "hoisted",
       patchedDependencies: workspace.patchedDependencies,
+      overrides: workspace.overrides,
       minimumReleaseAgeExclude: workspace.minimumReleaseAgeExclude,
       verifyDepsBeforeRun: false,
     }),

@@ -109,6 +109,11 @@ verified by `REDPACT_DOCKER_TESTS=1` and `test/playwright-docker.test.ts`.
 services on external dependencies, and rejection of retired execution selection input.
 Fixture services are declarations, not evidence of actual PostgreSQL or remote execution.
 
+`runtime-migrations.test.ts` starts the real CLI with disposable legacy records,
+checks HTTP readback, exact original backups and restart stability, and verifies
+that missing captured choices and future migration history leave inputs intact.
+It also exercises restart after a record was converted but completion was not recorded.
+
 ## Container-runner fixture transport
 
 `target.ts` uses the consumer-specific connection manifest to reach the disposable

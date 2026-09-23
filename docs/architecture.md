@@ -77,8 +77,9 @@ between record files.
 
 ## Current implementation choices
 
-- Runtime storage uses JSON and artifact files with one writer per instance. There
-  is no SQLite/Drizzle runtime or backward-format migration layer.
+- Runtime storage uses JSON and artifact files with one writer per instance. Ordered Umzug startup
+  migrations upgrade supported runtime layouts; see [storage](storage.md). There is
+  no SQLite/Drizzle runtime.
 - Native Git owns status and exclude semantics for all index formats, patches and
   mutations. Repository discovery and supported blob reads retain isomorphic-git.
 - Parcel file observation drives scoped invalidations; observation never runs tests.
