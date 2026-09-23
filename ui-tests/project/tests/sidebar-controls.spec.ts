@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test"
 import { openApp } from "../app"
 
-test("사이드바의 작업공간 행에서 닫고 헤더 아래에서 다시 연다", async ({ page, request }) => {
+test("macOS 신호등 옆에서 사이드바를 닫고 다시 연다", async ({ page, request }) => {
   expect(
     (await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })).ok(),
   ).toBeTruthy()
@@ -20,13 +20,28 @@ test("사이드바의 작업공간 행에서 닫고 헤더 아래에서 다시 �
     await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
   }
   const sidebarHeader = page.locator('[data-slot="sidebar-header"]:visible')
-  const toggle = sidebarHeader.getByRole("button", { name: "Toggle Sidebar", exact: true })
-  await test.step("프로젝트 표시 옵션 바로 왼쪽에 토글을 배치한다", async () => {
+  const toggle = (mobile ? sidebarHeader : page.locator(".native-sidebar-toolbar")).getByRole(
+    "button",
+    { name: "Toggle Sidebar", exact: true },
+  )
+  await test.step("탐색 버튼은 사이드바 헤더에 두고 탭은 앱 영역에 둔다", async () => {
     await expect(toggle).toBeVisible()
     const options = sidebarHeader.getByRole("button", { name: "Project menu options", exact: true })
     const left = await toggle.boundingBox()
     const right = await options.boundingBox()
-    expect(left && right && left.x + left.width <= right.x).toBeTruthy()
+    if (mobile) {
+      expect(left && right && left.x + left.width <= right.x).toBeTruthy()
+    } else {
+      const sidebar = await page.locator('[data-slot="sidebar-container"]').boundingBox()
+      const forward = await page
+        .getByRole("button", { name: "Go forward", exact: true })
+        .boundingBox()
+      const tabs = await page.getByRole("tablist", { name: "Open workspaces" }).boundingBox()
+      expect(left?.x).toBeGreaterThanOrEqual(88)
+      expect((left?.y ?? 100) + (left?.height ?? 0)).toBeLessThanOrEqual(48)
+      expect((forward?.x ?? 9999) + (forward?.width ?? 0)).toBeLessThanOrEqual(sidebar?.width ?? 0)
+      expect(tabs?.x).toBeGreaterThanOrEqual(sidebar?.width ?? 0)
+    }
     await expect(page.locator('.app-header [data-slot="sidebar-trigger"]')).toHaveCount(0)
   })
   await test.step("닫은 뒤에도 다시 열어 탐색할 수 있다", async () => {
@@ -34,6 +49,11 @@ test("사이드바의 작업공간 행에서 닫고 헤더 아래에서 다시 �
     await expect(sidebarHeader).not.toBeInViewport()
     const reopen = page.getByRole("button", { name: "Toggle Sidebar", exact: true })
     await expect(reopen).toBeVisible()
+    if (!mobile) {
+      const bounds = await reopen.boundingBox()
+      expect(bounds?.x).toBe(88)
+      expect((bounds?.y ?? 100) + (bounds?.height ?? 0)).toBeLessThanOrEqual(48)
+    }
     await reopen.click()
     await expect(sidebarHeader).toBeVisible()
     await expect(page.getByRole("navigation", { name: "Worktrees", exact: true })).toBeVisible()

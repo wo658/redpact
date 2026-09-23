@@ -431,13 +431,67 @@ test("빈 시작화면은 입력란 없이 폴더를 선택하면 바로 연결�
     "시작화면에는 경로와 이름 입력 폼이 없어야 한다",
   )
   assert.equal(screen.queryAllByRole("textbox").length, 0)
-  assert.equal(screen.queryAllByRole("button").length, 1)
+  assert.deepEqual(
+    screen.queryAllByRole("button").map((button) => button.textContent),
+    ["Open project folder", "Manage projects"],
+  )
   assert.equal(screen.queryByLabelText("Language"), null)
   assert.equal(view.container.querySelector("header, footer"), null)
   await user.click(screen.getByRole("button", { name: "Open project folder" }))
   await screen.findByRole("button", { name: project.name, exact: true })
   assert.deepEqual(calls, [["/Users/me/한글 project ", undefined]])
   assert.equal(localStorage.getItem("redpact:project"), "new")
+})
+
+test("마지막 프로젝트를 연결 해제한 뒤에도 관리 화면에서 재연결한다", async () => {
+  await i18n.changeLanguage("en")
+  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  let project = {
+    id: "only",
+    name: "Only project",
+    location: { kind: "directory", root: "/example" },
+    projectRoot: "/example",
+    available: true,
+  }
+  const user = userEvent.setup({ document })
+  render(
+    createElement(ProjectManager, {
+      initialProjects: [project],
+      api: {
+        worktrees: async () => [],
+        managedProjects: async () => [project],
+        disconnectProject: async () => {
+          project = { ...project, disconnectedAt: "2026-09-23T00:00:00Z" }
+          return project
+        },
+        reconnectProject: async () => {
+          const { disconnectedAt, ...rest } = project
+          project = rest
+          return project
+        },
+      },
+    }),
+  )
+  screen.getByRole("button", { name: "Only project", exact: true }).focus()
+  await user.keyboard("{ArrowDown}")
+  await user.click(await screen.findByRole("menuitem", { name: "Manage projects", exact: true }))
+  const dialog = await screen.findByRole("dialog", { name: "Manage projects", exact: true })
+  const actions = await within(dialog).findByRole("button", { name: "Actions for Only project" })
+  actions.focus()
+  await user.keyboard("{ArrowDown}")
+  await user.click(await screen.findByRole("menuitem", { name: "Disconnect", exact: true }))
+  await user.click(
+    within(screen.getByRole("alertdialog")).getByRole("button", {
+      name: "Disconnect",
+      exact: true,
+    }),
+  )
+  await user.click(within(dialog).getByRole("tab", { name: "Disconnected", exact: true }))
+  await user.click(await within(dialog).findByRole("button", { name: "Reconnect", exact: true }))
+  await user.click(within(dialog).getByRole("tab", { name: "Connected", exact: true }))
+  await user.click(await within(dialog).findByRole("button", { name: "Open", exact: true }))
+  assert.ok(await screen.findByRole("tab", { name: "Only project", exact: true }))
+  assert.equal(project.disconnectedAt, undefined)
 })
 
 test("재진입은 마지막 프로젝트를 복원하고 없는 선택은 첫 프로젝트로 대체한다", async () => {
@@ -6853,6 +6907,11 @@ test("macOS 앞뒤 버튼은 브라우저 방문 기록을 직접 이동한다",
     const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
     const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
     render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
+    const toggle = screen.getByRole("button", { name: "Toggle Sidebar", exact: true })
+    const back = screen.getByRole("button", { name: "Go back", exact: true })
+    assert.equal(toggle.closest(".native-sidebar-toolbar"), back.closest(".native-sidebar-toolbar"))
+    assert.ok(back.closest(".native-sidebar-toolbar"))
+    assert.equal(back.closest(".app-header"), null)
     const user = userEvent.setup({ document })
     await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
     await user.click(screen.getByRole("button", { name: "New tab", exact: true }))

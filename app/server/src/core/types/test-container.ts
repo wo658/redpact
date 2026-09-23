@@ -10,6 +10,7 @@ export type TestContainerInspection = {
   issue: string | null
 }
 export type TestContainer = {
+  busy(projectId: string): boolean
   composeSource(projectId: string, path: string): Promise<ProjectEntry>
   inspect(projectId: string): Promise<TestContainerInspection>
   start(projectId: string): Promise<TestContainerInspection>

@@ -37,6 +37,9 @@ export function createWorkStarts(deps: {
     const input = parsed.data
     const project =
       deps.store.getProject(input.projectId) ?? problem("not_found", "Project not found")
+    if (project.disconnectedAt) {
+      problem("project_disconnected", "Reconnect the project before creating worktrees")
+    }
     if (project.location.kind !== "git") {
       problem("invalid_input", "Worktree creation requires a Git project")
     }

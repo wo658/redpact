@@ -21,7 +21,8 @@ Redpact
 │   ├── Local server unavailable
 │   │   └── Retry connection [action]
 │   └── No connected project
-│       └── Open project folder [action]
+│       ├── Open project folder [action]
+│       └── Manage projects [dialog]
 │
 ├── Application header
 │   ├── New tab [action]
@@ -32,7 +33,15 @@ Redpact
 ├── Sidebar
 │   ├── Project switcher
 │   │   ├── Select connected project [action]
-│   │   └── Connect project [action]
+│   │   ├── Connect project [action]
+│   │   └── Manage projects [dialog]
+│   │       ├── Search by name or path
+│   │       ├── Connected / Disconnected [tabs]
+│   │       ├── Connect / Rename [dialogs]
+│   │       ├── Open / Project settings [actions]
+│   │       ├── View history [dialog]
+│   │       ├── Disconnect [confirmation dialog]
+│   │       └── Reconnect [action]
 │   ├── Project display options
 │   │   ├── Show / hide each available project menu item [action]
 │   │   └── Show all [action]

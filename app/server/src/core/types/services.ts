@@ -29,10 +29,14 @@ export type WorktreeService = {
   projectSettings(id: string): Promise<SettingsService>
   getProject(id: string): ProjectRecord
   getWorktree(id: string): Worktree
-  listProjects(): Promise<ProjectRecord[]>
+  listProjects(includeDisconnected?: boolean): Promise<ProjectRecord[]>
+  projectDetails(): Promise<(ProjectRecord & { projectRoot: string | null; available: boolean })[]>
+  renameProject(id: string, name: string): Promise<ProjectRecord>
+  disconnectProject(id: string): Promise<ProjectRecord>
+  reconnectProject(id: string): Promise<ProjectRecord>
   checkoutPaths(projectId: string): Promise<string[]>
   listWorktrees(projectId: string): Promise<Worktree[]>
-  connect(path: string, name?: string): Promise<ProjectRecord>
+  connect(path: string, name?: string, reconnect?: boolean): Promise<ProjectRecord>
   ensure(projectId: string, path: string): Promise<Worktree>
 }
 export type WorkStarts = {

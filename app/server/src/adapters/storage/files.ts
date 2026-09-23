@@ -37,6 +37,7 @@ const workStartSchema = z.strictObject({
 const binding = { projectId: id, worktreeId: id }
 const workSchema = z.strictObject({ id, intent: z.string(), createdAt: z.string(), ...binding })
 const projectSchema = z.strictObject({
+  disconnectedAt: z.string().datetime().optional(),
   tracking: trackingSchema.optional(),
   id,
   name: z.string(),
@@ -441,7 +442,12 @@ export function openStore(directory: string) {
       const previous = store.getProject(value.id)
       if (
         !previous ||
-        JSON.stringify({ ...previous, tracking: value.tracking }) !== JSON.stringify(value)
+        JSON.stringify({
+          ...previous,
+          tracking: value.tracking,
+          name: value.name,
+          disconnectedAt: value.disconnectedAt,
+        }) !== JSON.stringify(value)
       ) {
         throw new Error("Project identity cannot change")
       }

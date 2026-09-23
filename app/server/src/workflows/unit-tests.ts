@@ -105,6 +105,15 @@ export function createUnitTests(deps: {
     }
   }
   return {
+    busy: (ids?: string[]) =>
+      [...starting].some((id) => !ids || ids.includes(id)) ||
+      deps.store
+        .list()
+        .some(
+          (run) =>
+            (!ids || ids.includes(run.worktreeId)) &&
+            (run.state === "running" || run.cleanup.state !== "removed"),
+        ),
     get,
     async inspect(id, scope = "changed") {
       const { target, settings } = await configured(id)

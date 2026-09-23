@@ -27,6 +27,7 @@ export const healthResponse = z.object({
 })
 export const projectResponse: z.ZodType<ProjectRecord> = z
   .object({
+    disconnectedAt: z.string().optional(),
     tracking: trackingSchema.optional(),
     id,
     name: z.string(),

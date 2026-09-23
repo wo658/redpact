@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises"
-import { dirname, relative } from "node:path"
+import { dirname, join, relative } from "node:path"
 import { instanceSettingsSchema } from "../../core/instance-schema.js"
 import { projectExclusions } from "./exclusions.js"
 import { FileWatch } from "./file-watch.js"
@@ -15,14 +15,11 @@ export async function observeProjectFiles(deps: {
   ): Promise<{ watchPaths: string[]; issues: { path: string; message: string }[] }>
   report(issues: { path: string; message: string }[]): void
 }) {
-  const watched = new Set<string>([deps.settingsPath])
+  const projectRecords = join(dirname(deps.settingsPath), "projects")
+  const watched = new Set<string>([deps.settingsPath, projectRecords])
   const ignored = (path: string) => {
     const runtime = relative(dirname(deps.settingsPath), path).split("/")[0]
-    if (
-      ["runs", "worktrees", "projects", "work-items", "submissions", "environments"].includes(
-        runtime,
-      )
-    ) {
+    if (["runs", "worktrees", "work-items", "submissions", "environments"].includes(runtime)) {
       return true
     }
     const root = [...watched]
@@ -42,7 +39,12 @@ export async function observeProjectFiles(deps: {
       relative(root, path),
     )
   }
-  const watcher = new FileWatch([deps.settingsPath], ignored, false, () => projectExclusions)
+  const watcher = new FileWatch(
+    [deps.settingsPath, projectRecords],
+    ignored,
+    false,
+    () => projectExclusions,
+  )
   const cancellation = new AbortController()
   let closed = false
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -60,13 +62,15 @@ export async function observeProjectFiles(deps: {
       const settings = instanceSettingsSchema.parse(JSON.parse(source))
       const result = await deps.observe(
         [...new Set([...deps.defaults, ...(settings.projects ?? [])])],
-        changed?.includes(deps.settingsPath) ? undefined : changed,
+        changed?.some((path) => path === deps.settingsPath || path.startsWith(`${projectRecords}/`))
+          ? undefined
+          : changed,
         cancellation.signal,
       )
       if (closed) {
         return
       }
-      const next = new Set([deps.settingsPath, ...result.watchPaths])
+      const next = new Set([deps.settingsPath, projectRecords, ...result.watchPaths])
       const previous = new Set(watched)
       watched.clear()
       for (const path of next) {

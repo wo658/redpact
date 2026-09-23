@@ -75,7 +75,8 @@ TypeScript, Hono와 일반 함수를 사용합니다. controller 클래스, DI �
 ## 현재 구현 선택
 
 - 런타임은 인스턴스당 단일 writer가 JSON과 아티팩트 파일을 저장합니다.
-  SQLite/Drizzle 런타임과 이전 형식 마이그레이션 계층은 없습니다.
+  순차 Umzug 시작 마이그레이션으로 지원하는 런타임 형식을 변환합니다.
+  [저장소](storage.md)를 참고하세요. SQLite/Drizzle 런타임은 없습니다.
 - 모든 index 형식의 상태·제외 규칙, patch와 변경 작업은 native Git이 담당합니다.
   저장소 발견과 지원되는 blob 읽기에는 isomorphic-git을 유지합니다.
 - Parcel 파일 관찰은 범위별 갱신을 유도하며 테스트를 자동 실행하지 않습니다.

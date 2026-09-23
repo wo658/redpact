@@ -31,6 +31,7 @@ import { LanguageSelector } from "./language-selector"
 import { LiveUpdates, useLiveRevision } from "./live-updates"
 import { ProjectFileViewer } from "./project-file-viewer"
 import { ProjectGitGraph } from "./project-git-graph"
+import { ProjectLibrary } from "./project-library"
 import { ProjectMenuOptions, useProjectMenuOptions } from "./project-menu-options"
 import { ProjectSettings } from "./project-settings"
 import { ProjectStart } from "./project-start"
@@ -121,6 +122,7 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
   const { t } = useTranslation()
 
   const [projects, setProjects] = useState(initialProjects)
+  const [manageOpen, setManageOpen] = useState(false)
   const [initialTab] = useState<WorkspaceTab | undefined>(() => {
     const saved =
       typeof window === "undefined" ? undefined : readWorkspaceHistory(window.history.state)
@@ -136,6 +138,34 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
   const [selectedId, setSelectedId] = useState(initialTab?.projectId ?? "")
   const [workspaceTabs, setWorkspaceTabs] = useState<WorkspaceTab[]>(initialTab ? [initialTab] : [])
   const [activeWorkspaceTabId, setActiveWorkspaceTabId] = useState(initialTab?.id ?? "")
+  useEffect(() => {
+    const retained = workspaceTabs
+      .filter((tab) => projects.some((project) => project.id === tab.projectId))
+      .map((tab) => {
+        const project = projects.find((project) => project.id === tab.projectId)
+        return tab.kind === "project" && project ? { ...tab, label: project.name } : tab
+      })
+    if (retained.length === 0 && projects[0]) {
+      const project = projects[0]
+      retained.push({
+        id: `project:${project.id}`,
+        kind: "project",
+        label: project.name,
+        projectId: project.id,
+      })
+    }
+    if (JSON.stringify(workspaceTabs) !== JSON.stringify(retained)) {
+      setWorkspaceTabs(retained)
+    }
+    if (!retained.some((tab) => tab.id === activeWorkspaceTabId)) {
+      const next = retained[0]
+      setActiveWorkspaceTabId(next?.id ?? "")
+      setSelectedId(next?.projectId ?? "")
+      if (next) {
+        writeWorkspaceHistory(next, true)
+      }
+    }
+  }, [projects, workspaceTabs, activeWorkspaceTabId])
   useEffect(() => {
     if (initialTab) {
       writeWorkspaceHistory(initialTab, true)
@@ -336,6 +366,9 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
               </DropdownMenuRadioGroup>
               {projects.length > 0 && <DropdownMenuSeparator />}
               <DropdownMenuGroup>
+                <DropdownMenuItem onClick={() => setManageOpen(true)}>
+                  {t("Manage projects")}
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() =>
                     void update(async () => {
@@ -367,52 +400,85 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
       )}
     </div>
   )
+  const management = (
+    <ProjectLibrary
+      api={api}
+      open={manageOpen}
+      onOpenChange={setManageOpen}
+      onChange={(project) =>
+        setProjects((items) => {
+          const remaining = items.filter((item) => item.id !== project.id)
+          return project.disconnectedAt ? remaining : [...remaining, project]
+        })
+      }
+      onOpen={(project, settings) => {
+        if (settings) {
+          visitWorkspace({
+            id: `project:${project.id}`,
+            kind: "project",
+            projectId: project.id,
+            label: project.name,
+            view: { page: "project-settings", selectedId: "" },
+          })
+        } else {
+          selectProject(project.id, project)
+        }
+      }}
+    />
+  )
   if (!selected) {
     return (
-      <ProjectStart
-        pickDirectory={api.pickDirectory}
-        pending={pending}
-        error={error}
-        onConnect={(path, name) => update(() => api.connect(path, name))}
-      />
+      <>
+        {management}
+        <ProjectStart
+          onManage={() => setManageOpen(true)}
+          pickDirectory={api.pickDirectory}
+          pending={pending}
+          error={error}
+          onConnect={(path, name) => update(() => api.connect(path, name))}
+        />
+      </>
     )
   }
   return (
-    <TooltipProvider>
-      {workspaceTabs.map((tab) => {
-        const project = projects.find((item) => item.id === tab.projectId)
-        if (!project) {
-          return null
-        }
-        return (
-          <Activity key={tab.id} mode={tab.id === activeWorkspaceTabId ? "visible" : "hidden"}>
-            <SidebarProvider
-              defaultOpen
-              allowDesktopToggle
-              className="h-dvh min-h-0 overflow-hidden"
-            >
-              <LiveUpdates projectId={project.id}>
-                <WorktreePanel
-                  project={project}
-                  active={tab.id === activeWorkspaceTabId}
-                  api={api}
-                  projectMenu={tab.id === activeWorkspaceTabId ? projectMenu : undefined}
-                  workspaceTabs={workspaceTabs}
-                  activeWorkspaceTabId={activeWorkspaceTabId}
-                  onActivateWorkspaceTab={visitWorkspace}
-                  onCloseWorkspaceTab={closeWorkspaceTab}
-                  onNewWorkspaceTab={newWorkspaceTab}
-                  onOpenWorktree={openWorktree}
-                  initialSelectedId={tab.worktreeId ?? ""}
-                  view={tab.view ?? { page: "review", selectedId: tab.worktreeId ?? "" }}
-                  onViewChange={(view) => visitWorkspace({ ...tab, view })}
-                />
-              </LiveUpdates>
-            </SidebarProvider>
-          </Activity>
-        )
-      })}
-    </TooltipProvider>
+    <>
+      {management}
+      <TooltipProvider>
+        {workspaceTabs.map((tab) => {
+          const project = projects.find((item) => item.id === tab.projectId)
+          if (!project) {
+            return null
+          }
+          return (
+            <Activity key={tab.id} mode={tab.id === activeWorkspaceTabId ? "visible" : "hidden"}>
+              <SidebarProvider
+                defaultOpen
+                allowDesktopToggle
+                className="h-dvh min-h-0 overflow-hidden"
+              >
+                <LiveUpdates projectId={project.id}>
+                  <WorktreePanel
+                    project={project}
+                    active={tab.id === activeWorkspaceTabId}
+                    api={api}
+                    projectMenu={tab.id === activeWorkspaceTabId ? projectMenu : undefined}
+                    workspaceTabs={workspaceTabs}
+                    activeWorkspaceTabId={activeWorkspaceTabId}
+                    onActivateWorkspaceTab={visitWorkspace}
+                    onCloseWorkspaceTab={closeWorkspaceTab}
+                    onNewWorkspaceTab={newWorkspaceTab}
+                    onOpenWorktree={openWorktree}
+                    initialSelectedId={tab.worktreeId ?? ""}
+                    view={tab.view ?? { page: "review", selectedId: tab.worktreeId ?? "" }}
+                    onViewChange={(view) => visitWorkspace({ ...tab, view })}
+                  />
+                </LiveUpdates>
+              </SidebarProvider>
+            </Activity>
+          )
+        })}
+      </TooltipProvider>
+    </>
   )
 }
 
@@ -600,35 +666,35 @@ export function WorktreePanel({
           }}
         />
       )}
+      {nativeDesktop && (
+        <div className="native-sidebar-toolbar flex items-center gap-2" data-tauri-drag-region>
+          {(!isMobile || !openMobile) && <SidebarTrigger />}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("Go back")}
+            title={t("Go back")}
+            onClick={() => window.history.back()}
+          >
+            <ArrowLeft aria-hidden="true" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("Go forward")}
+            title={t("Go forward")}
+            onClick={() => window.history.forward()}
+          >
+            <ArrowRight aria-hidden="true" />
+          </Button>
+        </div>
+      )}
+
       <div className="flex min-h-0 min-w-0 flex-1 flex-col md:my-2 md:mr-2 md:peer-data-[state=collapsed]:ml-2">
         <header
           data-tauri-drag-region
           className="app-header flex min-w-0 shrink-0 items-center gap-2 p-2"
         >
-          <div className="app-header-controls flex shrink-0 items-center gap-2">
-            {nativeDesktop && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("Go back")}
-                  title={t("Go back")}
-                  onClick={() => window.history.back()}
-                >
-                  <ArrowLeft aria-hidden="true" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("Go forward")}
-                  title={t("Go forward")}
-                  onClick={() => window.history.forward()}
-                >
-                  <ArrowRight aria-hidden="true" />
-                </Button>
-              </>
-            )}
-          </div>
           <div
             className="flex min-w-0 items-center gap-1 overflow-x-auto py-1"
             role="tablist"
@@ -694,7 +760,7 @@ export function WorktreePanel({
           )}
           <div className="h-8 min-w-4 flex-1" data-tauri-drag-region />
         </header>
-        {(isMobile ? !openMobile : !open) && (
+        {!nativeDesktop && (isMobile ? !openMobile : !open) && (
           <div className="sidebar-reopen flex shrink-0 px-2 pb-2">
             <SidebarTrigger />
           </div>
@@ -867,6 +933,8 @@ export function WorktreeSidebar({
 }) {
   const { t } = useTranslation()
   const { isMobile, open } = useSidebar()
+  const nativeDesktop =
+    typeof document !== "undefined" && document.documentElement.dataset.desktop === "macos"
   const menuDisplay = useProjectMenuOptions(projectId)
   const menuItems = [
     {
@@ -982,7 +1050,9 @@ export function WorktreeSidebar({
       <SidebarHeader className="py-1">
         <div className="flex min-w-0 items-center gap-1">
           <div className="min-w-0 flex-1">{projectMenu}</div>
-          {(isMobile || open) && <SidebarTrigger className="sidebar-workspace-toggle" />}
+          {(isMobile || (open && !nativeDesktop)) && (
+            <SidebarTrigger className="sidebar-workspace-toggle" />
+          )}
           {menuItems.length > 0 && (
             <ProjectMenuOptions items={menuItems} display={menuDisplay} disabled={pending} />
           )}
@@ -1010,7 +1080,7 @@ export function WorktreeSidebar({
           </SidebarGroup>
         )}
         {onRefresh && (
-          <SidebarGroup className="pt-0">
+          <SidebarGroup className="group/worktrees flex-1 pt-0">
             <div className="flex items-center justify-between">
               <SidebarGroupLabel>{t("Worktrees")}</SidebarGroupLabel>
               {displayOptions}

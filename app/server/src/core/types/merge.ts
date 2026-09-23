@@ -71,5 +71,5 @@ export type MergeService = {
     request: { requestId: string; sourceRevision: string; targetRevision: string },
   ): Promise<MergeRecord>
   close(): Promise<void>
-  busy(): boolean
+  busy(ids?: string[]): boolean
 }

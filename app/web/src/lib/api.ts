@@ -342,6 +342,7 @@ export type ProjectTracking = {
   showBranches?: boolean
 }
 export type Project = {
+  disconnectedAt?: string
   tracking?: ProjectTracking
   id: string
   name: string
@@ -389,7 +390,7 @@ export function createApi(fetcher: typeof fetch = fetch) {
     path: string,
     body?: unknown,
     signal?: AbortSignal,
-    method?: "PUT",
+    method?: "PUT" | "PATCH" | "DELETE",
   ): Promise<T> {
     const response = await fetcher(`/api${path}`, {
       method: method ?? (body === undefined ? "GET" : "POST"),
@@ -753,6 +754,18 @@ export function createApi(fetcher: typeof fetch = fetch) {
     setTracking: (projectId: string, tracking: ProjectTracking) =>
       request<Project>(`/projects/${encodeURIComponent(projectId)}/tracking`, tracking),
     projects: (signal?: AbortSignal) => request<Project[]>("/projects", undefined, signal),
+    managedProjects: (signal?: AbortSignal) =>
+      request<(Project & { projectRoot: string | null; available: boolean })[]>(
+        "/projects?includeDisconnected=true",
+        undefined,
+        signal,
+      ),
+    renameProject: (id: string, name: string) =>
+      request<Project>(`/projects/${encodeURIComponent(id)}`, { name }, undefined, "PATCH"),
+    disconnectProject: (id: string) =>
+      request<Project>(`/projects/${encodeURIComponent(id)}`, undefined, undefined, "DELETE"),
+    reconnectProject: (id: string) =>
+      request<Project>(`/projects/${encodeURIComponent(id)}/reconnect`, {}),
     connect: (path: string, name?: string) =>
       request<Project>("/projects", { path, ...(name ? { name } : {}) }),
     worktrees: (projectId: string, signal?: AbortSignal) =>

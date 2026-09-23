@@ -115,7 +115,7 @@ export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
       zValidator("json", projectInput),
       async (c) => {
         const { path, name } = c.req.valid("json")
-        return c.json(await service.connect(path, name), 201)
+        return c.json(await service.connect(path, name, true), 201)
       },
     )
     .get(
@@ -124,13 +124,80 @@ export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
         operationId: "listProjects",
         summary: "List connected projects",
         tags: ["Projects"],
-        description: "Returns stored project connections without pagination.",
+        description:
+          "Returns connected projects. includeDisconnected=true includes retained disconnected projects with primary-folder availability. No pagination.",
+        parameters: [
+          { in: "query", name: "includeDisconnected", schema: { type: "boolean", default: false } },
+        ],
         responses: {
           ...localErrors,
-          200: jsonResponse(z.array(projectResponse), "List connected projects response."),
+          200: jsonResponse(
+            z.array(
+              z.intersection(
+                projectResponse,
+                z.object({
+                  projectRoot: z.string().nullable().optional(),
+                  available: z.boolean().optional(),
+                }),
+              ),
+            ),
+            "Project list; folder details are included with includeDisconnected=true.",
+          ),
         },
       }),
-      async (c) => c.json(await service.listProjects()),
+      async (c) =>
+        c.json(
+          c.req.query("includeDisconnected") === "true"
+            ? await service.projectDetails()
+            : await service.listProjects(),
+        ),
+    )
+    .patch(
+      "/projects/:id",
+      describeRoute({
+        operationId: "renameProject",
+        summary: "Rename a project",
+        tags: ["Projects"],
+        requestBody: jsonBody(z.strictObject({ name: z.string().trim().min(1).max(200) })),
+        responses: {
+          ...localErrors,
+          ...inputErrors,
+          ...notFound,
+          200: jsonResponse(projectResponse, "Updated display name."),
+        },
+      }),
+      zValidator("json", z.strictObject({ name: z.string().trim().min(1).max(200) })),
+      async (c) => c.json(await service.renameProject(c.req.param("id"), c.req.valid("json").name)),
+    )
+    .delete(
+      "/projects/:id",
+      describeRoute({
+        operationId: "disconnectProject",
+        summary: "Disconnect a project, preserving files and history",
+        tags: ["Projects"],
+        responses: {
+          ...localErrors,
+          ...notFound,
+          ...conflict,
+          200: jsonResponse(projectResponse, "Disconnected project."),
+        },
+      }),
+      async (c) => c.json(await service.disconnectProject(c.req.param("id"))),
+    )
+    .post(
+      "/projects/:id/reconnect",
+      describeRoute({
+        operationId: "reconnectProject",
+        summary: "Reconnect the original project directory",
+        tags: ["Projects"],
+        responses: {
+          ...localErrors,
+          ...notFound,
+          ...conflict,
+          200: jsonResponse(projectResponse, "Reconnected project."),
+        },
+      }),
+      async (c) => c.json(await service.reconnectProject(c.req.param("id"))),
     )
     .get(
       "/projects/:id",

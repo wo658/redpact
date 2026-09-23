@@ -25,6 +25,7 @@ test("runtime packaging preserves the repository's reviewed release-age exceptio
     await import(script)
     expect(installation.workspace).toMatchObject({
       minimumReleaseAgeExclude: workspace.minimumReleaseAgeExclude,
+      overrides: workspace.overrides,
     })
   } finally {
     process.argv = argv

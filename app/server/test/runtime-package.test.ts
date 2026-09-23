@@ -41,6 +41,7 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
       })
       expect(published.scripts).toBeUndefined()
       expect(published.devDependencies).toBeUndefined()
+      expect(published.bundledDependencies).toContain("umzug")
       const contents = execFileSync("tar", ["-tzf", tarball], { encoding: "utf8" }).split("\n")
       expect(contents).toContain("package/dist/adapters/environment/compose-worker.js")
       expect(contents).toContain("package/dist/adapters/test-runner/reporter.mjs")
@@ -48,6 +49,8 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
         expect(contents).toContain(`package/dist/adapters/test-runner/${asset}`)
       }
       expect(contents).toContain("package/dist/runtime-lock.yaml")
+      expect(contents).toContain("package/node_modules/umzug/package.json")
+      expect(contents).toContain("package/node_modules/umzug/LICENSE")
       expect(contents).toContain("package/LICENSE")
       expect(contents).toContain("package/NOTICE")
       expect(published.dependencies.vite).toBeUndefined()

@@ -36,6 +36,7 @@ import { createCaptureStore } from "./adapters/storage/captures.js"
 import { openStore } from "./adapters/storage/files.js"
 import { loadInstance } from "./adapters/storage/instance.js"
 import { createMergeStore } from "./adapters/storage/merges.js"
+import { createRuntimeMigrationFiles } from "./adapters/storage/migrations.js"
 import { createProjectSecretStore } from "./adapters/storage/project-secrets.js"
 import { createReviewStore } from "./adapters/storage/reviews.js"
 import { createRunLogReader } from "./adapters/storage/run-logs.js"
@@ -73,6 +74,7 @@ import {
 } from "./workflows/run-files.js"
 import { createRunQueries } from "./workflows/run-queries.js"
 import { createRuns } from "./workflows/runs.js"
+import { migrateRuntime } from "./workflows/runtime-migrations.js"
 import { createSettingsEditor } from "./workflows/settings-editor.js"
 import { createWorkStarts } from "./workflows/start-work.js"
 import { createStopEnvironment } from "./workflows/stop-environment.js"
@@ -117,6 +119,7 @@ const command = new Command()
     await mkdir(directory, { recursive: true, mode: 0o700 })
     const storage = openStore(directory)
     try {
+      await migrateRuntime(createRuntimeMigrationFiles(directory))
       const { instance, settings: instanceSettings } = loadInstance(directory)
       const port = override ?? instanceSettings.server.port
       const logger = pino({
@@ -145,6 +148,26 @@ const command = new Command()
         preferences: preferenceFiles,
       })
       const worktrees = createWorktrees({
+        activity: (projectId) => {
+          const ids = storage.store
+            .listWorktrees()
+            .filter((item) => item.projectId === projectId)
+            .map((item) => item.id)
+          return (
+            unitTests.busy(ids) ||
+            merges.busy(ids) ||
+            pullRequests.busy(ids) ||
+            testContainer.busy(projectId) ||
+            projectGraph.busy(projectId) ||
+            captures
+              .all()
+              .some(
+                (run) =>
+                  run.projectId === projectId &&
+                  (run.state !== "finished" || Boolean(run.cleanupError)),
+              )
+          )
+        },
         initializeSettings,
         projects: projectSettings,
         preferences: preferenceFiles,
@@ -158,7 +181,14 @@ const command = new Command()
         git: createWorktreeAdapter(),
         worktrees,
       })
-      const project = options.project ? await worktrees.connect(options.project) : undefined
+      const project = options.project
+        ? await worktrees.connect(options.project).catch((error: unknown) => {
+            if ((error as { code?: string }).code === "project_disconnected") {
+              return undefined
+            }
+            throw error
+          })
+        : undefined
       const worktree = project ? await worktrees.ensure(project.id, options.project) : undefined
       const defaultWorktreeId = worktree?.id
       const settings = worktree
@@ -341,6 +371,13 @@ const command = new Command()
         readTags: readRegistryTags,
         now: () => new Date().toISOString(),
       })
+      const projectGraph = createProjectGraph({
+        image: readCommittedImage,
+        fetch: fetchRemotes,
+        store: storage.store,
+        read: readHistory,
+        diff: readCommitDiff,
+      })
       const app = createApp({
         updates,
         reviewContent: createReviewContent({
@@ -385,13 +422,7 @@ const command = new Command()
         projectSettings,
         testContainer,
         projectFiles: createProjectFiles({ projects: projectSettings, read: readProjectEntry }),
-        projectGraph: createProjectGraph({
-          image: readCommittedImage,
-          fetch: fetchRemotes,
-          store: storage.store,
-          read: readHistory,
-          diff: readCommitDiff,
-        }),
+        projectGraph,
         reviews,
         observation,
         localFiles,

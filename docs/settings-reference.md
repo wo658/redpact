@@ -33,6 +33,10 @@ Saving or validating settings never starts code or grants execution approval.
 Every execution owns fresh resources; sharing settings never reuses another run's
 containers, networks or credentials snapshot.
 
+Runtime snapshot upgrades are separate from authored project configuration; see
+[versioned startup migrations](storage.md). The first migration preserves instance
+settings and uses captured choices only for legacy environment records.
+
 ## Editor and display preferences
 
 Project settings edits grouped application/test fields while preserving dependency

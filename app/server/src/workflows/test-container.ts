@@ -121,6 +121,7 @@ export function createTestContainer(deps: {
     return promise
   }
   return {
+    busy: (id) => pending.has(id),
     async composeSource(projectId, path) {
       const worktree = await target(projectId)
       if (!worktree) {

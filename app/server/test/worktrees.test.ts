@@ -11,6 +11,7 @@ import { createScheduler } from "../src/adapters/process/queue.js"
 import { createSettingsService } from "../src/adapters/settings/json.js"
 import { openStore } from "../src/adapters/storage/files.js"
 import { eventScope } from "../src/workflows/event-scope.js"
+import { createObserveProjects } from "../src/workflows/observe-projects.js"
 import { createProjectGraph } from "../src/workflows/project-graph.js"
 import { createSubmissions } from "../src/workflows/submissions.js"
 import {
@@ -28,6 +29,94 @@ let storage: ReturnType<typeof openStore>
 let services: Services & { worktrees: ReturnType<typeof createWorktrees> }
 let app: ReturnType<typeof createApp>
 const headers = { "Content-Type": "application/json" }
+
+test("project management preserves identity and rejects implicit reconnection", async () => {
+  const project = await services.worktrees.connect(repository, "Original")
+  const renamed = await app.request(`/api/projects/${project.id}`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ name: "Renamed" }),
+  })
+  expect(renamed.status).toBe(200)
+  expect(storage.store.getProject(project.id)?.name).toBe("Renamed")
+  const disconnected = await app.request(`/api/projects/${project.id}`, { method: "DELETE" })
+  expect(disconnected.status).toBe(200)
+  expect(await services.worktrees.listProjects()).toEqual([])
+  await expect(services.worktrees.connect(repository)).rejects.toMatchObject({
+    code: "project_disconnected",
+  })
+  const restored = await app.request(`/api/projects/${project.id}/reconnect`, { method: "POST" })
+  expect(restored.status).toBe(200)
+  expect(await services.worktrees.connect(repository)).toMatchObject({
+    id: project.id,
+    name: "Renamed",
+  })
+})
+
+test("disconnected projects survive restart, stop observation and preserve submissions", async () => {
+  const project = await services.worktrees.connect(repository)
+  const worktree = await services.worktrees.ensure(project.id, repository)
+  const work = await services.submissions.createWork("Retained evidence", worktree.id)
+  const submission = await services.submissions.submitForWork(work.id, [
+    { path: "example.test.ts", source: 'test("retained", () => {})' },
+  ])
+  await services.worktrees.disconnectProject(project.id)
+  const readTests = vi.fn()
+  const observe = createObserveProjects({
+    worktrees: services.worktrees,
+    submissions: services.submissions,
+    files: { readTests } as never,
+    checkouts: async () => [repository],
+  })
+  expect(await observe([repository])).toEqual({ watchPaths: [], issues: [] })
+  expect(readTests).not.toHaveBeenCalled()
+  expect(services.submissions.get(submission.id)).toMatchObject({
+    id: submission.id,
+    worktreeId: worktree.id,
+  })
+  await expect(services.worktrees.resolve(worktree.id)).rejects.toMatchObject({
+    code: "project_disconnected",
+  })
+  await services.runs.close()
+  storage.close()
+  storage = openStore(join(directory, "state"))
+  expect(storage.store.getProject(project.id)?.disconnectedAt).toBeTruthy()
+  expect(storage.store.getSubmission(submission.id)?.worktreeId).toBe(worktree.id)
+})
+
+test("active project operations block disconnect without affecting another project", async () => {
+  const active = new Set<string>()
+  const worktrees = createWorktrees({
+    store: storage.store,
+    git: createGitAdapter(),
+    settings: createSettingsService,
+    activity: (id) => active.has(id),
+  })
+  const project = await worktrees.connect(repository)
+  const other = await worktrees.connect(directory)
+  active.add(project.id)
+  await expect(worktrees.disconnectProject(project.id)).rejects.toMatchObject({
+    code: "worktree_busy",
+  })
+  expect(worktrees.getProject(project.id).disconnectedAt).toBeUndefined()
+  expect((await worktrees.disconnectProject(other.id)).disconnectedAt).toBeTruthy()
+  active.clear()
+  expect((await worktrees.disconnectProject(project.id)).disconnectedAt).toBeTruthy()
+})
+
+test("Git initialization cannot implicitly reconnect a disconnected directory", async () => {
+  const root = join(directory, "later-git")
+  await mkdir(root)
+  const project = await services.worktrees.connect(root)
+  await services.worktrees.disconnectProject(project.id)
+  execFileSync("git", ["-C", root, "init", "-q"])
+  await expect(services.worktrees.connect(root)).rejects.toMatchObject({
+    code: "project_disconnected",
+  })
+  expect(storage.store.listProjects()).toHaveLength(1)
+  expect((await services.worktrees.connect(root, undefined, true)).id).toBe(project.id)
+  expect((await services.worktrees.listProjects())[0].location.kind).toBe("git")
+})
 function git(...args: string[]) {
   return execFileSync("git", args, { cwd: repository, encoding: "utf8", stdio: "pipe" }).trim()
 }
