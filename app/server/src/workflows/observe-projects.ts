@@ -165,6 +165,9 @@ export function createObserveProjects(deps: {
       }
     } catch (error) {
       signal?.throwIfAborted()
+      if ((error as { code?: string }).code === "project_disconnected") {
+        return { watchPaths: [], issues: [], inputs }
+      }
       issues.push({
         path,
         message: error instanceof Error ? error.message : "Cannot discover project",

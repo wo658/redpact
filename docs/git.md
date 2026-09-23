@@ -23,6 +23,37 @@ creating a checkout or exposing execution controls.
 dirty-worktree visibility follow the tracking service. Include local branches is
 optional; branch rows supplement rather than duplicate live worktrees.
 
+## Project management
+
+Open **Manage projects** from the project switcher or the empty startup screen.
+Search connected or disconnected projects by name or primary-folder path. Rows show
+the folder, Git/directory kind and folder availability. **Connect project** uses the
+native folder picker and lets you set a display name. Connecting the same canonical
+project reuses its identity; an existing display name is preserved.
+
+**Rename** changes only the instance's display name, including open project tabs.
+Project settings still owns execution configuration. Folder moves, repository creation,
+cloning and permanent history deletion are not project-management operations.
+
+**Disconnect** requires confirmation and keeps source files, settings, worktrees,
+credentials and execution history. It removes the project from the switcher, closes
+its workspace tabs and stops automatic observation and new execution. The last
+disconnection returns to startup, where management remains available. The stored
+disconnected state survives restart; observed-root configuration cannot implicitly
+reconnect it. Finish active Unit/Integration/Playwright and Git operations, resolve
+unfinished worktree creation, and stop owned environments/cleanup before disconnecting.
+
+The **Disconnected** list offers **View history** and **Reconnect**. Reconnection
+validates the original directory and reuses the project/worktree IDs and name. An
+unavailable folder stays distinct from an intentionally disconnected project;
+restore its original location before reconnecting. History is retained, not deleted.
+
+HTTP uses `PATCH /api/projects/:id` for the display name, `DELETE /api/projects/:id`
+for disconnection and `POST /api/projects/:id/reconnect` for reconnection.
+`GET /api/projects` lists connected projects; `includeDisconnected=true` adds retained
+projects and folder availability. Mutations and execution admission share the
+worktree lifecycle boundary. See the generated API for request/response schemas.
+
 ## Read-only comparisons
 
 Native Git owns status and nested/global/shared exclude semantics for every index

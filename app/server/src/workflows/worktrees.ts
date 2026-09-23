@@ -15,6 +15,7 @@ import type { SettingsService } from "../core/types/settings.js"
 
 export function createWorktrees(deps: {
   store: Store
+  activity?(projectId: string): boolean
   preferences: PreferenceFiles
   git: Pick<GitAdapter, "metadata" | "primaryRoot" | "listWorktrees" | "currentBranch" | "isMerged">
   projects: ProjectSettingsService
@@ -71,11 +72,18 @@ export function createWorktrees(deps: {
   function getProject(id: string) {
     return deps.store.getProject(id) ?? problem("not_found", "Project not found")
   }
+  function connected(id: string) {
+    const project = getProject(id)
+    if (project.disconnectedAt) {
+      problem("project_disconnected", "Project is disconnected; reconnect it before starting work")
+    }
+    return project
+  }
   function getWorktree(id: string) {
     return deps.store.getWorktree(id) ?? problem("not_found", "Worktree not found")
   }
   async function refreshProject(project: ProjectRecord) {
-    if (project.location.kind !== "directory") {
+    if (project.disconnectedAt || project.location.kind !== "directory") {
       return project
     }
     let location: ProjectRecord["location"]
@@ -149,7 +157,7 @@ export function createWorktrees(deps: {
   }
   async function resolve(id: string): ReturnType<WorktreeService["resolve"]> {
     const worktree = getWorktree(id)
-    const actual = await inspect(getProject(worktree.projectId), worktree.checkoutRoot)
+    const actual = await inspect(connected(worktree.projectId), worktree.checkoutRoot)
     if (
       actual.checkoutRoot !== worktree.checkoutRoot ||
       actual.projectRoot !== worktree.projectRoot ||
@@ -205,7 +213,7 @@ export function createWorktrees(deps: {
     return result
   }
   async function ensure(projectId: string, path: string, managed?: { id: string }) {
-    const actual = await inspect(getProject(projectId), path)
+    const actual = await inspect(connected(projectId), path)
     const previous = deps.store
       .listWorktrees()
       .find(
@@ -344,12 +352,76 @@ export function createWorktrees(deps: {
     settingsForPath,
     getProject,
     getWorktree,
-    listProjects: () =>
+    async projectDetails() {
+      const projects = await service.listProjects(true)
+      return Promise.all(
+        projects.map(async (project) => {
+          try {
+            return {
+              ...project,
+              projectRoot: await deps.projects.root(project.id),
+              available: true,
+            }
+          } catch {
+            const projectRoot = project.location.kind === "directory" ? project.location.root : null
+            return { ...project, projectRoot, available: false }
+          }
+        }),
+      )
+    },
+    renameProject(id: string, name: string) {
+      return exclusive(() => {
+        const trimmed = name.trim()
+        if (!trimmed || trimmed.length > 200) {
+          problem("invalid_input", "Project name must contain 1 to 200 characters")
+        }
+        const project = { ...getProject(id), name: trimmed }
+        deps.store.updateProject(project)
+        return project
+      })
+    },
+    disconnectProject(id: string) {
+      return exclusive(() => {
+        const project = getProject(id)
+        if (project.disconnectedAt) {
+          return project
+        }
+        const running = deps.store.unfinishedRuns().some((run) => run.target?.projectId === id)
+        const resources = deps.store
+          .listEnvironments()
+          .some((env) => env.target.projectId === id && env.state !== "stopped")
+        const creation = deps.store
+          .listWorkStarts()
+          .some((item) => item.input.projectId === id && item.state !== "completed")
+        if (running || resources || creation || deps.activity?.(id)) {
+          problem(
+            "worktree_busy",
+            "Finish project operations and stop its environments before disconnecting",
+          )
+        }
+        const updated = { ...project, disconnectedAt: new Date().toISOString() }
+        deps.store.updateProject(updated)
+        return updated
+      })
+    },
+    reconnectProject(id: string) {
+      return exclusive(async () => {
+        const project = getProject(id)
+        const root = await deps.projects.root(id)
+        await inspect(project, root)
+        const { disconnectedAt: _disconnectedAt, ...updated } = project
+        deps.store.updateProject(updated)
+        return updated
+      })
+    },
+    listProjects: (includeDisconnected = false) =>
       exclusive(async () => {
         for (const project of deps.store.listProjects()) {
           await refreshProject(project)
         }
-        return deps.store.listProjects()
+        return deps.store
+          .listProjects()
+          .filter((project) => includeDisconnected || !project.disconnectedAt)
       }),
     async checkoutPaths(projectId: string) {
       const project = await exclusive(() => refreshProject(getProject(projectId)))
@@ -366,6 +438,9 @@ export function createWorktrees(deps: {
       const result = exclusive(async () => {
         pendingLists.delete(projectId)
         const project = await refreshProject(getProject(projectId))
+        if (project.disconnectedAt) {
+          return deps.store.listWorktrees().filter((item) => item.projectId === projectId)
+        }
         if (project.location.kind === "git") {
           const current = await discover(project.id, project.location.commonGitdir)
           return visibleWorktrees(project, current)
@@ -382,7 +457,7 @@ export function createWorktrees(deps: {
       pendingLists.set(projectId, result)
       return result
     },
-    connect(path: string, name?: string) {
+    connect(path: string, name?: string, reconnect = false) {
       return exclusive(async () => {
         const root = await directory(path)
         const git = await deps.git.metadata(root)
@@ -396,7 +471,6 @@ export function createWorktrees(deps: {
           location.kind === "git"
             ? await primaryProjectRoot(location.commonGitdir, location.projectPath)
             : root
-        await deps.initializeSettings(rulesRoot)
         for (const item of deps.store.listProjects()) {
           if (
             item.location.kind === "directory" &&
@@ -407,10 +481,27 @@ export function createWorktrees(deps: {
         }
         const previous = deps.store
           .listProjects()
-          .find((item) => JSON.stringify(item.location) === JSON.stringify(location))
+          .find(
+            (item) =>
+              JSON.stringify(item.location) === JSON.stringify(location) ||
+              (item.location.kind === "directory" &&
+                (item.location.root === root || item.location.root === rulesRoot)),
+          )
         if (previous) {
+          if (!previous.disconnectedAt) {
+            await deps.initializeSettings(rulesRoot)
+          }
+          if (previous.disconnectedAt && !reconnect) {
+            return connected(previous.id)
+          }
+          if (previous.disconnectedAt) {
+            const { disconnectedAt: _disconnectedAt, ...updated } = previous
+            deps.store.updateProject(updated)
+            return updated
+          }
           return previous
         }
+        await deps.initializeSettings(rulesRoot)
         const project = {
           id: randomUUID(),
           name: name?.trim() || basename(root),

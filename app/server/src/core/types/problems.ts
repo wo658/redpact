@@ -15,6 +15,7 @@ export type Problem = {
     | "invalid_input"
     | "closing"
     | "project_mismatch"
+    | "project_disconnected"
     | "worktree_unavailable"
     | "worktree_busy"
     | "target_required"

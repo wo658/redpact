@@ -14,6 +14,7 @@ export function createPullRequests(deps: {
   worktrees: { resolve(id: string): Promise<{ worktree: { checkoutRoot: string } }> }
 }): PullRequestService {
   const active = new Map<string, Promise<unknown>>()
+  const operating = new Map<string, number>()
   let closing = false
   async function inspectRoot(root: string): Promise<PullRequestInspection> {
     const source = await deps.git.inspect(root)
@@ -82,27 +83,37 @@ export function createPullRequests(deps: {
       return inspectRoot(worktree.checkoutRoot)
     },
     async publish(id, input) {
-      const parsed = publishPullRequestSchema.safeParse(input)
-      if (!parsed.success) {
-        problem("invalid_input", "Invalid PR publication request")
-      }
-      const { worktree } = await deps.worktrees.resolve(id)
-      const source = await deps.git.inspect(worktree.checkoutRoot)
-      if (closing) {
-        problem("closing", "Redpact is stopping")
-      }
-      if (active.has(source.commonGitdir)) {
-        problem("worktree_busy", "PR publication is already running in this repository")
-      }
-      const task = publish(worktree.checkoutRoot, parsed.data)
-      active.set(source.commonGitdir, task)
+      operating.set(id, (operating.get(id) ?? 0) + 1)
       try {
-        return await task
+        const parsed = publishPullRequestSchema.safeParse(input)
+        if (!parsed.success) {
+          problem("invalid_input", "Invalid PR publication request")
+        }
+        const { worktree } = await deps.worktrees.resolve(id)
+        const source = await deps.git.inspect(worktree.checkoutRoot)
+        if (closing) {
+          problem("closing", "Redpact is stopping")
+        }
+        if (active.has(source.commonGitdir)) {
+          problem("worktree_busy", "PR publication is already running in this repository")
+        }
+        const task = publish(worktree.checkoutRoot, parsed.data)
+        active.set(source.commonGitdir, task)
+        try {
+          return await task
+        } finally {
+          active.delete(source.commonGitdir)
+        }
       } finally {
-        active.delete(source.commonGitdir)
+        const remaining = (operating.get(id) ?? 1) - 1
+        if (remaining) {
+          operating.set(id, remaining)
+        } else {
+          operating.delete(id)
+        }
       }
     },
-    busy: () => active.size > 0,
+    busy: (ids) => [...operating.keys()].some((id) => !ids || ids.includes(id)),
     async close() {
       closing = true
       await Promise.allSettled(active.values())
