@@ -87,7 +87,11 @@ for (const native of [false, true]) {
           if (!strip || !forwardButton) {
             throw new Error("앞으로 버튼과 작업공간 탭이 표시되어야 한다")
           }
-          expect(strip.x).toBeGreaterThanOrEqual(forwardButton.x + forwardButton.width)
+          if (width >= 768) {
+            expect(strip.x).toBeGreaterThanOrEqual(forwardButton.x + forwardButton.width)
+          } else {
+            expect(strip.y).toBeGreaterThanOrEqual(48)
+          }
         }
       })
       await navigate("Settings")

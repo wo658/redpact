@@ -89,15 +89,21 @@ a fixed width, left-aligned icons and truncated titles, with a subtle outline an
 selected surface. The adjacent plus button opens the current page location in a fresh tab and remains reachable
 when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The
 browser desktop and native macOS provide a sidebar toggle; compact mobile screens retain
-the sidebar trigger. In mobile and native layouts,
-the open sidebar places this control beside the project selector, immediately before
-project display options. When closed, a reopening control sits below the workspace
-header. Worktree display options appear while hovering anywhere in the Worktrees
-section, including its remaining space above the footer. Keyboard focus, an open
-options menu and non-hover input keep the control available. On native macOS, the toggle
-and Back/Forward buttons occupy the 48px titlebar beside the window controls; they remain
-accessible with the sidebar collapsed. Mobile keeps the sidebar sheet trigger. Browser
-desktops omit app Back/Forward buttons and use browser controls.
+the sidebar trigger. In browser and mobile layouts, the open sidebar places this control
+beside the project selector, immediately before project display options. When closed,
+a reopening control sits below the workspace header.
+
+On native macOS, the sidebar toggle and Back/Forward buttons stay in the sidebar's
+48px titlebar header, immediately after the reserved window-control area. Collapsing
+the sidebar does not move these controls. Workspace tabs occupy the app area to the
+right of the expanded sidebar; when collapsed, they start after the native navigation
+controls. Narrow native windows place the tab strip below the titlebar so both remain
+reachable. The sidebar project row does not duplicate the native toggle; mobile sheets
+retain their own close toggle. Browser desktops use browser Back/Forward controls.
+
+Worktree display options appear while hovering anywhere in the Worktrees section,
+including its remaining space above the footer. Keyboard focus, an open options menu
+and non-hover input keep the control available.
 
 Project/worktree tab activation and sidebar page selection use the browser session history.
 Native Back/Forward call the same History API as browser navigation, across workspace tabs.
