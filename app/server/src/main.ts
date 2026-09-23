@@ -36,6 +36,7 @@ import { createCaptureStore } from "./adapters/storage/captures.js"
 import { openStore } from "./adapters/storage/files.js"
 import { loadInstance } from "./adapters/storage/instance.js"
 import { createMergeStore } from "./adapters/storage/merges.js"
+import { createRuntimeMigrationFiles } from "./adapters/storage/migrations.js"
 import { createProjectSecretStore } from "./adapters/storage/project-secrets.js"
 import { createReviewStore } from "./adapters/storage/reviews.js"
 import { createRunLogReader } from "./adapters/storage/run-logs.js"
@@ -73,6 +74,7 @@ import {
 } from "./workflows/run-files.js"
 import { createRunQueries } from "./workflows/run-queries.js"
 import { createRuns } from "./workflows/runs.js"
+import { migrateRuntime } from "./workflows/runtime-migrations.js"
 import { createSettingsEditor } from "./workflows/settings-editor.js"
 import { createWorkStarts } from "./workflows/start-work.js"
 import { createStopEnvironment } from "./workflows/stop-environment.js"
@@ -117,6 +119,7 @@ const command = new Command()
     await mkdir(directory, { recursive: true, mode: 0o700 })
     const storage = openStore(directory)
     try {
+      await migrateRuntime(createRuntimeMigrationFiles(directory))
       const { instance, settings: instanceSettings } = loadInstance(directory)
       const port = override ?? instanceSettings.server.port
       const logger = pino({
