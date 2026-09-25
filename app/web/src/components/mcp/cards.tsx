@@ -154,16 +154,13 @@ export function EnvironmentCard({ data, actions }: { data: Snapshot; actions: Ca
           <p className="text-sm text-muted-foreground">No dependencies declared.</p>
         )}
         <FieldGroup>
-          {Object.entries(dependencies).map(([name, modes]) => (
+          {Object.entries(dependencies).map(([name, kinds]) => (
             <Field key={name}>
               <FieldTitle className="min-w-0 [overflow-wrap:anywhere]">{name}</FieldTitle>
               <div className="flex min-w-0 flex-col gap-2">
                 <p className="break-words text-sm text-muted-foreground">
-                  Kind: {modes.map(dependencyModeLabel).join(", ")}
+                  Kind: {kinds.map(dependencyModeLabel).join(", ")}
                 </p>
-                {selection?.select[name] && (
-                  <Badge variant="outline">{dependencyModeLabel(selection.select[name])}</Badge>
-                )}
               </div>
             </Field>
           ))}

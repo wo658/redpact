@@ -73,6 +73,6 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm rebuild esbuild
       - run: pnpm --filter @redpact/server build
-      - run: pnpm --filter @redpact/server exec vitest run test/environment-modes-docker.test.ts test/environment-docker.test.ts test/environment-cleanup-docker.test.ts
+      - run: pnpm --filter @redpact/server exec vitest run test/environment-modes-docker.test.ts test/environment-docker.test.ts test/environment-cleanup-docker.test.ts --maxWorkers=1
         env:
           REDPACT_DOCKER_TESTS: '1'

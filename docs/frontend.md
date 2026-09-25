@@ -84,8 +84,12 @@ preview never executes project code.
 ## Layout and reading width
 
 The app header owns open-workspace tabs and native drag space outside the rounded content
-frame; it does not repeat the current page title. Workspace tabs use
-a fixed width, left-aligned icons and truncated titles, with a subtle outline and a brighter
+frame. Workspace tabs show `Project / Current page` or `Project / … / Last branch segment`.
+The full location remains in the tooltip and accessible name, including the close action.
+Sidebar navigation and browser history update the location; nested detail selections remain
+in their page toolbar. Tabs are at most 256px wide and shrink to the available strip width.
+The project uses at most 40% of the label, leaving the remaining width for the last segment;
+both truncate independently. Tabs use left-aligned icons, a subtle outline and a brighter
 selected surface. The adjacent plus button opens the current page location in a fresh tab and remains reachable
 when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The
 browser desktop and native macOS provide a sidebar toggle; compact mobile screens retain

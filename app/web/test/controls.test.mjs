@@ -490,7 +490,7 @@ test("마지막 프로젝트를 연결 해제한 뒤에도 관리 화면에서 �
   await user.click(await within(dialog).findByRole("button", { name: "Reconnect", exact: true }))
   await user.click(within(dialog).getByRole("tab", { name: "Connected", exact: true }))
   await user.click(await within(dialog).findByRole("button", { name: "Open", exact: true }))
-  assert.ok(await screen.findByRole("tab", { name: "Only project", exact: true }))
+  assert.ok(await screen.findByRole("tab", { name: "Only project / Worktrees", exact: true }))
   assert.equal(project.disconnectedAt, undefined)
 })
 
@@ -617,6 +617,7 @@ test("웹 헤더는 열린 작업공간 탭을 제공하고 페이지 선택은 
   assert.equal(screen.queryByRole("button", { name: "Go forward" }), null)
   await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
   assert.ok(screen.getByRole("heading", { name: "Settings", level: 1 }))
+  assert.ok(screen.getByRole("tab", { name: "Actual project / Settings", exact: true }))
   await user.click(screen.getByRole("button", { name: "Project settings", exact: true }))
   assert.ok(await screen.findByRole("combobox", { name: "Main branch" }))
   await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
@@ -755,6 +756,12 @@ test("사이드바 이동은 현재 탭을 바꾸고 명시적으로 연 탭만 
   )
   const tabs = () => within(screen.getByRole("tablist", { name: "Open workspaces" }))
   await screen.findByRole("button", { name: "feature/second", exact: true })
+  const location = tabs().getByRole("tab", {
+    name: "Redpact example / feature/second",
+    exact: true,
+  })
+  assert.equal(location.title, "Redpact example / feature/second")
+  assert.match(location.textContent, /… \/second$/)
   await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
   assert.equal(tabs().getAllByRole("tab").length, 2)
   await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
@@ -825,11 +832,6 @@ const dependencyCatalog = {
   },
 }
 
-async function chooseDependencyMode(user, dependency) {
-  await user.click(screen.getByRole("button", { name: "Select dependency" }))
-  await user.click(await screen.findByRole("menuitemradio", { name: dependency, exact: true }))
-}
-
 test("project catalog browses definitions without execution, preserves values and resets sources", async () => {
   await i18n.changeLanguage("en")
   const { ProjectDependencies } = await server.ssrLoadModule(
@@ -857,7 +859,6 @@ test("project catalog browses definitions without execution, preserves values an
           }
     },
   }
-  const user = userEvent.setup({ document })
   const view = render(
     createElement(ProjectDependencies, {
       api,
@@ -873,13 +874,11 @@ test("project catalog browses definitions without execution, preserves values an
   assert.equal(screen.queryByRole("button", { name: "Settings information" }), null)
   assert.equal(Boolean(screen.queryByText("identity-one")), false)
   assert.equal(Boolean(screen.queryByText("compose.yaml")), false)
-  await chooseDependencyMode(user, "payments", "mock")
   assert.ok(await screen.findByText("actual-payment-token"))
   assert.ok(screen.getByText("Unset"))
   assert.ok(screen.getByText("Empty string"))
   assert.deepEqual(calls, ["w1"])
-  await chooseDependencyMode(user, "llm", "mock")
-  assert.equal(screen.getByRole("button", { name: "Select dependency" }).textContent, "llm")
+  assert.ok(screen.getByRole("heading", { name: "llm", exact: true }))
   assert.ok(screen.getByText("No environment overrides."))
   assert.equal(screen.queryByRole("radiogroup", { name: "Settings source" }), null)
   view.rerender(createElement(ProjectDependencies, { ...props, projectId: "w2" }))
@@ -1047,7 +1046,7 @@ test("dependency overrides show every target in separate groups and follow the m
       },
     }),
   )
-  assert.equal(Boolean(screen.queryByRole("heading", { name: "payments" })), false)
+  assert.ok(screen.getByRole("heading", { name: "payments", exact: true }))
   assert.equal(Boolean(screen.queryByRole("tablist", { name: "Target service" })), false)
   const app = screen.getByRole("region", { name: "app", exact: true })
   const worker = screen.getByRole("region", { name: "worker", exact: true })
@@ -1106,7 +1105,7 @@ test("mode details show authored services without redundant headings", async () 
   assert.ok(screen.getByText("MODE"))
 })
 
-test("고정 의존성 목록은 키보드로 탐색하고 종류 전환 컨트롤을 표시하지 않는다", async () => {
+test("고정 의존성 목록은 선택 없이 모든 정의와 환경변수를 표시한다", async () => {
   await i18n.changeLanguage("en")
   const { DependencyCatalog } = await server.ssrLoadModule("/src/components/dependency-viewer.tsx")
   render(
@@ -1117,11 +1116,10 @@ test("고정 의존성 목록은 키보드로 탐색하고 종류 전환 컨트�
       },
     }),
   )
-  const user = userEvent.setup({ document })
-  await user.click(screen.getByRole("button", { name: "Select dependency" }))
-  ;(await screen.findByRole("menuitemradio", { name: "search" })).focus()
-  await user.keyboard("{Enter}")
-  assert.equal(screen.getByRole("button", { name: "Select dependency" }).textContent, "search")
+  assert.equal(screen.queryByRole("button", { name: "Select dependency" }), null)
+  assert.ok(screen.getByRole("heading", { name: "payments", exact: true }))
+  assert.ok(screen.getByRole("heading", { name: "search", exact: true }))
+  assert.ok(screen.getByText("mock-value"))
   assert.ok(screen.getByText("Remote connection"))
   assert.equal(screen.queryByRole("tablist", { name: "Dependency modes" }), null)
 })
@@ -2170,14 +2168,14 @@ test("dependency 도움말은 기본적으로 숨겨지고 클릭으로 열고 �
   await screen.findByText("No dependencies declared.")
   const tabs = screen.getByRole("tablist", { name: "Project dependency views" })
   const help = screen.getByRole("button", {
-    name: "About dependency modes and environment overrides",
+    name: "About fixed dependencies and environment overrides",
   })
   assert.ok(help.parentElement === tabs.parentElement, "Help shares the view navigation row")
   assert.ok(tabs.parentElement.classList.contains("items-center"))
   assert.equal(screen.queryAllByRole("dialog").length, 0)
   const user = userEvent.setup({ document })
   await user.click(
-    screen.getByRole("button", { name: "About dependency modes and environment overrides" }),
+    screen.getByRole("button", { name: "About fixed dependencies and environment overrides" }),
   )
   await screen.findByRole("dialog")
   await user.click(screen.getByRole("button", { name: "Close", exact: true }))
@@ -4418,7 +4416,7 @@ test("의존성 Overview가 앱 관계와 미구현 권장을 설정 및 실행 
   await user.click(screen.getByRole("button", { name: "Compose services" }))
   assert.ok(screen.getByText("assets"))
   await user.click(screen.getByRole("tab", { name: "Configuration" }))
-  assert.ok(screen.getByRole("button", { name: "Select dependency" }))
+  assert.equal(screen.queryByRole("button", { name: "Select dependency" }), null)
 })
 
 test("Overview는 현재 의존성만 표시하고 워크트리 실행 이력을 조회하지 않는다", async () => {

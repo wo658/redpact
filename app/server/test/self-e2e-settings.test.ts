@@ -39,6 +39,7 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/captures/application.spec.ts", purpose: "capture" },
       { path: "project/captures/dependencies.spec.ts", purpose: "capture" },
       { path: "project/captures/desktop-update.spec.ts", purpose: "capture" },
+      { path: "project/captures/mcp-app.spec.ts", purpose: "capture" },
       { path: "project/captures/problem-notice.spec.ts", purpose: "capture" },
       { path: "project/captures/word-wrap.spec.ts", purpose: "capture" },
       { path: "project/captures/workspace-history.spec.ts", purpose: "capture" },
@@ -48,7 +49,9 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/tests/desktop-update.spec.ts", purpose: "functional" },
       { path: "project/tests/fixed-execution-settings.spec.ts", purpose: "functional" },
       { path: "project/tests/git-graph.spec.ts", purpose: "functional" },
+      { path: "project/tests/header-location.spec.ts", purpose: "functional" },
       { path: "project/tests/material-icons.spec.ts", purpose: "functional" },
+      { path: "project/tests/mcp-app.spec.ts", purpose: "functional" },
       { path: "project/tests/problem-notice.spec.ts", purpose: "functional" },
       { path: "project/tests/product-demo.spec.ts", purpose: "functional" },
       { path: "project/tests/project-management.spec.ts", purpose: "functional" },
@@ -65,7 +68,7 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
     expect(
       browserFiles.find((file) => file.path === "project/tests/product-demo.spec.ts")?.target,
     ).toBe("demo")
-    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(17)
+    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(19)
     const files = await createLocalFiles().readTests(root, result.settings.tests.directory)
     const scenarios = files
       .filter((file) => file.path.endsWith(".test.ts"))
