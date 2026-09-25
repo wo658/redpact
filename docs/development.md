@@ -117,6 +117,13 @@ secret with a Vercel Deploy Hook for the website repository's main branch. Pull
 requests verify content without requesting production deployment. The workflow can
 also be manually dispatched on main to retry the publication request.
 
+Deployment requests run only for pushes or manual dispatches on `wo658/redpact`
+main; forks skip the deployment job. Store the hook URL only in Actions secrets,
+never in source or logs. Public readers and clones cannot access the secret value,
+but secrets do not hide it from maintainers who can modify and run workflows with
+secret access. The hook requests a deployment without granting access to the
+private website repository.
+
 Each website build resolves public main once, runs the canonical content checks
 and renderer checks, then builds English and Korean from that same checkout. No
 content is copied into the website repository. The build logs and deployed

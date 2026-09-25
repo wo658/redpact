@@ -107,6 +107,12 @@ verification workflow가 통과하면 Actions secret `REDPACT_DOCS_DEPLOY_HOOK`�
 secret에 저장합니다. PR에서는 내용만 검증하고 운영 배포를 요청하지 않습니다. main에서
 workflow를 수동 실행해 게시 요청을 재시도할 수도 있습니다.
 
+배포 요청은 `wo658/redpact`의 main push 또는 수동 실행에서만 수행하며, 포크에서는
+배포 job을 건너뜁니다. Hook URL은 Actions secret에만 저장하고 코드나 로그에 노출하지
+않습니다. 공개 저장소 조회·클론으로 secret 값을 읽을 수는 없지만, secret에 접근하는
+workflow를 수정하고 실행할 수 있는 유지보수자에게까지 값을 숨기는 장치는 아닙니다.
+Hook은 비공개 웹 저장소 접근 권한을 제공하지 않고 배포만 요청합니다.
+
 웹 빌드는 공개 main을 한 번 가져온 뒤 같은 체크아웃으로 원본 내용 검사, 렌더러 검사와
 한영 페이지 빌드를 수행합니다. 웹 저장소에 문서 사본을 만들지 않습니다. 사용한 실제
 커밋은 빌드 로그와 배포된 `/docs-source.json`에 기록합니다. 빌드가 원본을 가져오기 전에
