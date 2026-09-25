@@ -85,8 +85,8 @@ preview never executes project code.
 
 The app header owns open-workspace tabs and native drag space outside the rounded content
 frame; it does not repeat the current page title. Workspace tabs use
-a fixed width, left-aligned icons and truncated titles, with a subtle outline and a brighter
-selected surface. The adjacent plus button opens the current page location in a fresh tab and remains reachable
+a fixed width, left-aligned icons and truncated titles, with a subtle outline. The selected tab uses the theme’s accent background and a stronger
+primary-colored border in both light and dark themes; keyboard focus remains a separate ring. The adjacent plus button opens the current page location in a fresh tab and remains reachable
 when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The
 browser desktop and native macOS provide a sidebar toggle; compact mobile screens retain
 the sidebar trigger. In browser and mobile layouts, the open sidebar places this control
