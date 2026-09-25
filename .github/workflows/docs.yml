@@ -1,5 +1,6 @@
 name: Documentation verification
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'docs/**'
@@ -38,3 +39,31 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm docs:check
+
+  deploy-website:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    concurrency:
+      group: documentation-deploy-hook
+      cancel-in-progress: false
+    steps:
+      - name: Request a website build from current public main
+        env:
+          DEPLOY_HOOK: ${{ secrets.REDPACT_DOCS_DEPLOY_HOOK }}
+        run: |
+          node --input-type=module <<'JS'
+          const hook = process.env.DEPLOY_HOOK;
+          if (!hook?.startsWith("https://api.vercel.com/v1/integrations/deploy/")) {
+            throw new Error("Configure REDPACT_DOCS_DEPLOY_HOOK for the website main branch");
+          }
+          let response;
+          try {
+            response = await fetch(hook, { method: "POST", signal: AbortSignal.timeout(30000) });
+          } catch {
+            throw new Error("Website deployment request failed; retry this workflow");
+          }
+          if (!response.ok) throw new Error(`Website deployment request returned HTTP ${response.status}`);
+          console.log("Website deployment requested. Confirm completion in Vercel and the deployed /docs-source.json.");
+          JS

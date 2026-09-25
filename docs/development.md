@@ -108,6 +108,27 @@ sizes. Rendering failures remain unresolved until fixed; lack of renderer access
 is not a contributor failure. The build command still fails when the renderer is
 unavailable rather than reporting a skipped build as success.
 
+## Automatic website publication
+
+The private `redpact-web` renderer tracks this repository's `main`. When the
+Documentation verification workflow succeeds on main, it requests a website build
+through the `REDPACT_DOCS_DEPLOY_HOOK` Actions secret. Maintainers configure that
+secret with a Vercel Deploy Hook for the website repository's main branch. Pull
+requests verify content without requesting production deployment. The workflow can
+also be manually dispatched on main to retry the publication request.
+
+Each website build resolves public main once, runs the canonical content checks
+and renderer checks, then builds English and Korean from that same checkout. No
+content is copied into the website repository. The build logs and deployed
+`/docs-source.json` record the actual source commit. A newer main commit may be
+included when changes arrive before the build fetches its source.
+
+A successful hook request is not publication confirmation: check the Vercel result
+and the deployed source commit. Failed fetches, validation or builds do not publish
+the new output. A missing hook secret fails the publication job explicitly. A
+maintainer can set `REDPACT_DOCS_COMMIT` to a full SHA in the website build environment
+for reproducible builds or a temporary pin; remove it to resume main tracking.
+
 ## Documentation preview
 
 The content-only `pnpm docs:check` works in this public repository without access to
