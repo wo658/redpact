@@ -82,3 +82,9 @@ test("npx 캐시와 소유자를 확인할 수 없는 설치는 자동 교체하
   )
   expect(await detectInstallation(cached)).toBeNull()
 })
+
+test("별도 전역 prefix에 프로젝트 manifest가 없어도 실행을 막지 않는다", async () => {
+  const { root, installed } = await fixture("npm")
+  await rm(join(root, "package.json"))
+  await expect(detectInstallation(installed)).resolves.toBeNull()
+})

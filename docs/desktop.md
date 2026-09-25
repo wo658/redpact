@@ -168,9 +168,10 @@ native Apple Silicon and Intel macOS runners plus Windows Server 2022. It uses
 DMG, Intel app ZIP, Windows NSIS installer, signed updater bundles, signatures and
 `latest.json` to one **draft** GitHub Release. Uploads are serialized to preserve every
 manifest platform entry. Each job runs native tests/lint and installs its package to
-verify app launch, bundled Node, HTTP viewer, MCP and owned-server shutdown. After every
-desktop job succeeds, the workflow publishes the GitHub Release and the same npm version
-through trusted publishing. No updater sees a partial draft release.
+verify app launch, bundled Node, HTTP viewer, MCP and owned-server shutdown. Only after every
+desktop job and the shared [npm installation gate](development.md) succeed does the
+workflow publish the GitHub Release and the verified npm artifact through trusted publishing.
+Publication reuses the installed desktop packages in the draft; it does not rebuild them. No updater sees a partial draft release.
 
 Maintainer setup and release procedure:
 

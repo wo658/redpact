@@ -60,6 +60,7 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/tests/sidebar-controls.spec.ts", purpose: "functional" },
       { path: "project/tests/test-code-diff.spec.ts", purpose: "functional" },
       { path: "project/tests/viewers.spec.ts", purpose: "functional" },
+      { path: "project/tests/window-controls.spec.ts", purpose: "functional" },
       { path: "project/tests/word-wrap.spec.ts", purpose: "functional" },
       { path: "project/tests/workspace-history.spec.ts", purpose: "functional" },
       { path: "project/tests/workspace-tabs.spec.ts", purpose: "functional" },
@@ -68,7 +69,7 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
     expect(
       browserFiles.find((file) => file.path === "project/tests/product-demo.spec.ts")?.target,
     ).toBe("demo")
-    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(19)
+    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(20)
     const files = await createLocalFiles().readTests(root, result.settings.tests.directory)
     const scenarios = files
       .filter((file) => file.path.endsWith(".test.ts"))

@@ -8,9 +8,13 @@ import { join } from "node:path"
 const executable = process.argv[2]
 assert(executable, "Usage: node tools/install/smoke.mjs /absolute/path/to/redpact")
 const state = await mkdtemp(join(tmpdir(), "redpact-install-smoke-"))
-const child = spawn(executable, ["serve", "--port", "0", "--data-dir", state], {
-  stdio: ["ignore", "pipe", "pipe"],
-})
+const child = spawn(
+  executable,
+  [...process.argv.slice(3), "serve", "--port", "0", "--data-dir", state],
+  {
+    stdio: ["ignore", "pipe", "pipe"],
+  },
+)
 const exited = once(child, "exit")
 let output = ""
 child.stdout.on("data", (chunk) => {
@@ -19,8 +23,8 @@ child.stdout.on("data", (chunk) => {
 child.stderr.on("data", (chunk) => {
   output += chunk
 })
+let port
 try {
-  let port
   for (let attempt = 0; attempt < 150; attempt++) {
     port = /"port":(\d+)/.exec(output)?.[1]
     if (port) {
@@ -52,11 +56,33 @@ try {
   const result = await response.json()
   assert.equal(result.result.isError, false)
   assert.equal(result.result.structuredContent.specification.path, ".redpact/settings.json")
-  console.log("PASS: installed executable, health, bundled viewer and MCP configure describe")
 } finally {
   if (child.exitCode === null && child.signalCode === null) {
     child.kill("SIGTERM")
   }
-  await exited
+  const [code, signal] = await exited
+  if (process.platform === "win32") {
+    assert(code === 0 || signal === "SIGTERM", `Installed CLI shutdown failed: ${output}`)
+  } else {
+    assert.equal(code, 0, `Installed CLI shutdown failed (${signal}): ${output}`)
+  }
+  if (port) {
+    let running = true
+    for (let attempt = 0; attempt < 100; attempt++) {
+      running = await fetch(`http://127.0.0.1:${port}/api/health`, {
+        signal: AbortSignal.timeout(500),
+      })
+        .then(() => true)
+        .catch(() => false)
+      if (!running) {
+        break
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    assert.equal(running, false, "Owned server must stop after CLI exit")
+  }
   await rm(state, { recursive: true, force: true })
 }
+console.log(
+  "PASS: installed executable, health, bundled viewer, MCP configure describe and shutdown",
+)

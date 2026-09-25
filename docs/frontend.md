@@ -92,13 +92,21 @@ The project uses at most 40% of the label, leaving the remaining width for the l
 both truncate independently. Tabs use left-aligned icons, a subtle outline. The selected tab uses the theme’s accent background and a stronger
 primary-colored border in both light and dark themes; keyboard focus remains a separate ring. The adjacent plus button opens the current page location in a fresh tab and remains reachable
 when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The
-browser desktop and native macOS provide a sidebar toggle; compact mobile screens retain
+browser desktop and native macOS/Windows provide a sidebar toggle; compact mobile screens retain
 the sidebar trigger. In browser and mobile layouts, the open sidebar places this control
 beside the project selector, immediately before project display options. When closed,
 a reopening control sits below the workspace header.
 
-On native macOS, the sidebar toggle and Back/Forward buttons stay in the sidebar's
-48px titlebar header, immediately after the reserved window-control area. Collapsing
+On native macOS and Windows, the sidebar toggle and Back/Forward buttons stay in
+one 48px titlebar header. macOS reserves the left side for system traffic lights;
+Windows puts navigation on the left and custom minimize, maximize/restore and close
+buttons on the right, replacing the system titlebar and hiding the native menu bar.
+Window buttons remain available during connection loading and failure. Close keeps
+the existing hide-window behavior; the native Quit shortcut remains separate.
+Empty header areas drag the native window and double-click toggles maximization.
+The Windows maximize button reflects resize/focus changes. It does not implement
+the Windows 11 Snap Layouts hover menu; native dragging, resizing, shortcuts and
+window snapping require Windows verification in addition to Chromium layout tests. Collapsing
 the sidebar does not move these controls. Workspace tabs occupy the app area to the
 right of the expanded sidebar; when collapsed, they start after the native navigation
 controls. Narrow native windows place the tab strip below the titlebar so both remain
@@ -118,7 +126,7 @@ selection, review subtabs and scroll changes do not add history entries. The nat
 remain available because the History API does not expose complete traversal availability;
 at a history boundary traversal has no effect.
 The sidebar remains on the canvas. Preserve desktop
-gutters, collapsed state, full-width mobile content and macOS toolbar positioning.
+gutters, collapsed state, full-width mobile content and native toolbar positioning.
 Workspace IDs are independent of project/worktree IDs. Each tab records its page and target;
 sidebar navigation updates the active tab, and labels reflect its current location. Creating a
 new tab copies that location with a fresh ID. Project/worktree changes retain the active tab ID

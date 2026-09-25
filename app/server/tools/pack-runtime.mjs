@@ -28,7 +28,8 @@ try {
   manifest.homepage = "https://github.com/wo658/redpact#readme"
   manifest.bugs = { url: "https://github.com/wo658/redpact/issues" }
   // Consumers do not inherit workspace patches or overrides. Ship both locked graphs.
-  manifest.bundledDependencies = ["testcontainers", "umzug"]
+  // fsevents registry metadata adds a broken install script; retain its prebuilt package.
+  manifest.bundledDependencies = ["testcontainers", "umzug", "fsevents"]
   delete manifest.scripts
   await writeFile(join(stage, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`)
   await writeFile(join(stage, "pnpm-lock.yaml"), stringify(lock))
@@ -36,6 +37,7 @@ try {
     join(stage, "pnpm-workspace.yaml"),
     stringify({
       nodeLinker: "hoisted",
+      supportedArchitectures: { os: ["current", "darwin"], cpu: ["current", "arm64", "x64"] },
       patchedDependencies: workspace.patchedDependencies,
       overrides: workspace.overrides,
       minimumReleaseAgeExclude: workspace.minimumReleaseAgeExclude,

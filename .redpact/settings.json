@@ -15,7 +15,7 @@
   "playwright": {
     "directory": "ui-tests",
     "service": "app",
-    "port": 54318,
+    "port": 54320,
     "locale": "ko-KR",
     "uiLanguage": "ko",
     "timezoneId": "Asia/Seoul",

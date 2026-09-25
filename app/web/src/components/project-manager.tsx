@@ -16,6 +16,7 @@ import {
 import { Activity, useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { AppShortcuts } from "@/components/app-shortcuts"
+import { desktopPlatform } from "@/lib/desktop"
 import { useRefreshRequest } from "@/lib/use-refresh-request"
 import { cn } from "@/lib/utils"
 import { useWordWrap } from "@/lib/word-wrap"
@@ -538,8 +539,7 @@ export function WorktreePanel({
   const { isMobile, open, openMobile, setOpenMobile } = useSidebar()
 
   const [worktrees, setWorktrees] = useState<Worktree[]>([])
-  const nativeDesktop =
-    typeof document !== "undefined" && document.documentElement.dataset.desktop === "macos"
+  const nativeDesktop = desktopPlatform() !== undefined
   const [navigation, setNavigation] = useState<WorkspaceView>({
     page: initialPage,
     selectedId: initialSelectedId,
@@ -973,8 +973,7 @@ export function WorktreeSidebar({
 }) {
   const { t } = useTranslation()
   const { isMobile, open } = useSidebar()
-  const nativeDesktop =
-    typeof document !== "undefined" && document.documentElement.dataset.desktop === "macos"
+  const nativeDesktop = desktopPlatform() !== undefined
   const menuDisplay = useProjectMenuOptions(projectId)
   const menuItems = [
     {

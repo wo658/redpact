@@ -277,13 +277,21 @@ fn main() {
                 "remote": { "urls": [origin.as_str()] },
                 "permissions": ["allow-desktop-update-status", "allow-desktop-check-update", "allow-desktop-install-update", "allow-desktop-open-repository"]
             }).to_string())?;
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
             app.add_capability(serde_json::json!({
                 "identifier": "main-titlebar",
                 "windows": ["main"],
                 "local": false,
                 "remote": { "urls": [origin.as_str()] },
                 "permissions": ["core:window:allow-start-dragging", "core:window:allow-internal-toggle-maximize"]
+            }).to_string())?;
+            #[cfg(target_os = "windows")]
+            app.add_capability(serde_json::json!({
+                "identifier": "main-window-controls",
+                "windows": ["main"],
+                "local": false,
+                "remote": { "urls": [origin.as_str()] },
+                "permissions": ["core:window:allow-minimize", "core:window:allow-toggle-maximize", "core:window:allow-is-maximized", "core:window:allow-close"]
             }).to_string())?;
             let builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(origin))
                 .title("Redpact")
@@ -296,7 +304,14 @@ fn main() {
                 .hidden_title(true)
                 .traffic_light_position(tauri::LogicalPosition::new(16.0, 24.0))
                 .initialization_script("document.addEventListener('DOMContentLoaded', () => { document.documentElement.dataset.desktop = 'macos'; });");
+            #[cfg(target_os = "windows")]
+            let builder = builder
+                .decorations(false)
+                .shadow(true)
+                .initialization_script("document.addEventListener('DOMContentLoaded', () => { document.documentElement.dataset.desktop = 'windows'; });");
             let window = builder.build()?;
+            #[cfg(target_os = "windows")]
+            window.hide_menu()?;
             let handle = app.handle().clone();
             std::thread::spawn(move || loop {
                 check_update(handle.clone(), false);

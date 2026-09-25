@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next"
+import { DesktopTitlebar } from "@/components/desktop-titlebar"
 import { LanguageSelector } from "@/components/language-selector"
 import { Loading, Notice } from "./components/feedback"
 import { LiveUpdates } from "./components/live-updates"
@@ -16,7 +17,7 @@ export default function App() {
   return (
     <Toaster>
       <LiveUpdates>
-        <div className="desktop-titlebar" data-tauri-drag-region aria-hidden="true" />
+        <DesktopTitlebar />
         <ConnectedApp />
       </LiveUpdates>
     </Toaster>

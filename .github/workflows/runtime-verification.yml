@@ -1,0 +1,54 @@
+name: Verify release npm artifact
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm rebuild esbuild
+      - run: pnpm lint
+      - run: pnpm docs:check
+      - run: pnpm --filter @redpact/server typecheck
+      - run: pnpm test:package
+      - run: pnpm --filter @redpact/server test
+      - run: pnpm --filter @redpact/web test
+      - run: node app/server/tools/runtime-artifact.mjs record
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-runtime
+          path: |
+            dist/redpact-*.tgz
+            dist/runtime-artifact.json
+          if-no-files-found: error
+  install:
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, macos-14, macos-15-intel, windows-2022]
+        node: [24, 26]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-runtime
+          path: dist
+      - name: Install with lifecycle scripts and verify CLI, viewer and MCP
+        run: node app/server/tools/verify-npm-install.mjs

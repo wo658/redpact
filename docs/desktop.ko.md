@@ -157,8 +157,9 @@ macOS native runner와 Windows Server 2022에서 빌드합니다.
 Windows NSIS installer, 서명된 updater 번들·서명과 `latest.json`을 하나의 **Draft**
 GitHub Release에 올립니다. 모든 manifest 플랫폼 항목을 보존하도록 순차 업로드합니다.
 각 job은 native 테스트·린트와 패키지 설치를 실행해 앱 시작, 번들 Node, HTTP 뷰어,
-MCP 및 소유 서버 종료를 검증합니다. 모든 desktop job이 성공하면 GitHub Release와
-같은 npm 버전을 trusted publishing으로 공개합니다. 앱 updater에는 완성 전 Draft가 노출되지 않습니다.
+MCP 및 소유 서버 종료를 검증합니다. 모든 desktop job과 공통 [npm 설치 검증](development.md)이 성공해야 GitHub Release와
+검증한 npm 아티팩트를 trusted publishing으로 공개합니다. 데스크톱 공개 단계는
+설치 검증한 Draft 패키지를 그대로 사용하며 재빌드하지 않습니다. 앱 updater에는 완성 전 Draft가 노출되지 않습니다.
 
 유지관리자의 설정·릴리스 절차:
 

@@ -1,4 +1,7 @@
 node_modules/
+.pnpm-store/
+.local-note
+.redpact/local-web-state/
 dist/
 /output/
 .DS_Store

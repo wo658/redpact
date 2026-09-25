@@ -389,6 +389,10 @@ package manifest and lockfile, preserving development-dependency classification.
 The parent verifies the installed package version and restarts with the same options
 and listening port; the browser reloads after observing that version.
 
+An installation under a custom global prefix can still start when that prefix is
+not the package manager's active global root; a missing project manifest there does
+not block startup. Automatic updates require the original owner to be recognized.
+
 `npx` caches, unrecognized installation owners, source launches and direct `main.js`
 launches do not receive automatic installation authority. The dialog explains manual
 recovery instead of guessing a global install. For `npx`, stop the old process and

@@ -9,28 +9,29 @@ test.use({
   },
 })
 
-for (const native of [false, true]) {
-  for (const width of [1280, 390]) {
-    test(`${native ? "macOS 창 영역" : "웹"} ${width}px 탐색 컨트롤 배치를 촬영한다`, async ({
+for (const platform of [undefined, "macos", "windows"] as const) {
+  const native = platform !== undefined
+  for (const width of [1280, 800, 390]) {
+    test(`${platform ?? "웹"} ${width}px 탐색 컨트롤 배치를 촬영한다`, async ({
       page,
       request,
     }, testInfo) => {
       const connected = await request.post("/api/projects", {
-        data: { path: "/app", name: "Redpact" },
+        data: { path: process.env.REDPACT_TEST_PROJECT_ROOT ?? "/app", name: "Redpact" },
       })
       expect(connected.ok()).toBeTruthy()
       await page.setViewportSize({ width, height: 900 })
       // 네이티브 창 버튼 자체는 Chromium 캡처에 포함되지 않는다.
       if (native) {
-        await page.addInitScript(() => {
+        await page.addInitScript((platform) => {
           document.addEventListener(
             "DOMContentLoaded",
             () => {
-              document.documentElement.dataset.desktop = "macos"
+              document.documentElement.dataset.desktop = platform
             },
             { once: true },
           )
-        })
+        }, platform)
       }
       await openApp(page, "en")
       const toggle = page.getByRole("button", { name: "Toggle Sidebar", exact: true })
@@ -42,7 +43,11 @@ for (const native of [false, true]) {
       await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible()
       await expect(page.getByRole("dialog", { name: "Sidebar", exact: true })).toBeHidden()
       await page.evaluate(() => document.fonts.ready)
-      for (const state of ["기본", "사이드바 전환"] as const) {
+      for (const state of ["기본", "사이드바 전환", "다크 테마"] as const) {
+        if (state === "다크 테마") {
+          await page.emulateMedia({ colorScheme: "dark" })
+          await expect(page.locator("html")).toHaveClass(/dark/)
+        }
         if (state === "사이드바 전환") {
           await toggle.click()
           if (width < 768) {
@@ -57,7 +62,7 @@ for (const native of [false, true]) {
             )
           }
         }
-        await testInfo.attach(`${native ? "macOS" : "웹"} / ${width}px / ${state}`, {
+        await testInfo.attach(`${platform ?? "웹"} / ${width}px / ${state}`, {
           body: await page.screenshot({ animations: "disabled" }),
           contentType: "image/png",
         })

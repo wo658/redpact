@@ -66,6 +66,9 @@ async function detectLocal(root: string, reference: string): Promise<Installatio
   if (!(await samePackage(runtimePackagePath(join(cwd, "node_modules")), reference))) {
     return null
   }
+  if (!(await exists(join(cwd, "package.json")))) {
+    return null
+  }
   const project = JSON.parse(await readFile(join(cwd, "package.json"), "utf8"))
   if (
     !project.dependencies?.[runtimePackageName] &&

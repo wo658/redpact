@@ -206,13 +206,31 @@ manifests, Tauri configuration, Cargo manifest and the desktop package's Cargo l
 entry aligned in the same release change. Synchronization is currently manual;
 the private workspace root version is not the product release number.
 
-Tag the exact verified release commit. Building, installing locally, tagging and
-publishing are distinct operations. A stable `v<version>` tag starts the product
-release workflow: it builds and verifies Apple Silicon macOS, Intel macOS and Windows,
-publishes the completed GitHub Release, then publishes the same version to npm through
-trusted publishing. The workflow keeps the GitHub Release in draft state until every
-desktop matrix job succeeds. Its publish script does not automatically select an npm
-prerelease dist-tag for `-beta.N`; prereleases require a separately reviewed channel.
+Tag the exact verified release commit. Ordinary PR/push CI remains unchanged; the
+heavy distribution checks run on stable `v<version>` tags (or manual release dispatch).
+The product workflow keeps the GitHub Release in draft until **both** native desktop
+installation checks and the full npm installation matrix succeed. Neither publication
+job may bypass these gates. The standalone manual npm workflow reuses the npm gate.
+
+The [npm verification workflow](../.github/workflows/runtime-verification.yml) builds
+one tarball, records its source commit, version and SHA-256, and retains it as an
+Actions artifact. Linux x64, macOS ARM64/Intel and Windows x64 install that same file
+with Node 24 and 26, a fresh npm cache/prefix and lifecycle scripts enabled. Checks
+cover installed package identity, CLI startup, health, bundled viewer, MCP configure
+and owned-process shutdown. Windows invokes the installed CLI JavaScript entry with
+Node rather than the `.cmd` shim. These checks do not prove every Node 24+ version,
+Docker execution, or registry download availability.
+
+Only after all release checks pass do the publication jobs expose the draft desktop
+release and publish the verified npm tarball through trusted publishing. The npm job
+checks the artifact identity again and does not rebuild it. No candidate npm version
+is published during verification. Registry availability must be checked after posting;
+GitHub and npm publication are separate operations, not an atomic transaction. A failed
+check leaves the release unpublished (a tag and draft may remain). Retry infrastructure
+failures; source corrections require a new version/tag rather than moving a release tag.
+The publish script does not automatically select an npm prerelease dist-tag for
+`-beta.N`; prereleases require a separately reviewed channel. Local `publish:runtime`
+checks only the local environment; use the Actions workflow for the full matrix.
 
 The product snapshot and stable distribution tag is `v<version>`. Preview and legacy
 artifact verification workflows retain `desktop-preview-v<version>`,
@@ -241,7 +259,10 @@ The runtime package includes web assets, MCP resources, notices, runner files an
 lockfile evidence. Preserve the bundled Testcontainers patch, locked Umzug graph (including the AJV
 security override), and licenses through installed-package verification. Packaging
 retains workspace overrides in its staging install; consumers receive the bundled
-graph because they do not inherit workspace overrides. Workspace privacy flags do not make the OSS source
+graph because they do not inherit workspace overrides. The macOS-only optional
+`fsevents` dependency is bundled with its upstream prebuilt binary and license, including
+when packaging on Linux. This avoids the registry metadata that incorrectly requests
+`node-gyp rebuild` without a `binding.gyp`; consumer lifecycle scripts stay enabled. Workspace privacy flags do not make the OSS source
 private. Publishing needs a fresh package version and registry authorization;
 packing or previewing does not publish, push Git or create a release tag.
 

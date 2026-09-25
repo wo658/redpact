@@ -9,31 +9,32 @@ test.use({
   },
 })
 
-for (const native of [false, true]) {
+for (const platform of [undefined, "macos", "windows"] as const) {
+  const native = platform !== undefined
   for (const width of [1280, 390]) {
-    test(`${native ? "macOS 창 영역" : "웹"} ${width}px에서 사이드바와 브라우저 방문 기록을 사용한다`, async ({
+    test(`${platform ?? "웹"} ${width}px에서 사이드바와 브라우저 방문 기록을 사용한다`, async ({
       page,
       request,
     }) => {
       const connected = await request.post("/api/projects", {
-        data: { path: "/app", name: "Redpact" },
+        data: { path: process.env.REDPACT_TEST_PROJECT_ROOT ?? "/app", name: "Redpact" },
       })
       expect(connected.ok()).toBeTruthy()
       const project = await connected.json()
       // 다른 시나리오가 연결한 프로젝트와 무관하게 이 시나리오의 대상을 선택한다.
       await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
       await page.setViewportSize({ width, height: 900 })
-      // Chromium에서 macOS 레이아웃 분기를 검증하며 실제 Tauri 창 검증과 구분한다.
+      // Chromium에서 데스크톱 레이아웃 분기를 검증하며 실제 Tauri 창 검증과 구분한다.
       if (native) {
-        await page.addInitScript(() => {
+        await page.addInitScript((platform) => {
           document.addEventListener(
             "DOMContentLoaded",
             () => {
-              document.documentElement.dataset.desktop = "macos"
+              document.documentElement.dataset.desktop = platform
             },
             { once: true },
           )
-        })
+        }, platform)
       }
       await openApp(page, "en")
       const tabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
@@ -45,6 +46,19 @@ for (const native of [false, true]) {
       await expect(page.getByRole("button", { name: "Go forward", exact: true })).toHaveCount(
         native ? 1 : 0,
       )
+      if (platform === "windows") {
+        const buttons = page.locator(".native-window-controls")
+        await expect(buttons.getByRole("button")).toHaveCount(3)
+        await expect(buttons.getByRole("button", { name: "Close window" })).toBeInViewport()
+        if (width >= 768) {
+          const header = await page.locator(".app-header:visible").boundingBox()
+          const controls = await buttons.boundingBox()
+          if (!header || !controls) {
+            throw new Error("헤더와 창 버튼 영역이 표시되어야 한다")
+          }
+          expect(header.x + header.width).toBeLessThanOrEqual(controls.x)
+        }
+      }
       async function navigate(name: string) {
         const button = page.getByRole("button", { name, exact: true })
         if (!(await button.isVisible())) {
@@ -89,7 +103,7 @@ for (const native of [false, true]) {
         }
         expect(content.y).toBeGreaterThan(controls.y + controls.height)
         if (native) {
-          expect(controls.x).toBeGreaterThanOrEqual(88)
+          expect(controls.x).toBeGreaterThanOrEqual(platform === "macos" ? 88 : 8)
           expect(controls.y + controls.height).toBeLessThanOrEqual(48)
           const forwardButton = await page
             .getByRole("button", { name: "Go forward", exact: true })
@@ -107,7 +121,7 @@ for (const native of [false, true]) {
       })
       await navigate("Settings")
       await navigate("Project settings")
-      await test.step("브라우저와 macOS 버튼이 같은 메뉴 기록을 이동한다", async () => {
+      await test.step("브라우저와 네이티브 버튼이 같은 메뉴 기록을 이동한다", async () => {
         await back()
         await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible()
         await forward()

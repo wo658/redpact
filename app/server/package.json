@@ -1,6 +1,6 @@
 {
   "name": "@redpact/server",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -38,6 +38,9 @@
     "vitest": "4.0.18",
     "yaml": "2.9.0",
     "zod": "4.5.4"
+  },
+  "optionalDependencies": {
+    "fsevents": "2.3.3"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "13.0.0",

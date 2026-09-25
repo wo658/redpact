@@ -1,4 +1,9 @@
 export const en = {
+  "Minimize window": "Minimize window",
+  "Maximize window": "Maximize window",
+  "Restore window": "Restore window",
+  "Close window": "Close window",
+  "Could not control the window.": "Could not control the window.",
   "Could not load projects.": "Could not load projects.",
   "No execution history.": "No execution history.",
   "Project history": "Project history",

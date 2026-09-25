@@ -13,25 +13,23 @@ concurrency:
   group: npm-publish
   cancel-in-progress: false
 jobs:
+  verify-npm:
+    uses: ./.github/workflows/runtime-verification.yml
   publish:
+    needs: verify-npm
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.19.0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
           registry-url: https://registry.npmjs.org
-      - run: pnpm install --frozen-lockfile --ignore-scripts
-      - run: pnpm rebuild esbuild
-      - run: pnpm lint
-      - run: pnpm --filter @redpact/server typecheck
-      - run: pnpm test:package
-      - run: pnpm --filter @redpact/server test
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-runtime
+          path: dist
+      - run: node app/server/tools/runtime-artifact.mjs verify
       - name: Inspect publish contents
         run: node app/server/tools/publish-runtime.mjs --dry-run
       - name: Publish using npm trusted publishing

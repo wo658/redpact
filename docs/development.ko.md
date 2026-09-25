@@ -190,13 +190,28 @@ Tauri 설정, Cargo manifest와 Cargo lock의 데스크톱 패키지 항목을 �
 일치시키세요. 현재 버전 동기화는 수동이며 비공개 workspace 루트 버전은 제품 릴리스
 번호가 아닙니다.
 
-검증한 정확한 릴리스 커밋에 태그를 만드세요. 빌드, 로컬 설치, 태그 생성과 게시는
-별개 작업입니다. stable `v<version>` 태그는 제품 릴리스 workflow를 시작합니다.
-Apple Silicon macOS, Intel macOS와 Windows를 빌드·검증하고 완성된 GitHub Release를
-공개한 뒤 같은 버전을 trusted publishing으로 npm에 게시합니다. 모든 desktop matrix
-job이 성공할 때까지 GitHub Release는 Draft로 유지합니다. 게시 스크립트는 `-beta.N`에
-맞는 npm prerelease dist-tag를 자동 선택하지 않으므로 prerelease는 별도로 검토한
-채널이 필요합니다.
+검증한 정확한 릴리스 커밋에 태그를 만드세요. 일반 PR/push CI는 그대로 유지하며,
+무거운 배포 검사는 stable `v<version>` 태그 또는 수동 릴리스 실행에서 수행합니다.
+제품 workflow는 **네이티브 데스크톱 설치 검사와 전체 npm 설치 matrix가 모두 성공할 때까지**
+GitHub Release를 Draft로 유지합니다. 두 공개 job 모두 이 검사를 우회할 수 없습니다.
+별도의 수동 npm workflow도 같은 npm 검증을 재사용합니다.
+
+[npm 검증 workflow](../.github/workflows/runtime-verification.yml)는 tarball을 한 번 만들고
+소스 커밋·버전·SHA-256을 기록해 Actions artifact로 보관합니다. Linux x64,
+macOS ARM64/Intel, Windows x64에서 Node 24·26으로 같은 파일을 설치합니다.
+각 설치는 새 npm 캐시·설치 경로와 활성화된 lifecycle script를 사용합니다.
+설치 패키지 식별 정보, CLI 시작, health, 번들 뷰어, MCP configure와 소유 프로세스 종료를
+검사합니다. Windows에서는 `.cmd` shim 대신 설치된 CLI JavaScript 진입점을 Node로
+실행합니다. 모든 Node 24+ 버전, Docker 실행, 레지스트리 다운로드 가용성을 보장하지 않습니다.
+
+모든 릴리스 검사가 통과한 뒤에만 Draft 데스크톱 Release를 공개하고 검증한 npm tarball을
+trusted publishing으로 게시합니다. npm job은 아티팩트 식별 정보를 다시 검사하며 재빌드하지
+않습니다. 검증 도중 candidate npm 버전을 게시하지 않습니다. 레지스트리 가용성은 게시 후
+확인해야 하며 GitHub와 npm 게시는 원자적 트랜잭션이 아닌 별도 작업입니다. 검사 실패 시
+공개되지 않으며 태그와 Draft는 남을 수 있습니다. 인프라 오류는 재실행하고, 소스 수정은
+릴리스 태그를 이동하는 대신 새 버전·태그를 사용합니다. 게시 스크립트는 `-beta.N`에 맞는
+npm prerelease dist-tag를 자동 선택하지 않으므로 prerelease는 별도로 검토한 채널이 필요합니다.
+로컬 `publish:runtime`은 로컬 환경만 검사합니다. 전체 matrix 검증에는 Actions workflow를 사용하세요.
 
 제품 스냅샷과 stable 배포 태그는 `v<version>`입니다. Preview와 기존 아티팩트 검증
 workflow는 문서화된 곳에서 `desktop-preview-v<version>`,
@@ -224,7 +239,10 @@ task·연결을 시작하세요.
 패키지는 웹 에셋, MCP 리소스, 고지, 실행기 파일과 lockfile 증거를 포함합니다.
 설치 검증에서 번들 Testcontainers patch, AJV 보안 override를 포함한 고정 Umzug
 의존성 그래프, 라이선스를 보존하세요. 패키징의 준비 설치는 workspace override를
-유지합니다. 설치 소비자는 workspace override를 상속하지 않으므로 번들 그래프를 받습니다. Workspace private 표시는
+유지합니다. 설치 소비자는 workspace override를 상속하지 않으므로 번들 그래프를 받습니다.
+macOS 전용 선택적 `fsevents` 의존성은 Linux에서 패키징할 때도 upstream 사전 빌드 바이너리와
+라이선스를 함께 번들합니다. `binding.gyp` 없이 `node-gyp rebuild`를 잘못 요청하는
+레지스트리 메타데이터를 피하며 소비자의 lifecycle script는 활성화된 상태로 유지합니다. Workspace private 표시는
 OSS 소스를 비공개로 만드는 설정이 아닙니다. 게시에는 새 버전과 registry 권한이 필요하며
 pack·preview는 게시, Git push, release tag 생성을 하지 않습니다.
 

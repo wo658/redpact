@@ -8,7 +8,7 @@ Dependencies empty overview is exercised in both entry flows.
 
 | Page | Captured states |
 | --- | --- |
-| Workspace | Navigation, open project menu, web/macOS-layout history controls and expanded/collapsed sidebar at desktop/mobile widths |
+| Workspace | Navigation, open project menu, web/macOS/Windows-layout history controls and expanded/collapsed sidebar at desktop/mobile widths |
 | Settings | Complete light and dark pages |
 | Project settings | Execution configuration with page context |
 | Git Graph | Real repository commit history |
@@ -37,8 +37,10 @@ checkpoint names, exact viewport dimensions and retained bytes after cleanup.
 
 Populated execution results, retained screenshot history, failure dialogs and native
 Tauri chrome are not covered by these scenarios. Workspace history scenarios cover
-1280px and 390px layouts; their macOS branch is rendered in Chromium and does not
-verify actual window controls or native dragging. Their component
+1280px and 390px layouts, with captures also covering 800px and dark mode; their macOS and Windows branches are rendered in Chromium and does not
+verify actual OS window controls or native dragging. Windows control scenarios replace
+only the Tauri IPC boundary to verify button calls, maximize state, failure feedback
+and keyboard retry against the real viewer. Their component
 or API tests do not substitute for captured page evidence. Capture runs execute only the selected worktree.
 
 ## Functional tests

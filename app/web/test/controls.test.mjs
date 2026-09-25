@@ -6900,29 +6900,77 @@ test("브라우저 방문 기록으로 메뉴와 작업공간 탭을 복원하�
   assert.ok(screen.getByRole("combobox", { name: "Main branch" }))
 })
 
-test("macOS 앞뒤 버튼은 브라우저 방문 기록을 직접 이동한다", async () => {
+for (const platform of ["macos", "windows"]) {
+  test(`${platform} 앞뒤 버튼은 브라우저 방문 기록을 직접 이동한다`, async () => {
+    await i18n.changeLanguage("en")
+    document.documentElement.dataset.desktop = platform
+    try {
+      const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+      const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
+      render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
+      const toggle = screen.getByRole("button", { name: "Toggle Sidebar", exact: true })
+      const back = screen.getByRole("button", { name: "Go back", exact: true })
+      assert.equal(
+        toggle.closest(".native-sidebar-toolbar"),
+        back.closest(".native-sidebar-toolbar"),
+      )
+      assert.ok(back.closest(".native-sidebar-toolbar"))
+      assert.equal(back.closest(".app-header"), null)
+      const user = userEvent.setup({ document })
+      await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
+      const firstTab = window.history.state.redpactWorkspace.id
+      await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
+      const secondTab = window.history.state.redpactWorkspace.id
+      await user.click(screen.getByRole("button", { name: "Go back", exact: true }))
+      await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, firstTab))
+      await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
+      await user.click(screen.getByRole("button", { name: "Go forward", exact: true }))
+      await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, secondTab))
+    } finally {
+      delete document.documentElement.dataset.desktop
+    }
+  })
+}
+
+test("Windows 창 버튼은 연결 중에도 작동하고 최대화 상태를 반영한다", async () => {
   await i18n.changeLanguage("en")
-  document.documentElement.dataset.desktop = "macos"
+  document.documentElement.dataset.desktop = "windows"
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = () => new Promise(() => {})
+  const calls = []
+  let maximized = false
+  window.__TAURI__ = {
+    window: {
+      getCurrentWindow: () => ({
+        isMaximized: async () => maximized,
+        minimize: async () => {
+          calls.push("minimize")
+        },
+        toggleMaximize: async () => {
+          calls.push("toggle")
+          maximized = !maximized
+        },
+        close: async () => {
+          calls.push("close")
+        },
+      }),
+    },
+  }
   try {
-    const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-    const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-    render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
-    const toggle = screen.getByRole("button", { name: "Toggle Sidebar", exact: true })
-    const back = screen.getByRole("button", { name: "Go back", exact: true })
-    assert.equal(toggle.closest(".native-sidebar-toolbar"), back.closest(".native-sidebar-toolbar"))
-    assert.ok(back.closest(".native-sidebar-toolbar"))
-    assert.equal(back.closest(".app-header"), null)
+    const { default: App } = await server.ssrLoadModule("/src/App.tsx")
+    render(createElement(App))
     const user = userEvent.setup({ document })
-    await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
-    const firstTab = window.history.state.redpactWorkspace.id
-    await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
-    const secondTab = window.history.state.redpactWorkspace.id
-    await user.click(screen.getByRole("button", { name: "Go back", exact: true }))
-    await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, firstTab))
-    await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
-    await user.click(screen.getByRole("button", { name: "Go forward", exact: true }))
-    await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, secondTab))
+    await user.click(screen.getByRole("button", { name: "Minimize window", exact: true }))
+    await user.click(screen.getByRole("button", { name: "Maximize window", exact: true }))
+    await user.click(await screen.findByRole("button", { name: "Restore window", exact: true }))
+    await user.click(screen.getByRole("button", { name: "Close window", exact: true }))
+    assert.deepEqual(calls, ["minimize", "toggle", "toggle", "close"])
+    maximized = true
+    window.dispatchEvent(new Event("resize"))
+    await screen.findByRole("button", { name: "Restore window", exact: true })
   } finally {
+    globalThis.fetch = originalFetch
+    delete window.__TAURI__
     delete document.documentElement.dataset.desktop
   }
 })

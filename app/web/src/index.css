@@ -523,6 +523,34 @@
   }
 }
 
+:root[data-desktop="macos"] {
+  --native-navigation-left: 88px;
+  --native-tabs-left: 196px;
+  --native-controls-width: 0px;
+}
+
+:root[data-desktop="windows"] {
+  --native-navigation-left: 8px;
+  --native-tabs-left: 116px;
+  --native-controls-width: 138px;
+}
+
+.native-window-controls {
+  position: fixed;
+  z-index: 12;
+  top: 0;
+  right: 0;
+  display: flex;
+  height: 48px;
+  background: var(--sidebar);
+}
+
+.native-window-controls > button {
+  width: 46px;
+  height: 48px;
+  border-radius: 0;
+}
+
 /* Reserve the native window controls and keep the toolbar above both panes. */
 .desktop-titlebar {
   display: none;
@@ -537,7 +565,7 @@
   }
 }
 
-:root[data-desktop="macos"] .desktop-titlebar {
+:root:is([data-desktop="macos"], [data-desktop="windows"]) .desktop-titlebar {
   display: flex;
   position: fixed;
   z-index: 10;
@@ -547,38 +575,38 @@
   user-select: none;
 }
 
-:root[data-desktop="macos"] .native-sidebar-toolbar {
+:root:is([data-desktop="macos"], [data-desktop="windows"]) .native-sidebar-toolbar {
   position: fixed;
   z-index: 11;
   top: 0;
-  left: 88px;
+  left: var(--native-navigation-left);
   height: 48px;
   user-select: none;
 }
 
 @media (min-width: 768px) {
-  :root[data-desktop="macos"] .app-header {
+  :root:is([data-desktop="macos"], [data-desktop="windows"]) .app-header {
     position: fixed;
     z-index: 10;
-    inset: 0 0 auto var(--sidebar-width);
+    inset: 0 var(--native-controls-width) auto var(--sidebar-width);
     height: 48px;
     padding-left: 8px;
     background: var(--sidebar);
     user-select: none;
   }
 
-  :root[data-desktop="macos"]
+  :root:is([data-desktop="macos"], [data-desktop="windows"])
     [data-slot="sidebar-wrapper"]:has(> [data-slot="sidebar"][data-state="collapsed"])
     .app-header {
-    left: 196px;
+    left: var(--native-tabs-left);
   }
 }
 
-:root[data-desktop="macos"] [data-slot="sidebar-wrapper"] {
+:root:is([data-desktop="macos"], [data-desktop="windows"]) [data-slot="sidebar-wrapper"] {
   padding-top: 48px;
 }
 
-:root[data-desktop="macos"] [data-slot="sidebar-container"] {
+:root:is([data-desktop="macos"], [data-desktop="windows"]) [data-slot="sidebar-container"] {
   top: 48px;
   height: calc(100svh - 48px);
 }

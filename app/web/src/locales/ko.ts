@@ -1,6 +1,11 @@
 import type { en } from "./en"
 
 export const ko = {
+  "Minimize window": "창 최소화",
+  "Maximize window": "창 최대화",
+  "Restore window": "창 복원",
+  "Close window": "창 닫기",
+  "Could not control the window.": "창을 조작하지 못했습니다.",
   "Could not load projects.": "프로젝트를 불러오지 못했습니다.",
   "No execution history.": "실행 기록이 없습니다.",
   "Project history": "프로젝트 기록",
