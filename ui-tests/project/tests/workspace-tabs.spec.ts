@@ -155,6 +155,7 @@ test("프로젝트를 선택해도 다른 탭으로 이동하지 않고 닫기�
   expect(first.ok()).toBeTruthy()
   expect(second.ok()).toBeTruthy()
   const project = await first.json()
+  const documentation = await second.json()
   await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
   await openApp(page, "en")
   const tabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
@@ -169,10 +170,10 @@ test("프로젝트를 선택해도 다른 탭으로 이동하지 않고 닫기�
     await page.keyboard.press("Escape")
   }
   await test.step("둘째 탭에서 프로젝트를 바꾼 뒤 첫째 탭과 같은 프로젝트로 돌아온다", async () => {
-    await chooseProject("Redpact", "Documentation")
+    await chooseProject(project.name, documentation.name)
     await expect(tabs.getByRole("tab")).toHaveCount(2)
     await expect(tabs.getByRole("tab").nth(1)).toHaveAttribute("aria-selected", "true")
-    await chooseProject("Documentation", "Redpact")
+    await chooseProject(documentation.name, project.name)
     await expect(tabs.getByRole("tab")).toHaveCount(2)
     await expect(tabs.getByRole("tab").nth(1)).toHaveAttribute("aria-selected", "true")
   })

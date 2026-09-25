@@ -148,7 +148,7 @@ for (const platform of [undefined, "macos", "windows"] as const) {
       await test.step("닫은 목적지 탭과 새로고침한 현재 화면을 복원한다", async () => {
         await navigate("Project settings")
         await tabs
-          .getByRole("button", { name: "Close Redpact / Project settings", exact: true })
+          .getByRole("button", { name: `Close ${project.name} / Project settings`, exact: true })
           .last()
           .click()
         await expect(tabs.getByRole("tab")).toHaveCount(1)
