@@ -37,9 +37,10 @@ export async function prepareWrapProject(page: Page, request: APIRequestContext)
 export async function openWrapDiff(page: Page) {
   await page.goto("/")
   const navigation = page.getByRole("navigation", { name: "Worktrees", exact: true })
-  if (!(await navigation.isVisible())) {
+  if ((page.viewportSize()?.width ?? 1920) < 768) {
     await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
   }
+  await expect(navigation).toBeVisible()
   await navigation.getByRole("button").first().click()
   await page.keyboard.press("Escape")
   await page.getByRole("tab", { name: "Diff", exact: true }).click()

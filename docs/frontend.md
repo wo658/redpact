@@ -120,7 +120,9 @@ at a history boundary traversal has no effect.
 The sidebar remains on the canvas. Preserve desktop
 gutters, collapsed state, full-width mobile content and macOS toolbar positioning.
 Workspace IDs are independent of project/worktree IDs. Each tab records its page and target;
-sidebar navigation updates the active tab, and labels reflect its current location. See
+sidebar navigation updates the active tab, and labels reflect its current location. Creating a
+new tab copies that location with a fresh ID. Project/worktree changes retain the active tab ID
+and create a history destination even when its page name is unchanged. See
 [UX navigation](ux-navigation.md) for new-tab and close behavior.
 Open workspace tabs retain their React state and DOM through React Activity. Hidden tabs
 release effect subscriptions; activating a tab restarts reads without discarding its view state.

@@ -243,46 +243,29 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
     if (!project) {
       return
     }
-    const tabId = `project:${id}`
-    visitWorkspace(
-      workspaceTabs.find((tab) => tab.id === tabId) ?? {
-        id: tabId,
-        kind: "project",
-        label: project.name,
-        projectId: id,
-      },
-    )
+    visitWorkspace({
+      id: activeWorkspaceTabId || crypto.randomUUID(),
+      kind: "project",
+      label: project.name,
+      projectId: id,
+    })
   }
   function openWorktree(project: Project, worktree: Worktree) {
-    const tabId = `worktree:${project.id}:${worktree.id}`
-    const existing = workspaceTabs.find((tab) => tab.id === tabId)
-    if (existing) {
-      visitWorkspace(existing)
-      return
-    }
-    const next: WorkspaceTab = {
-      id: tabId,
+    visitWorkspace({
+      id: activeWorkspaceTabId || crypto.randomUUID(),
       kind: "worktree",
       label: worktreeName(worktree),
       projectId: project.id,
       worktreeId: worktree.id,
-    }
-    writeWorkspaceHistory(next)
-    setWorkspaceTabs((tabs) => tabs.map((tab) => (tab.id === activeWorkspaceTabId ? next : tab)))
-    setSelectedId(project.id)
-    setActiveWorkspaceTabId(next.id)
-    setError("")
+      view: { page: "review", selectedId: worktree.id },
+    })
   }
   function newWorkspaceTab() {
-    if (!selected) {
+    const current = workspaceTabs.find((tab) => tab.id === activeWorkspaceTabId)
+    if (!current) {
       return
     }
-    visitWorkspace({
-      id: `project:${selected.id}:${crypto.randomUUID()}`,
-      kind: "project",
-      label: selected.name,
-      projectId: selected.id,
-    })
+    visitWorkspace({ ...current, id: crypto.randomUUID() })
   }
   function closeWorkspaceTab(tabId: string) {
     if (workspaceTabs.length === 1) {
@@ -458,6 +441,7 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
               >
                 <LiveUpdates projectId={project.id}>
                   <WorktreePanel
+                    key={project.id}
                     project={project}
                     active={tab.id === activeWorkspaceTabId}
                     api={api}

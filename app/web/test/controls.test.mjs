@@ -6879,15 +6879,17 @@ test("브라우저 방문 기록으로 메뉴와 작업공간 탭을 복원하�
   render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
   const user = userEvent.setup({ document })
   await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
+  const firstTab = window.history.state.redpactWorkspace.id
   await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
-  assert.equal(Boolean(screen.queryByRole("heading", { name: "Settings", exact: true })), false)
+  assert.ok(screen.getByRole("heading", { name: "Settings", exact: true }))
+  const secondTab = window.history.state.redpactWorkspace.id
   window.history.back()
+  await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, firstTab))
   await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
   window.history.forward()
-  await waitFor(() =>
-    assert.equal(Boolean(screen.queryByRole("heading", { name: "Settings", exact: true })), false),
-  )
+  await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, secondTab))
   window.history.back()
+  await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, firstTab))
   await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
   await user.click(screen.getByRole("button", { name: "Project settings", exact: true }))
   await screen.findByRole("combobox", { name: "Main branch" })
@@ -6912,16 +6914,14 @@ test("macOS 앞뒤 버튼은 브라우저 방문 기록을 직접 이동한다",
     assert.equal(back.closest(".app-header"), null)
     const user = userEvent.setup({ document })
     await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
+    const firstTab = window.history.state.redpactWorkspace.id
     await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
+    const secondTab = window.history.state.redpactWorkspace.id
     await user.click(screen.getByRole("button", { name: "Go back", exact: true }))
+    await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, firstTab))
     await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
     await user.click(screen.getByRole("button", { name: "Go forward", exact: true }))
-    await waitFor(() =>
-      assert.equal(
-        Boolean(screen.queryByRole("heading", { name: "Settings", exact: true })),
-        false,
-      ),
-    )
+    await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, secondTab))
   } finally {
     delete document.documentElement.dataset.desktop
   }

@@ -1,6 +1,14 @@
 import { expect, test } from "@playwright/test"
 import { node } from "../target"
 
+// 격리된 테스트 앱에서 새 탭의 Web Crypto API를 사용한다.
+test.use({
+  channel: "chromium",
+  launchOptions: {
+    args: ["--unsafely-treat-insecure-origin-as-secure=http://app.redpact.test:54320"],
+  },
+})
+
 test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지한다", async ({ page, request }) => {
   await node(`
             import {mkdirSync,writeFileSync} from 'node:fs';

@@ -88,7 +88,11 @@ test("의존성 페이지의 빈 상태와 설정된 상태를 검토한다", as
     })
     await test.step("설정 탭에서 기존 환경변수 편집 기능을 사용한다", async () => {
       await page.getByRole("tab", { name: "설정", exact: true }).click()
-      await expect(page.getByText("원격 연결", { exact: true })).toBeVisible()
+      await expect(
+        page
+          .getByRole("region", { name: "payment", exact: true })
+          .getByText("원격 연결", { exact: true }),
+      ).toBeVisible()
       await expect(page.getByText("https://example.test", { exact: true })).toBeVisible()
       await expect(page.getByRole("button", { name: "환경변수 추가" })).toHaveCount(2)
       await capture(page, info, "Dependencies / 설정 / 환경변수 목록")
