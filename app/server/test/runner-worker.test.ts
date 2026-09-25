@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { pathToFileURL } from "node:url"
@@ -53,4 +53,55 @@ test("준비가 성공해도 컨테이너 ID가 없는 응답은 거부한다", 
   await expect(prepareRunner(entry, {}, new AbortController().signal, options)).rejects.toThrow(
     "Invalid runner container identity",
   )
+})
+
+test("준비 worker에 작업 디렉터리와 명시한 환경만 전달한다", async () => {
+  const entry = await worker(`
+    process.stdout.write(JSON.stringify({containerId:
+      process.cwd() + ':' + process.env.REDPACT_WORKER_TEST + ':' + String(process.env.HOME)}));
+  `)
+  await expect(
+    prepareRunner(entry, {}, new AbortController().signal, {
+      ...options,
+      cwd: directories.at(-1),
+      environment: { REDPACT_WORKER_TEST: "value" },
+    }),
+  ).resolves.toBe(`${await realpath(new URL(".", entry))}:value:undefined`)
+})
+
+test("준비 시간 제한으로 worker를 종료하고 진단을 마스킹한다", async () => {
+  const entry = await worker("process.stderr.write('private-value'); setInterval(() => {}, 1000)")
+  await expect(
+    prepareRunner(entry, {}, new AbortController().signal, {
+      timeout: 500,
+      failure: () => "Sanitized timeout",
+    }),
+  ).rejects.toThrow("Sanitized timeout")
+})
+
+test("실행 중 취소해도 원래 취소 이유를 반환한다", async () => {
+  const entry = await worker("setInterval(() => {}, 1000)")
+  const abort = new AbortController()
+  const reason = new Error("Cancelled running worker")
+  const pending = prepareRunner(entry, {}, abort.signal, options)
+  const assertion = expect(pending).rejects.toBe(reason)
+  setTimeout(() => abort.abort(reason), 100)
+  await assertion
+})
+
+test.each(["not-json", "null", '{"containerId":""}', '{"containerId":42}'])(
+  "잘못된 worker 응답 %s를 원문 노출 없이 거부한다",
+  async (output) => {
+    const entry = await worker(`process.stdout.write(${JSON.stringify(output)})`)
+    await expect(prepareRunner(entry, {}, new AbortController().signal, options)).rejects.toThrow(
+      "Invalid runner container identity",
+    )
+  },
+)
+
+test("출력이 없는 시간 초과도 원인을 전달한다", async () => {
+  const entry = await worker("setInterval(() => {}, 1000)")
+  await expect(
+    prepareRunner(entry, {}, new AbortController().signal, { ...options, timeout: 100 }),
+  ).rejects.toThrow("Preparation failed: Runner preparation timed out")
 })
