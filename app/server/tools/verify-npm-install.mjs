@@ -35,7 +35,7 @@ try {
       "--no-audit",
       "--no-fund",
     ],
-    { cwd: directory, env, stdio: "inherit", timeout: 300000 },
+    { cwd: directory, env, stdio: "inherit", timeout: 600000 },
   )
   const installed = join(prefix, windows ? "node_modules" : "lib/node_modules", "@wo658/redpact")
   const expected = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"))
@@ -58,5 +58,7 @@ try {
     `PASS: npm global install ${actual.version}; ${process.platform}/${process.arch}; Node ${process.version}`,
   )
 } finally {
-  await rm(directory, { recursive: true, force: true })
+  await rm(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 1000 }).catch(
+    (error) => console.warn(`Unable to remove temporary npm verification directory: ${error}`),
+  )
 }
