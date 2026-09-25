@@ -149,6 +149,7 @@ test("server emits startup information without a logging setting", async () => {
   expect((await fetch(`http://127.0.0.1:${port}/api/health`)).status).toBe(200)
   expect(server.output()).toContain('"level":30')
   expect(server.output()).toContain("Redpact listening on loopback")
+  expect(server.output()).toContain(`"url":"http://127.0.0.1:${port}/"`)
   await server.stop()
   expect((await server.exit)[0]).toBe(0)
 })
