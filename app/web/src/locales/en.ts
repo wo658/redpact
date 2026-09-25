@@ -679,9 +679,9 @@ export const en = {
   "Open settings": "Open settings",
   "Project settings": "Project settings",
   "Project dependencies": "Project dependencies",
-  "About dependency modes and environment overrides":
-    "About dependency modes and environment overrides",
-  "Dependency modes and environment overrides": "Dependency modes and environment overrides",
+  "About fixed dependencies and environment overrides":
+    "About fixed dependencies and environment overrides",
+  "Fixed dependencies and environment overrides": "Fixed dependencies and environment overrides",
   "All worktrees share the dependency definitions in the primary checkout's .redpact/settings.json. Changes here apply to future environments across the project; existing environments keep their captured settings.":
     "All worktrees share the dependency definitions in the primary checkout's .redpact/settings.json. Changes here apply to future environments across the project; existing environments keep their captured settings.",
   "Browse a dependency and its modes here. Browsing does not change execution choices. Each worktree selects one mode per dependency in Environment and saves its own selection.":

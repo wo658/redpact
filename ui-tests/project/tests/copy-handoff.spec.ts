@@ -1,5 +1,13 @@
 import { expect, test } from "@playwright/test"
 
+// 격리된 테스트 앱 origin에서 실제 Clipboard와 Web Crypto API를 검증한다.
+test.use({
+  channel: "chromium",
+  launchOptions: {
+    args: ["--unsafely-treat-insecure-origin-as-secure=http://app.redpact.test:54320"],
+  },
+})
+
 const fixtureRoot = "/tmp/redpact-copy-handoff-fixture"
 
 test("머지 충돌에서 해결 요청을 확인하고 복사한다", async ({ page, request }) => {

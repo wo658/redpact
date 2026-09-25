@@ -141,28 +141,13 @@ test
           git("-C", root + "-feature", "commit", "-qm", "feature change")
         `,
       ])
-      if (purpose === "functional") {
-        await docker([
-          "exec",
-          target,
-          "node",
-          "--input-type=module",
-          "-e",
-          `
-            import {mkdirSync,writeFileSync} from 'node:fs';
-            import {randomUUID} from 'node:crypto';
-            const origin='http://127.0.0.1:54318';
-            const project=await (await fetch(origin+'/api/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:'/app',name:'Redpact'})})).json();
-            const worktrees=await (await fetch(origin+'/api/projects/'+project.id+'/worktrees')).json();
-            const worktree=worktrees.find(item=>item.projectRoot==='/app');
-            if(!worktree) throw new Error('Header fixture worktree missing');
-            const id=randomUUID();
-            const directory='/tmp/redpact-e2e-state/playwright-runs';
-            mkdirSync(directory,{recursive:true});
-            writeFileSync(directory+'/'+id+'.json',JSON.stringify({version:1,id,target:'captures',purpose:'capture',scope:'worktree',worktreeId:worktree.id,projectId:project.id,projectRoot:'/app',revision:null,settings:{directory:'ui-tests',targets:{captures:{purpose:'capture',testMatch:['project/captures/**/*.spec.ts']}},service:'app',port:54318,viewport:{width:1920,height:1080}},selection:{services:['app'],select:{}},settingsDigest:'header-fixture',sourceDigest:'header-fixture',appDigest:'header-fixture',createdAt:new Date().toISOString(),state:'finished',outcome:'failed',cleanupError:'Retained header recovery fixture',before:{state:'unavailable',cases:[]},after:{state:'finished',outcome:'failed',cases:[]}}));
-          `,
-        ])
-      }
+      await docker([
+        "exec",
+        target,
+        "node",
+        "-e",
+        `fetch('http://127.0.0.1:54318/api/projects', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:'/app',name:'Redpact'})}).then(r=>{if(!r.ok)process.exit(1)})`,
+      ])
       run.sourceDigest = await runner.captureSources(id, projectRoot, settings)
       const env: Environment = {
         id: environmentId,
@@ -180,7 +165,10 @@ test
           reasons: {},
           requiredSecrets: [],
         },
-        endpoints: { "app:54320": { host: "app.redpact.test", port: 54320 } },
+        endpoints: {
+          "app:54320": { host: "app.redpact.test", port: 54320 },
+          "app:54319": { host: "app.redpact.test", port: 54319 },
+        },
         runtimeId: await docker(["info", "--format", "{{.ID}}"]),
         resources: [{ kind: "container", id: target, service: "app" }],
         requestId: randomUUID(),
@@ -245,15 +233,24 @@ test
               "Playwright / 스크린샷 / 프로젝트 Playwright 기록",
               "Playwright / Test / 실행 전 기능 테스트 파일",
             ]
-      expect(evidence.cases).toHaveLength({ capture: 4, demo: 1, functional: 26 }[purpose])
+      expect(evidence.cases).toHaveLength({ capture: 12, demo: 1, functional: 30 }[purpose])
       const expectedFiles = {
         capture: [
+          "project/captures/desktop-update.spec.ts",
+          "project/captures/desktop-update.spec.ts",
+          "project/captures/desktop-update.spec.ts",
+          "project/captures/mcp-app.spec.ts",
+          ...Array(4).fill("project/captures/workspace-history.spec.ts"),
           "project/captures/application.spec.ts",
           "project/captures/dependencies.spec.ts",
           "project/captures/problem-notice.spec.ts",
           "project/captures/word-wrap.spec.ts",
         ],
         functional: [
+          "project/tests/header-location.spec.ts",
+          "project/tests/mcp-app.spec.ts",
+          "project/tests/capture-viewport.spec.ts",
+          "project/tests/test-code-diff.spec.ts",
           "project/tests/desktop-update.spec.ts",
           "project/tests/desktop-update.spec.ts",
           "project/tests/desktop-update.spec.ts",

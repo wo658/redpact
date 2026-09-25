@@ -39,6 +39,8 @@ export function writeWorkspaceHistory(tab: WorkspaceTab, replace = false) {
   if (
     !replace &&
     current?.id === tab.id &&
+    current.projectId === tab.projectId &&
+    current.worktreeId === tab.worktreeId &&
     currentView.page === nextView.page &&
     currentView.selectedId === nextView.selectedId
   ) {

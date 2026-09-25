@@ -43,7 +43,8 @@ remain diagnostics. [Execution](execution.md) describes runtime boundaries.
 
 The bundled resources are `ui://redpact/environment.html` and
 `ui://redpact/tests.html`. They present response snapshots; they do not continuously
-poll or subscribe. Another `get_run` supplies a fresh snapshot. The persistent local
+poll or subscribe. The Environment card lists each dependency’s fixed kind once,
+without execution-time dependency choices. Another `get_run` supplies a fresh snapshot. The persistent local
 viewer remains the place for execution history and resource controls.
 
 A new `run_tests` captures the immutable submission and instance `approval` policy:

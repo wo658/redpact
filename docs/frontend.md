@@ -84,8 +84,12 @@ preview never executes project code.
 ## Layout and reading width
 
 The app header owns open-workspace tabs and native drag space outside the rounded content
-frame; it does not repeat the current page title. Workspace tabs use
-a fixed width, left-aligned icons and truncated titles, with a subtle outline and a brighter
+frame. Workspace tabs show `Project / Current page` or `Project / … / Last branch segment`.
+The full location remains in the tooltip and accessible name, including the close action.
+Sidebar navigation and browser history update the location; nested detail selections remain
+in their page toolbar. Tabs are at most 256px wide and shrink to the available strip width.
+The project uses at most 40% of the label, leaving the remaining width for the last segment;
+both truncate independently. Tabs use left-aligned icons, a subtle outline and a brighter
 selected surface. The adjacent plus button opens the current page location in a fresh tab and remains reachable
 when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The
 browser desktop and native macOS provide a sidebar toggle; compact mobile screens retain
@@ -116,7 +120,9 @@ at a history boundary traversal has no effect.
 The sidebar remains on the canvas. Preserve desktop
 gutters, collapsed state, full-width mobile content and macOS toolbar positioning.
 Workspace IDs are independent of project/worktree IDs. Each tab records its page and target;
-sidebar navigation updates the active tab, and labels reflect its current location. See
+sidebar navigation updates the active tab, and labels reflect its current location. Creating a
+new tab copies that location with a fresh ID. Project/worktree changes retain the active tab ID
+and create a history destination even when its page name is unchanged. See
 [UX navigation](ux-navigation.md) for new-tab and close behavior.
 Open workspace tabs retain their React state and DOM through React Activity. Hidden tabs
 release effect subscriptions; activating a tab restarts reads without discarding its view state.

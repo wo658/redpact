@@ -243,46 +243,29 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
     if (!project) {
       return
     }
-    const tabId = `project:${id}`
-    visitWorkspace(
-      workspaceTabs.find((tab) => tab.id === tabId) ?? {
-        id: tabId,
-        kind: "project",
-        label: project.name,
-        projectId: id,
-      },
-    )
+    visitWorkspace({
+      id: activeWorkspaceTabId || crypto.randomUUID(),
+      kind: "project",
+      label: project.name,
+      projectId: id,
+    })
   }
   function openWorktree(project: Project, worktree: Worktree) {
-    const tabId = `worktree:${project.id}:${worktree.id}`
-    const existing = workspaceTabs.find((tab) => tab.id === tabId)
-    if (existing) {
-      visitWorkspace(existing)
-      return
-    }
-    const next: WorkspaceTab = {
-      id: tabId,
+    visitWorkspace({
+      id: activeWorkspaceTabId || crypto.randomUUID(),
       kind: "worktree",
       label: worktreeName(worktree),
       projectId: project.id,
       worktreeId: worktree.id,
-    }
-    writeWorkspaceHistory(next)
-    setWorkspaceTabs((tabs) => tabs.map((tab) => (tab.id === activeWorkspaceTabId ? next : tab)))
-    setSelectedId(project.id)
-    setActiveWorkspaceTabId(next.id)
-    setError("")
+      view: { page: "review", selectedId: worktree.id },
+    })
   }
   function newWorkspaceTab() {
-    if (!selected) {
+    const current = workspaceTabs.find((tab) => tab.id === activeWorkspaceTabId)
+    if (!current) {
       return
     }
-    visitWorkspace({
-      id: `project:${selected.id}:${crypto.randomUUID()}`,
-      kind: "project",
-      label: selected.name,
-      projectId: selected.id,
-    })
+    visitWorkspace({ ...current, id: crypto.randomUUID() })
   }
   function closeWorkspaceTab(tabId: string) {
     if (workspaceTabs.length === 1) {
@@ -458,11 +441,13 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
               >
                 <LiveUpdates projectId={project.id}>
                   <WorktreePanel
+                    key={project.id}
                     project={project}
                     active={tab.id === activeWorkspaceTabId}
                     api={api}
                     projectMenu={tab.id === activeWorkspaceTabId ? projectMenu : undefined}
                     workspaceTabs={workspaceTabs}
+                    workspaceProjects={projects}
                     activeWorkspaceTabId={activeWorkspaceTabId}
                     onActivateWorkspaceTab={visitWorkspace}
                     onCloseWorkspaceTab={closeWorkspaceTab}
@@ -482,12 +467,47 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
   )
 }
 
+function workspaceLocation(
+  tab: WorkspaceTab,
+  worktrees: Worktree[],
+  selected: Worktree | undefined,
+  t: TFunction,
+) {
+  const page = tab.view?.page ?? "review"
+  const pages = {
+    "test-container": t("Container"),
+    tests: t("Tests"),
+    files: t("File Viewer"),
+    "git-graph": t("Git Graph"),
+    review: t("Worktrees"),
+    dependencies: t("Dependencies"),
+    "project-settings": t("Project settings"),
+    settings: t("Settings"),
+  }
+  if (page !== "review") {
+    return { destination: pages[page], parts: [pages[page]] }
+  }
+  const id = tab.view?.selectedId ?? tab.worktreeId
+  const worktree =
+    selected ?? worktrees.find((item) => (id ? item.id === id : item.projectId === tab.projectId))
+  let destination = pages.review
+  if (id?.startsWith("branch:")) {
+    destination = id.slice(7)
+  } else if (worktree) {
+    destination = worktreeName(worktree)
+  } else if (tab.kind === "worktree") {
+    destination = tab.label
+  }
+  return { destination, parts: destination.split("/").filter(Boolean) }
+}
+
 export function WorktreePanel({
   active = true,
   api,
   project,
   projectMenu,
   workspaceTabs = [],
+  workspaceProjects = [project],
   activeWorkspaceTabId,
   onActivateWorkspaceTab,
   onCloseWorkspaceTab,
@@ -507,6 +527,7 @@ export function WorktreePanel({
   project: Project
   projectMenu: ReactNode
   workspaceTabs?: WorkspaceTab[]
+  workspaceProjects?: Project[]
   activeWorkspaceTabId?: string
   onActivateWorkspaceTab?: (tab: WorkspaceTab) => void
   onCloseWorkspaceTab?: (tabId: string) => void
@@ -702,12 +723,21 @@ export function WorktreePanel({
           >
             {workspaceTabs.map((tab) => {
               const active = tab.id === activeWorkspaceTabId
+              const projectName =
+                workspaceProjects.find((item) => item.id === tab.projectId)?.name ?? tab.label
+              const { destination, parts } = workspaceLocation(
+                tab,
+                worktrees,
+                active ? selected : undefined,
+                t,
+              )
+              const title = `${projectName} / ${destination}`
               return (
                 <div
                   key={tab.id}
                   ref={active ? activeTabRef : undefined}
                   className={cn(
-                    "group/workspace-tab flex h-8 w-48 shrink-0 items-center gap-1 rounded-lg border px-1 text-xs transition-colors",
+                    "group/workspace-tab flex h-8 w-64 max-w-full shrink-0 items-center gap-1 rounded-lg border px-1 text-xs transition-colors",
                     active
                       ? "border-border bg-card text-foreground shadow-xs"
                       : "border-border/60 bg-muted/50 text-muted-foreground hover:bg-muted",
@@ -719,7 +749,8 @@ export function WorktreePanel({
                     role="tab"
                     aria-selected={active}
                     className="min-w-0 flex-1 justify-start gap-1.5 px-1 text-left"
-                    title={tab.label}
+                    title={title}
+                    aria-label={title}
                     onClick={() => onActivateWorkspaceTab?.(tab)}
                   >
                     {tab.kind === "worktree" ? (
@@ -727,7 +758,16 @@ export function WorktreePanel({
                     ) : (
                       <FolderGit2 aria-hidden="true" data-icon="inline-start" />
                     )}
-                    <span className="truncate">{tab.label}</span>
+                    <span aria-hidden="true" className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <span className="min-w-0 max-w-[40%] truncate text-muted-foreground">
+                        {projectName}
+                      </span>
+                      <span className="shrink-0 text-muted-foreground">/</span>
+                      {parts.length > 1 && (
+                        <span className="shrink-0 text-muted-foreground">… /</span>
+                      )}
+                      <span className="min-w-0 flex-1 truncate">{parts.at(-1)}</span>
+                    </span>
                   </Button>
                   {workspaceTabs.length > 1 && (
                     <Button
@@ -737,7 +777,7 @@ export function WorktreePanel({
                         !active &&
                           "opacity-0 group-hover/workspace-tab:opacity-100 group-focus-within/workspace-tab:opacity-100 [@media(hover:none)]:opacity-100",
                       )}
-                      aria-label={t("Close {{name}}", { name: tab.label })}
+                      aria-label={t("Close {{name}}", { name: title })}
                       onClick={() => onCloseWorkspaceTab?.(tab.id)}
                     >
                       <X aria-hidden="true" />
