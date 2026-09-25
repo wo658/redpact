@@ -1,4 +1,4 @@
-import { ChevronDownIcon, CircleHelpIcon } from "lucide-react"
+import { CircleHelpIcon } from "lucide-react"
 import { type ReactNode, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import type { Api, DependencyMode, DependencySettings, SettingsIssue } from "@/lib/api"
@@ -26,13 +26,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu"
 import { Empty } from "./ui/empty"
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "./ui/item"
 import { Skeleton } from "./ui/skeleton"
@@ -61,7 +54,7 @@ function DependencyHelp() {
   return (
     <Dialog>
       <DialogTrigger
-        aria-label={t("About dependency modes and environment overrides")}
+        aria-label={t("About fixed dependencies and environment overrides")}
         render={<Button variant="ghost" size="icon-sm" />}
       >
         <CircleHelpIcon aria-hidden="true" />
@@ -71,7 +64,7 @@ function DependencyHelp() {
         className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl"
       >
         <DialogHeader>
-          <DialogTitle>{t("Dependency modes and environment overrides")}</DialogTitle>
+          <DialogTitle>{t("Fixed dependencies and environment overrides")}</DialogTitle>
           <DialogDescription>
             {t(
               "All worktrees share the dependency definitions in the primary checkout's .redpact/settings.json. Changes here apply to future environments across the project; existing environments keep their captured settings.",
@@ -240,42 +233,23 @@ export function DependencyCatalog({
   dependencies: NonNullable<DependencySettings["dependencies"]>
 }) {
   const { t } = useTranslation()
-  const [selection, setSelection] = useState("")
-  const names = Object.keys(dependencies)
-  const name = names.includes(selection) ? selection : names[0]
-  if (!name) {
+  const entries = Object.entries(dependencies)
+  if (!entries.length) {
     return <EmptyState>{t("No dependencies declared.")}</EmptyState>
   }
-  const definition = dependencies[name]
   return (
-    <div className="flex min-w-0 flex-col gap-4">
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label={t("Select dependency")}
-          render={<Button variant="outline" className="max-w-full self-start" />}
-        >
-          <span className="truncate">{name}</span>
-          <ChevronDownIcon data-icon="inline-end" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuRadioGroup
-            value={name}
-            onValueChange={(value) => setSelection(String(value))}
-          >
-            {names.map((dependency) => (
-              <DropdownMenuRadioItem key={dependency} value={dependency} closeOnClick>
-                {dependency}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <Badge variant="outline" className="self-start">
-        {t(dependencyModeLabel(definition.kind))}
-      </Badge>
-      <ModeDefinition mode={definition}>
-        {renderEnvironment?.(name, definition.kind, definition)}
-      </ModeDefinition>
+    <div className="flex w-full min-w-0 content-width-768 flex-col gap-6">
+      {entries.map(([name, definition]) => (
+        <section key={name} aria-label={name} className="flex min-w-0 flex-col gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h3 className="break-all text-sm font-medium">{name}</h3>
+            <Badge variant="outline">{t(dependencyModeLabel(definition.kind))}</Badge>
+          </div>
+          <ModeDefinition mode={definition}>
+            {renderEnvironment?.(name, definition.kind, definition)}
+          </ModeDefinition>
+        </section>
+      ))}
     </div>
   )
 }

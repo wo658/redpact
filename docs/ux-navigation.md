@@ -92,7 +92,7 @@ Redpact
 │   │   │   ├── Overview [tab]
 │   │   │   │   └── Service relationships → selected service details
 │   │   │   ├── Configuration [tab]
-│   │   │   │   └── Selected dependency → fixed kind
+│   │   │   │   └── All dependencies → fixed definitions (no selector)
 │   │   │   │       ├── Per-environment / Shared local / Remote connection / Mock
 │   │   │   │       ├── Additional services
 │   │   │   │       └── Environment overrides and secret value inputs

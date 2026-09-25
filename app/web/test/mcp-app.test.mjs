@@ -105,12 +105,12 @@ test("official App and AppBridge negotiate and carry UI-only metadata and server
   }
 })
 
-test("configuration cards list every declared dependency and mode without an execution selection", () => {
+test("configuration cards list every fixed dependency kind without an execution selection", () => {
   const data = snapshotSchema.parse({
     kind: "environment",
     path: "/actual/project",
     valid: true,
-    dependencies: { database: ["isolated", "remote"], payments: ["mock", "remote"] },
+    dependencies: { database: ["isolated"], payments: ["mock"], provider: ["remote"] },
   })
   const html = renderToStaticMarkup(createElement(EnvironmentCard, { data, actions }))
   for (const text of [
@@ -152,5 +152,5 @@ test("execution snapshots display their captured fixed kind", () => {
   })
   const html = renderToStaticMarkup(createElement(EnvironmentCard, { data, actions }))
   assert.doesNotMatch(html, /Remote connection/)
-  assert.match(html, /Per-environment/)
+  assert.equal((html.match(/Per-environment/g) ?? []).length, 1)
 })

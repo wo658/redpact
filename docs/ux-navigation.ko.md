@@ -91,7 +91,7 @@ Redpact
 │   │   │   ├── Overview [탭]
 │   │   │   │   └── 서비스 관계 → 선택한 서비스 상세
 │   │   │   ├── Configuration [탭]
-│   │   │   │   └── 선택한 의존성 → 고정 종류
+│   │   │   │   └── 모든 의존성 → 고정 정의 (선택 컨트롤 없음)
 │   │   │   │       ├── Per-environment / Shared local / Remote connection / Mock
 │   │   │   │       ├── Additional services
 │   │   │   │       └── 환경 override와 비밀값 입력
