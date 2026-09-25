@@ -63,21 +63,17 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: Redpact ${{ github.ref_name }}
           releaseBody: |
-            Redpact ${{ github.ref_name }} adds project connection management with retained history, ordered runtime JSON migrations with original backups, and improved macOS sidebar controls and workspace navigation.
+            Redpact ${{ github.ref_name }} adds Compose web hosting and separate browser test runners, improves fixed dependency configuration and MCP cards, and refines workspace location headers, navigation, and active tabs in both themes.
 
-            Upgrade notes: supported legacy environment records are migrated automatically. Incomplete legacy selections block startup rather than guessing or resetting data. Project settings are not rewritten. Back up the complete instance before upgrading; downgrade requires restoring its matching backup while the application is stopped. Do not open upgraded data with an older application.
+            Validation on the release source: 606 server tests, 307 web tests, six managed integration cases, 30 actual-application browser cases, and 12 capture scenarios passed. The installed runtime package, server typecheck, lint, documentation content checks, and webpack documentation rendering passed. The default Turbopack documentation build failed with a local port-binding permission error; webpack rendering was verified separately. Opt-in tests excluded from the standard server suite are not claimed as passed.
 
-            Validation: server typecheck, 591 server tests, web tests/build, installed npm package verification, documentation content checks, and five Docker environment tests passed locally. The actual-application Playwright suite ran 26 scenarios: 12 passed and 14 failed. Failures include merge recovery, clipboard, sidebar/header expectations, ambiguous selectors, and workspace navigation/state expectations; these remain unresolved and this release is not fully UI-acceptance verified. The documentation renderer produced static pages but its wrapper did not exit, so renderer verification remains incomplete.
+            Project settings retain the fixed shared configuration contract. This release introduces no new runtime storage migration. macOS builds are ad-hoc signed and are not Apple notarized.
 
-            macOS builds are ad-hoc signed and are not Apple notarized.
+            Redpact ${{ github.ref_name }}은 Compose 웹 호스팅과 분리된 브라우저 테스트 실행기를 추가하고, 고정 의존성 설정과 MCP 카드를 개선하며, 작업공간 위치 헤더·탐색·라이트 및 다크 테마의 활성 탭 표시를 다듬습니다.
 
-            Redpact ${{ github.ref_name }}은 기록을 보존하는 프로젝트 연결 관리, 원본 백업을 남기는 순차적 런타임 JSON 마이그레이션, 개선된 macOS 사이드바 컨트롤과 작업공간 탐색을 제공합니다.
+            릴리스 소스 검증: 서버 테스트 606개, 웹 테스트 307개, 관리형 통합 시나리오 6개, 실제 앱 브라우저 기능 시나리오 30개, 캡처 시나리오 12개가 통과했습니다. 설치 패키지, 서버 타입 검사, lint, 문서 내용 검사 및 webpack 문서 렌더링도 통과했습니다. 기본 Turbopack 문서 빌드는 로컬 포트 바인딩 권한 오류로 실패했고 webpack 렌더링을 별도로 검증했습니다. 기본 서버 테스트에서 제외된 선택 실행 테스트는 통과했다고 주장하지 않습니다.
 
-            업그레이드 안내: 지원되는 이전 환경 레코드는 자동 변환됩니다. 이전 선택 정보가 불완전하면 추측하거나 데이터를 초기화하지 않고 시작을 차단합니다. 프로젝트 설정은 변경하지 않습니다. 업그레이드 전 인스턴스 전체를 백업하세요. 이전 버전으로 돌아가려면 앱을 중지한 상태에서 해당 버전의 백업을 복원해야 합니다. 업그레이드된 데이터를 이전 앱으로 열지 마세요.
-
-            검증: 서버 타입 검사, 서버 테스트 591개, 웹 테스트·빌드, npm 설치 패키지 검증, 문서 내용 검사 및 Docker 환경 테스트 5개는 로컬에서 통과했습니다. 실제 앱 Playwright 시나리오 26개 중 12개가 통과하고 14개가 실패했습니다. 머지 복구, 클립보드, 사이드바·헤더 기대값, 중복 선택자, 작업공간 탐색·상태 기대값 관련 실패가 해결되지 않았으므로 UI 인수 검증을 모두 통과한 릴리스가 아닙니다. 문서 렌더러는 정적 페이지를 생성했지만 실행 래퍼가 종료되지 않아 렌더러 검증도 미완료입니다.
-
-            macOS 빌드는 임시 서명되며 Apple 공증을 받지 않았습니다.
+            프로젝트 설정은 기존의 고정 공유 설정 계약을 유지하며 이번 릴리스에 새로운 런타임 저장소 마이그레이션은 없습니다. macOS 빌드는 임시 서명되며 Apple 공증을 받지 않았습니다.
           releaseDraft: true
           prerelease: false
           uploadUpdaterJson: true
