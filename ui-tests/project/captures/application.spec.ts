@@ -26,7 +26,7 @@ test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토�
     await expect(page.getByRole("button", { name: "Settings", exact: true })).toBeVisible()
   })
   const workspaceTabs = page.getByRole("tablist", { name: "열린 작업공간", exact: true })
-  await expect(workspaceTabs.getByRole("tab", { name: "Redpact", exact: true })).toBeVisible()
+  await expect(workspaceTabs.getByRole("tab", { name: /^Redpact \/ / })).toBeVisible()
   await capture(page, info, "작업공간 / 헤더 / 프로젝트 탭", workspaceTabs)
   const navigation = page.getByRole("navigation", { name: "Worktrees", exact: true })
   await expect(navigation.getByRole("button").first()).toBeVisible()
@@ -35,8 +35,16 @@ test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토�
   const worktreeName = await worktree.getAttribute("aria-label")
   expect(worktreeName, "워크트리 이름이 접근성 레이블로 제공되어야 한다").toBeTruthy()
   await worktree.click()
-  await expect(workspaceTabs.getByRole("tab", { name: worktreeName ?? "" })).toBeVisible()
+  await expect(
+    workspaceTabs.getByRole("tab", { name: `Redpact / ${worktreeName ?? ""}`, exact: true }),
+  ).toBeVisible()
   await expect(page.getByText("아직 리뷰할 내용이 없습니다.", { exact: true })).toBeVisible()
+  const emptyReview = page.getByText("아직 리뷰할 내용이 없습니다.", { exact: true })
+  await expect(emptyReview).toBeVisible()
+  for (const name of ["Diff", "Unit Test", "Integration Test", "Log", "Environment", "UI 리뷰"]) {
+    await expect(page.getByRole("tab", { name, exact: true })).toHaveCount(0)
+  }
+  await capture(page, info, "워크트리 / 리뷰 / 내용 없는 탭 숨김", emptyReview)
   await capture(page, info, "작업공간 / 헤더 / 워크트리 탭", workspaceTabs)
   await page
     .getByRole("button", { name: /Redpact/ })
@@ -89,13 +97,6 @@ test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토�
     page.getByRole("region", { name: "프로젝트 Dependencies", exact: true }),
   )
 
-  await navigation.getByRole("button").first().click()
-  const emptyReview = page.getByText("아직 리뷰할 내용이 없습니다.", { exact: true })
-  await expect(emptyReview).toBeVisible()
-  for (const name of ["Diff", "Unit Test", "Integration Test", "Log", "Environment", "UI 리뷰"]) {
-    await expect(page.getByRole("tab", { name, exact: true })).toHaveCount(0)
-  }
-  await capture(page, info, "워크트리 / 리뷰 / 내용 없는 탭 숨김", emptyReview)
   await page.getByRole("button", { name: "Test", exact: true }).click()
   await expect(page.getByRole("tab", { name: "Unit", selected: true })).toBeVisible()
   await expect(page.getByRole("region", { name: "Unit Test", exact: true })).toBeVisible()

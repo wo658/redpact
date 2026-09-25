@@ -128,6 +128,14 @@ Playwright entry; the fixture service does not launch browsers.
 The fixture image exposes the real application on 54318 with its unchanged loopback
 host/origin admission. Its test-only UI deployment on 54320 accepts the reserved
 `app.redpact.test` origin and forwards same-origin requests to the loopback upstream.
+The fixture closes upstream streams when the browser disconnects.
 Cross-origin requests remain rejected. Current Playwright setup uses 54320; an older
 controller using loopback 54318 can still inspect the same application. This deployment
 fixture does not establish production proxy, TLS or external API compatibility.
+
+Browser scenarios that exercise Clipboard or Web Crypto explicitly trust only the
+disposable `http://app.redpact.test:54320` origin through full Chromium channel launch options; the headless shell does not
+honor this origin-trust option.
+This test-only setting does not change the product HTTP admission rules or browser
+security settings outside that runner. MCP card scenarios load the actual bundled
+resource in an iframe and exchange messages with a separate test host window.

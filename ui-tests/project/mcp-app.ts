@@ -71,35 +71,42 @@ export async function openMcpEnvironment(page: Page, request: APIRequestContext)
     expect(result.isError).not.toBe(true)
     await page.goto("/")
     // 실제 서버의 App 리소스를 테스트 호스트 브리지로 열어 snapshot을 전달한다.
-    await page.evaluate((snapshot) => {
-      window.addEventListener("message", (event) => {
-        const message = event.data
-        if (message?.method === "ui/initialize") {
-          window.postMessage(
-            {
-              jsonrpc: "2.0",
-              id: message.id,
-              result: {
-                protocolVersion: message.params.protocolVersion,
-                hostInfo: { name: "Redpact browser test host", version: "1" },
-                hostCapabilities: {},
-                hostContext: { theme: "light" },
+    await page.setContent(
+      '<iframe title="MCP App" style="border:0;width:100%;height:100vh"></iframe>',
+    )
+    await page.evaluate(
+      ({ snapshot, html }) => {
+        window.addEventListener("message", (event) => {
+          const message = event.data
+          if (message?.method === "ui/initialize") {
+            ;(event.source as Window).postMessage(
+              {
+                jsonrpc: "2.0",
+                id: message.id,
+                result: {
+                  protocolVersion: message.params.protocolVersion,
+                  hostInfo: { name: "Redpact browser test host", version: "1" },
+                  hostCapabilities: {},
+                  hostContext: { theme: "light" },
+                },
               },
-            },
-            "*",
-          )
-        }
-        if (message?.method === "ui/notifications/initialized") {
-          window.postMessage(
-            { jsonrpc: "2.0", method: "ui/notifications/tool-result", params: snapshot },
-            "*",
-          )
-        }
-      })
-    }, result)
-    await page.setContent(resource.contents[0].text)
-    await expect(page.getByLabel("Environment", { exact: true })).toBeVisible()
-    return restore
+              "*",
+            )
+          }
+          if (message?.method === "ui/notifications/initialized") {
+            ;(event.source as Window).postMessage(
+              { jsonrpc: "2.0", method: "ui/notifications/tool-result", params: snapshot },
+              "*",
+            )
+          }
+        })
+        document.querySelector("iframe")!.srcdoc = html
+      },
+      { snapshot: result, html: resource.contents[0].text },
+    )
+    const card = page.frameLocator("iframe").getByLabel("Environment", { exact: true })
+    await expect(card).toBeVisible()
+    return { restore, card }
   } catch (error) {
     await restore()
     throw error

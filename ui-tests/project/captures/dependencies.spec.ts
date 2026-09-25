@@ -92,6 +92,14 @@ test("의존성 페이지의 빈 상태와 설정된 상태를 검토한다", as
       await expect(page.getByText("https://example.test", { exact: true })).toBeVisible()
       await expect(page.getByRole("button", { name: "환경변수 추가" })).toHaveCount(2)
       await capture(page, info, "Dependencies / 설정 / 환경변수 목록")
+      await page.setViewportSize({ width: 390, height: 844 })
+      await expect(page.getByRole("heading", { name: "payment", exact: true })).toBeVisible()
+      await expect(page.getByRole("heading", { name: "search", exact: true })).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        390,
+      )
+      await capture(page, info, "Dependencies / 모바일 / 고정 의존성 목록")
+      await page.setViewportSize({ width: 1920, height: 1080 })
       await page.getByRole("button", { name: "PAYMENT_URL 수정" }).click()
       await expect(page.getByRole("textbox", { name: "value", exact: true })).toBeVisible()
       await capture(page, info, "Dependencies / 설정 / 환경변수 편집")

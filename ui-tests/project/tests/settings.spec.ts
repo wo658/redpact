@@ -66,7 +66,7 @@ test("dependency 도움말은 필요할 때 열고 닫을 수 있다", async ({ 
   expect(response.ok()).toBeTruthy()
   await openApp(page)
   await page.getByRole("button", { name: "Dependencies", exact: true }).click()
-  const dialog = page.getByRole("dialog")
+  const dialog = page.getByRole("dialog", { name: "고정 의존성과 환경변수", exact: true })
   await expect(dialog).toBeHidden()
   await page.getByRole("button", { name: "고정 의존성 및 환경변수 도움말" }).click()
   await expect(dialog).toBeVisible()

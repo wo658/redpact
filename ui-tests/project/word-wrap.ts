@@ -36,8 +36,14 @@ export async function prepareWrapProject(page: Page, request: APIRequestContext)
 
 export async function openWrapDiff(page: Page) {
   await page.goto("/")
+  const navigation = page.getByRole("navigation", { name: "Worktrees", exact: true })
+  if (!(await navigation.isVisible())) {
+    await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+  }
+  await navigation.getByRole("button").first().click()
+  await page.keyboard.press("Escape")
   await page.getByRole("tab", { name: "Diff", exact: true }).click()
-  await page.getByRole("treeitem", { name: /settings.json/ }).click()
+  await page.getByRole("treeitem", { name: "settings.json", exact: true }).click()
   await expect(page.locator(".diff-code").filter({ hasText: "END_PROSE" })).toBeVisible()
 }
 

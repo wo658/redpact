@@ -1,12 +1,22 @@
 import { expect, test } from "@playwright/test"
 import { openApp } from "../app"
 
+// 격리된 테스트 앱 origin에서 실제 Clipboard와 Web Crypto API를 검증한다.
+test.use({
+  channel: "chromium",
+  launchOptions: {
+    args: ["--unsafely-treat-insecure-origin-as-secure=http://app.redpact.test:54320"],
+  },
+})
+
 test("헤더에서 새 탭을 열고 전환하고 닫아도 기존 작업공간을 유지한다", async ({
   page,
   request,
 }) => {
   const connected = await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })
   expect(connected.ok(), "실제 앱 프로젝트 연결이 성공한다").toBeTruthy()
+  const connectedProject = await connected.json()
+  await page.addInitScript((id) => localStorage.setItem("redpact:project", id), connectedProject.id)
   await openApp(page, "ko")
   const tabs = page.getByRole("tablist", { name: "열린 작업공간", exact: true })
   await expect(tabs.getByRole("tab")).toHaveCount(1)
@@ -57,6 +67,8 @@ test("헤더에서 새 탭을 열고 전환하고 닫아도 기존 작업공간�
 test("탭마다 파일 탐색 상태와 Test 하위 탭을 독립적으로 유지한다", async ({ page, request }) => {
   const connected = await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })
   expect(connected.ok()).toBeTruthy()
+  const connectedProject = await connected.json()
+  await page.addInitScript((id) => localStorage.setItem("redpact:project", id), connectedProject.id)
   await openApp(page, "en")
   const tabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
   async function navigate(name: string) {
