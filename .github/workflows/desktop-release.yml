@@ -63,13 +63,21 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: Redpact ${{ github.ref_name }}
           releaseBody: |
-            Redpact ${{ github.ref_name }} ships workspace navigation history, isolated reusable test images, macOS and Windows desktop installers, and the @wo658/redpact npm package from one verified tag.
+            Redpact ${{ github.ref_name }} adds project connection management with retained history, ordered runtime JSON migrations with original backups, and improved macOS sidebar controls and workspace navigation.
 
-            macOS builds are ad-hoc signed and are not Apple notarized. Docker-backed acceptance checks remain opt-in where a Docker daemon is unavailable.
+            Upgrade notes: supported legacy environment records are migrated automatically. Incomplete legacy selections block startup rather than guessing or resetting data. Project settings are not rewritten. Back up the complete instance before upgrading; downgrade requires restoring its matching backup while the application is stopped. Do not open upgraded data with an older application.
 
-            Redpact ${{ github.ref_name }}은 워크스페이스 탐색 기록, 격리된 재사용 가능 테스트 이미지, macOS 및 Windows 데스크톱 설치 파일, @wo658/redpact npm 패키지를 하나의 검증된 태그에서 배포합니다.
+            Validation: server typecheck, 591 server tests, web tests/build, installed npm package verification, documentation content checks, and five Docker environment tests passed locally. The actual-application Playwright suite ran 26 scenarios: 12 passed and 14 failed. Failures include merge recovery, clipboard, sidebar/header expectations, ambiguous selectors, and workspace navigation/state expectations; these remain unresolved and this release is not fully UI-acceptance verified. The documentation renderer produced static pages but its wrapper did not exit, so renderer verification remains incomplete.
 
-            macOS 빌드는 임시 서명되며 Apple 공증을 받지 않았습니다. Docker 데몬을 사용할 수 없는 환경에서는 Docker 기반 인수 검증을 선택적으로 실행합니다.
+            macOS builds are ad-hoc signed and are not Apple notarized.
+
+            Redpact ${{ github.ref_name }}은 기록을 보존하는 프로젝트 연결 관리, 원본 백업을 남기는 순차적 런타임 JSON 마이그레이션, 개선된 macOS 사이드바 컨트롤과 작업공간 탐색을 제공합니다.
+
+            업그레이드 안내: 지원되는 이전 환경 레코드는 자동 변환됩니다. 이전 선택 정보가 불완전하면 추측하거나 데이터를 초기화하지 않고 시작을 차단합니다. 프로젝트 설정은 변경하지 않습니다. 업그레이드 전 인스턴스 전체를 백업하세요. 이전 버전으로 돌아가려면 앱을 중지한 상태에서 해당 버전의 백업을 복원해야 합니다. 업그레이드된 데이터를 이전 앱으로 열지 마세요.
+
+            검증: 서버 타입 검사, 서버 테스트 591개, 웹 테스트·빌드, npm 설치 패키지 검증, 문서 내용 검사 및 Docker 환경 테스트 5개는 로컬에서 통과했습니다. 실제 앱 Playwright 시나리오 26개 중 12개가 통과하고 14개가 실패했습니다. 머지 복구, 클립보드, 사이드바·헤더 기대값, 중복 선택자, 작업공간 탐색·상태 기대값 관련 실패가 해결되지 않았으므로 UI 인수 검증을 모두 통과한 릴리스가 아닙니다. 문서 렌더러는 정적 페이지를 생성했지만 실행 래퍼가 종료되지 않아 렌더러 검증도 미완료입니다.
+
+            macOS 빌드는 임시 서명되며 Apple 공증을 받지 않았습니다.
           releaseDraft: true
           prerelease: false
           uploadUpdaterJson: true

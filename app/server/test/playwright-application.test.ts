@@ -6,6 +6,7 @@ import { execa } from "execa"
 import { expect, test } from "vitest"
 import { createCaptureRunner } from "../src/adapters/playwright/runner.js"
 import { createCaptureStore } from "../src/adapters/storage/captures.js"
+import { executionSettingsSchema } from "../src/core/execution-settings.js"
 import { settingsSchema } from "../src/core/settings-schema.js"
 import type { Environment } from "../src/core/types/environment.js"
 import type { CaptureRun } from "../src/core/types/playwright.js"
@@ -38,7 +39,7 @@ test
           demo: { purpose: "functional", testMatch: ["project/tests/product-demo.spec.ts"] },
         },
         service: "app",
-        port: 54318,
+        port: 54320,
         locale: "ko-KR",
         uiLanguage: "ko",
         timezoneId: "Asia/Seoul",
@@ -75,11 +76,20 @@ test
     }
     const docker = async (args: string[]) =>
       (await execa("docker", args, { timeout: 60000 })).stdout.trim()
+    const projectName = `redpact-${environmentId}`
+    const network = `${projectName}_redpact-runner`
+    let networkCreated = false
     let target = ""
     try {
+      await docker(["network", "create", network])
+      networkCreated = true
       target = await docker([
         "run",
         "-d",
+        "--network",
+        network,
+        "--network-alias",
+        "app.redpact.test",
         "--label",
         `io.redpact.owner=${ownerId}`,
         "--label",
@@ -154,12 +164,45 @@ test
         ])
       }
       run.sourceDigest = await runner.captureSources(id, projectRoot, settings)
-      const env = {
+      const env: Environment = {
         id: environmentId,
         ownerId,
+        projectName,
+        settings: executionSettingsSchema.parse({
+          environment: { compose: { files: [] } },
+          tests: {},
+        }),
+        plan: {
+          activeServices: ["app"],
+          excludedServices: [],
+          bindings: {},
+          prerequisites: {},
+          reasons: {},
+          requiredSecrets: [],
+        },
+        endpoints: { "app:54320": { host: "app.redpact.test", port: 54320 } },
         runtimeId: await docker(["info", "--format", "{{.ID}}"]),
         resources: [{ kind: "container", id: target, service: "app" }],
-      } as Environment
+        requestId: randomUUID(),
+        target: {
+          projectId: run.projectId,
+          worktreeId: run.worktreeId,
+          projectRoot,
+          checkoutRoot: projectRoot,
+        },
+        specification: settingsSchema.parse({ services: ["app"] }),
+        selection: { services: ["app"], select: {} },
+        bundle: [],
+        settingsDigest: "native-adapter-check",
+        inputDigest: "native-adapter-check",
+        state: "ready",
+        lifecycle: "run",
+        runIds: [],
+        services: [{ name: "app", job: false }],
+        errors: [],
+        createdAt: run.createdAt,
+        updatedAt: run.createdAt,
+      }
       const evidence = await runner.execute(
         run,
         "after",
@@ -202,7 +245,7 @@ test
               "Playwright / 스크린샷 / 프로젝트 Playwright 기록",
               "Playwright / Test / 실행 전 기능 테스트 파일",
             ]
-      expect(evidence.cases).toHaveLength({ capture: 4, demo: 1, functional: 11 }[purpose])
+      expect(evidence.cases).toHaveLength({ capture: 4, demo: 1, functional: 26 }[purpose])
       const expectedFiles = {
         capture: [
           "project/captures/application.spec.ts",
@@ -211,6 +254,21 @@ test
           "project/captures/word-wrap.spec.ts",
         ],
         functional: [
+          "project/tests/desktop-update.spec.ts",
+          "project/tests/desktop-update.spec.ts",
+          "project/tests/desktop-update.spec.ts",
+          "project/tests/fixed-execution-settings.spec.ts",
+          "project/tests/project-management.spec.ts",
+          "project/tests/project-management.spec.ts",
+          "project/tests/sidebar-controls.spec.ts",
+          "project/tests/sidebar-controls.spec.ts",
+          "project/tests/workspace-history.spec.ts",
+          "project/tests/workspace-history.spec.ts",
+          "project/tests/workspace-history.spec.ts",
+          "project/tests/workspace-history.spec.ts",
+          "project/tests/workspace-tabs.spec.ts",
+          "project/tests/workspace-tabs.spec.ts",
+          "project/tests/workspace-tabs.spec.ts",
           "project/tests/dependencies.spec.ts",
           "project/tests/copy-handoff.spec.ts",
           "project/tests/git-graph.spec.ts",
@@ -290,10 +348,13 @@ test
         await docker(["rm", "-fv", target])
       }
       await runner.removeInputs(id)
+      if (networkCreated) {
+        await docker(["network", "rm", network])
+      }
       if (!process.env.REDPACT_CAPTURE_EVIDENCE_DIR) {
         await rm(root, { recursive: true, force: true })
       }
     }
   },
-  120000,
+  600000,
 )

@@ -26,6 +26,7 @@ dockerTest(
     const data = join(root, "data")
     const namedImage = `redpact-cleanup-preserved-${randomUUID()}`
     const extraTag = `redpact-cleanup-extra-${randomUUID()}`
+    await execa("docker", ["pull", "alpine:3.21"])
     await execa("docker", ["tag", "alpine:3.21", namedImage])
     const originalImage = (
       await execa("docker", ["image", "inspect", "--format", "{{.Id}}", namedImage])

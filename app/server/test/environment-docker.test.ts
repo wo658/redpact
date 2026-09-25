@@ -23,7 +23,7 @@ dockerTest(
     await writeFile(composePath, compose)
     await writeFile(
       join(projectRoot, ".redpact/settings.json"),
-      '{"composeFiles": ["compose.yaml"]}',
+      JSON.stringify({ composeFiles: ["compose.yaml"], services: ["probe"] }),
     )
     const launch = async () => {
       const child = spawn(
@@ -55,8 +55,9 @@ dockerTest(
           headers: { "Content-Type": "application/json" },
           ...(body ? { method: "POST", body: JSON.stringify(body) } : {}),
         })
-        expect(response.ok, `${response.status}: ${path}`).toBe(true)
-        return response.json()
+        const text = await response.text()
+        expect(response.ok, `${response.status}: ${path}\n${text}`).toBe(true)
+        return JSON.parse(text)
       }
       return { child, exited, request }
     }
