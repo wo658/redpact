@@ -41,28 +41,3 @@ export async function http<T = Record<string, unknown>>(
     { path, method, body },
   )
 }
-export async function rpc<T = Record<string, unknown>>(method: string, params: unknown) {
-  return node<T>(
-    `
-    const {method, params} = JSON.parse(process.argv[1]);
-    const headers = {'Content-Type':'application/json', Accept:'application/json, text/event-stream'};
-    async function send(body) {
-      const response = await fetch('http://127.0.0.1:54318/mcp', {method:'POST', headers, body:JSON.stringify(body)});
-      const session = response.headers.get('mcp-session-id');
-      if (session) headers['mcp-session-id'] = session;
-      if (!response.ok) throw new Error('MCP HTTP ' + response.status);
-      const source = await response.text();
-      if (!source) return;
-      const value = source.startsWith('event:') || source.startsWith('data:')
-        ? source.split('\\n').filter(line=>line.startsWith('data:')).map(line=>JSON.parse(line.slice(5))).at(-1)
-        : JSON.parse(source);
-      if (value.error) throw new Error(JSON.stringify(value.error));
-      return value.result;
-    }
-    await send({jsonrpc:'2.0', id:1, method:'initialize', params:{protocolVersion:'2025-03-26', capabilities:{}, clientInfo:{name:'redpact-e2e', version:'1'}}});
-    await send({jsonrpc:'2.0', method:'notifications/initialized'});
-    console.log(JSON.stringify(await send({jsonrpc:'2.0', id:2, method, params})));
-  `,
-    { method, params },
-  )
-}

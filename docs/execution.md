@@ -62,6 +62,11 @@ image-only dependencies are preserved; no application credentials are needed aga
 Unit build images carry owner/run labels so cleanup also finds them when container
 startup fails before an image ID is recorded.
 
+The shared Playwright runner installs only Chromium and its system dependencies; Firefox
+and WebKit are not included. The self-E2E application uses a Node slim runtime without
+browsers. Browser scenarios live in `ui-tests/project/tests` and execute in the separate
+Playwright runner, including test-code diff and capture viewport checks.
+
 Playwright reuses its shared browser image when the Dockerfile and bundled reporter
 assets have the same digest. Warm captures skip the browser image build. Each capture
 still starts a fresh browser container and fresh application environment; their

@@ -56,6 +56,11 @@ Integration과 Playwright는 공유 러너 이미지를 유지하고, 임시 앱
 Unit 빌드 이미지에는 소유자·실행 label을 붙여 이미지 ID 기록 전 컨테이너 시작이
 실패해도 정리할 수 있습니다.
 
+공유 Playwright 러너에는 Chromium과 필요한 시스템 의존성만 설치하며 Firefox와
+WebKit은 포함하지 않습니다. 자체 E2E 앱은 브라우저 없는 Node slim 런타임을 사용합니다.
+테스트 코드 diff와 캡처 크기 필터 검증을 포함한 브라우저 시나리오는
+`ui-tests/project/tests`에 두고 별도 Playwright 러너에서 실행합니다.
+
 Playwright는 Dockerfile과 번들 reporter 파일의 digest가 같으면 공유 브라우저 이미지를
 재사용하며 다음 캡처에서 브라우저 이미지 빌드를 생략합니다. 각 캡처는 여전히 새 브라우저
 컨테이너와 새 앱 환경을 시작하고 실행 후 컨테이너와 앱 볼륨을 제거합니다. 러너 이미지

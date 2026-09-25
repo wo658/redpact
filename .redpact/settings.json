@@ -47,5 +47,6 @@
         "testMatch": ["project/tests/product-demo.spec.ts"]
       }
     }
-  }
+  },
+  "services": ["app"]
 }
