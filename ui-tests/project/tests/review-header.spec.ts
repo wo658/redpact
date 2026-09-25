@@ -87,7 +87,7 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
         const fontSize = await page
           .getByRole("tab", { name: "Log", exact: true })
           .evaluate((element) => getComputedStyle(element).fontSize)
-        await page.getByRole("tab", { name: "UI Review", exact: true }).click()
+        await page.getByRole("tab", { name: "Playwright", exact: true }).click()
         const mobile = page.getByRole("switch", { name: "Mobile", exact: true })
         await expect(mobile).toBeVisible()
         const after = await toolbar.boundingBox()
