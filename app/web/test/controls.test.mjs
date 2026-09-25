@@ -490,7 +490,7 @@ test("마지막 프로젝트를 연결 해제한 뒤에도 관리 화면에서 �
   await user.click(await within(dialog).findByRole("button", { name: "Reconnect", exact: true }))
   await user.click(within(dialog).getByRole("tab", { name: "Connected", exact: true }))
   await user.click(await within(dialog).findByRole("button", { name: "Open", exact: true }))
-  assert.ok(await screen.findByRole("tab", { name: "Only project", exact: true }))
+  assert.ok(await screen.findByRole("tab", { name: "Only project / Worktrees", exact: true }))
   assert.equal(project.disconnectedAt, undefined)
 })
 
@@ -617,6 +617,7 @@ test("웹 헤더는 열린 작업공간 탭을 제공하고 페이지 선택은 
   assert.equal(screen.queryByRole("button", { name: "Go forward" }), null)
   await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
   assert.ok(screen.getByRole("heading", { name: "Settings", level: 1 }))
+  assert.ok(screen.getByRole("tab", { name: "Actual project / Settings", exact: true }))
   await user.click(screen.getByRole("button", { name: "Project settings", exact: true }))
   assert.ok(await screen.findByRole("combobox", { name: "Main branch" }))
   await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
@@ -755,6 +756,12 @@ test("사이드바 이동은 현재 탭을 바꾸고 명시적으로 연 탭만 
   )
   const tabs = () => within(screen.getByRole("tablist", { name: "Open workspaces" }))
   await screen.findByRole("button", { name: "feature/second", exact: true })
+  const location = tabs().getByRole("tab", {
+    name: "Redpact example / feature/second",
+    exact: true,
+  })
+  assert.equal(location.title, "Redpact example / feature/second")
+  assert.match(location.textContent, /… \/second$/)
   await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
   assert.equal(tabs().getAllByRole("tab").length, 2)
   await user.click(screen.getByRole("button", { name: "Settings", exact: true }))

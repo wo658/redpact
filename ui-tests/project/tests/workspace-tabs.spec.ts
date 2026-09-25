@@ -10,7 +10,7 @@ test("헤더에서 새 탭을 열고 전환하고 닫아도 기존 작업공간�
   await openApp(page, "ko")
   const tabs = page.getByRole("tablist", { name: "열린 작업공간", exact: true })
   await expect(tabs.getByRole("tab")).toHaveCount(1)
-  let original = await tabs.getByRole("tab").innerText()
+  let original = await tabs.getByRole("tab").getAttribute("aria-label")
   const add = page.getByRole("button", { name: "새 탭", exact: true })
   await test.step("새 탭 버튼으로 독립된 프로젝트 탭을 연다", async () => {
     await expect(add).toBeVisible()
@@ -22,12 +22,12 @@ test("헤더에서 새 탭을 열고 전환하고 닫아도 기존 작업공간�
       await page.keyboard.press("Escape")
     }
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible()
-    original = await tabs.getByRole("tab").innerText()
+    original = await tabs.getByRole("tab").getAttribute("aria-label")
     await add.click()
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible()
     await expect(tabs.getByRole("tab")).toHaveCount(2)
     await expect(tabs.getByRole("tab").nth(1)).toHaveAttribute("aria-selected", "true")
-    await expect(tabs.getByRole("tab").first()).toHaveText(original)
+    await expect(tabs.getByRole("tab").first()).toHaveAccessibleName(original ?? "")
     await tabs.getByRole("tab").first().click()
     await expect(tabs.getByRole("tab").first()).toHaveAttribute("aria-selected", "true")
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible()
