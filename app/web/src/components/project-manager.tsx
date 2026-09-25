@@ -739,7 +739,7 @@ export function WorktreePanel({
                   className={cn(
                     "group/workspace-tab flex h-8 w-64 max-w-full shrink-0 items-center gap-1 rounded-lg border px-1 text-xs transition-colors",
                     active
-                      ? "border-border bg-card text-foreground shadow-xs"
+                      ? "border-primary/50 bg-accent text-accent-foreground shadow-xs"
                       : "border-border/60 bg-muted/50 text-muted-foreground hover:bg-muted",
                   )}
                 >
