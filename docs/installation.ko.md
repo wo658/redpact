@@ -9,6 +9,46 @@ Redpact의 공개 소스와 런타임 다운로드는
 [wo658/redpact](https://github.com/wo658/redpact)에서 제공합니다. 런타임 패키지는
 CLI와 브라우저 뷰어를 설치합니다. Tauri 데스크톱 앱은 설치하지 않습니다.
 
+## Docker Compose로 웹 뷰어 호스팅
+
+이 소스 체크아웃에서 실행합니다.
+
+```sh
+docker compose up -d --build --wait
+```
+
+`http://127.0.0.1:54318`을 엽니다. 하나의 컨테이너가 빌드된 뷰어, `/api`,
+`/mcp`를 함께 제공하므로 Vite 프로세스나 데스크톱 앱은 필요하지 않습니다.
+포트가 사용 중이면 `REDPACT_WEB_PORT=54328 docker compose up -d --build --wait`로
+실행하고 54328 포트로 접속합니다. 포트는 호스트의 루프백 인터페이스에만
+공개됩니다. 현재 로컬 Host/Origin 경계는 공개 도메인이나 LAN 호스팅을 지원하지
+않습니다. 인증이 없는 개발 서비스를 단순히 외부에 공개하지 마세요.
+
+실행 상태와 설치된 버전을 확인합니다.
+
+```sh
+docker compose ps
+curl --fail http://127.0.0.1:54318/api/health
+curl --fail http://127.0.0.1:54318/api/updates
+docker compose exec redpact node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version"
+```
+
+`/api/updates`에는 `currentVersion`이 포함됩니다. 포트를 변경했다면 curl의
+포트도 변경합니다. 체크아웃을 업데이트한 뒤 시작 명령으로 다시 빌드합니다.
+컨테이너 업데이트는 뷰어의 패키지 설치 기능 대신 이미지를 교체하여 수행합니다.
+`docker compose down`은 호스팅을 중지하고 `redpact-data` 볼륨을 보존합니다.
+`docker compose down -v`는 해당 인스턴스의 설정과 실행 증거도 삭제합니다.
+
+기본 컨테이너에는 연결된 프로젝트가 없으며 호스트 저장소나 Docker 소켓을
+마운트하지 않습니다. 실제 프로젝트를 탐색하려면 Compose 오버라이드에서 체크아웃을
+명시적으로 바인드 마운트하고 뷰어에서 **컨테이너 내부 경로**로 연결하세요.
+참조하는 워크트리와 Git 공통 디렉터리도 기록된 경로로 접근할 수 있어야 하며,
+컨테이너의 `node` 사용자에게 필요한 권한이 있어야 합니다.
+이 기본 구성은 뷰어/API를 호스팅하지만 관리형 테스트 실행, GitHub CLI 인증,
+관리형 워크트리 생성 준비까지 보장하지는 않습니다. 관리형 테스트에는 추가 Docker
+접근 권한과 일관된 호스트/컨테이너 바인드 경로가 필요합니다. 전체 로컬 개발
+실행기는 아래의 호스트 설치 런타임을 사용하세요.
+
 ## 설치 경로 선택
 
 | 경로 | 설치 대상 | 요구 사항 / 제한 |

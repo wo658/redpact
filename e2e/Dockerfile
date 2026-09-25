@@ -13,10 +13,9 @@ COPY . .
 RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm build && cp -R app/web/dist app/server/dist/ui
 RUN node app/server/tools/pack-runtime.mjs --directory /runtime
 
-FROM mcr.microsoft.com/playwright:v1.63.0-noble
+FROM node:24-bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends git procps ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN npm install -g pnpm@11.2.2 && npm cache clean --force
-RUN mkdir /e2e-browser && cd /e2e-browser && pnpm add --ignore-scripts --save-exact @playwright/test@1.63.0
 WORKDIR /app
 # Keep the editable Git fixture, but only ship production server dependencies and built UI.
 COPY . .

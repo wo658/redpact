@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto"
-import { expect, test } from "vitest"
-import { createSteps } from "./steps"
-import { browser, http, node } from "./target"
+import { expect, test } from "@playwright/test"
+import { http, node } from "../target"
 
 /** 저장된 캡처별 크기를 공개 API로 읽고 실제 앱의 Mobile 필터를 조작한다. */
-test("같은 실행의 모바일과 데스크톱 캡처를 실제 크기로 분리한다", async (context) => {
-  const step = createSteps(context)
+test("같은 실행의 모바일과 데스크톱 캡처를 실제 크기로 분리한다", async ({ page }) => {
+  test.setTimeout(60000)
+  const step = test.step
   const fixture = await step("격리된 앱에 혼합 크기 캡처 기록을 준비한다", async () => {
     const project = await http<{ id: string }>("/api/projects", "POST", { path: "/app" })
     expect(project.status).toBe(201)
@@ -81,59 +81,55 @@ test("같은 실행의 모바일과 데스크톱 캡처를 실제 크기로 분�
     ).toEqual([414, 768, undefined])
   })
   await step("실제 Chromium에서 Mobile 토글을 켜고 꺼 캡처가 바뀌는지 확인한다", async () => {
-    const source = `
-      const {test,expect}=require('@playwright/test');
-      test('실제 앱의 캡처별 Mobile 필터',async({page})=>{
-        await page.addInitScript((id)=>{localStorage.setItem('redpact:language','en');localStorage.setItem('redpact:project',id)},${JSON.stringify(fixture.projectId)});
-        await page.goto('http://127.0.0.1:54318/');
-        await page.getByRole('navigation',{name:'Worktrees',exact:true}).getByRole('button').first().click();
-        await page.getByRole('tab',{name:'Playwright',exact:true}).click();
-        const mobile=page.getByRole('switch',{name:'Mobile',exact:true});
-        await test.step('PNG 없는 파일과 실행하지 않은 파일도 선택하고 준비 오류를 확인한다',async()=>{
-          await page.getByRole('treeitem',{name:'empty.spec.ts',exact:true}).click();
-          await expect(page.getByText('No completed screenshots in this execution.',{exact:true})).toBeVisible();
-          await page.getByRole('treeitem',{name:'never.spec.ts',exact:true}).click();
-          // 격리 앱에는 Docker가 없으므로 실행 준비 오류를 숨기지 않는다.
-          const inspection = await (await page.request.get('http://127.0.0.1:54318/api/worktrees/'+${JSON.stringify(fixture.worktreeId)}+'/playwright')).json();
-          expect(inspection.error).toContain('spawn docker ENOENT');
-          await expect(page.getByText(/spawn docker ENOENT/)).toBeVisible();
-          await expect(page.getByRole('button',{name:'Run Playwright',exact:true})).toBeDisabled();
-          await expect(page.getByText('No captures yet. Run Playwright to record the actual application.',{exact:true})).toBeVisible();
-          await expect(page.getByAltText('Desktop boundary',{exact:true})).toHaveCount(0);
-          await page.getByRole('treeitem',{name:'viewport.spec.ts',exact:true}).click();
-        });
-        await test.step('Desktop에서는 768px 캡처만 표시한다',async()=>{
-          await expect(page.getByAltText('Desktop boundary',{exact:true})).toBeVisible();
-          await expect(page.getByAltText('Container / light / 414',{exact:true})).toHaveCount(0);
-          await expect(page.getByText('Viewport unavailable',{exact:false})).toBeVisible();
-        });
-        await test.step('Mobile에서는 414px 캡처만 표시한다',async()=>{
-          await page.setViewportSize({width:390,height:844});
-          await mobile.click();
-          await expect(page.getByAltText('Container / light / 414',{exact:true})).toBeVisible();
-          await expect(page.getByAltText('Desktop boundary',{exact:true})).toHaveCount(0);
-          await expect(page.getByAltText('Unknown capture',{exact:true})).toBeVisible();
-        });
-        await test.step('다시 Desktop으로 돌아와도 결과가 유지된다',async()=>{
-          await mobile.click();
-          await expect(page.getByAltText('Desktop boundary',{exact:true})).toBeVisible();
-          await expect(page.getByAltText('Container / light / 414',{exact:true})).toHaveCount(0);
-        });
-      });`
-    const report = await browser(source)
-
-    expect(report.stats.unexpected, JSON.stringify(report.suites)).toBe(0)
-    expect(report.stats.expected).toBe(1)
-    expect(
-      report.suites[0].specs[0].tests[0].results[0].steps.map(
-        (item: { title: string }) => item.title,
-      ),
-    ).toEqual(
-      expect.arrayContaining([
-        "Desktop에서는 768px 캡처만 표시한다",
-        "Mobile에서는 414px 캡처만 표시한다",
-        "다시 Desktop으로 돌아와도 결과가 유지된다",
-      ]),
-    )
+    await page.addInitScript((id) => {
+      localStorage.setItem("redpact:language", "en")
+      localStorage.setItem("redpact:project", id)
+    }, fixture.projectId)
+    await page.goto("/")
+    await page
+      .getByRole("navigation", { name: "Worktrees", exact: true })
+      .getByRole("button")
+      .first()
+      .click()
+    await page.getByRole("tab", { name: "Playwright", exact: true }).click()
+    const mobile = page.getByRole("switch", { name: "Mobile", exact: true })
+    await test.step("PNG 없는 파일과 실행하지 않은 파일도 선택하고 준비 오류를 확인한다", async () => {
+      await page.getByRole("treeitem", { name: "empty.spec.ts", exact: true }).click()
+      await expect(
+        page.getByText("No completed screenshots in this execution.", { exact: true }),
+      ).toBeVisible()
+      await page.getByRole("treeitem", { name: "never.spec.ts", exact: true }).click()
+      // 격리 앱에는 Docker가 없으므로 실행 준비 오류를 숨기지 않는다.
+      const inspection = await (
+        await page.request.get(`/api/worktrees/${fixture.worktreeId}/playwright`)
+      ).json()
+      expect(inspection.error).toContain("spawn docker ENOENT")
+      await expect(page.getByText(/spawn docker ENOENT/)).toBeVisible()
+      await expect(page.getByRole("button", { name: "Run Playwright", exact: true })).toBeDisabled()
+      await expect(
+        page.getByText("No captures yet. Run Playwright to record the actual application.", {
+          exact: true,
+        }),
+      ).toBeVisible()
+      await expect(page.getByAltText("Desktop boundary", { exact: true })).toHaveCount(0)
+      await page.getByRole("treeitem", { name: "viewport.spec.ts", exact: true }).click()
+    })
+    await test.step("Desktop에서는 768px 캡처만 표시한다", async () => {
+      await expect(page.getByAltText("Desktop boundary", { exact: true })).toBeVisible()
+      await expect(page.getByAltText("Container / light / 414", { exact: true })).toHaveCount(0)
+      await expect(page.getByText("Viewport unavailable", { exact: false })).toBeVisible()
+    })
+    await test.step("Mobile에서는 414px 캡처만 표시한다", async () => {
+      await page.setViewportSize({ width: 390, height: 844 })
+      await mobile.click()
+      await expect(page.getByAltText("Container / light / 414", { exact: true })).toBeVisible()
+      await expect(page.getByAltText("Desktop boundary", { exact: true })).toHaveCount(0)
+      await expect(page.getByAltText("Unknown capture", { exact: true })).toBeVisible()
+    })
+    await test.step("다시 Desktop으로 돌아와도 결과가 유지된다", async () => {
+      await mobile.click()
+      await expect(page.getByAltText("Desktop boundary", { exact: true })).toBeVisible()
+      await expect(page.getByAltText("Container / light / 414", { exact: true })).toHaveCount(0)
+    })
   })
 })

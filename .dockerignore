@@ -18,3 +18,10 @@ app/desktop/src-tauri/gen
 app/docs/.next
 app/docs/.source
 app/docs/tsconfig.tsbuildinfo
+
+# Local state and retained checkouts must not enter hosting images.
+.pnpm-store
+.local-note
+.worktrees
+**/.codex
+.redpact
