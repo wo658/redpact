@@ -3,8 +3,9 @@
 These acceptance tests exercise the built Redpact application through real HTTP,
 MCP, Git worktrees, filesystem events, and persisted submissions. They do not import
 server Core or rerun the unit-test suite. Nested Docker provisioning inside the target application is outside this suite's
-coverage. A few embedded browser probes exercise public UI behavior; maintained
-Playwright functional tests and captures use their separate execution entry.
+coverage. Browser probes, including test-code diffs and capture viewport filtering, run as
+Playwright functional tests through the separate runner. The application image contains
+no installed browser or Playwright test runtime.
 
 ## Run through the connected Redpact
 
@@ -98,9 +99,10 @@ It does not establish that the current MCP host renders the input card.
 `dependency-topology.test.ts` verifies fixed dependency definitions, application-service
 relationships, and revision-preserving rejection of unsupported kinds through HTTP and MCP.
 
-`capture-viewport.test.ts` seeds isolated capture records, verifies their public API
-readback, and runs Playwright functional assertions against that same application
-container's real Mobile toggle. It uses Chromium installed in the disposable fixture image and reports browser assertions inside the managed Integration result.
+`ui-tests/project/tests/capture-viewport.spec.ts` seeds isolated capture records, verifies
+their public API readback, and checks the real Mobile toggle from the separate
+Chromium runner. `test-code-diff.spec.ts` verifies desktop and mobile diff rendering
+through the same Playwright entry.
 It does not claim those seeded PNGs were application captures. Actual automatic
 collection, delayed/path attachments, crops and high-DPI pages are independently
 verified by `REDPACT_DOCKER_TESTS=1` and `test/playwright-docker.test.ts`.
@@ -120,12 +122,20 @@ It also exercises restart after a record was converted but completion was not re
 image's fixture service on port 54319. It needs no Docker CLI, Docker socket or host
 filesystem mount. The fixture endpoint executes bounded setup commands only inside
 that image and rejects browser-origin requests. It is not included in product packages
-and must never be deployed as a normal server. Existing embedded browser probes run
-inside the fixture image; maintained UI verification uses the Playwright entry.
+and must never be deployed as a normal server. Browser verification uses the separate
+Playwright entry; the fixture service does not launch browsers.
 
 The fixture image exposes the real application on 54318 with its unchanged loopback
 host/origin admission. Its test-only UI deployment on 54320 accepts the reserved
 `app.redpact.test` origin and forwards same-origin requests to the loopback upstream.
+The fixture closes upstream streams when the browser disconnects.
 Cross-origin requests remain rejected. Current Playwright setup uses 54320; an older
 controller using loopback 54318 can still inspect the same application. This deployment
 fixture does not establish production proxy, TLS or external API compatibility.
+
+Browser scenarios that exercise Clipboard or Web Crypto explicitly trust only the
+disposable `http://app.redpact.test:54320` origin through full Chromium channel launch options; the headless shell does not
+honor this origin-trust option.
+This test-only setting does not change the product HTTP admission rules or browser
+security settings outside that runner. MCP card scenarios load the actual bundled
+resource in an iframe and exchange messages with a separate test host window.

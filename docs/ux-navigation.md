@@ -92,7 +92,7 @@ Redpact
 │   │   │   ├── Overview [tab]
 │   │   │   │   └── Service relationships → selected service details
 │   │   │   ├── Configuration [tab]
-│   │   │   │   └── Selected dependency → fixed kind
+│   │   │   │   └── All dependencies → fixed definitions (no selector)
 │   │   │   │       ├── Per-environment / Shared local / Remote connection / Mock
 │   │   │   │       ├── Additional services
 │   │   │   │       └── Environment overrides and secret value inputs
@@ -205,7 +205,9 @@ Redpact
   before project display options. When closed, the reopen control appears below the header.
   Worktree display options appear on hover anywhere in the Worktrees section, on keyboard
   focus, while the menu is open, and for non-hover input.
-  Workspace tabs use a fixed width, left-aligned icons and truncated labels with subtle outlines.
+  Workspace tabs show project and current location with slashes, collapsing intermediate branch
+  segments to an ellipsis. Full locations remain available in accessible names and tooltips.
+  See [header layout](frontend.md) for width limits and truncation.
   Every workspace tab has an identity independent of its project or worktree and records
   its current page, project and applicable worktree or branch. Sidebar page, project,
   worktree and branch selections navigate within the active tab. Only explicitly choosing

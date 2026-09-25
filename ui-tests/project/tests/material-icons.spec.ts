@@ -21,7 +21,7 @@ test("Material 파일 아이콘과 폴더 상태를 표시하고 Git 변경 및 
   try {
     await test.step("변경 파일에 컬러 아이콘과 수정 상태를 함께 표시한다", async () => {
       await openWrapDiff(page)
-      const row = page.getByRole("treeitem", { name: /settings.json/ })
+      const row = page.getByRole("treeitem", { name: "settings.json", exact: true })
       await loadedIcon(row)
       await expect(row).toContainText("M")
     })

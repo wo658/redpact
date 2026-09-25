@@ -679,8 +679,8 @@ export const ko = {
   "Open settings": "설정 열기",
   "Project settings": "Project settings",
   "Project dependencies": "프로젝트 Dependencies",
-  "About dependency modes and environment overrides": "dependency mode 및 env override 도움말",
-  "Dependency modes and environment overrides": "dependency mode와 env override",
+  "About fixed dependencies and environment overrides": "고정 의존성 및 환경변수 도움말",
+  "Fixed dependencies and environment overrides": "고정 의존성과 환경변수",
   "All worktrees share the dependency definitions in the primary checkout's .redpact/settings.json. Changes here apply to future environments across the project; existing environments keep their captured settings.":
     "모든 worktree는 기본 checkout의 .redpact/settings.json에 정의된 dependency를 공유합니다. 여기서 수정한 규칙은 프로젝트 전체에서 새로 만드는 환경에 적용되며, 기존 환경은 생성 당시 설정을 유지합니다.",
   "Browse a dependency and its modes here. Browsing does not change execution choices. Each worktree selects one mode per dependency in Environment and saves its own selection.":

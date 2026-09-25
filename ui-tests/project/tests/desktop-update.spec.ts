@@ -1,6 +1,14 @@
 import { expect, test } from "@playwright/test"
 import { openApp } from "../app"
 
+// 격리된 테스트 앱 origin에서 실제 Clipboard와 Web Crypto API를 검증한다.
+test.use({
+  channel: "chromium",
+  launchOptions: {
+    args: ["--unsafely-treat-insecure-origin-as-secure=http://app.redpact.test:54320"],
+  },
+})
+
 test.beforeEach(async ({ request }) => {
   const response = await request.post("/api/projects", {
     data: { path: process.env.REDPACT_TEST_PROJECT_ROOT ?? "/app", name: "Redpact" },
@@ -197,12 +205,14 @@ test("확인 실패를 최신 상태로 알리지 않고 npm 자동 설치 불�
   }
   await test.step("불명확한 설치를 전역 npm 설치로 바꾸지 않는다", async () => {
     await page.getByRole("button", { name: "Update to 9.0.0", exact: true }).click()
-    await expect(page.getByRole("dialog")).toContainText("Automatic installation is unavailable")
+    await expect(page.getByRole("dialog", { name: "Update to 9.0.0", exact: true })).toContainText(
+      "Automatic installation is unavailable",
+    )
     await expect(
       page.getByRole("button", { name: "Install and restart", exact: true }),
     ).toHaveCount(0)
     await page
-      .getByRole("dialog")
+      .getByRole("dialog", { name: "Update to 9.0.0", exact: true })
       .getByRole("button", { name: "Close", exact: true })
       .first()
       .click()

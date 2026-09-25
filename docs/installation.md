@@ -9,6 +9,46 @@ Redpact's public source and runtime downloads are hosted at
 [wo658/redpact](https://github.com/wo658/redpact). The runtime package installs the
 CLI and bundled browser viewer. It does not install the Tauri desktop application.
 
+## Host the web viewer with Docker Compose
+
+From this source checkout, run:
+
+```sh
+docker compose up -d --build --wait
+```
+
+Open `http://127.0.0.1:54318`. The same container serves the built viewer, `/api`
+and `/mcp`; no Vite process or desktop app is needed. If that port is occupied,
+run `REDPACT_WEB_PORT=54328 docker compose up -d --build --wait` and open port
+54328 instead. Ports are published only on the host's loopback interface. The
+current local Host/Origin boundary does not support public-domain or LAN hosting;
+do not simply expose this unauthenticated development service publicly.
+
+Check the running service and installed version:
+
+```sh
+docker compose ps
+curl --fail http://127.0.0.1:54318/api/health
+curl --fail http://127.0.0.1:54318/api/updates
+docker compose exec redpact node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version"
+```
+
+`/api/updates` includes `currentVersion`. Change the curl port when using an
+override. Rebuild with the startup command after updating the checkout; container
+updates are managed through image replacement, not the viewer's package installer.
+`docker compose down` stops hosting while retaining the `redpact-data` volume;
+`docker compose down -v` also deletes that instance's settings and evidence.
+
+The default container starts with no connected projects and does not mount host
+repositories or the Docker socket. To browse a real project, explicitly bind-mount
+its checkout in a Compose override and connect its **container path** in the viewer.
+Keep any referenced worktrees and Git common directories accessible at their stored
+paths, and ensure the container's `node` user has the necessary permissions.
+This baseline hosts the viewer/API; it does not establish managed test execution,
+GitHub CLI authentication or managed worktree creation readiness. Managed tests need
+additional Docker access and consistent host/container bind paths. For a full local
+development runner, use the host-installed runtime described below.
+
 ## Choose an installation path
 
 | Path | What it installs | Requirements / limits |

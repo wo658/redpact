@@ -26,6 +26,7 @@ test("의존성 개요에서 고정 종류와 연결 근거를 읽고 실제 설
             kind: "remote",
             env: { app: { PAYMENT_URL: "https://example.test" } },
           },
+          search: { kind: "shared-local", env: { app: { SEARCH_URL: "http://search.test" } } },
         },
         relationships: [
           {
@@ -76,13 +77,22 @@ test("의존성 개요에서 고정 종류와 연결 근거를 읽고 실제 설
           .getByText("원격 연결", { exact: true }),
       ).toBeVisible()
       await expect(page.getByText("https://example.test", { exact: true })).toBeVisible()
-      await expect(page.getByRole("button", { name: "환경변수 추가" })).toBeVisible()
+      await expect(page.getByRole("button", { name: "dependency 선택", exact: true })).toHaveCount(
+        0,
+      )
+      await expect(page.getByRole("heading", { name: "payment", exact: true })).toBeVisible()
+      await expect(page.getByRole("heading", { name: "search", exact: true })).toBeVisible()
+      await expect(page.getByText("http://search.test", { exact: true })).toBeVisible()
+      await expect(page.getByRole("button", { name: "환경변수 추가" })).toHaveCount(2)
       await page.getByRole("button", { name: "PAYMENT_URL 수정" }).click()
       await page
         .getByRole("textbox", { name: "value", exact: true })
         .fill("https://updated.example.test")
       await page.getByRole("button", { name: "저장", exact: true }).click()
       await expect(page.getByText("https://updated.example.test", { exact: true })).toBeVisible()
+      const saved = JSON.parse((await (await request.get(endpoint)).json()).source)
+      expect(saved.dependencies.payment.env.app.PAYMENT_URL).toBe("https://updated.example.test")
+      expect(saved.dependencies.search.env.app.SEARCH_URL).toBe("http://search.test")
     })
   } finally {
     const latest = await (await request.get(endpoint)).json()

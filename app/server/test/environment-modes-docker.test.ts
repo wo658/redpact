@@ -249,7 +249,8 @@ dockerTest(
       await configureFixed(selections[0])
       for (let i = 0; i < 2; i++) {
         const run = await runs.start(submission.id, selections[0])
-        await expect.poll(() => runs.get(run.id).state, { timeout: 15000 }).toBe("finished")
+        // A cold CI runner also builds the Vitest image before the run can finish.
+        await expect.poll(() => runs.get(run.id).state, { timeout: 120000 }).toBe("finished")
         const executed = runs.get(run.id)
         const preparationLog = await readFile(
           join(data, "environments", executed.environmentId!, "preparation.log"),

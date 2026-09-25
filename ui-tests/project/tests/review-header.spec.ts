@@ -1,6 +1,30 @@
 import { expect, test } from "@playwright/test"
+import { node } from "../target"
+
+// 격리된 테스트 앱에서 새 탭의 Web Crypto API를 사용한다.
+test.use({
+  channel: "chromium",
+  launchOptions: {
+    args: ["--unsafely-treat-insecure-origin-as-secure=http://app.redpact.test:54320"],
+  },
+})
 
 test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지한다", async ({ page, request }) => {
+  await node(`
+            import {mkdirSync,writeFileSync} from 'node:fs';
+            import {randomUUID} from 'node:crypto';
+            const origin='http://127.0.0.1:54318';
+            const project=await (await fetch(origin+'/api/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:'/app',name:'Redpact'})})).json();
+            const worktrees=await (await fetch(origin+'/api/projects/'+project.id+'/worktrees')).json();
+            const worktree=worktrees.find(item=>item.projectRoot==='/app');
+            if(!worktree) throw new Error('Header fixture worktree missing');
+            const id=randomUUID();
+            const directory='/tmp/redpact-e2e-state/playwright-runs';
+            mkdirSync(directory,{recursive:true});
+            writeFileSync(directory+'/'+id+'.json',JSON.stringify({version:1,id,target:'captures',purpose:'capture',scope:'worktree',worktreeId:worktree.id,projectId:project.id,projectRoot:'/app',revision:null,settings:{directory:'ui-tests',targets:{captures:{purpose:'capture',testMatch:['project/captures/**/*.spec.ts']}},service:'app',port:54318,viewport:{width:1920,height:1080}},selection:{services:['app'],select:{}},settingsDigest:'header-fixture',sourceDigest:'header-fixture',appDigest:'header-fixture',createdAt:new Date().toISOString(),state:'finished',outcome:'failed',cleanupError:'Retained header recovery fixture',before:{state:'unavailable',cases:[]},after:{state:'finished',outcome:'failed',cases:[]}}));
+
+            console.log('null');
+  `)
   const projects = await (await request.get("/api/projects")).json()
   const project =
     projects.find((item: { name: string }) => item.name.toLowerCase() === "redpact") ?? projects[0]
@@ -21,11 +45,19 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
   const worktreeName = await worktree.getAttribute("aria-label")
   expect(worktreeName, "워크트리 이름이 접근성 레이블로 제공되어야 한다").toBeTruthy()
   await worktree.click()
-  await expect(workspaceTabs.getByRole("tab", { name: worktreeName ?? "" })).toBeVisible()
+  await expect(
+    workspaceTabs.getByRole("tab", {
+      name: `${project.name} / ${worktreeName ?? ""}`,
+      exact: true,
+    }),
+  ).toBeVisible()
   await page.setViewportSize({ width: 1440, height: 900 })
-  await expect(page.getByRole("button", { name: "Toggle Sidebar", exact: true })).toBeHidden()
+  await expect(page.getByRole("button", { name: "Toggle Sidebar", exact: true })).toBeVisible()
   const projectTab = workspaceTabs.getByRole("tab").first()
-  const worktreeTab = workspaceTabs.getByRole("tab", { name: worktreeName ?? "" })
+  const worktreeTab = workspaceTabs.getByRole("tab", {
+    name: `${project.name} / ${worktreeName ?? ""}`,
+    exact: true,
+  })
   const projectTabWidth = await projectTab.evaluate((element) => element.parentElement?.clientWidth)
   const worktreeTabWidth = await worktreeTab.evaluate(
     (element) => element.parentElement?.clientWidth,
@@ -83,8 +115,16 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
       )
     })
   }
-  await workspaceTabs.getByRole("button", { name: `Close ${worktreeName}` }).click()
-  await expect(workspaceTabs.getByRole("tab", { name: worktreeName ?? "" })).toHaveCount(0)
+  const closingLabel = await workspaceTabs
+    .getByRole("tab", { selected: true })
+    .getAttribute("aria-label")
+  await workspaceTabs.getByRole("button", { name: `Close ${closingLabel}`, exact: true }).click()
+  await expect(
+    workspaceTabs.getByRole("tab", {
+      name: `${project.name} / ${worktreeName ?? ""}`,
+      exact: true,
+    }),
+  ).toHaveCount(0)
   await page.setViewportSize({ width: 1440, height: 900 })
   await expect(worktree).toBeVisible()
 })

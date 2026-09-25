@@ -39,7 +39,8 @@ HTTP에서 실행합니다. Unit은 설정된 명령을 실행하고, Playwright
 ## 요청 승인과 Apps
 
 번들 리소스는 `ui://redpact/environment.html`, `ui://redpact/tests.html`입니다.
-응답 snapshot을 표시하며 지속 polling·구독을 하지 않습니다. 새 `get_run`이 새
+응답 snapshot을 표시하며 지속 polling·구독을 하지 않습니다. Environment 카드는 실행 시
+의존성 선택 없이 각 의존성의 고정 종류를 한 번씩 표시합니다. 새 `get_run`이 새
 snapshot을 제공합니다. 실행 이력과 리소스 제어는 지속적인 로컬 뷰어에서 확인합니다.
 
 새 `run_tests`는 불변 제출과 인스턴스 `approval` 정책을 캡처합니다.

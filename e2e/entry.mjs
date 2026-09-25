@@ -79,6 +79,7 @@ const ui = createServer((req, res) => {
     },
   )
   upstream.on("error", () => res.writeHead(502).end())
+  res.on("close", () => upstream.destroy())
   req.pipe(upstream)
 }).listen(54320, "0.0.0.0")
 for (const signal of ["SIGINT", "SIGTERM"]) {
