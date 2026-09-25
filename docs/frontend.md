@@ -187,6 +187,10 @@ and actions on the right in one row, including Playwright’s Mobile and Run Pla
 controls. Each side scrolls horizontally when needed; labels keep their normal
 font size and do not wrap.
 
+Run result panels share the execution progress strip described in
+[execution](execution.md). Active Unit and Integration phases also appear by their
+Run controls so a user can see progress without switching tabs.
+
 Wrap related content in `ReviewToolbarScope`. One active `ReviewToolbarOverride`
 may target a scope; nested scopes are independent. Unmount inactive overrides.
 An omitted slot inherits, `null` hides, and supplied content replaces. Unmounting

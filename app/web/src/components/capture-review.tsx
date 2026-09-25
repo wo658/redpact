@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import type { Api, CaptureArtifact, CaptureRun } from "@/lib/api"
 import { captureFiles, captureMatchesMode, captureRunMatchesMode } from "@/lib/review-content"
 import { useRefreshRequest } from "@/lib/use-refresh-request"
+import { ExecutionProgress } from "./execution-progress"
 import { EmptyState, Loading, Notice } from "./feedback"
 import { useLiveRevision } from "./live-updates"
 import { TestFileBrowser } from "./test-file-browser"
@@ -232,6 +233,7 @@ function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureRev
           ))}
           {run && (
             <>
+              <ExecutionProgress kind="playwright" run={run} />
               {data?.inputDigest && run.appDigest !== data.inputDigest && (
                 <Badge variant="secondary">{t("Source changed since this capture")}</Badge>
               )}

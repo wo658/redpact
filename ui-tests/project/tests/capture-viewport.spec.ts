@@ -113,6 +113,10 @@ test("같은 실행의 모바일과 데스크톱 캡처를 실제 크기로 분�
       ).toBeVisible()
       await expect(page.getByAltText("Desktop boundary", { exact: true })).toHaveCount(0)
       await page.getByRole("treeitem", { name: "viewport.spec.ts", exact: true }).click()
+      await expect(page.getByRole("status", { name: "Playwright progress" })).toBeVisible()
+      await expect(page.getByRole("status", { name: "Playwright progress" })).toContainText(
+        "Finished",
+      )
     })
     await test.step("Desktop에서는 768px 캡처만 표시한다", async () => {
       await expect(page.getByAltText("Desktop boundary", { exact: true })).toBeVisible()
