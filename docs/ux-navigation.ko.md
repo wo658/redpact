@@ -68,8 +68,8 @@ Redpact
 │   │   │   └── Playwright [탭]
 │   │   │       ├── Screenshots [탭]
 │   │   │       │   └── 선택한 캡처 파일
-│   │   │       │       ├── Preview [탭]
-│   │   │       │       └── Test Code [탭]
+│   │   │       │       ├── Test Code [탭]
+│   │   │       │       └── Screenshots [탭]
 │   │   │       ├── Tests [탭]
 │   │   │       │   └── 선택한 기능 테스트 파일
 │   │   │       │       ├── Code [탭]

@@ -69,8 +69,8 @@ Redpact
 │   │   │   └── Playwright [tab]
 │   │   │       ├── Screenshots [tab]
 │   │   │       │   └── Selected capture file
-│   │   │       │       ├── Preview [tab]
-│   │   │       │       └── Test Code [tab]
+│   │   │       │       ├── Test Code [tab]
+│   │   │       │       └── Screenshots [tab]
 │   │   │       ├── Tests [tab]
 │   │   │       │   └── Selected functional test file
 │   │   │       │       ├── Code [tab]
