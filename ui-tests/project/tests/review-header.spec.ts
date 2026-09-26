@@ -53,7 +53,7 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
     await worktree.click()
     await expect(
       workspaceTabs.getByRole("tab", {
-        name: `${project.name} / ${worktreeName ?? ""}`,
+        name: `${project.name} / Worktrees`,
         exact: true,
       }),
     ).toBeVisible()
@@ -61,7 +61,7 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
     await expect(page.getByRole("button", { name: "Toggle Sidebar", exact: true })).toBeVisible()
     const projectTab = workspaceTabs.getByRole("tab").first()
     const worktreeTab = workspaceTabs.getByRole("tab", {
-      name: `${project.name} / ${worktreeName ?? ""}`,
+      name: `${project.name} / Worktrees`,
       exact: true,
     })
     const projectTabWidth = await projectTab.evaluate(
@@ -129,7 +129,7 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
     await workspaceTabs.getByRole("button", { name: `Close ${closingLabel}`, exact: true }).click()
     await expect(
       workspaceTabs.getByRole("tab", {
-        name: `${project.name} / ${worktreeName ?? ""}`,
+        name: `${project.name} / Worktrees`,
         exact: true,
       }),
     ).toHaveCount(0)

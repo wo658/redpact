@@ -84,11 +84,12 @@ preview never executes project code.
 ## Layout and reading width
 
 The app header owns open-workspace tabs and native drag space outside the rounded content
-frame. Workspace tabs show `Project / Current page` or `Project / … / Last branch segment`.
-The full location remains in the tooltip and accessible name, including the close action.
+frame. Workspace tabs show `Project / Sidebar page`, including `Project / Worktrees` for
+worktree or branch review. Worktree names, branch paths and nested sections are intentionally
+omitted. The same label appears in the tooltip and accessible name, including the close action.
 Sidebar navigation and browser history update the location; nested detail selections remain
 in their page toolbar. Tabs are at most 256px wide and shrink to the available strip width.
-The project uses at most 40% of the label, leaving the remaining width for the last segment;
+The project uses at most 40% of the label, leaving the remaining width for the sidebar page;
 both truncate independently. Tabs use left-aligned icons, a subtle outline. The selected tab uses the theme’s accent background and a stronger
 primary-colored border in both light and dark themes; keyboard focus remains a separate ring. The adjacent plus button opens the current page location in a fresh tab and remains reachable
 when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The

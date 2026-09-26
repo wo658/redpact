@@ -468,12 +468,7 @@ export function ProjectManager({ api, initialProjects }: { api: Api; initialProj
   )
 }
 
-function workspaceLocation(
-  tab: WorkspaceTab,
-  worktrees: Worktree[],
-  selected: Worktree | undefined,
-  t: TFunction,
-) {
+function workspaceLocation(tab: WorkspaceTab, t: TFunction) {
   const page = tab.view?.page ?? "review"
   const pages = {
     "test-container": t("Container"),
@@ -485,21 +480,7 @@ function workspaceLocation(
     "project-settings": t("Project settings"),
     settings: t("Settings"),
   }
-  if (page !== "review") {
-    return { destination: pages[page], parts: [pages[page]] }
-  }
-  const id = tab.view?.selectedId ?? tab.worktreeId
-  const worktree =
-    selected ?? worktrees.find((item) => (id ? item.id === id : item.projectId === tab.projectId))
-  let destination = pages.review
-  if (id?.startsWith("branch:")) {
-    destination = id.slice(7)
-  } else if (worktree) {
-    destination = worktreeName(worktree)
-  } else if (tab.kind === "worktree") {
-    destination = tab.label
-  }
-  return { destination, parts: destination.split("/").filter(Boolean) }
+  return pages[page]
 }
 
 export function WorktreePanel({
@@ -725,12 +706,7 @@ export function WorktreePanel({
               const active = tab.id === activeWorkspaceTabId
               const projectName =
                 workspaceProjects.find((item) => item.id === tab.projectId)?.name ?? tab.label
-              const { destination, parts } = workspaceLocation(
-                tab,
-                worktrees,
-                active ? selected : undefined,
-                t,
-              )
+              const destination = workspaceLocation(tab, t)
               const title = `${projectName} / ${destination}`
               return (
                 <div
@@ -763,10 +739,7 @@ export function WorktreePanel({
                         {projectName}
                       </span>
                       <span className="shrink-0 text-muted-foreground">/</span>
-                      {parts.length > 1 && (
-                        <span className="shrink-0 text-muted-foreground">… /</span>
-                      )}
-                      <span className="min-w-0 flex-1 truncate">{parts.at(-1)}</span>
+                      <span className="min-w-0 flex-1 truncate">{destination}</span>
                     </span>
                   </Button>
                   {workspaceTabs.length > 1 && (
