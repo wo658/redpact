@@ -175,7 +175,12 @@ Recorded CSS viewport width classifies each PNG at 768px; missing provenance sta
 visible in both modes with an explicit label. Image pixels, filenames and current
 run defaults do not establish viewport provenance. Project Captures lists declared
 capture sources before execution and separates each file's Test Code from its Screenshots;
-an empty Screenshots tab does not hide executable capture code. Project Tests retains
+an empty Screenshots tab does not hide executable capture code. Each selected file shows
+a horizontal strip of named thumbnails above the large image. Click a thumbnail or use
+the radio group's arrow keys to select a checkpoint without opening a dropdown. The
+strip scrolls on narrow screens. The selected image fills the mobile content width and
+scrolls vertically instead of shrinking into the remaining height; its run link remains
+available below the image. Project Tests retains
 Captures, Tests and Runs independently of changed-file review.
 
 Secret-bearing runs omit trace archives. Images, videos and submitted source are not

@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useState } from "react"
+import { type ReactNode, useCallback, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import type { Api, CaptureArtifact, CaptureCase, CaptureRun, PlaywrightFile } from "@/lib/api"
 import { useRefreshRequest } from "@/lib/use-refresh-request"
@@ -11,6 +11,8 @@ import { ReviewToolbarOverride } from "./review-toolbar"
 import { TestFileBrowser } from "./test-file-browser"
 import { Button } from "./ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/coss-tabs"
+import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "./ui/field"
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group"
 import { UnifiedDiff } from "./unified-diff"
 
 type ImageRecord = { run: CaptureRun; scenario: CaptureCase; image: CaptureArtifact }
@@ -219,6 +221,7 @@ function CaptureView({
   onRun(id: string): void
 }) {
   const { t } = useTranslation()
+  const thumbnailId = useId()
   const [view, setView] = useState("screenshots")
   const [selected, setSelected] = useState("")
   const groups = imageGroups(runs)
@@ -279,23 +282,65 @@ function CaptureView({
         <TabsContent value="screenshots" className="flex h-0 min-h-0 flex-col gap-3 overflow-auto">
           {record ? (
             <>
-              <ChoiceList
-                compact
-                label={t("Checkpoint")}
+              <RadioGroup
+                aria-label={t("Checkpoint")}
                 value={group.id}
-                onValueChange={setSelected}
-                options={images.map((item) => ({
-                  value: item.id,
-                  label: `${item.name} · ${item.records[0].run.target} · ${item.records[0].scenario.title}`,
-                }))}
-              />
+                onValueChange={(value) => {
+                  if (typeof value === "string") {
+                    setSelected(value)
+                  }
+                }}
+                className="flex shrink-0 gap-3 overflow-x-auto border-b p-3"
+              >
+                {images.map((item, index) => {
+                  const capture = item.records[0]
+                  const id = `${thumbnailId}-${index}`
+                  return (
+                    <FieldLabel key={item.id} htmlFor={id} className="min-w-44 max-w-44 shrink-0">
+                      <Field>
+                        <img
+                          src={api.captureArtifact(capture.run.id, "after", capture.image.id)}
+                          alt=""
+                          loading="lazy"
+                          className="aspect-video w-full rounded-sm object-contain"
+                        />
+                        <div className="flex items-start gap-2">
+                          <RadioGroupItem
+                            id={id}
+                            value={item.id}
+                            aria-labelledby={`${id}-caption`}
+                            onFocus={(event) =>
+                              event.currentTarget.scrollIntoView({
+                                block: "nearest",
+                                inline: "nearest",
+                              })
+                            }
+                          />
+                          <FieldContent
+                            id={`${id}-caption`}
+                            aria-label={`${item.name} · ${capture.run.target} · ${capture.scenario.title}`}
+                            className="min-w-0"
+                          >
+                            <FieldTitle className="[overflow-wrap:anywhere]">
+                              {item.name}
+                            </FieldTitle>
+                            <FieldDescription className="[overflow-wrap:anywhere]">
+                              {capture.run.target} · {capture.scenario.title}
+                            </FieldDescription>
+                          </FieldContent>
+                        </div>
+                      </Field>
+                    </FieldLabel>
+                  )
+                })}
+              </RadioGroup>
               <h2 className="text-base font-medium [overflow-wrap:anywhere]">
                 {record.image.name}
               </h2>
               <img
                 src={api.captureArtifact(record.run.id, "after", record.image.id)}
                 alt={record.image.name}
-                className="block min-h-0 max-w-full flex-1 object-contain"
+                className="block h-auto w-full shrink-0 object-contain md:min-h-0 md:w-auto md:max-w-full md:flex-1"
               />
               <p className="content-width-768 text-xs text-muted-foreground [overflow-wrap:anywhere]">
                 {t("Captured")}: {record.run.createdAt} · {record.run.projectRoot}
