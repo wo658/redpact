@@ -33,6 +33,17 @@ runs start by selecting a declared functional or capture target in the Playwrigh
 UI/API. Their screenshots, UI-review artifacts, execution record and cleanup stay
 with that Playwright run rather than an MCP submission.
 
+The viewer presents a common progress strip for all three run types in their
+result views. It shows the current preparation, execution, cleanup or finished
+stage and elapsed time; an active Unit or Integration run also appears beside its
+Run control. Unit distinguishes source capture, Docker connection, container
+build and command execution. Integration distinguishes queueing, environment
+preparation and test execution. Playwright distinguishes application preparation,
+browser startup and browser execution. These labels come from the durable facts
+already recorded on each run, so they can skip a short stage between refreshes.
+They are not individual timed events or a stream of live command output. Errors
+and cleanup results remain on the selected run.
+
 For agent-mediated verification, direct Docker/Compose, Vitest or Playwright CLI
 commands are local diagnostics, not Redpact execution evidence. Start each selected
 path through its entry above so the connected worktree retains its result and cleanup.

@@ -170,6 +170,10 @@ Redpact 밖의 도움이 필요한 복구 상태는 해당 view가 구체적인 
 Screenshots·Tests·Runs와 실행 작업을 제공합니다. 파일별 Code·Results는 파일 panel에
 남습니다. 좁은 너비에서 제어는 줄바꿈하고 탐색 그룹은 자체 overflow를 소유합니다.
 
+실행 결과 panel은 [실행](execution.md)에 설명한 공통 진행 상태 표시를 사용합니다.
+실행 중인 Unit과 Integration 단계는 탭을 전환하지 않아도 볼 수 있도록 실행 버튼 옆에도
+표시합니다.
+
 관련 영역을 `ReviewToolbarScope`로 감쌉니다. Scope당 활성 `ReviewToolbarOverride`는
 하나이며 중첩 scope는 독립적입니다. 비활성 override는 unmount합니다. 생략한 slot은
 상속, `null`은 숨김, 전달한 내용은 대체입니다. Unmount하면 기본값을 복원합니다.

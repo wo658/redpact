@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { useTranslation } from "react-i18next"
 import type { Api, UnitInspection, UnitRun } from "@/lib/api"
+import { ExecutionProgress } from "./execution-progress"
 import { EmptyState, Loading, Notice } from "./feedback"
 import { useLiveRevision } from "./live-updates"
 import { SearchPicker } from "./search-picker"
@@ -124,6 +125,7 @@ export function UnitTests({
           {t("Cancel command")}
         </Button>
       )}
+      {running && <ExecutionProgress kind="unit" run={running} compact />}
     </div>
   )
   const toolbar = actionsContainer ? createPortal(controls, actionsContainer) : controls
@@ -233,11 +235,7 @@ export function UnitTests({
                 {run && (
                   <div className="flex min-w-0 flex-col gap-3">
                     <p className="text-sm font-medium">{resultLabel(run)}</p>
-                    {run.state === "running" && (
-                      <p className="text-sm text-muted-foreground">
-                        {t("Output is available when the command finishes.")}
-                      </p>
-                    )}
+                    <ExecutionProgress kind="unit" run={run} />
                     {run.cleanup?.error && <Notice error>{run.cleanup.error}</Notice>}
                     {run.cleanup?.state === "failed" && (
                       <Button variant="outline" disabled={pending} onClick={() => void action(run)}>

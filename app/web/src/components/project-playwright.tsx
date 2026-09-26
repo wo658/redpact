@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 import type { Api, CaptureArtifact, CaptureCase, CaptureRun, PlaywrightFile } from "@/lib/api"
 import { useRefreshRequest } from "@/lib/use-refresh-request"
 import { ChoiceList } from "./choice-list"
+import { ExecutionProgress } from "./execution-progress"
 import { EmptyState, Loading, Notice } from "./feedback"
 import { useLiveRevision } from "./live-updates"
 import { ProjectPlaywrightAction } from "./project-playwright-action"
@@ -333,6 +334,7 @@ function RecordedRunBrowser({ api, run }: { api: Api; run: CaptureRun }) {
         {run.purpose} · {run.outcome ?? run.state} · {run.projectRoot} ·{" "}
         {run.settings.viewport.width} × {run.settings.viewport.height}
       </p>
+      <ExecutionProgress kind="playwright" run={run} />
       {run.error && <Notice error>{run.error}</Notice>}
       {run.cleanupError && <Notice error>{run.cleanupError}</Notice>}
       <Tabs
