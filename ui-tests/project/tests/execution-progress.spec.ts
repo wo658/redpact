@@ -71,7 +71,11 @@ test("Unit과 Integration 실행 기록에서 진행 상태와 오류를 함께 
   }, project.id)
   await test.step("Unit 결과에서 단계와 원인을 함께 확인한다", async () => {
     await page.goto("/")
+    if ((page.viewportSize()?.width ?? 1920) < 768) {
+      await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).first().click()
+    }
     await page.getByRole("button", { name: "Tests", exact: true }).click()
+    await page.keyboard.press("Escape")
     await page.getByRole("tab", { name: "Unit", exact: true }).click()
     await page.getByRole("tab", { name: "Command results", exact: true }).click()
     const panel = page.getByRole("region", { name: "Unit Test", exact: true })

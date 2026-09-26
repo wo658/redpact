@@ -86,11 +86,15 @@ test("같은 실행의 모바일과 데스크톱 캡처를 실제 크기로 분�
       localStorage.setItem("redpact:project", id)
     }, fixture.projectId)
     await page.goto("/")
+    if ((page.viewportSize()?.width ?? 1920) < 768) {
+      await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).first().click()
+    }
     await page
       .getByRole("navigation", { name: "Worktrees", exact: true })
       .getByRole("button")
       .first()
       .click()
+    await page.keyboard.press("Escape")
     await page.getByRole("tab", { name: "Playwright", exact: true }).click()
     const mobile = page.getByRole("switch", { name: "Mobile", exact: true })
     await test.step("PNG 없는 파일과 실행하지 않은 파일도 선택하고 준비 오류를 확인한다", async () => {
