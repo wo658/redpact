@@ -1,6 +1,34 @@
 import type { en } from "./en"
 
 export const ko = {
+  "Agent plugins": "에이전트 플러그인",
+  "Redpact plugins": "Redpact 플러그인",
+  "Codex CLI path": "Codex CLI 경로",
+  "Claude Code CLI path": "Claude Code CLI 경로",
+  "Check plugin updates": "플러그인 업데이트 확인",
+  "Not checked": "확인 전",
+  "No newer plugin version": "새 플러그인 버전 없음",
+  "Not installed": "미설치",
+  "Manage in agent": "에이전트에서 관리",
+  "Plugin update failed": "플러그인 확인 또는 업데이트 실패",
+  "Updated. Start a new agent session.": "업데이트 완료. 새 에이전트 세션을 시작하세요.",
+  "Available: {{version}}": "새 버전: {{version}}",
+  "Installed: {{version}}": "설치 버전: {{version}}",
+  "Update {{agent}} plugin": "{{agent}} 플러그인 업데이트",
+  "Update plugin": "플러그인 업데이트",
+  "Working…": "처리 중…",
+  "Could not request plugin updates. Check again.":
+    "플러그인 업데이트를 요청하지 못했습니다. 다시 확인하세요.",
+  "Check Redpact plugins in Codex and Claude Code. Save CLI paths in instance settings before checking.":
+    "Codex와 Claude Code의 Redpact 플러그인을 확인합니다. 확인 전에 인스턴스 설정에서 CLI 경로를 저장하세요.",
+  "Install plugin {{version}} using the agent CLI? Start a new agent session after updating.":
+    "에이전트 CLI로 플러그인 {{version}}을 설치할까요? 업데이트 후 새 에이전트 세션을 시작하세요.",
+  "Local or unrecognized source. Update this plugin through its original marketplace.":
+    "로컬 설치이거나 출처를 확인할 수 없습니다. 원래 마켓플레이스에서 업데이트하세요.",
+  "Automatic updates require one enabled user installation. Use the agent to manage other scopes or disabled plugins.":
+    "자동 업데이트는 활성화된 사용자 설치 한 개를 지원합니다. 다른 범위나 비활성 플러그인은 에이전트에서 관리하세요.",
+  "The installed plugin has no comparable semantic version.":
+    "설치된 플러그인 버전을 비교할 수 없습니다.",
   "{{kind}} progress": "{{kind}} 실행 진행 상태",
   "Execution progress": "실행 진행 상태",
   "{{seconds}}s elapsed": "{{seconds}}초 경과",

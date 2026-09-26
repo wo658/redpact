@@ -57,3 +57,5 @@ Tracking에는 `mainBranch`, `hideMerged`, 선택적 `showBranches`가 저장됩
 구현: [설정 스키마](../app/server/src/core/settings-schema.ts),
 [configure 안내](../app/server/src/workflows/configure.ts),
 [설정 reader](../app/server/src/adapters/settings/json.ts).
+
+인스턴스 설정은 선택적으로 `agents.codex.cliPath`와 `agents.claude.cliPath`에 절대 실행 파일 경로를 저장합니다. 경로를 생략하면 자동 탐지합니다. 저장만으로 CLI를 실행하지 않으며 다음 플러그인 확인에 저장값을 적용합니다. 지원 출처와 업데이트 동작은 [에이전트 플러그인 업데이트](installation.md)를 참고하세요. 선택 필드이므로 기존 인스턴스 설정을 다시 작성할 필요가 없습니다.

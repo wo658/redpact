@@ -23,6 +23,7 @@ import { parseSource } from "./adapters/parser/source.js"
 import { createCaptureBaselineCleanup } from "./adapters/playwright/baseline.js"
 import { discoverPlaywright } from "./adapters/playwright/catalog.js"
 import { createCaptureRunner } from "./adapters/playwright/runner.js"
+import { createPluginClient } from "./adapters/plugins/client.js"
 import { createScheduler } from "./adapters/process/queue.js"
 import { readProjectEntry } from "./adapters/project-files.js"
 import { readProjectFile } from "./adapters/settings/bundle.js"
@@ -60,6 +61,7 @@ import { createMergeService } from "./workflows/merge.js"
 import { createObserveProjects } from "./workflows/observe-projects.js"
 import { createCaptures } from "./workflows/playwright.js"
 import { createPlaywrightCatalog } from "./workflows/playwright-catalog.js"
+import { createPluginUpdates } from "./workflows/plugin-updates.js"
 import { createProjectFiles } from "./workflows/project-files.js"
 import { createProjectGraph } from "./workflows/project-graph.js"
 import { createProjectSecrets } from "./workflows/project-secrets.js"
@@ -378,7 +380,13 @@ const command = new Command()
         read: readHistory,
         diff: readCommitDiff,
       })
+      const pluginUpdates = createPluginUpdates({
+        client: createPluginClient(),
+        settings: settingsEditor,
+        now: () => new Date().toISOString(),
+      })
       const app = createApp({
+        pluginUpdates,
         updates,
         reviewContent: createReviewContent({
           worktrees,
@@ -471,6 +479,7 @@ const command = new Command()
           ? createDesktopControl({
               input: runtimeInput ?? process.stdin,
               busy: () =>
+                pluginUpdates.status().busy ||
                 captures.all().some((run) => run.state !== "finished") ||
                 merges.busy() ||
                 pullRequests.busy() ||

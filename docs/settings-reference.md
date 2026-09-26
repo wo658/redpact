@@ -63,3 +63,5 @@ captured values when future defaults change.
 Implementation: [settings schema](../app/server/src/core/settings-schema.ts),
 [configure guidance](../app/server/src/workflows/configure.ts),
 [settings reader](../app/server/src/adapters/settings/json.ts).
+
+Instance settings optionally store `agents.codex.cliPath` and `agents.claude.cliPath` as absolute executable paths. Omit either path for automatic detection. Saving does not execute the CLI; the next plugin check uses the saved value. See [agent plugin updates](installation.md) for supported sources and update behavior. Existing instance settings need no rewrite because these fields are optional.

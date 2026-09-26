@@ -30,6 +30,7 @@ import { EmptyState, Notice } from "./feedback"
 import { GitHubSettings } from "./github-settings"
 import { LanguageSelector } from "./language-selector"
 import { LiveUpdates, useLiveRevision } from "./live-updates"
+import { PluginUpdateSettings } from "./plugin-updates"
 import { ProjectFileViewer } from "./project-file-viewer"
 import { ProjectGitGraph } from "./project-git-graph"
 import { ProjectLibrary } from "./project-library"
@@ -869,6 +870,7 @@ export function GlobalSettings({ api }: { api: Api }) {
   return (
     <div className="flex min-w-0 flex-col gap-8">
       <UpdateSettings />
+      <PluginUpdateSettings />
       <SettingsSection title={t("Preferences")}>
         <ThemeSettings />
         <SettingsRow title={t("Word wrap")}>

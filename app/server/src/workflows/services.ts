@@ -11,6 +11,7 @@ import type {
   CaptureWorkflow,
   PlaywrightCatalog,
 } from "../core/types/playwright.js"
+import type { PluginUpdates } from "../core/types/plugin-updates.js"
 import type { ProjectFiles } from "../core/types/project-files.js"
 import type { ProjectSecrets } from "../core/types/project-secrets.js"
 import type { PullRequestService } from "../core/types/pull-requests.js"
@@ -33,6 +34,7 @@ import type { UnitTestsService } from "../core/types/unit-tests.js"
 import type { Updates } from "../core/types/updates.js"
 
 export type Services = {
+  pluginUpdates?: PluginUpdates
   updates?: Updates
   reviewContent?: ReviewContentService
   testContainer?: TestContainer

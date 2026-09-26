@@ -10,7 +10,19 @@ export const instanceSchema = z.strictObject({
   createdAt: z.iso.datetime(),
 })
 
+const agentCliSchema = z.strictObject({
+  cliPath: z
+    .string()
+    .min(1)
+    .max(4096)
+    .refine(isAbsolute, "Use an absolute agent CLI path")
+    .optional(),
+})
+
 export const instanceSettingsSchema = z.strictObject({
+  agents: z
+    .strictObject({ codex: agentCliSchema.optional(), claude: agentCliSchema.optional() })
+    .optional(),
   testResources: testResourceSchema.optional(),
   environmentConcurrency: z.number().int().min(1).max(4).optional(),
   github: z

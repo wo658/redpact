@@ -28,8 +28,9 @@ function object(value: unknown): ObjectValue {
     : {}
 }
 function fieldValue(value: ObjectValue, entry: Entry): string {
-  const [parent, child] = entry.key.split(".")
-  const authored = child ? object(value[parent])[child] : value[parent]
+  const authored = entry.key
+    .split(".")
+    .reduce<unknown>((current, key) => object(current)[key], value)
   if (authored === undefined) {
     return ""
   }
@@ -42,9 +43,14 @@ function fieldValue(value: ObjectValue, entry: Entry): string {
   return String(authored)
 }
 function setField(value: ObjectValue, entry: Entry, text: string) {
-  const [parent, child] = entry.key.split(".")
-  const target = child ? object(value[parent]) : value
-  const key = child ?? parent
+  const keys = entry.key.split(".")
+  const key = keys.pop() ?? entry.key
+  let target = value
+  for (const part of keys) {
+    const next = object(target[part])
+    target[part] = next
+    target = next
+  }
   if (!text.trim()) {
     delete target[key]
   } else if (entry.kind === "json") {
@@ -62,9 +68,6 @@ function setField(value: ObjectValue, entry: Entry, text: string) {
     target[key] = Number(text)
   } else {
     target[key] = text
-  }
-  if (child) {
-    value[parent] = target
   }
 }
 
@@ -194,6 +197,13 @@ export function AuthoredSettings({ api, projectId }: { api: Api; projectId?: str
         },
         { key: "projects", label: t("Observed project directories"), kind: "lines", fallback: "" },
         { key: "github.cliPath", label: t("GitHub CLI path"), kind: "text", fallback: "" },
+        { key: "agents.codex.cliPath", label: t("Codex CLI path"), kind: "text", fallback: "" },
+        {
+          key: "agents.claude.cliPath",
+          label: t("Claude Code CLI path"),
+          kind: "text",
+          fallback: "",
+        },
       ]
   if (projectId) {
     return (
@@ -402,11 +412,15 @@ function ConfigurationForm({
                     placeholder={entry.fallback}
                   />
                 )}
-                {entry.key === "github.cliPath" && (
+                {entry.key.endsWith(".cliPath") && (
                   <FieldDescription className="@lg/field-group:col-start-2">
-                    {t(
-                      "Sign in from Terminal with gh auth login. Tokens are not stored in Redpact.",
-                    )}{" "}
+                    {entry.key === "github.cliPath" && (
+                      <>
+                        {t(
+                          "Sign in from Terminal with gh auth login. Tokens are not stored in Redpact.",
+                        )}{" "}
+                      </>
+                    )}
                     {t(
                       "Leave empty for automatic detection. Save changes before checking the connection.",
                     )}

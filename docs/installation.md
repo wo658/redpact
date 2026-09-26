@@ -264,6 +264,46 @@ Approval and credential cards require a compatible MCP Apps host. Plugin install
 alone does not prove card support; an unavailable approval UI must not be bypassed.
 See [the interface contract](interfaces.md).
 
+## Agent plugin updates
+
+Settings → Agent plugins checks installed Redpact plugins in Codex and Claude Code.
+Set **Codex CLI path** or **Claude Code CLI path** in instance settings when automatic
+executable detection fails; use an absolute executable path without arguments and
+save before checking. Empty paths use PATH and common local installation directories.
+The CLI runs as the Redpact server's OS user on its host, not as the browser user.
+Other agents are not yet supported.
+
+**Check plugin updates** reads each agent's installed-plugin and marketplace JSON.
+Only the enabled user installation `redpact@redpact` from `wo658/redpact` on the
+marketplace's default/main branch supports automatic installation. Local/personal
+sources, disabled plugins, other scopes and multiple installations need management
+in the owning agent. Missing CLI, incomplete output, unknown versions and network
+failures remain explicit; they do not mean “up to date”.
+
+The comparison reads each agent's plugin manifest from public GitHub `main`, the
+source used by the existing marketplace installation commands. It does **not**
+compare the app's GitHub Release version, or judge app/plugin compatibility.
+Only a strictly greater stable SemVer shows **Update**; build metadata alone does
+not indicate a newer release, and an installed newer version is never downgraded.
+Publishers must increment the plugin manifest version when distributing changes.
+Checks are manual; normal status polling reads the last in-memory result without
+running CLI commands. Restarting Redpact clears that result.
+
+**Update** opens a confirmation for the displayed agent/version. Redpact rechecks
+the saved CLI path, installed version and public version, refreshes only the Redpact
+marketplace, and checks the refreshed manifest before invoking the owning CLI:
+Codex uses `plugin marketplace upgrade redpact` then `plugin add redpact@redpact --json`;
+Claude Code uses `plugin marketplace update redpact` then
+`plugin update redpact@redpact --scope user`. Arguments are fixed and no shell command
+is accepted. Commands have a two-minute limit and network manifest reads a ten-second
+limit. Checks and installations are serialized within the instance.
+
+Success requires reading back the requested installed version. Start a new agent
+session afterward; disk installation does not refresh an existing conversation.
+Redpact itself does not restart. Interactive CLI approval, installation failure or
+a changed candidate remains an error requiring a fresh check. No automatic rollback
+is provided. Do not update the same plugin concurrently in another client.
+
 ## Requirements
 
 Install Node.js 24 or newer and pnpm for the server and web viewer. Managed test execution also needs Docker with Compose. Unit commands run in Docker using the project's configured Dockerfile; managed integration tests prepare Compose application services. Git features use native Git. Use maintained Git 2.50 or newer for managed worktree creation.

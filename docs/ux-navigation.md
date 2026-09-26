@@ -146,6 +146,7 @@ Redpact
 │   ├── Update [action; newer desktop/npm version only]
 │   └── Settings [page; global, sidebar footer icon]
 │       ├── Updates [section]
+│       ├── Agent plugins [section; check versions and confirm installation]
 │       │   └── Check for updates [action; no installation]
 │       ├── Preferences [section]
 │       │   ├── Theme: Light / Dark / System

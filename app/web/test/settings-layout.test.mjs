@@ -33,7 +33,14 @@ test("settings organize preferences and integrations into named sections", async
   const sections = [...doc.querySelectorAll('[data-slot="settings-section"]')]
   assert.deepEqual(
     sections.map((section) => section.querySelector("h2").textContent),
-    ["Updates", "Preferences", "Integrations", "Automation", "Instance configuration"],
+    [
+      "Updates",
+      "Agent plugins",
+      "Preferences",
+      "Integrations",
+      "Automation",
+      "Instance configuration",
+    ],
   )
   const preferences = sections.find(
     (section) => section.querySelector("h2").textContent === "Preferences",

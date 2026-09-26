@@ -23,6 +23,7 @@ import { eventRoutes } from "./interfaces/http/events.js"
 import { integrationTestRoutes } from "./interfaces/http/integration-tests.js"
 import { mergeRoutes } from "./interfaces/http/merges.js"
 import { playwrightRoutes } from "./interfaces/http/playwright.js"
+import { pluginUpdateRoutes } from "./interfaces/http/plugin-updates.js"
 import { projectFileRoutes } from "./interfaces/http/project-files.js"
 import { projectGraphRoutes } from "./interfaces/http/project-graph.js"
 import { projectSecretRoutes } from "./interfaces/http/project-secrets.js"
@@ -131,6 +132,9 @@ export function createApp(services: Services, options: { uiDirectory?: string } 
     }
     return c.json({ error: "Internal server error" }, 500)
   })
+  if (services.pluginUpdates) {
+    app.route("/api", pluginUpdateRoutes(services.pluginUpdates))
+  }
   if (services.updates) {
     app.route("/api", updateRoutes(services.updates))
   }

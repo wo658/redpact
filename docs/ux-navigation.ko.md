@@ -145,6 +145,7 @@ Redpact
 │   ├── Update [작업; 데스크톱/npm 새 버전만 표시]
 │   └── Settings [페이지; 전역, 사이드바 하단 아이콘]
 │       ├── Updates [섹션]
+│       ├── 에이전트 플러그인 [섹션; 버전 확인 및 설치 확인]
 │       │   └── Check for updates [작업; 설치 없음]
 │       ├── Preferences [섹션]
 │       │   ├── Theme: Light / Dark / System

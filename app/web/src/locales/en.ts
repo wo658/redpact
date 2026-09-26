@@ -1,4 +1,32 @@
 export const en = {
+  "Agent plugins": "Agent plugins",
+  "Redpact plugins": "Redpact plugins",
+  "Codex CLI path": "Codex CLI path",
+  "Claude Code CLI path": "Claude Code CLI path",
+  "Check plugin updates": "Check plugin updates",
+  "Not checked": "Not checked",
+  "No newer plugin version": "No newer plugin version",
+  "Not installed": "Not installed",
+  "Manage in agent": "Manage in agent",
+  "Plugin update failed": "Plugin update failed",
+  "Updated. Start a new agent session.": "Updated. Start a new agent session.",
+  "Available: {{version}}": "Available: {{version}}",
+  "Installed: {{version}}": "Installed: {{version}}",
+  "Update {{agent}} plugin": "Update {{agent}} plugin",
+  "Update plugin": "Update plugin",
+  "Working…": "Working…",
+  "Could not request plugin updates. Check again.":
+    "Could not request plugin updates. Check again.",
+  "Check Redpact plugins in Codex and Claude Code. Save CLI paths in instance settings before checking.":
+    "Check Redpact plugins in Codex and Claude Code. Save CLI paths in instance settings before checking.",
+  "Install plugin {{version}} using the agent CLI? Start a new agent session after updating.":
+    "Install plugin {{version}} using the agent CLI? Start a new agent session after updating.",
+  "Local or unrecognized source. Update this plugin through its original marketplace.":
+    "Local or unrecognized source. Update this plugin through its original marketplace.",
+  "Automatic updates require one enabled user installation. Use the agent to manage other scopes or disabled plugins.":
+    "Automatic updates require one enabled user installation. Use the agent to manage other scopes or disabled plugins.",
+  "The installed plugin has no comparable semantic version.":
+    "The installed plugin has no comparable semantic version.",
   "{{kind}} progress": "{{kind}} progress",
   "Execution progress": "Execution progress",
   "{{seconds}}s elapsed": "{{seconds}}s elapsed",
