@@ -1,6 +1,7 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: Immutable evidence arrays have no unique IDs and can contain duplicate names and assertions.
 import { Check, Minus, X } from "lucide-react"
 import { useTranslation } from "react-i18next"
+import { ExecutionProgress } from "./execution-progress"
 import { EmptyState, Loading, Notice } from "./feedback"
 import { ListGroup, ListHeader, ListItem, ListItems } from "./kibo-ui/list"
 import { useLiveRevision } from "./live-updates"
@@ -212,11 +213,7 @@ function IntegrationRunControls({
   const controls = (
     <div className="flex items-center gap-2">
       {runButton}
-      {active && (
-        <span role="status" className="text-xs text-muted-foreground">
-          {t("Run status: {{status}}", { status: currentRun?.state })}
-        </span>
-      )}
+      {active && currentRun && <ExecutionProgress kind="integration" run={currentRun} compact />}
     </div>
   )
   return (
@@ -424,6 +421,7 @@ function TestEvidenceResults({
       aria-label={t("Observed test results")}
       className="flex w-full min-w-0 content-width-768 flex-col gap-6 [overflow-wrap:anywhere]"
     >
+      {run && <ExecutionProgress kind="integration" run={run} />}
       {(!run?.result || !cases.length || run.result.outcome !== "passed") && (
         <Badge variant="outline">{run ? t(run.result?.outcome ?? run.state) : t("Not run")}</Badge>
       )}

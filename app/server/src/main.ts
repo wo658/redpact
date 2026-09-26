@@ -505,8 +505,9 @@ const command = new Command()
           port,
         },
         (address) => {
+          const url = options.host === "127.0.0.1" ? `http://127.0.0.1:${address.port}/` : undefined
           logger.info(
-            { host: options.host, port: address.port },
+            { host: options.host, port: address.port, url },
             options.host === "127.0.0.1"
               ? "Redpact listening on loopback"
               : "Redpact listening in container mode",

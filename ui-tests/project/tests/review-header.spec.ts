@@ -42,8 +42,16 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
     await page.goto("/")
     const workspaceTabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
     await expect(workspaceTabs.getByRole("tab")).toHaveCount(1)
+    if ((page.viewportSize()?.width ?? 1920) < 768) {
+      await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).first().click()
+    }
     await page.getByRole("button", { name: "Settings", exact: true }).click()
+    await page.keyboard.press("Escape")
     await page.getByRole("button", { name: "New tab", exact: true }).click()
+    if ((page.viewportSize()?.width ?? 1920) < 768) {
+      await expect(page.getByRole("dialog")).toHaveCount(0)
+      await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).first().click()
+    }
     const worktree = page
       .getByRole("navigation", { name: "Worktrees", exact: true })
       .getByRole("button")
@@ -51,9 +59,10 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
     const worktreeName = await worktree.getAttribute("aria-label")
     expect(worktreeName, "워크트리 이름이 접근성 레이블로 제공되어야 한다").toBeTruthy()
     await worktree.click()
+    await page.keyboard.press("Escape")
     await expect(
       workspaceTabs.getByRole("tab", {
-        name: `${project.name} / ${worktreeName ?? ""}`,
+        name: `${project.name} / Worktrees`,
         exact: true,
       }),
     ).toBeVisible()
@@ -61,7 +70,7 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
     await expect(page.getByRole("button", { name: "Toggle Sidebar", exact: true })).toBeVisible()
     const projectTab = workspaceTabs.getByRole("tab").first()
     const worktreeTab = workspaceTabs.getByRole("tab", {
-      name: `${project.name} / ${worktreeName ?? ""}`,
+      name: `${project.name} / Worktrees`,
       exact: true,
     })
     const projectTabWidth = await projectTab.evaluate(
@@ -129,7 +138,7 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
     await workspaceTabs.getByRole("button", { name: `Close ${closingLabel}`, exact: true }).click()
     await expect(
       workspaceTabs.getByRole("tab", {
-        name: `${project.name} / ${worktreeName ?? ""}`,
+        name: `${project.name} / Worktrees`,
         exact: true,
       }),
     ).toHaveCount(0)

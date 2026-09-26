@@ -1,6 +1,20 @@
 import type { en } from "./en"
 
 export const ko = {
+  "{{kind}} progress": "{{kind}} 실행 진행 상태",
+  "Execution progress": "실행 진행 상태",
+  "{{seconds}}s elapsed": "{{seconds}}초 경과",
+  "Cleaning up": "정리 중",
+  Finished: "완료",
+  "Checking Docker": "Docker 연결 확인 중",
+  "Building test container": "테스트 컨테이너 빌드 중",
+  "Running command": "명령 실행 중",
+  "Capturing sources": "소스 캡처 중",
+  "Running tests": "테스트 실행 중",
+  "Preparing environment": "환경 준비 중",
+  "Waiting to start": "실행 대기 중",
+  "Running browser tests": "브라우저 테스트 실행 중",
+  "Starting browser": "브라우저 시작 중",
   "Minimize window": "창 최소화",
   "Maximize window": "창 최대화",
   "Restore window": "창 복원",

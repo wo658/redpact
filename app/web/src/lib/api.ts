@@ -152,6 +152,9 @@ export type UnitRun = {
   resourceLimit?: ResourceLimit
   projectRoot: string
   id: string
+  inputDigest?: string | null
+  runtimeId?: string | null
+  containerId?: string | null
   state: "running" | "finished"
   outcome: string | null
   settings: { dockerfile: string; cwd: string; command: string; patterns: string[] }
@@ -316,6 +319,7 @@ export type RunLogs = {
   stderr: { text: string; truncated: boolean } | null
 }
 export type TestRun = RunSummary & {
+  environmentId?: string
   limitations: string[]
   result: null | {
     resourceLimit?: ResourceLimit

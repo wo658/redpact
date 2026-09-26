@@ -36,7 +36,7 @@ test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토�
   expect(worktreeName, "워크트리 이름이 접근성 레이블로 제공되어야 한다").toBeTruthy()
   await worktree.click()
   await expect(
-    workspaceTabs.getByRole("tab", { name: `Redpact / ${worktreeName ?? ""}`, exact: true }),
+    workspaceTabs.getByRole("tab", { name: `Redpact / Worktrees`, exact: true }),
   ).toBeVisible()
   await expect(page.getByText("아직 리뷰할 내용이 없습니다.", { exact: true })).toBeVisible()
   const emptyReview = page.getByText("아직 리뷰할 내용이 없습니다.", { exact: true })

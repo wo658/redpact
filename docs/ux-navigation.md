@@ -205,8 +205,8 @@ Redpact
   before project display options. When closed, the reopen control appears below the header.
   Worktree display options appear on hover anywhere in the Worktrees section, on keyboard
   focus, while the menu is open, and for non-hover input.
-  Workspace tabs show project and current location with slashes, collapsing intermediate branch
-  segments to an ellipsis. Full locations remain available in accessible names and tooltips.
+  Workspace tabs show the project and sidebar page separated by a slash. Worktree names,
+  branch paths and internal sections are omitted, including in accessible names and tooltips.
   See [header layout](frontend.md) for width limits and truncation.
   Every workspace tab has an identity independent of its project or worktree and records
   its current page, project and applicable worktree or branch. Sidebar page, project,

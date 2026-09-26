@@ -9,5 +9,7 @@ COPY app/web/package.json ./app/web/package.json
 COPY app/desktop/package.json ./app/desktop/package.json
 RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
+# The shared local settings are excluded from build contexts; use the tracked self-E2E fixture.
+COPY e2e/settings.example.json .redpact/settings.json
 # Git fixtures create their own repositories; captured host Git metadata is excluded.
 RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm --filter @redpact/web build

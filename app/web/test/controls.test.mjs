@@ -757,11 +757,11 @@ test("사이드바 이동은 현재 탭을 바꾸고 명시적으로 연 탭만 
   const tabs = () => within(screen.getByRole("tablist", { name: "Open workspaces" }))
   await screen.findByRole("button", { name: "feature/second", exact: true })
   const location = tabs().getByRole("tab", {
-    name: "Redpact example / feature/second",
+    name: "Redpact example / Worktrees",
     exact: true,
   })
-  assert.equal(location.title, "Redpact example / feature/second")
-  assert.match(location.textContent, /… \/second$/)
+  assert.equal(location.title, "Redpact example / Worktrees")
+  assert.match(location.textContent, /Worktrees$/)
   await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
   assert.equal(tabs().getAllByRole("tab").length, 2)
   await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
@@ -2571,6 +2571,67 @@ test("unit command can run even when this worktree added no test files", async (
   assert.equal(screen.getByRole("button", { name: "Run Unit command" }).disabled, false)
 })
 
+test("실행 기록에서 Unit, Integration, Playwright의 준비 단계를 구분한다", async () => {
+  await i18n.changeLanguage("en")
+  const { ExecutionProgress } = await server.ssrLoadModule("/src/components/execution-progress.tsx")
+  render(
+    createElement(
+      "div",
+      null,
+      createElement(ExecutionProgress, {
+        kind: "unit",
+        run: {
+          state: "running",
+          createdAt: "2026-09-26T00:00:00.000Z",
+          inputDigest: "digest",
+          runtimeId: null,
+          containerId: null,
+          outcome: null,
+        },
+      }),
+      createElement(ExecutionProgress, {
+        kind: "integration",
+        run: {
+          state: "queued",
+          createdAt: "2026-09-26T00:00:00.000Z",
+          environmentId: "env",
+          result: null,
+        },
+      }),
+      createElement(ExecutionProgress, {
+        kind: "playwright",
+        run: {
+          state: "running",
+          createdAt: "2026-09-26T00:00:00.000Z",
+          after: {
+            state: "running",
+            environmentId: "env",
+            inputDigest: undefined,
+            containerId: undefined,
+          },
+          outcome: undefined,
+        },
+      }),
+    ),
+  )
+  assert.equal(
+    screen.getByRole("status", { name: "Unit progress" }).textContent.includes("Checking Docker"),
+    true,
+  )
+  assert.equal(
+    screen
+      .getByRole("status", { name: "Integration progress" })
+      .textContent.includes("Preparing environment"),
+    true,
+  )
+  assert.equal(
+    screen
+      .getByRole("status", { name: "Playwright progress" })
+      .textContent.includes("Preparing environment"),
+    true,
+  )
+})
+
 test("브라우저 저장소가 차단되어도 첫 프로젝트와 전환을 사용할 수 있다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
@@ -2962,7 +3023,13 @@ test("통합 실행 접수 후 실행 중 상태를 표시하고 재실행을 �
   const button = await screen.findByRole("button", { name: "Run Integration tests" })
   await waitFor(() => assert.equal(button.disabled, false))
   await userEvent.setup({ document }).click(button)
-  await screen.findByText("Run status: queued")
+  await screen.findByRole("status", { name: "Integration progress" })
+  assert.equal(
+    screen
+      .getByRole("status", { name: "Integration progress" })
+      .textContent.includes("Waiting to start"),
+    true,
+  )
   assert.equal(button.disabled, true)
 })
 
@@ -4832,7 +4899,7 @@ test("project Tests navigation browses and executes only the primary checkout", 
   )
   await user.click(screen.getByRole("button", { name: "Run Integration tests" }))
   assert.deepEqual(runs, ["main", "integration:main"])
-  await screen.findByText("Run status: queued")
+  await screen.findByRole("status", { name: "Integration progress" })
   assert.equal(screen.getByRole("button", { name: "Run Integration tests" }).disabled, true)
 })
 
@@ -4853,7 +4920,7 @@ test("integration execution follows refreshed runs after its own run finishes", 
   await userEvent
     .setup({ document })
     .click(screen.getByRole("button", { name: "Run Integration tests" }))
-  await screen.findByText("Run status: queued")
+  await screen.findByRole("status", { name: "Integration progress" })
   const finished = {
     ...api,
     runs: async () => ({ items: [{ id: "own" }] }),
@@ -4869,7 +4936,7 @@ test("integration execution follows refreshed runs after its own run finishes", 
     run: async () => ({ id: "other", state: "running", result: null }),
   }
   view.rerender(createElement(TestObservation, { api: next, worktreeId: "w" }))
-  await screen.findByText("Run status: running")
+  await screen.findByText("Running tests")
   assert.equal(screen.getByRole("button", { name: "Run Integration tests" }).disabled, true)
 })
 

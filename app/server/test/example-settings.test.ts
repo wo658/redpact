@@ -5,7 +5,7 @@ import { createSettingsService } from "../src/adapters/settings/json.js"
 test("the repository root uses its own self-E2E environment instead of Order Desk", async () => {
   const reader = createSettingsService(fileURLToPath(new URL("../../../", import.meta.url)))
   const catalog = await reader.read()
-  expect(catalog.valid).toBe(true)
+  expect(catalog.valid, JSON.stringify(catalog.issues)).toBe(true)
   expect(catalog.settings?.composeFiles).toEqual(["e2e/compose.yaml"])
   expect(catalog.settings?.dependencies).toEqual({})
   expect(catalog.settings?.tests.directory).toBe("e2e/tests")

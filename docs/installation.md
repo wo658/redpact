@@ -295,7 +295,7 @@ REDPACT_API_URL=http://127.0.0.1:54318 pnpm --filter @redpact/web dev
 
 Open the loopback URL printed by Vite. The viewer proxies API requests to the server. Keep both processes running. Check server health at `http://127.0.0.1:54318/api/health`.
 
-The CLI default port is `54318`. `--port` overrides instance settings for that launch; a busy port fails startup. Redpact binds to loopback and requires no API token. It is a local application, not a service intended for public exposure.
+The CLI default port is `54318`. On startup, the log's `url` field gives the viewer address, such as `http://127.0.0.1:54318/`; open that address directly. `--port` overrides instance settings for that launch; a busy port fails startup. Redpact binds to loopback and requires no API token. It is a local application, not a service intended for public exposure.
 
 ## Verify each connection separately
 

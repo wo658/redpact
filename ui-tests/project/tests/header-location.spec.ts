@@ -22,12 +22,31 @@ test("헤더가 프로젝트와 현재 페이지를 표시하고 긴 이름과 �
     await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
     await openApp(page, "en")
     const tabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
-    async function navigate(label: string) {
+    async function openSidebar() {
       if ((page.viewportSize()?.width ?? 1920) < 768) {
-        await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+        await page.keyboard.press("Escape")
+        await expect(page.getByRole("dialog")).toHaveCount(0)
+        await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).first().click()
       }
-      await page.getByRole("button", { name: label, exact: true }).click()
     }
+    async function navigate(label: string) {
+      await openSidebar()
+      await page.getByRole("button", { name: label, exact: true }).click()
+      await page.keyboard.press("Escape")
+    }
+    await test.step("워크트리를 선택해도 사이드바 메뉴만 표시한다", async () => {
+      await openSidebar()
+      await page
+        .getByRole("navigation", { name: "Worktrees", exact: true })
+        .getByRole("button")
+        .first()
+        .click()
+      await page.keyboard.press("Escape")
+      await expect(tabs.getByRole("tab", { selected: true })).toHaveAccessibleName(
+        `${name} / Worktrees`,
+      )
+      await expect(tabs.getByRole("tab", { selected: true })).not.toContainText("… /")
+    })
     await test.step("사이드바 이동에 맞춰 현재 위치를 갱신한다", async () => {
       await navigate("Settings")
       await expect(tabs.getByRole("tab", { selected: true })).toHaveAccessibleName(
