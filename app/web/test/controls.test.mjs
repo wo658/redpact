@@ -757,11 +757,11 @@ test("사이드바 이동은 현재 탭을 바꾸고 명시적으로 연 탭만 
   const tabs = () => within(screen.getByRole("tablist", { name: "Open workspaces" }))
   await screen.findByRole("button", { name: "feature/second", exact: true })
   const location = tabs().getByRole("tab", {
-    name: "Redpact example / feature/second",
+    name: "Redpact example / Worktrees",
     exact: true,
   })
-  assert.equal(location.title, "Redpact example / feature/second")
-  assert.match(location.textContent, /… \/second$/)
+  assert.equal(location.title, "Redpact example / Worktrees")
+  assert.match(location.textContent, /Worktrees$/)
   await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
   assert.equal(tabs().getAllByRole("tab").length, 2)
   await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
