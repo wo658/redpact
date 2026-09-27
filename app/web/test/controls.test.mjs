@@ -721,7 +721,7 @@ test("실행 결과에서 저장된 소스를 열고 돌아올 수 있다", asyn
   const detail = screen.getByRole("tab", { name: "Executed source" })
   assert.ok(failedGroup)
   assert.ok(screen.getByRole("tree"))
-  assert.equal(screen.queryByText("passed"), null)
+  assert.ok(screen.getByText("passed"), "결과 행은 그룹 제목과 별도로 자신의 판정을 표시한다")
   await user.click(detail)
   assert.ok(screen.getByRole("tabpanel", { name: "Executed source" }))
   assert.equal(Boolean(screen.queryByRole("tab", { name: "Result" })), false)

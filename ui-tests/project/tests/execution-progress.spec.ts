@@ -47,7 +47,7 @@ test("Unit과 Integration 실행 기록에서 진행 상태와 오류를 함께 
         settings:{dockerfile:'unit.Dockerfile',cwd:'.',command:'node --version',patterns:['e2e/tests/progress.test.ts']},
         runtimeId:null,containerId:null,imageId:null,inputDigest:'captured',
         cleanup:{state:'removed',error:null},createdAt:time,finishedAt:time,state:'finished',
-        outcome:'execution_error',exitCode:null,stdout:'',stderr:'',truncated:false,error:'Docker unavailable'};
+        outcome:'execution_error',exitCode:1,stdout:'첫 번째 출력\\n두 번째 출력',stderr:'진단 메시지',truncated:false,error:'Docker unavailable'};
       writeFileSync(root+'/unit-runs/'+unitId+'.json',JSON.stringify(unit));
       mkdirSync(root+'/runs/'+integrationId,{recursive:true});
       const integration={id:integrationId,submissionId,target:{projectId,worktreeId,projectRoot:'/app',checkoutRoot:'/app'},
@@ -81,6 +81,11 @@ test("Unit과 Integration 실행 기록에서 진행 상태와 오류를 함께 
     const panel = page.getByRole("region", { name: "Unit Test", exact: true })
     await expect(panel.getByRole("status", { name: "Unit progress" })).toContainText("Finished")
     await expect(panel.getByText("Docker unavailable", { exact: true })).toBeVisible()
+    await expect(panel.getByRole("heading", { name: "stdout", exact: true })).toBeVisible()
+    await expect(panel.getByRole("region", { name: "stdout", exact: true })).toContainText(
+      "두 번째 출력",
+    )
+    await expect(panel.getByText("Exit code: 1", { exact: true })).toBeVisible()
   })
   await test.step("Integration 결과에서도 같은 진행 상태 형식을 확인한다", async () => {
     await page.getByRole("tab", { name: "Integration", exact: true }).click()

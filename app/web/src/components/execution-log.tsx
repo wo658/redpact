@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import type { Api, ExecutionSummary, Page } from "@/lib/api"
 import { EmptyState, Loading, Notice } from "./feedback"
 import { useLiveRevision } from "./live-updates"
+import { ResultRow } from "./result-row"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { ButtonGroup } from "./ui/button-group"
@@ -111,11 +112,11 @@ function ExecutionRow({ api, run }: { api: Api; run: ExecutionSummary }) {
     }
   }
   return (
-    <li className="flex min-w-0 flex-col gap-2 py-3">
-      <div className="flex min-w-0 items-start gap-3">
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <p className="text-sm whitespace-pre-wrap [overflow-wrap:anywhere]">{run.intent}</p>
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+    <li className="min-w-0">
+      <ResultRow
+        title={run.intent}
+        metadata={
+          <>
             <Badge variant="outline">{t(labels[run.kind])}</Badge>
             <span className="[overflow-wrap:anywhere]">{t(run.outcome ?? run.state)}</span>
             <time
@@ -131,23 +132,28 @@ function ExecutionRow({ api, run }: { api: Api; run: ExecutionSummary }) {
                 minute: "2-digit",
               })}
             </time>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          disabled={pending}
-          onClick={() => void copy()}
-          aria-label={copied ? t("Copied") : t("Copy log: {{name}}", { name: run.intent })}
-          title={t("Copy log")}
-        >
-          {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-        </Button>
-        <span className="sr-only" role="status">
-          {copied ? t("Copied") : ""}
-        </span>
-      </div>
-      {error && <Notice error>{error}</Notice>}
+          </>
+        }
+        actions={
+          <>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              disabled={pending}
+              onClick={() => void copy()}
+              aria-label={copied ? t("Copied") : t("Copy log: {{name}}", { name: run.intent })}
+              title={t("Copy log")}
+            >
+              {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+            </Button>
+            <span className="sr-only" role="status">
+              {copied ? t("Copied") : ""}
+            </span>
+          </>
+        }
+      >
+        {error && <Notice error>{error}</Notice>}
+      </ResultRow>
     </li>
   )
 }
