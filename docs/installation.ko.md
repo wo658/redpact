@@ -253,6 +253,39 @@ claude plugin install redpact@redpact
 프로젝트가 호스팅하는 카탈로그이며 OpenAI나 Anthropic의 공식 추천 목록 등재를
 의미하지 않습니다.
 
+### 다른 에이전트의 마켓플레이스
+
+공개 저장소 `https://github.com/wo658/redpact`가 마켓플레이스 배포처입니다.
+각 클라이언트는 자체 카탈로그를 읽으며 모든 에이전트에 공통인 등록 명령은 없습니다.
+마켓플레이스 등록과 Redpact 플러그인 설치는 별개입니다. 기존 `redpact@personal`은
+자동으로 이전되지 않습니다. 원격 설치본을 사용하기 전에 해당 클라이언트에서 중복
+설치를 비활성화하거나 제거하세요.
+
+GitHub Copilot CLI는 기존 Claude 형식의 카탈로그와 매니페스트를 지원합니다.
+
+```sh
+copilot plugin marketplace add wo658/redpact
+copilot plugin install redpact@redpact
+```
+
+`plugin` 명령을 지원하는 GitHub Copilot CLI가 필요하며, 이름이 `copilot`인 다른
+실행 파일과는 구분해야 합니다. 이 호환성은
+[Copilot 플러그인 문서](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference)에
+정의되어 있습니다. 이 프로젝트에서는 Copilot 설치와 MCP Apps 렌더링을 아직 검증하지 않았습니다.
+
+Cursor용 `.cursor-plugin/marketplace.json` 카탈로그도 저장소에 제공합니다.
+Redpact 매니페스트는 스킬 내용을 복제하지 않고 동일한 스킬과 MCP 설정을 참조합니다.
+Cursor 팀 마켓플레이스 설정 시 이 GitHub 저장소를 사용하세요. 공개 Cursor Marketplace
+목록에 노출되려면 별도의 제출과 심사가 필요하며, 저장소 제공 자체가 등록 승인을 뜻하지는
+않습니다. [Cursor 플러그인 문서](https://cursor.com/docs/reference/plugins)를 참고하세요.
+Cursor 설치와 MCP Apps 렌더링은 아직 검증하지 않았습니다.
+
+Gemini CLI는 이 마켓플레이스 카탈로그 대신 `gemini-extension.json`이 포함된 GitHub
+확장을 사용합니다. 이 저장소는 현재 Gemini 확장 패키지를 제공하지 않습니다.
+다른 MCP 지원 클라이언트는 아래 방식으로 직접 연결할 수 있습니다. Redpact 앱의
+플러그인 업데이트 기능은 현재 Codex와 Claude Code만 지원하며, 다른 클라이언트의
+플러그인은 해당 클라이언트에서 관리합니다.
+
 플러그인은 `http://127.0.0.1:54321/mcp`를 사용합니다. 다른 인스턴스를 쓰려면
 플러그인이 자동으로 따라간다고 가정하지 말고 실제 포트로 HTTP MCP를 직접 연결하세요.
 다른 클라이언트도 이 연결을 사용할 수 있으나 검증된 플러그인 통합으로 주장하지 않습니다.

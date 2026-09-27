@@ -256,6 +256,40 @@ GitHub repository. Plugin installation does not install or launch Redpact, insta
 Docker, or grant test approval. These are project-hosted catalogs, not claims of
 listing in an OpenAI or Anthropic curated directory.
 
+### Other agent marketplaces
+
+The public repository is the marketplace source: `https://github.com/wo658/redpact`.
+Each client reads its own catalog; there is no universal marketplace registration
+command. Registering a marketplace and installing its Redpact plugin are separate
+operations. Existing `redpact@personal` installations are not automatically migrated.
+Use the owning client to disable or remove a duplicate before using the hosted copy.
+
+GitHub Copilot CLI supports the existing Claude-format catalog and manifest:
+
+```sh
+copilot plugin marketplace add wo658/redpact
+copilot plugin install redpact@redpact
+```
+
+This requires the GitHub Copilot CLI with `plugin` commands, not another executable
+named `copilot`. The [Copilot plugin reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference)
+documents this compatibility. Installation and MCP Apps rendering in Copilot have
+not yet been verified by this project.
+
+Cursor has its own `.cursor-plugin/marketplace.json` catalog in this repository.
+Its Redpact manifest points to the same skills and MCP configuration, without copied
+skill content. Use the GitHub repository when configuring a Cursor team marketplace.
+Public Cursor Marketplace listing requires a separate submission and review; the
+repository is not evidence of an approved listing. See the
+[Cursor plugin reference](https://cursor.com/docs/reference/plugins).
+Cursor installation and MCP Apps rendering remain unverified.
+
+Gemini CLI uses GitHub extensions with `gemini-extension.json`, rather than these
+marketplace catalogs. This repository does not currently package a Gemini extension.
+Other MCP-capable clients can connect directly as described below. Redpact's in-app
+plugin update controls currently support Codex and Claude Code only; other clients
+manage their own plugins.
+
 The plugin uses `http://127.0.0.1:54321/mcp`. To use a different instance, configure
 a direct HTTP MCP connection to its actual port instead of assuming the plugin
 follows it. Other clients may use that connection, but are not claimed as tested
