@@ -34,6 +34,14 @@ Project-wide test catalogs retain their full-source views. Recorded Integration 
 
 ## Read test outcomes
 
+Result details and execution logs share a two-line row: the full command, scenario
+or intent first, then its verdict and available time metadata. Actions remain beside
+the row title. Rows wrap long names and diagnostics within the reading column;
+Unit output has separate stdout/stderr headings and preserves line breaks. Unit
+results also show the captured command and recorded exit code when available.
+Playwright steps separate their title, duration and error instead of combining them
+into one small line. Test verdicts remain distinct from progress and cleanup errors.
+
 For **Unit**, inspect the command, exit code, stdout/stderr and cleanup state. Results describe the whole command rather than individual cases. Selecting a source does not mean only that file ran. The source viewer reads current files, not an archived unit source snapshot.
 
 For **Integration**, inspect captured source, case verdicts and observed steps. Confirm meaningful assertions were reached. A skipped case or failure before the test body may have no observed steps. An unfinished step is not a pass. Agents retrieve integration evidence through `get_run`.

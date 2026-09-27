@@ -5,6 +5,7 @@ import type { Api, UnitInspection, UnitRun } from "@/lib/api"
 import { ExecutionProgress } from "./execution-progress"
 import { EmptyState, Loading, Notice } from "./feedback"
 import { useLiveRevision } from "./live-updates"
+import { ResultRow } from "./result-row"
 import { SearchPicker } from "./search-picker"
 import { TestCode } from "./test-code"
 import { TestFileBrowser } from "./test-file-browser"
@@ -218,7 +219,7 @@ export function UnitTests({
           </TabsContent>
           <TabsContent
             value="results"
-            className="flex h-0 min-h-0 min-w-0 flex-col gap-3 overflow-auto [&>*]:shrink-0"
+            className="flex h-0 min-h-0 min-w-0 flex-col gap-3 overflow-auto [&>*]:shrink-0 [&>*]:content-width-768"
           >
             {!data.runs.length && <EmptyState>{t("No command runs yet.")}</EmptyState>}
             {data.runs.length > 0 && (
@@ -233,8 +234,20 @@ export function UnitTests({
                   }))}
                 />
                 {run && (
-                  <div className="flex min-w-0 flex-col gap-3">
-                    <p className="text-sm font-medium">{resultLabel(run)}</p>
+                  <ResultRow
+                    title={run.settings.command}
+                    metadata={
+                      <>
+                        <span>{resultLabel(run)}</span>
+                        <time dateTime={run.createdAt}>
+                          {new Date(run.createdAt).toLocaleString()}
+                        </time>
+                        {run.exitCode !== null && (
+                          <span>{t("Exit code: {{code}}", { code: run.exitCode })}</span>
+                        )}
+                      </>
+                    }
+                  >
                     <ExecutionProgress kind="unit" run={run} />
                     {run.cleanup?.error && <Notice error>{run.cleanup.error}</Notice>}
                     {run.cleanup?.state === "failed" && (
@@ -245,16 +258,22 @@ export function UnitTests({
                     {run.error && <Notice error>{run.error}</Notice>}
                     {run.truncated && <Notice>{t("Command output was truncated.")}</Notice>}
                     {run.stdout && (
-                      <section aria-label={t("stdout")}>
-                        <pre className="max-h-96 overflow-auto text-code">{run.stdout}</pre>
+                      <section aria-label={t("stdout")} className="flex min-w-0 flex-col gap-2">
+                        <h4 className="text-sm font-medium">{t("stdout")}</h4>
+                        <pre className="max-h-96 overflow-auto whitespace-pre-wrap [overflow-wrap:anywhere] text-code">
+                          {run.stdout}
+                        </pre>
                       </section>
                     )}
                     {run.stderr && (
-                      <section aria-label={t("stderr")}>
-                        <pre className="max-h-96 overflow-auto text-code">{run.stderr}</pre>
+                      <section aria-label={t("stderr")} className="flex min-w-0 flex-col gap-2">
+                        <h4 className="text-sm font-medium">{t("stderr")}</h4>
+                        <pre className="max-h-96 overflow-auto whitespace-pre-wrap [overflow-wrap:anywhere] text-code">
+                          {run.stderr}
+                        </pre>
                       </section>
                     )}
-                  </div>
+                  </ResultRow>
                 )}
               </>
             )}

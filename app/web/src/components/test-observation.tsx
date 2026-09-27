@@ -5,11 +5,11 @@ import { ExecutionProgress } from "./execution-progress"
 import { EmptyState, Loading, Notice } from "./feedback"
 import { ListGroup, ListHeader, ListItem, ListItems } from "./kibo-ui/list"
 import { useLiveRevision } from "./live-updates"
+import { ResultRow } from "./result-row"
 import { TestCode } from "./test-code"
 import { TestFileBrowser } from "./test-file-browser"
 import { Badge } from "./ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/coss-tabs"
-import { Item, ItemContent, ItemTitle } from "./ui/item"
 import { UnifiedDiff } from "./unified-diff"
 import "@/locales"
 import { useEffect, useState } from "react"
@@ -445,24 +445,22 @@ function TestEvidenceResults({
                 {groups.get(state)?.map(({ result, index }) => {
                   return (
                     <ListItem key={`${index}-${result.file}-${result.name}`}>
-                      <Item render={<article />} className="items-start" size="sm">
-                        <ItemContent className="gap-4">
-                          <ItemTitle>
-                            <h3 className="min-w-0 [overflow-wrap:anywhere]">{result.name}</h3>
-                          </ItemTitle>
-                          {Boolean(result.steps?.length) && (
-                            <ObservedSteps steps={result.steps ?? []} showDuration={false} />
-                          )}
-                          {result.errors.map((error, index) => (
-                            <Notice error key={index}>
-                              <pre className="whitespace-pre-wrap break-words text-code">
-                                {`${error.name}: ${error.message}`}
-                                {error.stack && `\n${error.stack}`}
-                              </pre>
-                            </Notice>
-                          ))}
-                        </ItemContent>
-                      </Item>
+                      <ResultRow
+                        title={<h3>{result.name}</h3>}
+                        metadata={<span>{t(result.state)}</span>}
+                      >
+                        {Boolean(result.steps?.length) && (
+                          <ObservedSteps steps={result.steps ?? []} showDuration={false} />
+                        )}
+                        {result.errors.map((error, index) => (
+                          <Notice error key={index}>
+                            <pre className="whitespace-pre-wrap break-words text-code">
+                              {`${error.name}: ${error.message}`}
+                              {error.stack && `\n${error.stack}`}
+                            </pre>
+                          </Notice>
+                        ))}
+                      </ResultRow>
                     </ListItem>
                   )
                 })}
@@ -472,18 +470,17 @@ function TestEvidenceResults({
         {!cases.length &&
           submission.parsed.flatMap((file) =>
             file.review.scenarios.map((scenario, index) => (
-              <Item key={`${file.path}-${index}`} size="sm">
-                <ItemContent>
-                  <ItemTitle>
-                    <h3>{scenario.title}</h3>
-                    <Badge variant="outline">
-                      {run?.result?.outcome === "environment_error"
-                        ? t("Environment failed; no test results were recorded")
-                        : t("No recorded result")}
-                    </Badge>
-                  </ItemTitle>
-                </ItemContent>
-              </Item>
+              <ResultRow
+                key={`${file.path}-${index}`}
+                title={<h3>{scenario.title}</h3>}
+                metadata={
+                  <span>
+                    {run?.result?.outcome === "environment_error"
+                      ? t("Environment failed; no test results were recorded")
+                      : t("No recorded result")}
+                  </span>
+                }
+              />
             )),
           )}
       </div>

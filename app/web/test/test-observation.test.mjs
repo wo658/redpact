@@ -183,3 +183,14 @@ test("each test surface names its own execution path", async () => {
   assert.match(integration, /Run Integration tests/)
   assert.match(unit, /Run Unit command/)
 })
+
+test("실행 결과 제목과 판정은 별도 행으로 읽을 수 있다", () => {
+  const html = render(
+    [{ name: "긴 결과 제목", file: "checkout.test.ts", state: "passed", errors: [] }],
+    "passed",
+  )
+  assert.match(
+    html,
+    /<article[^>]*>[\s\S]*?<h3>긴 결과 제목<\/h3>[\s\S]*?<span>passed<\/span>[\s\S]*?<\/article>/,
+  )
+})

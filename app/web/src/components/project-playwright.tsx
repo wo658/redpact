@@ -7,6 +7,7 @@ import { ExecutionProgress } from "./execution-progress"
 import { EmptyState, Loading, Notice } from "./feedback"
 import { useLiveRevision } from "./live-updates"
 import { ProjectPlaywrightAction } from "./project-playwright-action"
+import { ResultRow } from "./result-row"
 import { ReviewToolbarOverride } from "./review-toolbar"
 import { TestFileBrowser } from "./test-file-browser"
 import { Button } from "./ui/button"
@@ -330,10 +331,21 @@ function RecordedRunBrowser({ api, run }: { api: Api; run: CaptureRun }) {
       onSelect={setPath}
       label={t("Playwright files")}
     >
-      <p className="content-width-768 text-xs text-muted-foreground [overflow-wrap:anywhere]">
-        {run.purpose} · {run.outcome ?? run.state} · {run.projectRoot} ·{" "}
-        {run.settings.viewport.width} × {run.settings.viewport.height}
-      </p>
+      <ResultRow
+        title={run.target}
+        metadata={
+          <>
+            <span>{t(run.outcome ?? run.state)}</span>
+            <time dateTime={run.createdAt}>{new Date(run.createdAt).toLocaleString()}</time>
+            <span>{t(run.purpose)}</span>
+            <span>
+              {run.settings.viewport.width} × {run.settings.viewport.height}
+            </span>
+          </>
+        }
+      >
+        <span className="text-muted-foreground">{run.projectRoot}</span>
+      </ResultRow>
       <ExecutionProgress kind="playwright" run={run} />
       {run.error && <Notice error>{run.error}</Notice>}
       {run.cleanupError && <Notice error>{run.cleanupError}</Notice>}
@@ -346,7 +358,10 @@ function RecordedRunBrowser({ api, run }: { api: Api; run: CaptureRun }) {
           <TabsTrigger value="results">{t("Execution results")}</TabsTrigger>
           <TabsTrigger value="source">{t("Test Code")}</TabsTrigger>
         </TabsList>
-        <TabsContent value="results" className="flex h-0 min-h-0 flex-col gap-3 overflow-auto">
+        <TabsContent
+          value="results"
+          className="flex h-0 min-h-0 flex-col divide-y overflow-auto [&>*]:content-width-768"
+        >
           {cases.length ? (
             cases.map((scenario) => (
               <StoredCase
@@ -378,7 +393,7 @@ function RecordedRunBrowser({ api, run }: { api: Api; run: CaptureRun }) {
   )
 }
 function runLabel(run: CaptureRun) {
-  return `${run.target} · ${run.createdAt}`
+  return `${run.target} · ${new Date(run.createdAt).toLocaleString()}`
 }
 function TextLink({ children, onClick }: { children: ReactNode; onClick(): void }) {
   return (
@@ -392,18 +407,12 @@ function TextLink({ children, onClick }: { children: ReactNode; onClick(): void 
   )
 }
 function ListRow({ name, detail, onClick }: { name: string; detail: string; onClick(): void }) {
+  const { t } = useTranslation()
   return (
-    <Button
-      variant="ghost"
-      aria-label={name}
-      className="h-auto min-h-11 w-full content-width-768 flex-col items-start justify-start gap-1 whitespace-normal rounded-none border-b px-1 py-3 text-left"
-      onClick={onClick}
-    >
-      <span className="min-w-0 [overflow-wrap:anywhere]">{name}</span>
-      <span className="content-width-768 text-xs text-muted-foreground [overflow-wrap:anywhere]">
-        {detail} →
-      </span>
-    </Button>
+    <ResultRow
+      title={<TextLink onClick={onClick}>{name}</TextLink>}
+      metadata={<span>{t(detail)}</span>}
+    />
   )
 }
 function TestsView({
@@ -496,22 +505,24 @@ function StoredCase({
   scenario: CaptureCase
   onSource(): void
 }) {
+  const { t } = useTranslation()
   return (
-    <section className="min-w-0 border-b py-3 [overflow-wrap:anywhere]">
-      <h4 className="content-width-768 text-sm">
-        {scenario.title} · {scenario.status}
-      </h4>
+    <ResultRow title={<h4>{scenario.title}</h4>} metadata={<span>{t(scenario.status)}</span>}>
       {scenario.errors.map((error) => (
         <Notice key={error} error>
           {error}
         </Notice>
       ))}
       <TextLink onClick={onSource}>{scenario.file}</TextLink>
-      <ol className="content-width-768 text-xs text-muted-foreground [overflow-wrap:anywhere]">
+      <ol className="flex min-w-0 flex-col divide-y">
         {scenario.steps.map((step, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: Recorded step order is immutable.
-          <li key={`${index}:${step.title}`}>
-            {step.title} · {step.error ?? `${step.duration} ms`}
+          <li key={`${index}:${step.title}`} className="flex min-w-0 flex-col gap-1 py-2">
+            <span className="whitespace-pre-wrap">{step.title}</span>
+            <span className="text-xs text-muted-foreground">
+              {t("{{duration}} ms", { duration: Math.round(step.duration) })}
+            </span>
+            {step.error && <Notice error>{step.error}</Notice>}
           </li>
         ))}
       </ol>
@@ -537,7 +548,7 @@ function StoredCase({
           ),
         )}
       </div>
-    </section>
+    </ResultRow>
   )
 }
 export function PlaywrightSource({

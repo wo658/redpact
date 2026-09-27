@@ -16,6 +16,7 @@ Dependencies empty overview is exercised in both entry flows.
 | Worktree | Empty Diff, unconfigured unit tests, empty integration source/results, empty execution log, environment selection |
 | Worktree UI Review | Empty screenshots and empty recorded source, both with persistent tabs |
 | Project Playwright | Empty screenshots, functional file list, selected source, empty run history |
+| Execution results | Unit output and exit code, Integration preparation failure, Playwright scenario/step errors and copyable Log rows at 1280px and 390px |
 | Problem notice | Actual settings validation failure with the shared Handoff shell and visible diagnostic |
 
 Captures await the expected state and fonts. A visible container alone does not
@@ -33,9 +34,11 @@ checkout, and verify the returned run in that worktree's list. See
 [self-E2E](../e2e/README.md). Native adapter verification additionally checks the
 checkpoint names, exact viewport dimensions and retained bytes after cleanup.
 
+Result-row scenarios seed isolated execution records through the existing fixture transport, then navigate the actual application and exercise log copying. These records verify presentation, not actual command or test execution. Functional and capture entries share the same scenarios; only the capture entry attaches named PNGs.
+
 ## Coverage limits
 
-Populated execution results, retained screenshot history, failure dialogs and native
+Retained screenshot history, failure dialogs and native
 Tauri chrome are not covered by these scenarios. Workspace history scenarios cover
 1280px and 390px layouts, with captures also covering 800px and dark mode; their macOS and Windows branches are rendered in Chromium and does not
 verify actual OS window controls or native dragging. Windows control scenarios replace

@@ -94,7 +94,7 @@ export function ExecutionProgress({
     <div
       role="status"
       aria-label={t("{{kind}} progress", { kind: t(kindLabels[kind]) })}
-      className={compact ? "text-xs text-muted-foreground" : "rounded-md border p-3 text-sm"}
+      className={compact ? "text-xs text-muted-foreground" : "border-b px-3 py-3 text-sm"}
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         {!compact && <span className="font-medium">{t("Execution progress")}</span>}
