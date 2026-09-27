@@ -60,9 +60,9 @@ See [troubleshooting](troubleshooting.md) for next steps.
 
 ## Browse current screenshots
 
-Open **Tests → Playwright → Screenshots** and select an image. Names such as `Settings / Appearance / Dark theme` appear under page and feature groups; the last segment labels the image.
+Open **Tests → Playwright → Screenshots** and select a capture source file from the file list. Its **Screenshots** tab has a **Checkpoint** selector showing each full capture name, target and scenario title. Names such as `Settings / Appearance / Dark theme` remain a single label; the slashes do not create page or feature groups. Use **Test Code** to inspect the selected file. Maintained files show current source; recorded-only files show source from the selected capture.
 
-The gallery uses the latest successful completed execution **per capture target**. Until a target succeeds, it falls back to that target's latest completed execution. A newer successful run replaces its entire name set, removing obsolete scenarios and renamed groups from the current list. Failed retries do not displace a successful set.
+The gallery uses the latest successful completed execution **per capture target**. Until a target succeeds, it falls back to that target's latest completed execution. A newer successful run replaces its entire name set, removing obsolete scenarios and old capture names from the current list. Failed retries do not displace a successful set.
 
 “Current” therefore describes a presentation policy, not a guarantee that every image reflects the latest files. Check its time and source. Different targets can show images from different executions. A source-changed indication means another run is needed before treating the image as evidence of today's code.
 

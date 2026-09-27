@@ -122,7 +122,7 @@ test("Settings page is ready for review", async ({ page }, info) => {
 })
 ```
 
-Use stable names in the form `Page / Group / Capture name`. The exact ` / ` separator creates groups. Choose useful states such as an empty form, validation error or saved result. Wait for application state and fonts instead of fixed sleeps. Capture the viewport or a meaningful section with enough context to judge the change.
+Use stable, descriptive names such as `Page / Group / Capture name`. The viewer displays the complete name in its checkpoint selector; `/` is a naming convention, not a grouping instruction. See [browsing captures](results.md) for the file and checkpoint navigation. Choose useful states such as an empty form, validation error or saved result. Wait for application state and fonts instead of fixed sleeps. Capture the viewport or a meaningful section with enough context to judge the change.
 
 For functional targets, use `test.step` and assertions on observable results: navigate, submit a form, then verify the resulting state and relevant persistence. Screenshots are optional diagnostics. Functional screenshots do not populate the project's capture gallery.
 

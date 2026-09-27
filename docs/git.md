@@ -117,8 +117,8 @@ inspection and recovery, not blind repetition or branch deletion.
 
 An agent resolving conflicts works in the source checkout, rechecks the target,
 tests and commits the resolution before another authorized merge. Test approval does
-not authorize Git merge. Dependency overlays require the separate reviewed
-[promotion procedure](settings-reference.md).
+not authorize Git merge. All worktrees use the shared fixed configuration described
+in [settings ownership](settings-reference.md); there is no dependency-overlay promotion step.
 
 ## GitHub pull requests
 

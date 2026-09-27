@@ -54,7 +54,8 @@ docker compose exec redpact node -p "JSON.parse(require('node:fs').readFileSync(
 | 경로 | 설치 대상 | 요구 사항 / 제한 |
 | --- | --- | --- |
 | macOS 데스크톱 다운로드 | 네이티브 앱, 서버, 뷰어, Node | macOS 13.5+, Apple Silicon 또는 Intel, 서명된 업데이트 제공, 공증 없음 |
-| Windows/Linux 데스크톱 preview | 네이티브 앱, 서버, 뷰어, Node | Windows x64 EXE, Ubuntu 22.04 x64 DEB, 수동 업데이트 |
+| Windows 데스크톱 다운로드 | 네이티브 앱, 서버, 뷰어, Node | Windows x64 EXE, 서명된 업데이트 제공, 게시자 코드 서명 없음 |
+| Linux 데스크톱 preview | 네이티브 앱, 서버, 뷰어, Node | Ubuntu 22.04 x64 DEB, 수동 업데이트 |
 | Homebrew 자체 Tap | CLI Formula 또는 macOS 데스크톱 Cask | 데스크톱은 `--cask`로 선택, 공증 없는 preview |
 | 터미널 설치기 | `~/.local` 아래 CLI와 브라우저 뷰어 | macOS 또는 Linux, Node 24+, npm, curl, SHA-256 도구 |
 | GitHub 릴리스 tarball과 npm/pnpm | CLI와 브라우저 뷰어 | Node 24+와 npm 또는 pnpm |
@@ -65,9 +66,10 @@ docker compose exec redpact node -p "JSON.parse(require('node:fs').readFileSync(
 관리형 실행에는 Docker와 Compose가 추가로 필요합니다. Git 기능은 네이티브 Git을
 사용하며 관리형 워크트리 생성에는 유지보수되는 Git 2.50+가 필요합니다. 설치와 MCP
 연결 성공이 Docker 준비 상태나 클라이언트의 MCP Apps 지원을 증명하지는 않습니다.
-Windows CLI 설치, Windows/Linux ARM, 다른 Linux 배포판과 Universal macOS
-설치기는 미검증입니다. macOS 앱은 Apple 공증을 받지 않았으며
-Windows preview에는 게시자 코드 서명 인증서가 없습니다.
+[npm 설치 매트릭스](development.md)는 Windows x64의 Node 24와 26을 검사합니다.
+Windows/Linux ARM, 다른 Linux 배포판과 Universal macOS 설치기는 미검증입니다.
+macOS 앱은 Apple 공증을 받지 않았으며 Windows 앱에는 게시자 코드 서명 인증서가
+없습니다. 업데이트 서명과 OS 코드 서명은 별개입니다.
 
 ## 소스에서 번들 런타임 설치
 
@@ -78,33 +80,36 @@ git clone https://github.com/wo658/redpact.git
 cd redpact
 pnpm install --frozen-lockfile
 pnpm pack:runtime
-pnpm add --global ./dist/redpact-0.2.0.tgz --ignore-scripts
+redpact_version=$(node -p "require('./app/server/package.json').version")
+pnpm add --global "./dist/redpact-${redpact_version}.tgz"
 redpact serve --project /absolute/path/to/your-project
 ```
 
-프로젝트 경로를 자신의 체크아웃 경로로 바꾸세요. 패키지 버전이 달라졌다면 `pnpm pack:runtime`이 출력한 tarball 경로를 사용하세요. pnpm 전역 실행 파일 디렉터리가 없다는 오류가 나면 `pnpm setup`을 실행하고 터미널을 다시 연 뒤 Redpact 체크아웃에서 전역 설치를 재시도하세요.
+프로젝트 경로를 자신의 체크아웃 경로로 바꾸세요. 명령은 현재 체크아웃에서 패키지 버전을 읽으며, `pnpm pack:runtime`도 생성한 tarball 경로를 출력합니다. pnpm 전역 실행 파일 디렉터리가 없다는 오류가 나면 `pnpm setup`을 실행하고 터미널을 다시 연 뒤 Redpact 체크아웃에서 전역 설치를 재시도하세요.
 
 번들 뷰어는 `http://127.0.0.1:54318`에서 열고, 에이전트는 `http://127.0.0.1:54318/mcp`에 연결하세요. 서버를 실행 상태로 유지하고 종료하려면 Ctrl+C를 누르세요. 이 명령은 CLI와 웹 뷰어를 설치합니다. 네이티브 데스크톱 앱은 아래 macOS 빌드 안내를 따르세요. 관리형 테스트에는 사전 준비 항목에 설명한 Docker와 Compose가 필요합니다.
 
 ## macOS 데스크톱 다운로드
 
-[Mac 데스크톱 릴리스](https://github.com/wo658/redpact/releases/latest)에서 CPU에 맞는 패키지를 다운로드하세요.
+[현재 데스크톱 릴리스](https://github.com/wo658/redpact/releases/latest)에서 CPU에 맞는 패키지를 다운로드하세요. 아래 파일명의 `<version>`은 해당 릴리스에 표시된 버전입니다.
 
-- Apple Silicon(M 시리즈): `Redpact_0.2.0_aarch64.dmg`.
-- Intel: `Redpact_0.2.0_x64.zip`.
+- Apple Silicon(M 시리즈): `Redpact_<version>_aarch64.dmg`.
+- Intel: `Redpact_<version>_x64.zip`.
 
 Apple Silicon DMG를 열거나 Intel ZIP을 압축 해제하고 **Redpact**를 **Applications**로 드래그한 뒤 사용한 디스크 이미지가 있으면 추출하고
 Redpact를 실행하세요. Node·서버·뷰어가 포함되어 터미널에서 서버를 실행할 필요가 없습니다.
 최초 MCP 주소는 `http://127.0.0.1:54321/mcp`입니다. 같은 포트를 사용하는 다른
 Redpact 인스턴스가 있다면 먼저 종료하세요.
 
-이 릴리스는 ad-hoc 서명을 사용하며 **Apple 공증을 받지 않았습니다**.
-`shasum -a 256 <다운로드한파일>` 결과를 릴리스의 `SHA256SUMS`와 비교하세요.
+이 빌드는 ad-hoc 서명을 사용하며 **Apple 공증을 받지 않았습니다**.
+`shasum -a 256 <다운로드한파일>` 결과를 GitHub에 표시된 해당 자산의 SHA-256 digest와
+비교하세요. 현재 제품 릴리스 workflow는 별도 `SHA256SUMS` 파일을 첨부하지 않으며,
+이전 preview 릴리스에는 이 파일이 제공됩니다.
 macOS가 차단하면 출처를 확인한 뒤 시스템 설정 → 개인정보 보호 및 보안에서
 [Apple의 앱별 ‘확인 없이 열기’ 안내](https://support.apple.com/ko-kr/102445)를 따르세요.
 Gatekeeper를 전역으로 해제하지 마세요. 체크섬 일치는 릴리스 파일의 일치 여부이며 Apple 심사가 아닙니다.
 
-0.2.0은 시작 시와 6시간마다 서명된 업데이트를 확인하며 설치·재시작에는 확인이 필요합니다.
+현재 제품 릴리스는 시작 시와 6시간마다 서명된 업데이트를 확인하며 설치·재시작에는 확인이 필요합니다.
 feed 없는 preview나 개발 빌드에서 전환할 때는 이 릴리스를 한 번 수동 설치하세요.
 활성 작업을 마치고 Redpact를 종료한 뒤 Applications의 앱을 교체하세요.
 제거하려면 종료 후 `Redpact.app`을 삭제하세요. 설정과 결과는
@@ -119,7 +124,7 @@ brew install --cask wo658/redpact/redpact
 open /Applications/Redpact.app
 ```
 
-Cask는 현재 업데이트 feed가 없는 이전 0.1.0 preview를 설치합니다. 0.2.0과 서명된
+Cask는 현재 업데이트 feed가 없는 이전 0.1.0 preview를 설치합니다. 현재 제품 릴리스와 서명된
 업데이트를 사용하려면 위에서 직접 다운로드하세요. Cask는 Apple Silicon DMG 또는
 Intel ZIP을 선택하고 체크섬을 검증합니다.
 직접 다운로드와 동일하게 공증·최초 실행 제한이 적용됩니다. 새 Cask 버전으로
@@ -129,23 +134,25 @@ Intel ZIP을 선택하고 체크섬을 검증합니다.
 기존 DMG를 수동 설치했다면 종료하고 해당 앱을 Applications 밖으로 옮긴 뒤
 Cask를 설치하세요. 새 앱의 실행이 확인될 때까지 이전 복사본을 보관하세요.
 
-## Windows와 Linux 데스크톱 preview
+## Windows와 Linux 데스크톱 다운로드
 
-[Windows/Linux preview](https://github.com/wo658/redpact/releases/tag/desktop-platform-preview-v0.1.0)에서 OS에 맞는 패키지를 다운로드하세요.
+Windows는 [현재 데스크톱 릴리스](https://github.com/wo658/redpact/releases/latest)를,
+Linux는 [플랫폼 preview](https://github.com/wo658/redpact/releases/tag/desktop-platform-preview-v0.1.0)를 사용합니다.
 Node·서버·뷰어가 포함되어 있습니다. 실행 전 54321 포트를 사용하는 다른 Redpact를
 종료하세요. 최초 MCP 주소는 `http://127.0.0.1:54321/mcp`입니다.
 
 ### Windows x64
 
-`Redpact_0.1.0_x64-setup.exe`를 받아 실행하고 시작 메뉴에서 Redpact를 여세요.
+현재 릴리스의 `Redpact_<version>_x64-setup.exe`를 받아 실행하고 시작 메뉴에서 Redpact를 여세요.
 설치기는 필요한 경우 WebView2를 설치하므로 최초 설치 시 인터넷 연결이 필요할 수
-있습니다. 이 preview에는 코드 서명이 없어 Windows SmartScreen 게시자 경고가
+있습니다. 설치기에 게시자 코드 서명이 없어 Windows SmartScreen 게시자 경고가
 나타날 수 있습니다. 릴리스 출처를 확인하고 `Get-FileHash <파일> -Algorithm SHA256`
-결과를 `SHA256SUMS`와 비교하세요. GitHub Windows Server 2022 러너에서 네이티브
-빌드, 무인 설치, 앱·서버·뷰어·MCP 실행과 제거를 검사합니다. Windows 10/11의
+결과를 GitHub에 표시된 해당 자산의 SHA-256 digest와 비교하세요.
+GitHub Windows Server 2022 러너에서 네이티브 빌드, 무인 설치, 앱·서버·뷰어·MCP 실행과 제거를 검사합니다. Windows 10/11의
 대화형 설치와 SmartScreen 허용은 이 검사에 포함되지 않습니다.
 
-업데이트는 Redpact를 종료한 뒤 새 설치기를 실행하세요. 제거는 Windows 설정 → 앱을
+현재 Windows 제품 릴리스는 macOS와 동일한 서명된 업데이트 확인과 명시적인 설치·재시작
+확인을 지원합니다. 수동 교체 시에는 Redpact를 종료한 뒤 새 설치기를 실행하세요. 제거는 Windows 설정 → 앱을
 사용합니다. 인스턴스 설정·결과는 설치 경로와 별개인
 `%APPDATA%\dev.redpact.desktop\state`에 남습니다.
 
@@ -166,7 +173,7 @@ redpact-desktop
 업데이트는 Redpact를 종료한 뒤 `apt install ./<파일>`로 새 DEB를 설치하세요.
 제거는 `sudo apt remove redpact`이며 인스턴스 데이터는
 `${XDG_DATA_HOME:-$HOME/.local/share}/dev.redpact.desktop/state`에 남습니다.
-두 preview 모두 수동 업데이트이며 [데스크톱 수명주기](desktop.md)를 따릅니다.
+Linux preview는 수동 업데이트이며 [데스크톱 수명주기](desktop.md)를 따릅니다.
 설치 검사는 관리형 Docker 실행이나 모든 WebView 동작의 검증이 아닙니다.
 
 ## Homebrew
@@ -424,7 +431,7 @@ http://127.0.0.1:54318/mcp
 
 ## 선택 사항: macOS 데스크톱 빌드
 
-데스크톱 앱은 뷰어, 서버, Node 런타임을 함께 제공합니다. 빌드하려면 Node와 pnpm 외에 Rust stable과 해당 플랫폼의 Tauri 사전 요구사항이 필요합니다. macOS에는 Xcode Command Line Tools가 필요하며, 번들 Node 런타임은 macOS 13.5 이상을 요구합니다. Windows·Linux 빌드와 설치 검증 범위는 위의 preview 안내를 참고하세요.
+데스크톱 앱은 뷰어, 서버, Node 런타임을 함께 제공합니다. 빌드하려면 Node와 pnpm 외에 Rust stable과 해당 플랫폼의 Tauri 사전 요구사항이 필요합니다. macOS에는 Xcode Command Line Tools가 필요하며, 번들 Node 런타임은 macOS 13.5 이상을 요구합니다. Windows·Linux 빌드와 설치 검증 범위는 위의 OS별 다운로드 안내를 참고하세요.
 
 개발용으로는 Redpact 체크아웃에서 `pnpm desktop:dev`를 실행하세요. 개인용 macOS 설치는 다음 명령을 사용합니다.
 

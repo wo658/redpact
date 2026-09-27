@@ -54,7 +54,8 @@ development runner, use the host-installed runtime described below.
 | Path | What it installs | Requirements / limits |
 | --- | --- | --- |
 | macOS desktop download | Native app, server, viewer and Node | macOS 13.5+, Apple Silicon or Intel; signed updates, without notarization |
-| Windows/Linux desktop preview | Native app, server, viewer and Node | Windows x64 EXE; Ubuntu 22.04 x64 DEB; manual updates |
+| Windows desktop download | Native app, server, viewer and Node | Windows x64 EXE; signed updates, without publisher code signing |
+| Linux desktop preview | Native app, server, viewer and Node | Ubuntu 22.04 x64 DEB; manual updates |
 | Homebrew custom tap | CLI formula or macOS desktop Cask | Select `--cask` for the desktop; desktop preview is not notarized |
 | Terminal installer | CLI and browser viewer under `~/.local` | macOS or Linux, Node 24+, npm, curl and SHA-256 utility |
 | GitHub release tarball with npm/pnpm | CLI and browser viewer | Node 24+ and npm or pnpm |
@@ -65,9 +66,10 @@ development runner, use the host-installed runtime described below.
 Managed execution additionally needs Docker with Compose. Git operations use native
 Git; managed worktree creation requires maintained Git 2.50+. Installation and MCP
 connectivity do not verify Docker readiness or client support for MCP Apps.
-Windows CLI installation, ARM Windows/Linux, other Linux distributions and a Universal
-macOS installer remain unverified. The macOS app is not Apple notarized;
-the Windows preview has no publisher code-signing certificate.
+The [npm installation matrix](development.md) covers Windows x64 with Node 24 and 26.
+ARM Windows/Linux, other Linux distributions and a Universal macOS installer remain
+unverified. The macOS app is not Apple notarized; the Windows app has no publisher
+code-signing certificate. Updater signatures are separate from OS code signing.
 
 ## Install a bundled runtime from source
 
@@ -78,33 +80,36 @@ git clone https://github.com/wo658/redpact.git
 cd redpact
 pnpm install --frozen-lockfile
 pnpm pack:runtime
-pnpm add --global ./dist/redpact-0.2.0.tgz --ignore-scripts
+redpact_version=$(node -p "require('./app/server/package.json').version")
+pnpm add --global "./dist/redpact-${redpact_version}.tgz"
 redpact serve --project /absolute/path/to/your-project
 ```
 
-Replace the project path with your checkout. If the package version changes, use the tarball path printed by `pnpm pack:runtime`. If pnpm reports that its global bin directory is missing, run `pnpm setup`, reopen your terminal, and retry the global installation from the Redpact checkout.
+Replace the project path with your checkout. The command reads the package version from this checkout; `pnpm pack:runtime` also prints the generated tarball path. If pnpm reports that its global bin directory is missing, run `pnpm setup`, reopen your terminal, and retry the global installation from the Redpact checkout.
 
 Open `http://127.0.0.1:54318` for the bundled viewer and use `http://127.0.0.1:54318/mcp` for your agent. Keep the server running; Ctrl+C stops it. This installs the CLI and web viewer. For the native desktop app, follow the macOS build instructions below. Managed tests require Docker with Compose as described under Requirements.
 
 ## macOS desktop download
 
-Download the matching package from the [Mac desktop release](https://github.com/wo658/redpact/releases/latest):
+Download the matching package from the [current desktop release](https://github.com/wo658/redpact/releases/latest). Use the version shown on that release in these filenames:
 
-- Apple Silicon (M-series): `Redpact_0.2.0_aarch64.dmg`.
-- Intel: `Redpact_0.2.0_x64.zip`.
+- Apple Silicon (M-series): `Redpact_<version>_aarch64.dmg`.
+- Intel: `Redpact_<version>_x64.zip`.
 
 Open the Apple Silicon DMG (or extract the Intel ZIP), drag **Redpact** to **Applications**, eject the disk image if used, then open
 Redpact. Node, the server and viewer are bundled; no terminal server command is needed.
 The first-launch MCP address is `http://127.0.0.1:54321/mcp`. Quit any other Redpact
 instance using that port before opening the desktop app.
 
-This release is ad-hoc signed, **not Apple notarized**. Check the downloaded file
-against the release's `SHA256SUMS` with `shasum -a 256 <downloaded-file>`.
+These builds are ad-hoc signed, **not Apple notarized**. Compare
+`shasum -a 256 <downloaded-file>` with the SHA-256 digest for that asset on GitHub.
+The current product release workflow does not attach a separate `SHA256SUMS` file;
+older preview releases provide one.
 If macOS blocks it, follow [Apple's app-specific Open Anyway instructions](https://support.apple.com/en-us/102445)
 in System Settings → Privacy & Security after checking the source. Do not disable
 Gatekeeper globally. A matching checksum confirms the release file, not Apple review.
 
-Version 0.2.0 checks for signed updates at startup and every six hours; installation
+Current product releases check for signed updates at startup and every six hours; installation
 and restart require confirmation. Install this release manually once when upgrading
 from a preview or development build without a feed. Finish active work, quit Redpact
 and replace the app in Applications. To uninstall,
@@ -121,7 +126,7 @@ open /Applications/Redpact.app
 ```
 
 The Cask currently installs the older 0.1.0 preview without an update feed. Use the
-direct download above for 0.2.0 and signed updates. The Cask selects the matching
+direct download above for the current product release and signed updates. The Cask selects the matching
 Apple Silicon DMG or Intel ZIP and verifies its checksum.
 It has the same notarization and first-launch limitations as the direct download.
 Use `brew update` then `brew upgrade --cask wo658/redpact/redpact` after quitting
@@ -130,23 +135,28 @@ Redpact to install a newer Cask version. Remove with
 If you previously installed the DMG manually, quit and move that app out of
 Applications before installing the Cask. Keep the old copy until launch succeeds.
 
-## Windows and Linux desktop preview
+## Windows and Linux desktop downloads
 
-Download the OS-specific package from the [Windows/Linux preview](https://github.com/wo658/redpact/releases/tag/desktop-platform-preview-v0.1.0).
+Windows uses the [current desktop release](https://github.com/wo658/redpact/releases/latest).
+Linux uses the [platform preview](https://github.com/wo658/redpact/releases/tag/desktop-platform-preview-v0.1.0).
 Node, the server and viewer are bundled. Quit other Redpact instances using port
 54321 before opening the app; its initial MCP endpoint is `http://127.0.0.1:54321/mcp`.
 
 ### Windows x64
 
-Download `Redpact_0.1.0_x64-setup.exe`, run it and open Redpact from the Start menu.
+Download `Redpact_<version>_x64-setup.exe` for the current release, run it and open
+Redpact from the Start menu.
 The installer provisions WebView2 when needed, so first installation may need
-network access. This preview is unsigned; Windows SmartScreen may show a publisher
-warning. Verify the release source and compare `Get-FileHash <file> -Algorithm SHA256`
-with `SHA256SUMS`. Native build, silent installation, app/server/viewer/MCP launch
+network access. The installer has no publisher code signature; Windows SmartScreen
+may show a publisher warning. Verify the release source and compare
+`Get-FileHash <file> -Algorithm SHA256` with the asset's SHA-256 digest on GitHub.
+Native build, silent installation, app/server/viewer/MCP launch
 and uninstall are tested on the GitHub Windows Server 2022 runner. Windows 10/11
 interactive installation and SmartScreen approval are not covered by that check.
 
-Quit Redpact before running a newer installer. Remove it through Windows Settings
+Current Windows product releases support the same signed update checks and explicit
+install/restart confirmation as macOS. For manual replacement, quit Redpact before
+running a newer installer. Remove it through Windows Settings
 → Apps. Instance settings/results are separate from the installation and remain
 under `%APPDATA%\dev.redpact.desktop\state`.
 
@@ -168,7 +178,7 @@ AppImage, RPM and ARM packages are not provided.
 For an update, quit Redpact and install the newer DEB with `apt install ./<file>`.
 Remove with `sudo apt remove redpact`; instance data stays in
 `${XDG_DATA_HOME:-$HOME/.local/share}/dev.redpact.desktop/state`.
-Both previews use manual updates and retain the [desktop lifecycle](desktop.md).
+The Linux preview uses manual updates and retains the [desktop lifecycle](desktop.md).
 Installation checks do not prove managed Docker execution or every WebView interaction.
 
 ## Homebrew
