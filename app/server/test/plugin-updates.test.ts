@@ -61,7 +61,14 @@ test("앱 버전과 무관하게 더 높은 플러그인만 갱신하고 설치 
     version = "0.2.0"
   })
   const client = {
-    inspect: vi.fn(async () => ({ version, enabled: true, scope: "user", official: true })),
+    inspect: vi.fn(async () => ({
+      version,
+      enabled: true,
+      scope: "user",
+      id: "redpact@personal",
+      sourceKey: "personal",
+      supported: true,
+    })),
     latest: vi.fn(async () => "0.2.0"),
     install,
   }
@@ -77,18 +84,20 @@ test("앱 버전과 무관하게 더 높은 플러그인만 갱신하고 설치 
     status: "updated",
     currentVersion: "0.2.0",
   })
-  expect(install).toHaveBeenCalledWith("codex", "0.2.0", undefined)
+  expect(install).toHaveBeenCalledWith("codex", "0.2.0", undefined, "personal")
   expect((await service.check()).agents[0].status).toBe("current")
 })
 
-test("로컬 설치와 버전 불명은 자동 설치하지 않고 실패 후 재확인을 허용한다", async () => {
+test("지원하지 않는 소스와 버전 불명은 자동 설치하지 않고 실패 후 재확인을 허용한다", async () => {
   const { createPluginUpdates } = await import("../src/workflows/plugin-updates.js")
   const client = {
     inspect: vi.fn(async () => ({
       version: "0.1.0",
       enabled: true,
       scope: "user",
-      official: false,
+      id: "redpact@personal",
+      sourceKey: "personal",
+      supported: false,
     })),
     latest: vi.fn(async () => "0.2.0"),
     install: vi.fn(),
@@ -104,14 +113,18 @@ test("로컬 설치와 버전 불명은 자동 설치하지 않고 실패 후 �
     version: "unknown",
     enabled: true,
     scope: "user",
-    official: true,
+    id: "redpact@personal",
+    sourceKey: "personal",
+    supported: true,
   })
   expect((await service.check()).agents[0].status).toBe("unsupported")
   client.inspect.mockResolvedValue({
     version: "0.1.0",
     enabled: true,
     scope: "user",
-    official: true,
+    id: "redpact@personal",
+    sourceKey: "personal",
+    supported: true,
   })
   await service.check()
   client.install.mockRejectedValue(new Error("Install failed"))
@@ -124,7 +137,7 @@ test("로컬 설치와 버전 불명은 자동 설치하지 않고 실패 후 �
   expect((await service.install("codex", "0.2.0")).agents[0].status).toBe("error")
 })
 
-test("확인 후 CLI 경로나 공개 버전이 바뀌면 설치하지 않는다", async () => {
+test("확인 후 CLI 경로나 마켓플레이스 버전이 바뀌면 설치하지 않는다", async () => {
   const { createPluginUpdates } = await import("../src/workflows/plugin-updates.js")
   let cliPath = "/bin/codex"
   const client = {
@@ -132,7 +145,9 @@ test("확인 후 CLI 경로나 공개 버전이 바뀌면 설치하지 않는다
       version: "0.1.0",
       enabled: true,
       scope: "user",
-      official: true,
+      id: "redpact@personal",
+      sourceKey: "personal",
+      supported: true,
     })),
     latest: vi.fn(async () => "0.2.0"),
     install: vi.fn(),
@@ -159,7 +174,14 @@ test("플러그인 설치 중에는 확인 결과를 덮거나 중복 설치하�
   let version = "0.1.0"
   let finish = () => {}
   const client = {
-    inspect: vi.fn(async () => ({ version, enabled: true, scope: "user", official: true })),
+    inspect: vi.fn(async () => ({
+      version,
+      enabled: true,
+      scope: "user",
+      id: "redpact@personal",
+      sourceKey: "personal",
+      supported: true,
+    })),
     latest: vi.fn(async () => "0.2.0"),
     install: vi.fn(
       () =>
@@ -193,4 +215,14 @@ test("빌드 메타데이터만 다르거나 설치 버전이 더 높으면 내�
   expect(pluginVersionStatus("0.3.0", "0.2.0")).toBe("current")
   expect(() => pluginVersionStatus("unknown", "0.2.0")).toThrow()
   expect(() => pluginVersionStatus("0.1.0", "0.2.0-beta.1")).toThrow()
+})
+
+test("Codex 재설치 버전의 시간표시가 더 최신이면 업데이트하고 이전 빌드로 내리지 않는다", async () => {
+  const { pluginVersionStatus } = await import("../src/core/plugin-updates.js")
+  expect(pluginVersionStatus("0.1.0+codex.20260919112208", "0.1.0+codex.20260927112208")).toBe(
+    "available",
+  )
+  expect(pluginVersionStatus("0.1.0+codex.20260927112208", "0.1.0+codex.20260919112208")).toBe(
+    "current",
+  )
 })

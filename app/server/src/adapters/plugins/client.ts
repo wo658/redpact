@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises"
 import { homedir } from "node:os"
-import { delimiter, join } from "node:path"
+import { delimiter, isAbsolute, join, resolve } from "node:path"
 import { execa } from "execa"
 import { z } from "zod"
 import type {
@@ -9,7 +9,6 @@ import type {
   PluginInstallation,
 } from "../../core/types/plugin-updates.js"
 
-const repository = "https://github.com/wo658/redpact"
 const manifest = z.object({ name: z.literal("redpact"), version: z.string().min(1).max(100) })
 const codexPlugin = z.object({
   pluginId: z.string(),
@@ -83,44 +82,8 @@ async function command(agent: PluginAgent, args: string[], cliPath?: string) {
   }
 }
 
-async function latest(agent: PluginAgent) {
-  const response = await fetch(
-    `https://raw.githubusercontent.com/wo658/redpact/main/plugins/redpact/${manifestPath(agent)}`,
-    {
-      signal: AbortSignal.timeout(10000),
-      redirect: "error",
-      headers: { Accept: "application/json" },
-    },
-  )
-  if (!response.ok) {
-    throw new Error(`Plugin marketplace returned HTTP ${response.status}.`)
-  }
-  const reader = response.body?.getReader()
-  if (!reader) {
-    throw new Error("Plugin marketplace returned no manifest.")
-  }
-  let size = 0
-  const chunks: Uint8Array[] = []
-  try {
-    while (true) {
-      const value = await reader.read()
-      if (value.done) {
-        break
-      }
-      size += value.value.byteLength
-      if (size > 65536) {
-        throw new Error("Plugin manifest is too large.")
-      }
-      chunks.push(value.value)
-    }
-    return manifest.parse(JSON.parse(Buffer.concat(chunks).toString("utf8"))).version
-  } finally {
-    await reader.cancel()
-  }
-}
-
 export function createPluginClient(
-  options: { command?: Command; latest?: typeof latest; read?: typeof readFile } = {},
+  options: { command?: Command; read?: typeof readFile } = {},
 ): PluginClient {
   const run = options.command ?? command
   const read = options.read ?? readFile
@@ -130,21 +93,53 @@ export function createPluginClient(
       const entry = codexMarkets
         .parse(JSON.parse(result.stdout))
         .marketplaces.find((item) => item.name === name)
-      const source = entry?.marketplaceSource
+      if (!entry) {
+        throw new Error("The installed plugin marketplace is not configured.")
+      }
       return {
-        root: entry?.root,
-        official:
-          source?.sourceType === "git" &&
-          [repository, `${repository}.git`].includes(source.source) &&
-          (!source.ref || source.ref === "main"),
+        root: entry.root,
+        refresh: entry.marketplaceSource?.sourceType === "git",
+        identity: entry.marketplaceSource ?? null,
       }
     }
     const entry = claudeMarkets.parse(JSON.parse(result.stdout)).find((item) => item.name === name)
-    const official =
-      entry?.source === "github" &&
-      entry.repo === "wo658/redpact" &&
-      (!entry.branch || entry.branch === "main")
-    return { root: entry?.installLocation, official }
+    if (!entry) {
+      throw new Error("The installed plugin marketplace is not configured.")
+    }
+    return {
+      root: entry.installLocation,
+      refresh: !["directory", "file"].includes(entry.source),
+      identity: { source: entry.source, repo: entry.repo, url: entry.url, branch: entry.branch },
+    }
+  }
+  async function catalog(agent: PluginAgent, name: string, cliPath?: string) {
+    const market = await marketplace(agent, name, cliPath)
+    const file =
+      agent === "codex" ? ".agents/plugins/marketplace.json" : ".claude-plugin/marketplace.json"
+    const value = z
+      .object({ plugins: z.array(z.object({ name: z.string(), source: z.unknown() })) })
+      .parse(JSON.parse(await read(join(market.root, file), "utf8")))
+    const entries = value.plugins.filter((item) => item.name === "redpact")
+    if (entries.length !== 1) {
+      throw new Error("The marketplace must contain one Redpact entry.")
+    }
+    const source = entries[0].source
+    let path: string | undefined
+    if (agent === "claude" && typeof source === "string" && source.startsWith("./")) {
+      path = source
+    } else if (agent === "codex") {
+      const local = z
+        .object({ source: z.literal("local"), path: z.string().min(1) })
+        .safeParse(source)
+      if (local.success) {
+        path = local.data.path
+      }
+    }
+    return {
+      ...market,
+      path: path ? resolve(market.root, path) : undefined,
+      sourceKey: JSON.stringify([name, market.root, market.identity, source]),
+    }
   }
   async function inspect(agent: PluginAgent, cliPath?: string): Promise<PluginInstallation | null> {
     const result = await run(agent, ["plugin", "list", "--json"], cliPath)
@@ -178,35 +173,57 @@ export function createPluginClient(
     }
     const entry = entries[0]
     const name = entry.id.slice("redpact@".length)
-    if (name !== "redpact") {
-      return { ...entry, official: false }
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(name)) {
+      throw new Error("The plugin marketplace name is invalid.")
     }
-    const source = await marketplace(agent, name, cliPath)
-    return { ...entry, official: source.official }
+    const source = await catalog(agent, name, cliPath)
+    return { ...entry, sourceKey: source.sourceKey, supported: Boolean(source.path) }
+  }
+  async function candidate(agent: PluginAgent, cliPath?: string) {
+    const installed = await inspect(agent, cliPath)
+    if (!installed?.supported || !installed.id) {
+      throw new Error("This marketplace plugin source is not supported. Manage it in the agent.")
+    }
+    const name = installed.id.slice("redpact@".length)
+    const source = await catalog(agent, name, cliPath)
+    if (source.refresh) {
+      await run(
+        agent,
+        ["plugin", "marketplace", agent === "codex" ? "upgrade" : "update", name],
+        cliPath,
+      )
+    }
+    const refreshed = await catalog(agent, name, cliPath)
+    if (
+      refreshed.sourceKey !== installed.sourceKey ||
+      !refreshed.path ||
+      !isAbsolute(refreshed.path)
+    ) {
+      throw new Error("The plugin marketplace source changed. Check again before installing.")
+    }
+    const value = manifest.parse(
+      JSON.parse(await read(join(refreshed.path, manifestPath(agent)), "utf8")),
+    )
+    return { installed, version: value.version }
   }
   return {
     inspect,
-    latest: options.latest ?? latest,
-    async install(agent, version, cliPath) {
-      const source = await marketplace(agent, "redpact", cliPath)
-      if (!source.official || !source.root) {
-        throw new Error("The public Redpact marketplace is not configured.")
+    async latest(agent, cliPath) {
+      const result = await candidate(agent, cliPath)
+      return result.version
+    },
+    async install(agent, version, cliPath, expected) {
+      const result = await candidate(agent, cliPath)
+      if (expected && result.installed.sourceKey !== expected) {
+        throw new Error("The plugin marketplace source changed. Check again before installing.")
       }
-      const refresh = agent === "codex" ? "upgrade" : "update"
-      await run(agent, ["plugin", "marketplace", refresh, "redpact"], cliPath)
-      const refreshed = await marketplace(agent, "redpact", cliPath)
-      if (!refreshed.official || !refreshed.root) {
-        throw new Error("The plugin marketplace source changed.")
-      }
-      const path = join(refreshed.root, "plugins/redpact", manifestPath(agent))
-      const candidate = manifest.parse(JSON.parse(await read(path, "utf8")))
-      if (candidate.version !== version) {
+      if (result.version !== version) {
         throw new Error("The marketplace version changed. Check again before installing.")
       }
       if (agent === "codex") {
-        await run(agent, ["plugin", "add", "redpact@redpact", "--json"], cliPath)
+        await run(agent, ["plugin", "add", result.installed.id, "--json"], cliPath)
       } else {
-        await run(agent, ["plugin", "update", "redpact@redpact", "--scope", "user"], cliPath)
+        await run(agent, ["plugin", "update", result.installed.id, "--scope", "user"], cliPath)
       }
     },
   }

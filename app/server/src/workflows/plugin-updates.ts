@@ -27,6 +27,8 @@ export function createPluginUpdates(deps: {
     busy: false,
     checkedAt: null,
   }
+  const sources = new Map<PluginAgent, string>()
+  let checking = false
   let checkedPaths: Partial<Record<PluginAgent, string | undefined>> = {}
   const status = () => structuredClone(state)
   async function paths() {
@@ -54,7 +56,13 @@ export function createPluginUpdates(deps: {
       if (issue) {
         return { ...row, status: "unsupported", error: issue }
       }
-      row.latestVersion = await deps.client.latest(agent)
+      if (!checking && sources.get(agent) !== installed.sourceKey) {
+        throw new Error("The plugin marketplace source changed. Check again before installing.")
+      }
+      row.latestVersion = await deps.client.latest(agent, cliPath)
+      if (checking) {
+        sources.set(agent, installed.sourceKey)
+      }
       row.status = pluginVersionStatus(installed.version, row.latestVersion)
       return row
     } catch (error) {
@@ -73,6 +81,7 @@ export function createPluginUpdates(deps: {
       }
       state.busy = true
       try {
+        checking = true
         const settings = await paths()
         checkedPaths = Object.fromEntries(agents.map((agent) => [agent, settings[agent]?.cliPath]))
         state.agents = await Promise.all(agents.map((agent) => inspect(agent, checkedPaths[agent])))
@@ -85,6 +94,7 @@ export function createPluginUpdates(deps: {
           error: error instanceof Error ? error.message : "Plugin check failed.",
         }))
       } finally {
+        checking = false
         state.busy = false
         state.checkedAt = deps.now()
       }
@@ -110,9 +120,14 @@ export function createPluginUpdates(deps: {
         ) {
           throw new Error("Plugin update changed. Check again before installing.")
         }
-        await deps.client.install(agent, version, cliPath)
+        await deps.client.install(agent, version, cliPath, sources.get(agent))
         const installed = await deps.client.inspect(agent, cliPath)
-        if (!installed || installationIssue(installed) || installed.version !== version) {
+        if (
+          !installed ||
+          installationIssue(installed) ||
+          installed.version !== version ||
+          installed.sourceKey !== sources.get(agent)
+        ) {
           throw new Error(
             "The requested plugin version was not confirmed. Check the agent before retrying.",
           )
@@ -128,6 +143,7 @@ export function createPluginUpdates(deps: {
           error: error instanceof Error ? error.message : "Plugin update failed.",
         })
       } finally {
+        checking = false
         state.busy = false
         state.checkedAt = deps.now()
       }

@@ -26,8 +26,8 @@ export const pluginUpdatesStateSchema = z.object({
 })
 
 export function installationIssue(value: PluginInstallation): string | null {
-  if (!value.official) {
-    return "Local or unrecognized source. Update this plugin through its original marketplace."
+  if (!value.supported) {
+    return "This marketplace plugin source is not supported. Manage it in the agent."
   }
   if (value.scope !== "user" || !value.enabled) {
     return "Automatic updates require one enabled user installation. Use the agent to manage other scopes or disabled plugins."
@@ -41,6 +41,11 @@ export function installationIssue(value: PluginInstallation): string | null {
 export function pluginVersionStatus(current: string, latest: string): PluginUpdateStatus["status"] {
   if (!valid(current) || !valid(latest) || prerelease(latest)) {
     throw new Error("The plugin version cannot be compared with a stable release.")
+  }
+  const currentBuild = /^(\d+\.\d+\.\d+)\+codex\.(\d{14})$/.exec(current)
+  const latestBuild = /^(\d+\.\d+\.\d+)\+codex\.(\d{14})$/.exec(latest)
+  if (currentBuild && latestBuild && currentBuild[1] === latestBuild[1]) {
+    return latestBuild[2] > currentBuild[2] ? "available" : "current"
   }
   return gt(latest, current) ? "available" : "current"
 }

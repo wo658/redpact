@@ -56,24 +56,24 @@ test("플러그인 조회와 CLI 경로 저장은 실제 HTTP 경계에서 동�
 // 실제 에이전트 설치를 변경하지 않도록 외부 CLI만 격리된 실행 파일로 대체한다.
 test("실제 앱은 확인한 플러그인을 CLI로 갱신하고 설치 버전을 다시 검증한다", async (context) => {
   const step = createSteps(context)
-  const fixture = await step("공개 매니페스트와 격리된 에이전트 CLI를 준비한다", () =>
+  const fixture = await step("개인 마켓플레이스와 격리된 에이전트 CLI를 준비한다", () =>
     node<{ root: string; cli: string; version: string }>(`
     const fs = await import('node:fs/promises'); const os = await import('node:os'); const path = await import('node:path');
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'redpact-plugin-e2e-'));
-    const response = await fetch('https://raw.githubusercontent.com/wo658/redpact/main/plugins/redpact/.codex-plugin/plugin.json');
-    if (!response.ok) throw new Error('Public plugin manifest unavailable: ' + response.status);
-    const manifest = await response.json();
+    const manifest = {name:'redpact',version:'0.1.0+codex.20260927112208'};
+    await fs.mkdir(path.join(root,'.agents/plugins'),{recursive:true});
+    await fs.writeFile(path.join(root,'.agents/plugins/marketplace.json'),JSON.stringify({plugins:[{name:'redpact',source:{source:'local',path:'./plugins/redpact'}}]}));
     await fs.mkdir(path.join(root, 'plugins/redpact/.codex-plugin'), {recursive:true});
     await fs.writeFile(path.join(root, 'plugins/redpact/.codex-plugin/plugin.json'), JSON.stringify(manifest));
-    await fs.writeFile(path.join(root, 'version'), '0.0.0');
+    await fs.writeFile(path.join(root, 'version'), '0.1.0+codex.20260919112208');
     const cli = path.join(root, 'codex');
     const script = [
       '#!/usr/bin/env node',
       "const fs = require('node:fs'); const path = require('node:path'); const root = __dirname; const args = process.argv.slice(2);",
       "fs.appendFileSync(path.join(root, 'calls'), JSON.stringify(args) + String.fromCharCode(10));",
       "let result = {};",
-      "if (args[1] === 'list') result = {installed:[{pluginId:'redpact@redpact', marketplaceName:'redpact', version:fs.readFileSync(path.join(root,'version'),'utf8'), installed:true, enabled:true}]};",
-      "if (args[2] === 'list') result = {marketplaces:[{name:'redpact',root,marketplaceSource:{sourceType:'git',source:'https://github.com/wo658/redpact.git'}}]};",
+      "if (args[1] === 'list') result = {installed:[{pluginId:'redpact@personal', marketplaceName:'personal', version:fs.readFileSync(path.join(root,'version'),'utf8'), installed:true, enabled:true}]};",
+      "if (args[2] === 'list') result = {marketplaces:[{name:'personal',root,marketplaceSource:{sourceType:'git',source:'https://example.test/team.git'}}]};",
       "if (args[1] === 'add') fs.writeFileSync(path.join(root,'version'), JSON.parse(fs.readFileSync(path.join(root,'plugins/redpact/.codex-plugin/plugin.json'),'utf8')).version);",
       "console.log(JSON.stringify(result));"
     ].join(String.fromCharCode(10));
@@ -117,9 +117,9 @@ test("실제 앱은 확인한 플러그인을 CLI로 갱신하고 설치 버전�
         `const fs=await import('node:fs');const root=JSON.parse(process.argv[1]);console.log(JSON.stringify(fs.readFileSync(root+'/calls','utf8').trim().split(String.fromCharCode(10)).map(JSON.parse)));`,
         fixture.root,
       )
-      expect(calls).toContainEqual(["plugin", "marketplace", "upgrade", "redpact"])
+      expect(calls).toContainEqual(["plugin", "marketplace", "upgrade", "personal"])
       expect(calls.filter((args) => args[1] === "add")).toEqual([
-        ["plugin", "add", "redpact@redpact", "--json"],
+        ["plugin", "add", "redpact@personal", "--json"],
       ])
       expect(
         (

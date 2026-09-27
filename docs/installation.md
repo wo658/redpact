@@ -274,29 +274,35 @@ The CLI runs as the Redpact server's OS user on its host, not as the browser use
 Other agents are not yet supported.
 
 **Check plugin updates** reads each agent's installed-plugin and marketplace JSON.
-Only the enabled user installation `redpact@redpact` from `wo658/redpact` on the
-marketplace's default/main branch supports automatic installation. Local/personal
-sources, disabled plugins, other scopes and multiple installations need management
-in the owning agent. Missing CLI, incomplete output, unknown versions and network
-failures remain explicit; they do not mean “up to date”.
+It follows the installed `redpact@<marketplace>` identity, including personal and
+local marketplaces; it does not switch the plugin to the official marketplace.
+One enabled user installation is required. Disabled plugins, other scopes and
+multiple installations need management in the owning agent. Missing CLI, incomplete
+output, unknown versions and refresh failures remain explicit errors.
 
-The comparison reads each agent's plugin manifest from public GitHub `main`, the
-source used by the existing marketplace installation commands. It does **not**
-compare the app's GitHub Release version, or judge app/plugin compatibility.
-Only a strictly greater stable SemVer shows **Update**; build metadata alone does
-not indicate a newer release, and an installed newer version is never downgraded.
-Publishers must increment the plugin manifest version when distributing changes.
-Checks are manual; normal status polling reads the last in-memory result without
-running CLI commands. Restarting Redpact clears that result.
+Redpact refreshes only that marketplace through the agent CLI when it is remote.
+Codex Git marketplaces use `plugin marketplace upgrade <marketplace>`; Claude Code
+remote marketplaces use `plugin marketplace update <marketplace>`. Local marketplaces
+are read directly. The marketplace catalog resolves the plugin directory, whose
+agent-specific manifest supplies the available version. Codex local-path entries
+and Claude Code relative-directory entries are supported, including those inside
+Git marketplaces. Entries pointing to a separate remote plugin repository are not
+yet supported and must be managed in the agent.
+
+The comparison does not use the app's GitHub Release version or judge app/plugin
+compatibility. Only a strictly greater stable SemVer shows **Update**; build metadata
+alone does not indicate a newer release. The supported Codex reinstall convention
+`X.Y.Z+codex.YYYYMMDDhhmmss` is an exception: for the same base version, a later
+timestamp offers an update. Newer installed versions are never downgraded. Publishers must increment the plugin manifest version when distributing
+changes. Checks are manual; normal status polling reads the last in-memory result
+without running CLI commands. Restarting Redpact clears that result.
 
 **Update** opens a confirmation for the displayed agent/version. Redpact rechecks
-the saved CLI path, installed version and public version, refreshes only the Redpact
-marketplace, and checks the refreshed manifest before invoking the owning CLI:
-Codex uses `plugin marketplace upgrade redpact` then `plugin add redpact@redpact --json`;
-Claude Code uses `plugin marketplace update redpact` then
-`plugin update redpact@redpact --scope user`. Arguments are fixed and no shell command
-is accepted. Commands have a two-minute limit and network manifest reads a ten-second
-limit. Checks and installations are serialized within the instance.
+the saved CLI path, installed version, marketplace identity and available version.
+Codex installs with `plugin add redpact@<marketplace> --json`; Claude Code uses
+`plugin update redpact@<marketplace> --scope user`. The marketplace name comes from
+the validated installed identity. No shell command is accepted. Each CLI command
+has a two-minute limit. Checks and installations are serialized within the instance.
 
 Success requires reading back the requested installed version. Start a new agent
 session afterward; disk installation does not refresh an existing conversation.

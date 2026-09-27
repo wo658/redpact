@@ -3,7 +3,9 @@ export type PluginInstallation = {
   version: string
   enabled: boolean
   scope: string
-  official: boolean
+  supported: boolean
+  id: string
+  sourceKey: string
 }
 export type PluginUpdateStatus = {
   agent: PluginAgent
@@ -19,8 +21,8 @@ export type PluginUpdatesState = {
 }
 export type PluginClient = {
   inspect(agent: PluginAgent, cliPath?: string): Promise<PluginInstallation | null>
-  latest(agent: PluginAgent): Promise<string>
-  install(agent: PluginAgent, version: string, cliPath?: string): Promise<void>
+  latest(agent: PluginAgent, cliPath?: string): Promise<string>
+  install(agent: PluginAgent, version: string, cliPath?: string, sourceKey?: string): Promise<void>
 }
 export type PluginUpdates = {
   status(): PluginUpdatesState
