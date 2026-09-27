@@ -63,23 +63,23 @@ jobs:
           tauriScript: pnpm exec tauri
           args: --target ${{ matrix.target }} --config src-tauri/tauri.release.conf.json --bundles ${{ matrix.bundles }}
           tagName: ${{ github.ref_name }}
-          releaseName: Redpact ${{ github.ref_name }} — Installation and desktop reliability
+          releaseName: Redpact ${{ github.ref_name }} — Plugin updates and execution evidence
           releaseBody: |
-            Fixes macOS npm installation by bundling the existing optional fsevents prebuilt package. Adds Windows titlebar controls and improves native navigation and responsive workspace layouts. Release publication now waits for native desktop checks and npm installation checks across four OS/architecture environments on Node 24 and 26.
+            Adds Redpact plugin update checks and CLI installation for Codex and Claude Code using each installed marketplace. Includes personal/local marketplace support and Codex timestamp build comparison. Publishes plugin 0.2.0 through the repository catalogs, with Cursor packaging and Copilot installation guidance.
 
-            No settings or storage migration is required.
+            Improves execution progress and readable result rows, screenshot thumbnail selection, workspace navigation labels, CLI startup URLs and current English/Korean documentation.
 
-            Release artifacts are verified before publication. See this tag's Actions run for source checks, npm installation results and native desktop installation results.
+            No settings or storage migration is required from 0.6.1. Existing projects keep their fixed settings. Plugin installation does not update the app or an existing agent session: restart the agent session after installing. Other agents are not yet supported by the in-app updater; Cursor/Copilot packaging does not establish MCP Apps support.
 
-            macOS builds are ad-hoc signed, not Apple notarized. Installation smoke checks do not cover every WebView control, Docker execution or upgrades from a previous release.
+            Publication waits for native desktop checks and npm installation verification. macOS builds are ad-hoc signed, not Apple notarized. Installation smoke tests do not cover every native WebView interaction or upgrades from every prior version.
 
-            기존 선택적 fsevents 사전 빌드 패키지를 번들해 macOS npm 설치 오류를 수정합니다. Windows 창 제어 버튼과 네이티브 탐색·반응형 작업공간 레이아웃을 개선합니다. 이제 네이티브 데스크톱 검사와 4개 OS/아키텍처 환경의 Node 24·26 npm 설치 검사가 모두 성공해야 공개됩니다.
+            설치된 마켓플레이스를 기준으로 Codex·Claude Code의 Redpact 플러그인 업데이트 확인과 CLI 설치를 지원합니다. 개인·로컬 마켓플레이스와 Codex 날짜 빌드 비교를 포함하며, 저장소 카탈로그로 플러그인 0.2.0을 배포합니다. Cursor 패키지 구성과 Copilot 설치 안내도 추가합니다.
 
-            설정·저장소 마이그레이션은 필요하지 않습니다.
+            실행 진행 상태와 읽기 쉬운 결과 행, 스크린샷 썸네일 선택, 작업공간 탐색 이름, CLI 시작 URL 및 최신 한영 문서를 개선합니다.
 
-            릴리스 아티팩트는 공개 전에 검증됩니다. 소스 검사, npm 설치 및 네이티브 데스크톱 설치 결과는 이 태그의 Actions 실행을 확인하세요.
+            0.6.1에서 설정·저장소 마이그레이션은 필요하지 않으며 기존 고정 설정을 유지합니다. 플러그인 설치는 앱이나 기존 에이전트 세션을 갱신하지 않으므로 설치 후 새 세션을 시작하세요. 앱 내 업데이트는 다른 에이전트를 아직 지원하지 않으며 Cursor·Copilot 패키지 구성은 MCP Apps 지원 검증을 뜻하지 않습니다.
 
-            macOS 빌드는 임시 서명되며 Apple 공증을 받지 않았습니다. 설치 스모크 검사는 모든 WebView 제어, Docker 실행, 이전 버전으로부터의 업데이트를 검증하지 않습니다.
+            네이티브 데스크톱과 npm 설치 검증을 통과한 뒤 공개됩니다. macOS 빌드는 임시 서명되며 Apple 공증을 받지 않았습니다. 설치 스모크 검사는 모든 네이티브 WebView 동작이나 모든 이전 버전의 업데이트를 검증하지 않습니다.
           releaseDraft: true
           prerelease: false
           uploadUpdaterJson: true

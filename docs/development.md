@@ -282,7 +282,11 @@ Implementation: [runtime packaging](../app/server/tools/pack-runtime.mjs),
 
 The public repository owns `install.sh`, `Formula/redpact.rb`, the Codex catalog at
 `.agents/plugins/marketplace.json` and the Claude Code catalog at
-`.claude-plugin/marketplace.json`. Both catalogs reuse `plugins/redpact`.
+`.claude-plugin/marketplace.json`. The Cursor catalog at `.cursor-plugin/marketplace.json` also reuses
+`plugins/redpact`; Copilot can read the Claude-format catalog. Keep the three
+plugin manifest versions aligned when publishing plugin changes. Plugin versions
+are independent of the server/desktop version, and publishing a GitHub Release
+does not replace the marketplace branch snapshot.
 See [installation](installation.md) for user commands and unsupported paths.
 
 For a runtime release, run `pnpm test:package` and the required executable checks.

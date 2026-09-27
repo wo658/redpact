@@ -31,12 +31,12 @@ Ordinary feature worktrees reuse the shared fixed configuration. The live settin
 still uses the shared primary rulesRoot, not a checkout-local settings override.
 Do not claim init complete until the setup is committed on the intended base
 and a fresh worktree runs the agreed baseline configuration without infrastructure edits.
-Follow the dependency guide's ordered init discussion: ask about existing Cloud or
-always-running shared-local services first, then agree on a minimum baseline using
-Isolated where feasible and runnable Mock implementations otherwise. Ask about
-required additions per app after presenting that baseline.
-Request required private keys only for selected connections. Reuse explicit choices
-and baseline implementation authorization without repeated per-dependency questions. Init authorizes the scoped local setup commit after verification, not unrelated
+Inspect existing services and explicit provider choices, then configure one fixed
+kind per dependency. Ask only for unresolved topology decisions, missing endpoints
+or private inputs. Reuse accepted choices and authorized mock implementation;
+do not invent a mode catalog or require a second selectable baseline.
+Request private keys only for the agreed connections through secure input.
+Init authorizes the scoped local setup commit after verification, not unrelated
 features, remote publication or an unrequested merge.
 Application Container setup and dependency registration
 include bounded temporary execution to verify host access and the proposed connection; follow

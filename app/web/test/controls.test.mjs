@@ -3130,7 +3130,7 @@ test("컨테이너 정리 실패는 성공한 테스트 결과를 유지하며 �
   assert.ok(screen.getByText("Success"))
   assert.equal(screen.queryByText(/Container cleanup:/), null)
   assert.equal(screen.queryByText("stderr"), null)
-  assert.equal(screen.queryByText(/Exit code:/), null)
+  assert.equal(screen.getByText("Exit code: 0").textContent, "Exit code: 0")
 })
 
 test("미커밋 화면은 버릴 파일을 확인받고 정리 후 자동 머지하지 않는다", async () => {
@@ -4033,7 +4033,12 @@ test("프로젝트 Playwright 와이어프레임은 캡처에서 실행과 소�
       name: "Screenshots",
     }),
   )
-  await user.click(screen.getByRole("button", { name: "screens · 2026-09-11", exact: true }))
+  await user.click(
+    screen.getByRole("button", {
+      name: `screens · ${new Date("2026-09-11").toLocaleString()}`,
+      exact: true,
+    }),
+  )
   assert.ok(screen.getByRole("tree"))
   assert.ok(await screen.findByAltText("설정 패널"))
   await user.click(screen.getByRole("tab", { name: "Tests", exact: true }))
@@ -4045,7 +4050,12 @@ test("프로젝트 Playwright 와이어프레임은 캡처에서 실행과 소�
   assert.equal(screen.queryByRole("button", { name: "Back to runs" }), null)
   assert.equal(screen.queryByRole("radiogroup"), null)
   await user.click(screen.getByRole("combobox", { name: "Capture run" }))
-  await user.click(screen.getByRole("option", { name: /screens · 2026-09-10/ }))
+  await user.click(
+    screen.getByRole("option", {
+      name: `screens · ${new Date("2026-09-10").toLocaleString()} · passed`,
+      exact: true,
+    }),
+  )
   assert.equal((await screen.findByAltText("설정 패널")).getAttribute("src"), "/saved-older.png")
 })
 
@@ -5062,7 +5072,12 @@ test("새 캡처가 대체한 미분류 이름과 삭제된 시나리오는 목�
   await user.keyboard("{Escape}")
   await user.click(screen.getByRole("tab", { name: "Runs", exact: true }))
   await user.click(screen.getByRole("combobox", { name: "Capture run" }))
-  await user.click(screen.getByRole("option", { name: /captures · 2026-09-10/ }))
+  await user.click(
+    screen.getByRole("option", {
+      name: `captures · ${new Date("2026-09-10").toLocaleString()} · passed`,
+      exact: true,
+    }),
+  )
   assert.equal(screen.getByAltText("Removed").getAttribute("src"), "/old/old-1.png")
 })
 

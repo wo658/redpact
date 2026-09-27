@@ -262,8 +262,11 @@ Docker 리소스를 prune하지 않습니다. 이전 릴리스는 명시적으�
 
 공개 저장소는 `install.sh`, `Formula/redpact.rb`, Codex 카탈로그
 `.agents/plugins/marketplace.json`, Claude Code 카탈로그
-`.claude-plugin/marketplace.json`을 소유합니다. 두 카탈로그는
-`plugins/redpact`를 재사용합니다. 사용자 명령과 미지원 경로는
+`.claude-plugin/marketplace.json`을 소유합니다. Cursor 카탈로그
+`.cursor-plugin/marketplace.json`도 같은 `plugins/redpact`를 재사용하며 Copilot은
+Claude 형식의 카탈로그를 읽을 수 있습니다. 플러그인 변경 배포 시 세 매니페스트의
+버전을 함께 올립니다. 플러그인 버전은 서버·데스크톱 버전과 독립적이며 GitHub Release
+게시만으로 마켓플레이스 브랜치의 내용이 갱신되지는 않습니다. 사용자 명령과 미지원 경로는
 [설치 안내](installation.md)를 참고하세요.
 
 런타임 릴리스 전에는 `pnpm test:package`와 필수 실행 코드 검사를 수행합니다.

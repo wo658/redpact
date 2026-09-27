@@ -1,6 +1,6 @@
 {
   "name": "redpact",
-  "version": "0.1.0+codex.20260914063949",
+  "version": "0.2.0",
   "description": "Develop with local Redpact-managed Integration, Unit and Playwright execution evidence.",
   "author": {
     "name": "jhkim"
