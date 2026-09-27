@@ -3751,8 +3751,7 @@ test("프로젝트 Playwright는 워크트리 캡처와 기능 검증 파일을 
   )
   assert.ok(await screen.findByAltText("임시 작업 화면"))
   assert.equal(screen.queryByAltText("실패 진단"), null)
-  await user.click(screen.getByRole("combobox", { name: "Checkpoint" }))
-  await user.click(screen.getByRole("option", { name: /프로젝트 설정/ }))
+  await user.click(screen.getByRole("radio", { name: /프로젝트 설정/ }))
   assert.ok(screen.getByAltText("프로젝트 설정"))
   assert.equal(screen.queryByRole("radio", { name: "Side by side" }), null)
   assert.equal(screen.queryByAltText(/Before:/), null)
@@ -4025,7 +4024,8 @@ test("프로젝트 Playwright 와이어프레임은 캡처에서 실행과 소�
   const user = userEvent.setup({ document })
   await screen.findByAltText("설정 패널")
   assert.ok(screen.getByText(/Captured:/))
-  assert.equal(screen.queryByRole("radiogroup"), null)
+  assert.equal(screen.getAllByRole("radio").length, 1)
+  assert.ok(screen.getByRole("radiogroup", { name: "Checkpoint" }))
   await user.click(screen.getByRole("tab", { name: "Test Code" }))
   assert.ok(await screen.findByText("recorded capture source"))
   await user.click(
@@ -4276,20 +4276,18 @@ test("스크린샷은 페이지와 의미 그룹으로 나누고 같은 이름�
   const user = userEvent.setup({ document })
   await screen.findByAltText(names[0])
   assert.ok(screen.getByRole("tree"))
-  await user.click(screen.getByRole("combobox", { name: "Checkpoint" }))
   for (const name of names) {
-    assert.ok(screen.getByRole("option", { name: `${name} · captures · 페이지 캡처`, exact: true }))
+    assert.ok(screen.getByRole("radio", { name: `${name} · captures · 페이지 캡처`, exact: true }))
   }
   await user.click(
-    screen.getByRole("option", {
+    screen.getByRole("radio", {
       name: "Settings / Appearance / Dark · captures · 페이지 캡처",
       exact: true,
     }),
   )
   assert.equal(screen.getByRole("img").getAttribute("src"), "/image-2.png")
-  await user.click(screen.getByRole("combobox", { name: "Checkpoint" }))
   await user.click(
-    screen.getByRole("option", {
+    screen.getByRole("radio", {
       name: "Checkout / Default · captures · 페이지 캡처",
       exact: true,
     }),
@@ -5059,9 +5057,8 @@ test("새 캡처가 대체한 미분류 이름과 삭제된 시나리오는 목�
   )
   await screen.findByAltText("Settings / Appearance / Default")
   const user = userEvent.setup({ document })
-  await user.click(screen.getByRole("combobox", { name: "Checkpoint" }))
-  assert.equal(screen.queryByRole("option", { name: /Removed|Partial/ }), null)
-  assert.ok(screen.getByRole("option", { name: /Other target/ }))
+  assert.equal(screen.queryByRole("radio", { name: /Removed|Partial/ }), null)
+  assert.ok(screen.getByRole("radio", { name: /Other target/ }))
   await user.keyboard("{Escape}")
   await user.click(screen.getByRole("tab", { name: "Runs", exact: true }))
   await user.click(screen.getByRole("combobox", { name: "Capture run" }))

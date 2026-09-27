@@ -58,6 +58,7 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/tests/product-demo.spec.ts", purpose: "functional" },
       { path: "project/tests/project-management.spec.ts", purpose: "functional" },
       { path: "project/tests/review-header.spec.ts", purpose: "functional" },
+      { path: "project/tests/screenshot-gallery.spec.ts", purpose: "functional" },
       { path: "project/tests/settings.spec.ts", purpose: "functional" },
       { path: "project/tests/sidebar-controls.spec.ts", purpose: "functional" },
       { path: "project/tests/test-code-diff.spec.ts", purpose: "functional" },
