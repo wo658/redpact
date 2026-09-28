@@ -205,3 +205,32 @@ Integration과 Playwright는 `tests.env`를 공유하고 서비스 URL을 내부
 [Unit workflow](../app/server/src/workflows/unit-tests.ts),
 [Playwright record workflow](../app/server/src/workflows/playwright.ts),
 [리소스 스키마](../app/server/src/core/test-resource-schema.ts).
+
+## Testcontainers 위임
+
+고정 버전 `testcontainers@12.1.0`이 Compose 시작, 이미지 빌드·pull,
+컨테이너 핸들, 매핑 포트 조회, 컨테이너 검사, 일반 exec, 아카이브 조회,
+중지·제거와 네트워크 제거를 담당합니다. 공개 런타임 클라이언트는 워커 종료나
+서버 재시작 뒤에도 기존 컨테이너 ID를 조회합니다. 복구 과정에서 실행 중인
+Compose 환경 핸들을 재구성하지 않습니다. 모든 런타임 접근은 Testcontainers가
+선택한 로컬 소켓을 사용합니다. 러너 네트워크 ID는 생성한 이름을 그대로 넘기지
+않고 런타임에서 조회합니다.
+
+Redpact는 실행 수락, 취소, 영속 식별 정보, 리소스 소유권, 이미지 보존,
+증거와 정리 재시도를 계속 담당합니다. 고정 버전의 공개 Testcontainers API가
+지원하지 않는 다음 작업은 해당 클라이언트가 노출하는 Docker 연결로 처리합니다.
+
+- 중지된 컨테이너와 소유 네트워크·볼륨 목록, 데몬 식별 정보와 한도 조회.
+- 선택적 이미지 삭제와 볼륨 검사·제거. 이미지 검사는 Testcontainers를 사용하며,
+  삭제 시 공유 이미지나 Docker 빌드 캐시를 일괄 정리하지 않습니다.
+- 종료 로그 스냅샷: 이 버전의 `ContainerClient.logs`는 항상 스트림을 계속
+  구독하고 조회 오류를 숨깁니다. 정리는 오류와 종료 출력을 보존해야 합니다.
+- 출력 상한을 둔 스트리밍 exec, 메모리·swap 설정과 과거 OOM 조회.
+  일반 `exec`는 전체 출력을 버퍼링하며 취소·출력 상한 계약이 없습니다.
+
+Compose 유효 모델 검증에는 계속 `docker compose config`를 사용합니다.
+공개 런타임 클라이언트가 해당 기능을 제공하지 않기 때문입니다. 러너 출력의
+아카이브는 Testcontainers로 조회하고 호스트 `tar` 명령으로 추출합니다.
+Testcontainers 업그레이드 시 이러한 예외와 시작 실패 패치를 재평가합니다.
+이미지 삭제, 로그 스냅샷, 출력 상한을 둔 실행을 라이브러리 전용 API에 완전히
+위임한 것으로 간주하지 않습니다.

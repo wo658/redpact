@@ -224,3 +224,32 @@ Implementation: [execution workflow](../app/server/src/workflows/execute-tests.t
 [Unit workflow](../app/server/src/workflows/unit-tests.ts),
 [Playwright record workflow](../app/server/src/workflows/playwright.ts),
 [resource schema](../app/server/src/core/test-resource-schema.ts).
+
+## Testcontainers delegation
+
+The pinned `testcontainers@12.1.0` owns Compose startup, image build/pull,
+container handles, mapped-port discovery, container inspection, ordinary exec,
+archive retrieval, stop/removal and network removal. The exported runtime client
+also resolves existing container IDs after a worker exits or the server restarts;
+recovery does not reconstruct a live Compose environment handle. All runtime
+access uses the local socket selected by Testcontainers. Runner network IDs are
+resolved from the runtime rather than passed as an unverified generated name.
+
+Redpact still owns lifecycle admission, cancellation, durable identity, resource
+ownership, image retention, evidence and cleanup retries. Public Testcontainers
+APIs do not cover every operation in this pinned version. Its exposed Docker
+connection supplies these narrowly scoped exceptions:
+
+- Listing stopped containers and owned networks/volumes, daemon identity and limits.
+- Selective image deletion and volume inspection/removal. Image inspection uses
+  Testcontainers; deletion never prunes shared images or Docker build caches.
+- Finite final log snapshots: `ContainerClient.logs` always follows and suppresses
+  retrieval errors in this version. Cleanup must retain failures and shutdown output.
+- Bounded streaming exec, memory/swap updates and historical OOM queries. Ordinary
+  `exec` buffers the complete output and has no cancellation/output-limit contract.
+
+Compose effective-model validation still uses `docker compose config`: the public
+runtime client does not expose it. Archive bytes come from Testcontainers and the
+host `tar` command extracts runner outputs. Revisit these exceptions and the
+failed-start patch when upgrading Testcontainers. They are not full delegation of
+image deletion, log snapshots or bounded execution to dedicated library APIs.

@@ -13,6 +13,13 @@ import { testResourceSchema } from "../../core/test-resource-schema.js"
 import type { TestRunner } from "../../core/types/contracts.js"
 import type { ReadTestResources } from "../../core/types/test-resources.js"
 import { executeLimitedContainer } from "../environment/limited-command.js"
+import {
+  containersWithLabels,
+  copyContainerOutput,
+  removeContainer,
+  runtimeClient,
+  runtimeSocket,
+} from "../environment/runtime.js"
 import { minimalEnvironment } from "../environment/testcontainers.js"
 
 const require = createRequire(import.meta.url)
@@ -108,8 +115,6 @@ export function createVitestRunner(
           errors: ["Managed runner network is unavailable"],
         }
       }
-      const docker = (args: string[]) =>
-        execa("docker", args, { env: minimalEnvironment(), extendEnv: false, timeout: 30000 })
       let worker = new URL("./worker.js", import.meta.url)
       if (!existsSync(worker)) {
         worker = new URL("./worker.ts", import.meta.url)
@@ -121,6 +126,9 @@ export function createVitestRunner(
           config: await readFile(configPath, "utf8"),
           id: runId,
           ...connections.runtime,
+          network: (
+            await (await runtimeClient()).network.getById(connections.runtime.network).inspect()
+          ).Id,
           limits,
           connections: { version: connections.version, services: connections.services },
           environment: {
@@ -132,7 +140,7 @@ export function createVitestRunner(
         }),
         ipc: true,
         detached: true,
-        env: minimalEnvironment(),
+        env: { ...minimalEnvironment(), DOCKER_HOST: await runtimeSocket() },
         extendEnv: false,
         cancelSignal: signal,
         forceKillAfterDelay: 2000,
@@ -167,7 +175,7 @@ export function createVitestRunner(
           signal,
           limits,
         )
-        await docker(["cp", `${id}:/review/output/.`, directory])
+        await copyContainerOutput(id, directory)
         const redact = (text: string) =>
           secretValues
             .filter((value) => value.length > 0)
@@ -194,9 +202,8 @@ export function createVitestRunner(
           return { outcome: "execution_error", cases: [], errors: [redact(processResult.error)] }
         }
         try {
-          const observed = await docker([
-            "exec",
-            id,
+          const client = await runtimeClient()
+          const observed = await client.container.exec(client.container.getById(id), [
             "node",
             "-e",
             "const fs=require('fs'),crypto=require('crypto');console.log(JSON.stringify(JSON.parse(process.argv[1]).map(p=>crypto.createHash('sha256').update(fs.readFileSync('/review/source/'+p)).digest('hex'))))",
@@ -230,16 +237,12 @@ export function createVitestRunner(
           }
         }
       } finally {
-        const found = await docker([
-          "ps",
-          "-aq",
-          "--filter",
-          `label=io.redpact.owner=${connections.runtime.ownerId}`,
-          "--filter",
-          `label=io.redpact.integration=${runId}`,
+        const containers = await containersWithLabels([
+          `io.redpact.owner=${connections.runtime.ownerId}`,
+          `io.redpact.integration=${runId}`,
         ])
-        for (const id of found.stdout.split(/\s+/).filter(Boolean)) {
-          await docker(["rm", "-fv", id])
+        for (const container of containers) {
+          await removeContainer(container.Id)
         }
       }
     },
