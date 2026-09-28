@@ -5,6 +5,7 @@ export interface MigrationFile {
 }
 
 export interface RuntimeMigrationFiles {
+  environmentValues(id: string): Promise<Record<string, string>>
   history(): Promise<unknown>
   recordHistory(names: string[]): Promise<void>
   environments(migration: string): Promise<MigrationFile[]>

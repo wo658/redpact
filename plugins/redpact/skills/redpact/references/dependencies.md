@@ -17,9 +17,9 @@ Application metadata and relationships do not implicitly start services.
 Ordinary feature work reuses shared configuration. A task that requires configuration
 changes may edit those shared settings within the user's authorized scope; explain
 the effect on future worktree executions. Do not invent a local overlay to isolate
-settings. Keep code and Compose edits in the intended task checkout. Never copy
-credentials into settings or test sources; use named secret references and secure
-credential input. A validation pass proves neither readiness nor approval.
+settings. Keep code and Compose edits in the intended task checkout. Environment values are plaintext key-value strings in settings; no secret/host/URL
+value types or separate credential input exist. Keep real credentials out of committed
+settings and test sources. A validation pass proves neither readiness nor approval.
 
 ## Choose and verify a topology
 

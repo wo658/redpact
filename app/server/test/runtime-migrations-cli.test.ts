@@ -20,7 +20,10 @@ test.each(["legacy", "resume"])(
     const result = JSON.parse(stdout)
     expect(result.first.status, result.first.output).toBe(200)
     expect(result.backup).toBe(result.original)
-    expect(JSON.parse(result.log ?? "null")).toEqual(["001-fixed-environment-settings"])
+    expect(JSON.parse(result.log ?? "null")).toEqual([
+      "001-fixed-environment-settings",
+      "002-flat-environment-values",
+    ])
     expect(result.second?.status).toBe(200)
     expect(result.unchangedAfterRestart).toBe(true)
     expect(result.settingsUnchanged).toBe(true)

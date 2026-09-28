@@ -215,7 +215,7 @@ export type DependencyDefinition = DependencyMode & {
 }
 export type DependencyMode = {
   services?: string[]
-  env?: Record<string, Record<string, string | { secret: string } | { unset: true }>>
+  env?: Record<string, Record<string, string | { unset: true }>>
 }
 export type DependencySettings = {
   valid: boolean
@@ -257,14 +257,9 @@ export type TestContainerInspection = {
         errors: string[]
         specification: {
           tests: {
-            env: Record<
-              string,
-              | string
-              | { secret: string }
-              | { service: string; port: number; scheme: "http" | "https" }
-            >
+            env: Record<string, string>
           }
-          playwright?: { service: string; port: number }
+          playwright?: { service: string; port: number; scheme: "http" | "https" }
         }
       })
     | null
@@ -493,25 +488,6 @@ export function createApi(fetcher: typeof fetch = fetch) {
       request<UnitRun>(`/worktrees/${encodeURIComponent(id)}/unit-tests/run`, {}),
     cancelUnitRun: (id: string) =>
       request<UnitRun>(`/unit-runs/${encodeURIComponent(id)}/cancel`, {}),
-    projectSecretValue: (id: string, name: string, signal?: AbortSignal) =>
-      request<{ value: string }>(
-        `/projects/${encodeURIComponent(id)}/secrets/${encodeURIComponent(name)}`,
-        undefined,
-        signal,
-      ),
-    projectSecrets: (id: string, signal?: AbortSignal) =>
-      request<{ name: string; configured: boolean }[]>(
-        `/projects/${encodeURIComponent(id)}/secrets`,
-        undefined,
-        signal,
-      ),
-    saveProjectSecret: (id: string, name: string, value: string) =>
-      request<{ name: string; configured: boolean }>(
-        `/projects/${encodeURIComponent(id)}/secrets/${encodeURIComponent(name)}`,
-        { value },
-        undefined,
-        "PUT",
-      ),
     projectConfiguration: (id: string, signal?: AbortSignal) =>
       request<SettingsDocument>(
         `/projects/${encodeURIComponent(id)}/configuration`,

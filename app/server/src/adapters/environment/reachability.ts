@@ -4,18 +4,13 @@ import type { Environment } from "../../core/types/environment.js"
 // Container healthchecks cannot establish reachability through a host-published port.
 export async function verifyBrowserEndpoints(
   record: {
-    settings: Pick<Environment["settings"], "tests">
     specification: Pick<Environment["specification"], "playwright">
   },
   endpoints: Environment["endpoints"],
   signal: AbortSignal,
 ) {
+  signal.throwIfAborted()
   const schemes = new Map<string, string>()
-  for (const binding of Object.values(record.settings.tests.env)) {
-    if ("service" in binding && binding.scheme) {
-      schemes.set(`${binding.service}:${binding.port}`, binding.scheme)
-    }
-  }
   const browser = record.specification.playwright
   if (browser) {
     const key = `${browser.service}:${browser.port}`

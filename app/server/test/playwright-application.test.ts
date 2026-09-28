@@ -163,7 +163,6 @@ test
           bindings: {},
           prerequisites: {},
           reasons: {},
-          requiredSecrets: [],
         },
         endpoints: {
           "app:54320": { host: "app.redpact.test", port: 54320 },

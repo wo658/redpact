@@ -45,12 +45,12 @@ export async function configureSettings(
         [definition.kind],
       ]),
     ),
-    deferredChecks: ["compose-effective-model", "images", "secrets", "docker", "readiness"],
+    deferredChecks: ["compose-effective-model", "images", "docker", "readiness"],
     ...(result.plan ? { plan: result.plan } : {}),
     ...(action === "inspect" && result.settings ? { settings: result.settings } : {}),
     nextSteps: result.valid
       ? [
-          "Configuration is valid. Before completing requested external setup, check declared key availability and use request_keys for necessary missing authentication inputs. Readiness and approval remain unchecked. For unitTests.command execution use the Unit Test viewer or the unit-test HTTP API; run_tests is only for managed integration tests and requires configured Compose services. When managed execution is requested, call run_tests with path. Poll get_run for results and cleanup state. Temporary environments are removed after execution. Shared local infrastructure belongs outside worktree environments and is declared as a shared-local dependency.",
+          "Configuration is valid. Readiness and approval remain unchecked. For unitTests.command execution use the Unit Test viewer or the unit-test HTTP API; run_tests is only for managed integration tests and requires configured Compose services. When managed execution is requested, call run_tests with path. Poll get_run for results and cleanup state. Temporary environments are removed after execution. Shared local infrastructure belongs outside worktree environments and is declared as a shared-local dependency.",
         ]
       : [
           "Call configure describe for the schema and initial setup workflow. Inspect the application and existing files, then author or repair .redpact/settings.json. For managed integration execution, also author missing Dockerfile and Compose definitions; unit-only configuration needs no Compose. Correct the reported file/field errors, then call configure validate.",

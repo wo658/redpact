@@ -38,7 +38,6 @@ import { openStore } from "./adapters/storage/files.js"
 import { loadInstance } from "./adapters/storage/instance.js"
 import { createMergeStore } from "./adapters/storage/merges.js"
 import { createRuntimeMigrationFiles } from "./adapters/storage/migrations.js"
-import { createProjectSecretStore } from "./adapters/storage/project-secrets.js"
 import { createReviewStore } from "./adapters/storage/reviews.js"
 import { createRunLogReader } from "./adapters/storage/run-logs.js"
 import { createUnitRunStore } from "./adapters/storage/unit-runs.js"
@@ -64,7 +63,6 @@ import { createPlaywrightCatalog } from "./workflows/playwright-catalog.js"
 import { createPluginUpdates } from "./workflows/plugin-updates.js"
 import { createProjectFiles } from "./workflows/project-files.js"
 import { createProjectGraph } from "./workflows/project-graph.js"
-import { createProjectSecrets } from "./workflows/project-secrets.js"
 import { createProjectSettings } from "./workflows/project-settings.js"
 import { createPullRequests } from "./workflows/pull-requests.js"
 import { createReviewContent } from "./workflows/review-content.js"
@@ -197,13 +195,8 @@ const command = new Command()
         ? (await worktrees.resolve(worktree.id)).settings
         : createSettingsService(process.cwd())
       const git = createGitService(settings.projectRoot, gitAdapter)
-      const projectSecrets = createProjectSecrets({
-        store: createProjectSecretStore(directory),
-        worktrees,
-      })
-      const composeAdapter = createComposeAdapter(directory, projectSecrets.resolve)
+      const composeAdapter = createComposeAdapter(directory)
       const environments = createEnvironments({
-        secrets: projectSecrets.resolve,
         store: storage.store,
         worktrees,
         adapter: composeAdapter,
@@ -249,13 +242,7 @@ const command = new Command()
       await environments.recover()
       captureWorkflow = createCaptureWorkflow({
         captures,
-        runner: createCaptureRunner(
-          directory,
-          instance.id,
-          (record) => Object.values(projectSecrets.resolve(record)),
-          readTestResources,
-          (record) => projectSecrets.resolve(record),
-        ),
+        runner: createCaptureRunner(directory, instance.id, readTestResources),
         baseline: createCaptureBaselineCleanup(directory),
         worktrees,
         environments,
@@ -443,7 +430,6 @@ const command = new Command()
         }),
         changes,
         dataDirectory: directory,
-        projectSecrets,
         runs,
         executeTests,
         stopEnvironment,

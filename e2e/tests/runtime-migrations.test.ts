@@ -16,7 +16,10 @@ for (const scenario of ["legacy", "resume"]) {
     })
     await step("원본 백업과 적용 이력이 유지되고 설정과 반복 시작 결과가 보존된다", () => {
       expect(result.backup).toBe(result.original)
-      expect(JSON.parse(result.log ?? "null")).toEqual(["001-fixed-environment-settings"])
+      expect(JSON.parse(result.log ?? "null")).toEqual([
+        "001-fixed-environment-settings",
+        "002-flat-environment-values",
+      ])
       expect(result.unchangedAfterRestart).toBe(true)
       expect(result.settingsUnchanged).toBe(true)
       expect(result.locked).toBe(false)

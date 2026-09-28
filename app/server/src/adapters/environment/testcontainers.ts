@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 import { isDeepStrictEqual } from "node:util"
 import { execa } from "execa"
 import { stringify } from "yaml"
-import { runnerServiceHost } from "../../core/runner-environment.js"
+import { environmentRedactions, runnerServiceHost } from "../../core/runner-environment.js"
 import { testSelectionSchema } from "../../core/settings-schema.js"
 import type {
   Environment,
@@ -23,10 +23,7 @@ import { stageSelection } from "./selection.js"
 
 export { minimalEnvironment } from "../process/environment.js"
 
-export function createComposeAdapter(
-  dataDir: string,
-  secretSource: NodeJS.ProcessEnv | ((record: Environment) => NodeJS.ProcessEnv) = process.env,
-): EnvironmentAdapter {
+export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
   function directory(record: Environment) {
     return join(dataDir, "environments", record.id)
   }
@@ -143,7 +140,6 @@ export function createComposeAdapter(
     fingerprint: (root, inputs) => snapshotComposeInputs(root, inputs),
     inspect,
     async prepare(record, signal, observe) {
-      let secrets: NodeJS.ProcessEnv = {}
       signal = AbortSignal.any([signal, AbortSignal.timeout(record.settings.environment.timeoutMs)])
       const root = directory(record)
       const stage = join(root, "source")
@@ -179,15 +175,8 @@ export function createComposeAdapter(
         ) {
           throw new Error("Settings or selection plan changed during capture")
         }
-        secrets = typeof secretSource === "function" ? secretSource(record) : secretSource
-        const selection = await stageSelection(stage, record, secrets)
-        const variables = selection.variables
-        redactValues.push(
-          ...record.plan.requiredSecrets
-            .map((name) => secrets[name])
-            .filter((value): value is string => Boolean(value))
-            .sort((a, b) => b.length - a.length),
-        )
+        const selection = await stageSelection(stage, record)
+        redactValues.push(...environmentRedactions(record))
         const context = JSON.parse(await docker(["context", "inspect"]))[0]
         const host = context?.Endpoints?.docker?.Host
         if (typeof host !== "string" || !host.startsWith("unix://")) {
@@ -205,7 +194,7 @@ export function createComposeAdapter(
             profile,
           ]),
         ]
-        const env = { ...minimalEnvironment(), ...variables, COMPOSE_DISABLE_ENV_FILE: "1" }
+        const env = { ...minimalEnvironment(), COMPOSE_DISABLE_ENV_FILE: "1" }
         const config = await execa("docker", [...flags, "config", "--format", "json"], {
           cwd: stage,
           env,
@@ -269,7 +258,7 @@ export function createComposeAdapter(
             }
             for (const value of Object.values(build.args ?? {})) {
               if (redactValues.some((secret) => String(value).includes(secret))) {
-                throw new Error("Secrets cannot be build arguments")
+                throw new Error("Environment values cannot be build arguments")
               }
             }
           }
@@ -308,14 +297,6 @@ export function createComposeAdapter(
         update({
           services: Object.keys(model.services).map((name) => ({ name, job: jobs.has(name) })),
         })
-        for (const binding of Object.values(record.settings.tests.env)) {
-          if (
-            "service" in binding &&
-            !model.services[binding.service]?.ports?.some((p) => Number(p.target) === binding.port)
-          ) {
-            throw new Error("Test binding requires a declared published service port")
-          }
-        }
         if (record.lifecycle === "run") {
           const localBuilds = Object.entries(model.services).filter(([, service]) => service.build)
           if (localBuilds.length) {
@@ -347,7 +328,6 @@ export function createComposeAdapter(
             files: [...files, overrideFile],
             profiles: record.settings.environment.compose.profiles,
             projectName: record.projectName,
-            variables,
             timeoutMs: record.settings.environment.timeoutMs,
           }),
           cancelSignal: signal,
@@ -394,11 +374,7 @@ export function createComposeAdapter(
           for (const [key, binding] of Object.entries(
             record.plan.bindings[resource.service ?? ""] ?? {},
           )) {
-            if (
-              "unset" in binding
-                ? values.has(key)
-                : values.get(key) !== ("value" in binding ? binding.value : secrets[binding.secret])
-            ) {
+            if (typeof binding !== "string" ? values.has(key) : values.get(key) !== binding) {
               throw new Error(`Service environment mismatch: ${resource.service}.${key}`)
             }
           }
@@ -457,7 +433,6 @@ export function createComposeAdapter(
         await rm(join(directory(record), "source"), { recursive: true, force: true })
         return
       }
-      const secrets = typeof secretSource === "function" ? secretSource(record) : secretSource
       await runtime(record)
       const runners = (
         await docker([
@@ -492,10 +467,7 @@ export function createComposeAdapter(
               ["logs", "--tail", "1000", resource.id],
               Math.max(1, deadline - Date.now()),
             )
-            const redactions = record.plan.requiredSecrets
-              .map((name) => secrets[name])
-              .filter((value): value is string => Boolean(value))
-              .sort((a, b) => b.length - a.length)
+            const redactions = environmentRedactions(record)
             const log = redactions
               .reduce((text, secret) => text.split(secret).join("[REDACTED]"), output)
               .slice(-65536)

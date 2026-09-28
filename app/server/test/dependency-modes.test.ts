@@ -20,7 +20,7 @@ it("allows ordinary literal keys and passwords without forcing secret references
   })
   const result = await reader.read({ services: ["app"], select: { auth: "mock" } })
   expect(result.issues).toEqual([])
-  expect(result.plan?.bindings.app.API_KEY).toEqual({ value: "local-key" })
+  expect(result.plan?.bindings.app.API_KEY).toEqual("local-key")
 })
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })))
@@ -37,7 +37,7 @@ const configuration = {
       },
     },
   },
-  tests: { env: { APP_URL: { service: "app", port: 3000, scheme: "http" } } },
+  tests: { env: { APP_URL: "http://app.redpact.test:3000" } },
 }
 async function fixture(value: unknown = configuration) {
   const root = await mkdtemp(join(tmpdir(), "redpact-modes-"))
@@ -80,10 +80,10 @@ it("applies different app contracts and preserves omitted Compose defaults", asy
   expect(result.issues).toEqual([])
   expect(result.plan?.activeServices).toEqual(["app", "worker"])
   expect(result.plan?.bindings).toEqual({
-    app: { PAYMENTS_MODE: { value: "mock" } },
-    worker: { PAYMENT_BACKEND: { value: "stub" }, STALE: { unset: true } },
+    app: { PAYMENTS_MODE: "mock" },
+    worker: { PAYMENT_BACKEND: "stub", STALE: { unset: true } },
   })
-  expect(result.plan?.requiredSecrets).toEqual([])
+  expect(result.plan).not.toHaveProperty("requiredSecrets")
 })
 it("starts selected containers and fixed prerequisites without consumer wait edges", async () => {
   const result = await (
@@ -102,7 +102,7 @@ it("starts selected containers and fixed prerequisites without consumer wait edg
   expect(result.issues).toEqual([])
   expect(result.plan?.activeServices).toEqual(["app", "db", "payments"])
   expect(result.plan?.prerequisites.app).toEqual({})
-  expect(result.plan?.bindings.app).toEqual({ PAYMENTS_URL: { value: "http://payments:8080" } })
+  expect(result.plan?.bindings.app).toEqual({ PAYMENTS_URL: "http://payments:8080" })
 })
 it("rejects inactive injection targets and conflicting selected writes", async () => {
   const reader = await fixture({ ...configuration, services: ["app"] })
@@ -153,17 +153,13 @@ it("stages array and map defaults while replacing unresolved inputs and explicit
   )
   const result = await reader.read({ services: ["app", "worker"], select: { payments: "mock" } })
   expect(result.issues).toEqual([])
-  const staged = await stageSelection(
-    reader.projectRoot,
-    {
-      plan: result.plan!,
-      settings: executionSettingsSchema.parse({
-        environment: { compose: { files: ["compose.yaml"] } },
-        tests: {},
-      }),
-    },
-    {},
-  )
+  const staged = await stageSelection(reader.projectRoot, {
+    plan: result.plan!,
+    settings: executionSettingsSchema.parse({
+      environment: { compose: { files: ["compose.yaml"] } },
+      tests: {},
+    }),
+  })
   const base = parse(await readFile(join(reader.projectRoot, staged.files[0]), "utf8"))
   const overrides = parse(
     await readFile(join(reader.projectRoot, staged.files[staged.files.length - 1]), "utf8"),
@@ -172,7 +168,7 @@ it("stages array and map defaults while replacing unresolved inputs and explicit
   expect(base.services.worker.environment).toEqual({})
   expect(overrides.services.app.environment).toEqual({ PAYMENTS_MODE: "mock" })
   expect(overrides.services.worker.environment.STALE).toBeNull()
-  expect(staged.variables).toEqual({})
+  expect(staged).not.toHaveProperty("variables")
 })
 it("rejects unknown references, incomplete selections, bounded input and symbolic links", async () => {
   const reader = await fixture()

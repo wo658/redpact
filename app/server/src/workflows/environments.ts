@@ -7,7 +7,7 @@ import {
 } from "../core/environment-policy.js"
 import { executionSettingsSchema } from "../core/execution-settings.js"
 import { problem } from "../core/problems.js"
-import { runnerEnvironment } from "../core/runner-environment.js"
+import { environmentRedactions } from "../core/runner-environment.js"
 import { testSelectionSchema } from "../core/settings-schema.js"
 import type { Store } from "../core/types/contracts.js"
 import type { Environment, EnvironmentAdapter } from "../core/types/environment.js"
@@ -19,10 +19,7 @@ export function createEnvironments(deps: {
   worktrees: WorktreeService
   adapter: EnvironmentAdapter
   ownerId: string
-  secrets?: NodeJS.ProcessEnv | ((record: Environment) => NodeJS.ProcessEnv)
 }): EnvironmentService {
-  const secretValues = (record: Environment) =>
-    typeof deps.secrets === "function" ? deps.secrets(record) : (deps.secrets ?? process.env)
   const tasks = new Map<string, Promise<void>>()
   const controls = new Map<string, AbortController>()
   let closing = false
@@ -116,17 +113,7 @@ export function createEnvironments(deps: {
       environment: { compose: { files: specification.composeFiles, profiles: [] }, variables: {} },
       tests: {
         timeoutMs: specification.tests.timeoutMs,
-        env: Object.fromEntries(
-          Object.entries(specification.tests.env).map(([key, value]) => {
-            if (typeof value === "string") {
-              return [key, { value }]
-            }
-            if ("service" in value) {
-              return [key, { ...value, value: "url" }]
-            }
-            return [key, value]
-          }),
-        ),
+        env: specification.tests.env,
       },
     })
     const inputDigest = await deps.adapter.fingerprint(resolved.worktree.projectRoot, {
@@ -298,12 +285,9 @@ export function createEnvironments(deps: {
         runIds: [...new Set([...record.runIds, runId])],
       })
     },
-    async secretValues(id: string) {
+    async redactionValues(id: string) {
       const record = get(id)
-      const values = secretValues(record)
-      return record.plan.requiredSecrets
-        .map((name) => values[name])
-        .filter((value): value is string => Boolean(value))
+      return environmentRedactions(record)
     },
     async executionValues(id: string) {
       const record = await refresh(id)
@@ -315,7 +299,7 @@ export function createEnvironments(deps: {
       ) {
         problem("configuration_error", "Application inputs changed while queued")
       }
-      return runnerEnvironment(record.settings, secretValues(record))
+      return { ...record.settings.tests.env }
     },
     async healthy(id: string) {
       return (await refresh(id)).state === "in_use"

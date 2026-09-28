@@ -133,14 +133,23 @@ build images are removed with their environments; Docker build caches and explic
 named project images are not pruned. No general automatic evidence archival/deletion policy is implied;
 manual deletion of a referenced record can break its dependants.
 
-## Private values and evidence
+## Environment values and evidence
 
-Project secret values live in private instance storage and override server environment
-fallbacks. Explicit blank values disable fallback. Public records expose references
-and availability; `connections.json` contains mapped addresses, not credentials.
-Review capabilities and credential-input tokens must not enter model-visible content.
-Private source, images or transformed program output may still contain sensitive
-information; runtime evidence is local data, not an automatic public export.
+Environment strings remain plaintext in the shared settings and captured settings/source
+records. New executions do not create private-secrets files or read server environment
+fallbacks. See [environment values](configuration.md) for masking and plaintext limits.
+Review capabilities must not enter model-visible content. Images and transformed output
+may still contain sensitive information; evidence is local data, not a public export.
+
+Migration `002-flat-environment-values` converts historical environment records to string
+values. It unwraps literal bindings, derives old service host/port/URL bindings using the
+original internal DNS convention, and resolves secret references only from the saved
+`private-secrets/environment-<id>.json` snapshot. It never substitutes current project or
+server values. Missing or invalid captured values block startup without rewriting records;
+restore the matching captured snapshot from an instance backup before retrying. Original
+records are backed up under the first pending migration. Captured source, digests and
+historical private files are preserved; ordinary execution no longer reads those private
+files. Authored settings require manual conversion under [configuration](configuration.md).
 
 Implementation: [storage adapters](../app/server/src/adapters/storage),
 [record contracts](../app/server/src/core/types/contracts.ts),

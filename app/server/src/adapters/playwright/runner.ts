@@ -7,8 +7,8 @@ import { execa } from "execa"
 import { z } from "zod"
 import { captureCaseSchema } from "../../core/playwright-schema.js"
 import {
+  environmentRedactions,
   runnerConnections,
-  runnerEnvironment,
   runnerServiceHost,
 } from "../../core/runner-environment.js"
 import { testResourceSchema } from "../../core/test-resource-schema.js"
@@ -29,9 +29,7 @@ const reportSchema = z.strictObject({
 export function createCaptureRunner(
   directory: string,
   ownerId: string,
-  secretValues: (record: Environment) => string[] = () => [],
   readLimits: ReadTestResources = async () => testResourceSchema.parse({}),
-  runnerSecrets: (record: Environment) => Record<string, string> = () => ({}),
 ): CaptureRunner {
   const inputs = (id: string) => join(directory, "playwright-inputs", id)
   const output = (id: string, side: string) => join(directory, "playwright-runs", id, side)
@@ -89,9 +87,7 @@ export function createCaptureRunner(
     },
     async execute(run, side, environment, signal, observe) {
       const limits = testResourceSchema.parse(await readLimits())
-      const redactions = secretValues(environment)
-        .filter(Boolean)
-        .sort((a, b) => b.length - a.length)
+      const redactions = environmentRedactions(environment)
       const redact = (text: string) =>
         redactions.reduce((result, value) => result.split(value).join("[REDACTED]"), text)
       signal.throwIfAborted()
@@ -156,7 +152,7 @@ export function createCaptureRunner(
           side,
           network: `${environment.projectName}_redpact-runner`,
           environment: {
-            ...runnerEnvironment(environment.settings, runnerSecrets(environment)),
+            ...environment.settings.tests.env,
             REDPACT_CONNECTIONS_FILE: "/review/connections.json",
           },
           connections: runnerConnections(environment),

@@ -379,7 +379,7 @@ export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
         summary: "Read dependency choices",
         tags: ["Settings"],
         description:
-          "Read-only fixed dependency settings and execution planning. Does not resolve secrets or start containers.",
+          "Read-only fixed dependency settings and execution planning. Does not start containers.",
 
         responses: {
           ...localErrors,
@@ -408,7 +408,7 @@ export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
         summary: "Read one dependency definition",
         tags: ["Settings"],
         description:
-          "Read-only fixed dependency settings and execution planning. Does not resolve secrets or start containers.",
+          "Read-only fixed dependency settings and execution planning. Does not start containers.",
 
         responses: {
           ...localErrors,
@@ -437,7 +437,7 @@ export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
         summary: "Preview the fixed execution plan",
         tags: ["Settings"],
         description:
-          "Read-only fixed dependency settings and execution planning. Does not resolve secrets or start containers.",
+          "Read-only fixed dependency settings and execution planning. Does not start containers.",
         requestBody: jsonBody(z.strictObject({})),
         responses: {
           ...localErrors,

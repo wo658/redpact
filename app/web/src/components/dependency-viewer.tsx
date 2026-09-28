@@ -106,7 +106,7 @@ function DependencyHelp() {
               </li>
               <li>
                 {t(
-                  "A secret reference uses a project credential supplied in this Redpact instance, with server environment fallback when no project value is saved. An explicitly saved blank blocks fallback. Required missing credentials block execution.",
+                  "Environment values are stored as plaintext in project settings. Hosts, ports, URLs and credentials use the same string values.",
                 )}
               </li>
             </ul>
@@ -300,20 +300,12 @@ function EnvironmentOverrides({ env }: { env: NonNullable<DependencyMode["env"]>
 function OverrideTable({ values }: { values: NonNullable<DependencyMode["env"]>[string] }) {
   const { t } = useTranslation()
   const rows = Object.entries(values)
-  function renderBinding(value: string | { secret: string } | { unset: true }) {
+  function renderBinding(value: string | { unset: true }) {
     if (typeof value === "string") {
       if (value === "") {
         return <Badge variant="outline">{t("Empty string")}</Badge>
       }
       return <code>{value}</code>
-    }
-    if ("secret" in value) {
-      return (
-        <span className="flex flex-wrap items-center gap-1">
-          <Badge variant="outline">{t("Secret reference")}</Badge>
-          <code>{value.secret}</code>
-        </span>
-      )
     }
     return <Badge variant="outline">{t("Unset")}</Badge>
   }

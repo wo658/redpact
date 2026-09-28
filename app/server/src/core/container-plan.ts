@@ -1,15 +1,6 @@
 import type { ComposeModel } from "./types/compose.js"
 import type { EnvironmentPlan } from "./types/environment-plan.js"
 import type { Settings, SettingsIssue, TestSelection } from "./types/settings.js"
-export function hasPort(service: ComposeModel["services"][string] | undefined, port: number) {
-  return (
-    service?.ports?.some((p) =>
-      typeof p === "object"
-        ? Number(p.target) === port && (!p.protocol || p.protocol === "tcp")
-        : Number(String(p).replace(/\/tcp$/, "")) === port,
-    ) ?? false
-  )
-}
 export function planContainers(
   settings: Settings,
   model: ComposeModel,
@@ -69,18 +60,6 @@ export function planContainers(
       }
     }
   }
-  for (const [key, value] of Object.entries(settings.tests.env)) {
-    if (typeof value !== "string" && "service" in value) {
-      exists(value.service, `tests.env.${key}`)
-      if (!hasPort(model.services[value.service], value.port)) {
-        issue(
-          "unknown_reference",
-          `tests.env.${key}`,
-          "Test URL requires a declared published TCP port",
-        )
-      }
-    }
-  }
   if (issues.length || !settings.composeFiles.length) {
     return { issues }
   }
@@ -90,10 +69,8 @@ export function planContainers(
     bindings: {},
     prerequisites: {},
     reasons: {},
-    requiredSecrets: [],
   }
-  const active = new Set<string>(),
-    secrets = new Set<string>()
+  const active = new Set<string>()
   function visit(id: string, reason: string) {
     exists(id, "settings.services")
     if (!Object.hasOwn(model.services, id)) {
@@ -135,19 +112,7 @@ export function planContainers(
           )
           continue
         }
-        plan.bindings[target][key] = typeof value === "string" ? { value } : value
-        if (typeof value !== "string" && "secret" in value) {
-          secrets.add(value.secret)
-        }
-      }
-    }
-  }
-  for (const [key, value] of Object.entries(settings.tests.env)) {
-    if (typeof value !== "string") {
-      if ("secret" in value) {
-        secrets.add(value.secret)
-      } else if (!active.has(value.service)) {
-        issue("inactive_target", `tests.env.${key}`, "Test URL must reference an active service")
+        plan.bindings[target][key] = value
       }
     }
   }
@@ -172,6 +137,5 @@ export function planContainers(
   plan.excludedServices = Object.keys(model.services)
     .filter((id) => !active.has(id))
     .sort()
-  plan.requiredSecrets = [...secrets].sort()
   return { issues, ...(issues.length ? {} : { plan }) }
 }

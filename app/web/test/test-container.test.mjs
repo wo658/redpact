@@ -61,7 +61,10 @@ test("변경 표시와 실행 제어는 유지하고 상시 운영 안내는 표
     target: { projectRoot: "/repo" },
     errors: [],
     endpoints: { "app:3000": { host: "127.0.0.1", port: 41234 } },
-    specification: { tests: { env: { APP_URL: { service: "app", port: 3000, scheme: "http" } } } },
+    specification: {
+      tests: { env: { APP_URL: "http://app.redpact.test:3000" } },
+      playwright: { service: "app", port: 3000, scheme: "http" },
+    },
   }
   const doc = render({ target, environment, changed: true, issue: null })
   assert.match(doc.body.textContent, /Local changes available/)

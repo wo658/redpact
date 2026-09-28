@@ -414,7 +414,7 @@ curl --fail http://127.0.0.1:54318/api/health
 http://127.0.0.1:54318/mcp
 ```
 
-설정 문법은 클라이언트마다 다릅니다. 클라이언트의 HTTP MCP 연결 기능을 사용하세요. Redpact는 이 흐름을 위한 stdio 브리지를 제공하지 않습니다. 모델에 제공하는 도구는 `configure`, `run_tests`, `get_run`, `request_keys`입니다.
+설정 문법은 클라이언트마다 다릅니다. 클라이언트의 HTTP MCP 연결 기능을 사용하세요. Redpact는 이 흐름을 위한 stdio 브리지를 제공하지 않습니다. 모델에 제공하는 도구는 `configure`, `run_tests`, `get_run`입니다.
 
 경로를 바꾼 뒤 에이전트에게 다음 인자로 `configure`를 호출하도록 요청하세요.
 
