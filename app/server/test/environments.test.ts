@@ -15,27 +15,9 @@ test("rejects reserved variables and retired format fields", () => {
   ).toBe(false)
 })
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { createSettingsService } from "../src/adapters/settings/json.js"
-
-test("configure validation rejects Compose isolation violations without contacting Docker", async () => {
-  const root = await mkdtemp(join(tmpdir(), "redpact-compose-schema-"))
-  try {
-    await mkdir(join(root, ".redpact"))
-    await writeFile(join(root, ".redpact/settings.json"), JSON.stringify(composeSettings))
-    await writeFile(
-      join(root, "compose.yaml"),
-      "services:\n  app:\n    image: alpine:3.21\n    container_name: shared\n",
-    )
-    const result = await createSettingsService(root).read()
-    expect(result.valid).toBe(false)
-    expect(result.issues.some((issue) => issue.message.includes("container_name"))).toBe(true)
-  } finally {
-    await rm(root, { recursive: true, force: true })
-  }
-})
 
 import { createApp } from "../src/app.js"
 

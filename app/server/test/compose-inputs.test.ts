@@ -117,16 +117,13 @@ test("Compose resolves selected merged build contexts relative to its first file
   await expect(snapshotComposeInputs(root, inputs)).resolves.not.toBe(before)
 })
 
-test("build contexts and control files cannot read through host symlinks", async () => {
-  const { root, fingerprint } = await fixture()
-  await symlink("/etc/passwd", join(root, "app/.dockerignore"))
-  await expect(fingerprint()).rejects.toThrow("Docker ignore file must be a regular file")
-  await rm(join(root, "app/.dockerignore"))
-  await symlink("app", join(root, "linked-app"))
-  await writeFile(join(root, "compose.yaml"), "services:\n  app:\n    build: ./linked-app\n")
-  await expect(fingerprint()).rejects.toThrow(
-    "Build context paths must not traverse symbolic links",
-  )
+test("링크된 빌드 입력은 Redpact가 따라 읽거나 캡처하지 않는다", async () => {
+  const { root, inputs } = await fixture()
+  await symlink("/missing-host-ignore", join(root, "app/.dockerignore"))
+  const stage = await mkdtemp(join(tmpdir(), "compose-linked-build-"))
+  roots.push(stage)
+  await expect(snapshotComposeInputs(root, inputs, stage)).resolves.toMatch(/^[a-f0-9]{64}$/)
+  await expect(readFile(join(stage, "app/source.txt"))).rejects.toMatchObject({ code: "ENOENT" })
 })
 
 test("re-included files preserve their excluded parent directory permissions", async () => {

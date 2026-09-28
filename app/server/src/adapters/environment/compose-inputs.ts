@@ -15,13 +15,13 @@ import {
 } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
-import { dirname, join, relative, resolve } from "node:path"
+import { dirname, isAbsolute, join, relative, resolve } from "node:path"
 import type { Ignore } from "@balena/dockerignore"
 import { execa } from "execa"
 import type { Environment } from "../../core/types/environment.js"
 import { minimalEnvironment } from "../process/environment.js"
 import type { EffectiveCompose } from "./compose-model.js"
-import { checkCompose, contained } from "./inputs.js"
+import { contained } from "./inputs.js"
 import { stageSelection } from "./selection.js"
 
 const dockerIgnore = createRequire(import.meta.url)("@balena/dockerignore") as (options: {
@@ -31,7 +31,7 @@ const dockerIgnore = createRequire(import.meta.url)("@balena/dockerignore") as (
 type Inputs = Pick<Environment, "settings" | "plan">
 
 // Resolve Compose before inspecting application files; it owns context and merge semantics.
-async function buildContexts(root: string, inputs: Inputs) {
+async function resolveInputs(root: string, inputs: Inputs) {
   const temporary = await mkdtemp(join(tmpdir(), "redpact-compose-config-"))
   try {
     const placeholders = Object.fromEntries(
@@ -47,29 +47,25 @@ async function buildContexts(root: string, inputs: Inputs) {
         "--project-directory",
         dirname(join(root, inputs.settings.environment.compose.files[0])),
         ...selected.files.flatMap((file) => ["-f", join(temporary, file)]),
+        "--profile",
+        "*",
         "config",
         "--format",
         "json",
       ],
       {
         cwd: root,
-        env: { ...minimalEnvironment(), ...selected.variables, COMPOSE_DISABLE_ENV_FILE: "1" },
+        env: { ...minimalEnvironment(), ...selected.variables },
         extendEnv: false,
         timeout: 30000,
         maxBuffer: 4 * 1024 * 1024,
       },
     )
     const model: EffectiveCompose = JSON.parse(result.stdout)
-    checkCompose(model, true)
-    if (
-      Object.keys(model.services).sort().join(",") !==
-      [...inputs.plan.activeServices].sort().join(",")
-    ) {
-      throw new Error("Effective services differ from the selection plan")
-    }
-    return Object.values(model.services).flatMap((service) =>
-      service.build ? [service.build] : [],
+    model.services = Object.fromEntries(
+      Object.entries(model.services).filter(([name]) => inputs.plan.activeServices.includes(name)),
     )
+    return model
   } finally {
     await rm(temporary, { recursive: true, force: true })
   }
@@ -115,23 +111,45 @@ async function destinationDirectory(root: string, path: string) {
   }
 }
 
-async function contextPaths(root: string, context: string, dockerfile: string) {
-  contained(root, context)
-  const canonical = contained(root, await realpath(context))
+async function contextPaths(root: string, context: string, dockerfile?: string) {
+  // Compose owns external/remote paths. Redpact never reads or copies their contents.
+  const local = relative(root, context)
+  if (!isAbsolute(context) || local === ".." || local.startsWith("../") || isAbsolute(local)) {
+    return new Set<string>()
+  }
+  const canonical = await realpath(context).catch(() => undefined)
   if (canonical !== context) {
-    throw new Error("Build context paths must not traverse symbolic links")
+    return new Set<string>()
   }
-  const recipe = contained(context, resolve(context, dockerfile))
-  if (contained(context, await realpath(recipe)) !== recipe) {
-    throw new Error("Dockerfile paths must not traverse symbolic links")
+  const recipe = dockerfile ? resolve(context, dockerfile) : undefined
+  const recipePath = recipe ? relative(context, recipe) : ""
+  if (recipePath === ".." || recipePath.startsWith("../") || isAbsolute(recipePath)) {
+    return new Set<string>()
   }
-  const specific = await optionalFile(`${recipe}.dockerignore`)
+  if (recipe && (await realpath(recipe).catch(() => undefined)) !== recipe) {
+    return new Set<string>()
+  }
+  for (const path of [
+    ...(recipe ? [`${recipe}.dockerignore`] : []),
+    join(context, ".dockerignore"),
+  ]) {
+    try {
+      if ((await lstat(path)).isSymbolicLink()) {
+        return new Set<string>()
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw error
+      }
+    }
+  }
+  const specific = recipe ? await optionalFile(`${recipe}.dockerignore`) : undefined
   const ignorePath =
     specific === undefined ? join(context, ".dockerignore") : `${recipe}.dockerignore`
   const source = specific ?? (await optionalFile(ignorePath)) ?? ""
   const matcher = dockerIgnore({ ignorecase: false }).add(source)
   const exceptions = source.split(/\r?\n/).some((line) => line.trim().startsWith("!"))
-  const paths = new Set<string>([recipe])
+  const paths = new Set<string>(recipe ? [recipe] : [])
   if ((await optionalFile(ignorePath)) !== undefined) {
     paths.add(ignorePath)
   }
@@ -204,10 +222,17 @@ async function capturePath(
 
 export async function snapshotComposeInputs(root: string, inputs: Inputs, destination?: string) {
   root = await realpath(root)
-  const builds = await buildContexts(root, inputs)
+  const model = await resolveInputs(root, inputs)
+  const builds = Object.values(model.services).flatMap((service) =>
+    service.build ? [service.build] : [],
+  )
   const paths = new Set(inputs.settings.environment.compose.files.map((file) => join(root, file)))
   for (const build of builds) {
-    for (const path of await contextPaths(root, build.context, build.dockerfile ?? "Dockerfile")) {
+    for (const path of await contextPaths(
+      root,
+      build.context,
+      build.dockerfile_inline ? undefined : (build.dockerfile ?? "Dockerfile"),
+    )) {
       paths.add(path)
     }
   }
@@ -218,7 +243,7 @@ export async function snapshotComposeInputs(root: string, inputs: Inputs, destin
       parent = dirname(parent)
     }
   }
-  const hash = createHash("sha256")
+  const hash = createHash("sha256").update(JSON.stringify(model))
   const directories: { path: string | undefined; mode: number }[] = []
   for (const path of [...paths].sort()) {
     const directory = await capturePath(root, path, hash, destination)

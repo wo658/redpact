@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs"
 import { appendFile, mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { join } from "node:path"
+import { dirname, isAbsolute, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { isDeepStrictEqual } from "node:util"
 import { execa } from "execa"
@@ -16,8 +16,6 @@ import { minimalEnvironment } from "../process/environment.js"
 import { readJsonSettings } from "../settings/json.js"
 import { snapshotComposeInputs } from "./compose-inputs.js"
 import type { EffectiveCompose } from "./compose-model.js"
-import { checkCompose, contained, validateComposeInputs } from "./inputs.js"
-import { verifyBrowserEndpoints } from "./reachability.js"
 
 import {
   containerLogSnapshot,
@@ -79,7 +77,7 @@ export function createComposeAdapter(
           labels?.["io.redpact.owner"] !== record.ownerId ||
           labels?.["io.redpact.environment"] !== record.id
         ) {
-          throw new Error("Resource ownership mismatch")
+          continue
         }
         resources.push({
           kind,
@@ -99,26 +97,19 @@ export function createComposeAdapter(
         const service = record.services.find((s) => s.name === name)
         observed.set(
           name,
-          service?.job
-            ? item.State.Status === "exited" && item.State.ExitCode === 0
-            : item.State.Running && item.State.Health?.Status === "healthy",
+          (observed.get(name) ?? true) &&
+            (service?.job
+              ? item.State.Status === "exited" && item.State.ExitCode === 0
+              : item.State.Running &&
+                (!item.State.Health || item.State.Health.Status === "healthy")),
         )
         for (const [port, bindings] of Object.entries(item.NetworkSettings.Ports ?? {})) {
           const binding = bindings?.[0]
-          if (binding) {
+          if (binding && port.endsWith("/tcp")) {
             endpoints[`${name}:${port.split("/")[0]}`] = {
               host: client.info.containerRuntime.host,
               port: Number(binding.HostPort),
             }
-          }
-        }
-        for (const mount of item.Mounts ?? []) {
-          if (
-            mount.Type === "volume" &&
-            mount.Name &&
-            !resources.some((r) => r.kind === "volume" && r.id === mount.Name)
-          ) {
-            resources.push({ kind: "volume", id: mount.Name })
           }
         }
       }
@@ -160,7 +151,6 @@ export function createComposeAdapter(
         ) {
           throw new Error("Application inputs changed during preparation")
         }
-        await validateComposeInputs(stage, record.settings)
         const captured = await readJsonSettings(
           record.target.projectRoot,
           testSelectionSchema.parse(record.selection),
@@ -174,7 +164,7 @@ export function createComposeAdapter(
           throw new Error("Settings or selection plan changed during capture")
         }
         secrets = typeof secretSource === "function" ? secretSource(record) : secretSource
-        const selection = await stageSelection(stage, record, secrets)
+        const selection = await stageSelection(stage, record, secrets, record.target.projectRoot)
         const variables = selection.variables
         redactValues.push(
           ...record.plan.requiredSecrets
@@ -189,30 +179,37 @@ export function createComposeAdapter(
           "compose",
           "--project-name",
           record.projectName,
+          "--project-directory",
+          dirname(join(record.target.projectRoot, record.settings.environment.compose.files[0])),
           ...files.flatMap((file) => ["-f", join(stage, file)]),
           ...record.settings.environment.compose.profiles.flatMap((profile) => [
             "--profile",
             profile,
           ]),
         ]
-        const env = { ...minimalEnvironment(), ...variables, COMPOSE_DISABLE_ENV_FILE: "1" }
-        const config = await execa("docker", [...flags, "config", "--format", "json"], {
-          cwd: stage,
-          env,
-          extendEnv: false,
-          cancelSignal: signal,
-          timeout: 30000,
-          maxBuffer: 4 * 1024 * 1024,
-          reject: false,
-        })
+        const env = { ...minimalEnvironment(), ...variables }
+        const config = await execa(
+          "docker",
+          [...flags, "--profile", "*", "config", "--format", "json"],
+          {
+            cwd: record.target.projectRoot,
+            env,
+            extendEnv: false,
+            cancelSignal: signal,
+            timeout: 30000,
+            maxBuffer: 4 * 1024 * 1024,
+            reject: false,
+          },
+        )
         if (config.exitCode !== 0) {
-          throw new Error("Compose effective configuration is invalid")
+          throw new Error(config.stderr || "Compose configuration could not be resolved")
         }
         const model: EffectiveCompose = JSON.parse(config.stdout)
-        checkCompose(model, true)
-        if (Object.keys(model.services).sort().join(",") !== record.plan.activeServices.join(",")) {
-          throw new Error("Effective services differ from the selection plan")
-        }
+        model.services = Object.fromEntries(
+          Object.entries(model.services).filter(([name]) =>
+            record.plan.activeServices.includes(name),
+          ),
+        )
         const previousBuildImages = new Set<string>()
         if (record.lifecycle === "manual") {
           for (const [name, service] of Object.entries(model.services)) {
@@ -230,6 +227,8 @@ export function createComposeAdapter(
           networks: Record<string, unknown>
           volumes: Record<string, unknown>
         } = { services: {}, networks: {}, volumes: {} }
+        const runnerKey = `redpact-runner-${record.id}`
+        const runnerName = `${record.projectName}-runner`
         const jobs = new Set<string>()
         for (const service of Object.values(model.services)) {
           for (const [name, edge] of Object.entries(service.depends_on ?? {})) {
@@ -239,75 +238,80 @@ export function createComposeAdapter(
           }
         }
         for (const [name, service] of Object.entries(model.services)) {
-          if (
-            service.profiles?.length &&
-            !service.profiles.some((p: string) =>
-              record.settings.environment.compose.profiles.includes(p),
-            )
-          ) {
-            delete model.services[name]
-            continue
-          }
-          if (!jobs.has(name) && (!service.healthcheck?.test || service.healthcheck.disable)) {
-            throw new Error(`Service ${name} requires a healthcheck`)
-          }
-          if (service.build) {
-            const build = service.build
-            contained(stage, build.context)
-            if (build.dockerfile?.startsWith("/") || build.dockerfile?.split("/").includes("..")) {
-              throw new Error("Dockerfile must stay in build context")
-            }
-            for (const value of Object.values(build.args ?? {})) {
-              if (redactValues.some((secret) => String(value).includes(secret))) {
-                throw new Error("Secrets cannot be build arguments")
-              }
-            }
-          }
-          const ports = (service.ports ?? []).map((p) => ({
-            target: Number(p.target),
-            published: "0",
-            host_ip: "127.0.0.1",
-            protocol: "tcp",
-          }))
           override.services[name] = {
             labels,
-            networks: { "redpact-runner": { aliases: [runnerServiceHost(name)] } },
-            ...(ports.length ? { ports } : {}),
-            ...(record.lifecycle === "run" && service.build
+            ...(!service.network_mode
               ? {
-                  image: `${record.projectName}-${name}`,
-                  pull_policy: "build",
-                  build: { labels, tags: [] },
+                  networks: {
+                    ...(service.networks ?? { default: {} }),
+                    [runnerKey]: { aliases: [runnerServiceHost(name)] },
+                  },
                 }
+              : {}),
+            ...(record.lifecycle === "run" && service.build && !service.image
+              ? { build: { labels } }
               : {}),
           }
         }
-        for (const name of Object.keys(model.networks ?? { default: {} })) {
-          override.networks[name] = { labels }
+        for (const [name, resource] of Object.entries(model.networks ?? { default: {} })) {
+          if (!resource?.external) {
+            override.networks[name] = { labels }
+          }
         }
-        override.networks["redpact-runner"] = { labels }
-        for (const name of Object.keys(model.volumes ?? {})) {
-          override.volumes[name] = { labels }
+        override.networks[runnerKey] = { external: true, name: runnerName }
+        for (const [name, resource] of Object.entries(model.volumes ?? {})) {
+          if (!resource?.external) {
+            override.volumes[name] = { labels }
+          }
         }
-        // Override the complete port sequence; merging entries could otherwise expose an unbound address.
-        const yaml = stringify(override)
-          .replace(/^( {4}ports:)/gm, "$1 !override")
-          .replace(/^( {6}tags:) \[\]/gm, "$1 !override []")
+        // Freeze Compose's resolved model; preserve authored ports, mounts, resources and build options.
+        // Only captured local build contexts move into the source snapshot.
+        for (const service of Object.values(model.services)) {
+          if (service.build) {
+            const path = relative(record.target.projectRoot, service.build.context)
+            if (
+              !isAbsolute(path) &&
+              path !== ".." &&
+              !path.startsWith("../") &&
+              existsSync(join(stage, path))
+            ) {
+              service.build.context = join(stage, path)
+            }
+          }
+        }
+        const resolvedFile = ".redpact-resolved.yaml"
+        await writeFile(
+          join(stage, resolvedFile),
+          stringify(model, (_key, value) => {
+            if (typeof value !== "string") {
+              return value
+            }
+            const references = Object.entries(variables)
+              .filter(([, secret]) => secret)
+              .sort((a, b) => b[1].length - a[1].length)
+            for (const [name, secret] of references) {
+              value = value.replaceAll(secret, `__redpact_${record.id}_${name}__`)
+            }
+            value = value.replaceAll("$", "$$")
+            for (const [name] of references) {
+              value = value.replaceAll(`__redpact_${record.id}_${name}__`, `\${${name}}`)
+            }
+            return value
+          }),
+          {
+            mode: 0o600,
+            flag: "wx",
+          },
+        )
         const overrideFile = ".redpact-runtime.yaml"
-        await writeFile(join(stage, overrideFile), yaml, { mode: 0o600, flag: "wx" })
+        await writeFile(join(stage, overrideFile), stringify(override), { mode: 0o600, flag: "wx" })
         update({
           services: Object.keys(model.services).map((name) => ({ name, job: jobs.has(name) })),
         })
-        for (const binding of Object.values(record.settings.tests.env)) {
-          if (
-            "service" in binding &&
-            !model.services[binding.service]?.ports?.some((p) => Number(p.target) === binding.port)
-          ) {
-            throw new Error("Test binding requires a declared published service port")
-          }
-        }
         if (record.lifecycle === "run") {
-          const localBuilds = Object.entries(model.services).filter(([, service]) => service.build)
+          const localBuilds = Object.entries(model.services).filter(
+            ([, service]) => service.build && !service.image,
+          )
           if (localBuilds.length) {
             // Capture only environment-owned tags; cleanup must not evaluate application variables.
             await writeFile(
@@ -322,6 +326,16 @@ export function createComposeAdapter(
           }
         }
         signal.throwIfAborted()
+        // The runner network exists even when every application uses host/none networking.
+        const client = await runtimeClient()
+        await client.network.create({
+          Name: runnerName,
+          Labels: {
+            ...labels,
+            "com.docker.compose.project": record.projectName,
+            "com.docker.compose.network": "redpact-runner",
+          },
+        })
         let worker = new URL("./compose-worker.js", import.meta.url)
         if (!existsSync(worker)) {
           worker = new URL("./compose-worker.ts", import.meta.url)
@@ -334,18 +348,11 @@ export function createComposeAdapter(
           extendEnv: false,
           input: JSON.stringify({
             directory: stage,
-            files: [...files, overrideFile],
+            files: [resolvedFile, overrideFile],
+            services: record.plan.activeServices,
             profiles: record.settings.environment.compose.profiles,
             projectName: record.projectName,
             variables,
-            ports: Object.fromEntries(
-              Object.entries(model.services)
-                .filter(([name]) => !jobs.has(name))
-                .map(([name, service]) => [
-                  name,
-                  (service.ports ?? []).map((port) => Number(port.target)),
-                ]),
-            ),
             timeoutMs: record.settings.environment.timeoutMs,
           }),
           cancelSignal: signal,
@@ -371,38 +378,10 @@ export function createComposeAdapter(
         }
         const observation = await inspect(current)
         update({ resources: observation.resources, endpoints: observation.endpoints })
-        const observedServices = observation.resources
-          .filter((resource) => resource.kind === "container")
-          .map((resource) => resource.service)
-          .sort()
-        if (observedServices.join(",") !== record.plan.activeServices.join(",")) {
-          throw new Error("Observed services differ from selection plan")
-        }
-        for (const resource of observation.resources.filter((r) => r.kind === "container")) {
-          const container = await inspectContainer(resource.id)
-          const values = new Map<string, string>(
-            (container.Config.Env ?? []).map((line: string) => {
-              const i = line.indexOf("=")
-              return [line.slice(0, i), line.slice(i + 1)]
-            }),
-          )
-          for (const [key, binding] of Object.entries(
-            record.plan.bindings[resource.service ?? ""] ?? {},
-          )) {
-            if (
-              "unset" in binding
-                ? values.has(key)
-                : values.get(key) !== ("value" in binding ? binding.value : secrets[binding.secret])
-            ) {
-              throw new Error(`Service environment mismatch: ${resource.service}.${key}`)
-            }
-          }
-        }
         if (!observation.healthy) {
           throw new Error("Services or preparation jobs are not ready")
         }
         if (record.lifecycle === "manual") {
-          await verifyBrowserEndpoints(current, observation.endpoints, signal)
           const currentImages = new Set(
             observation.resources
               .filter((resource) => resource.kind === "container")

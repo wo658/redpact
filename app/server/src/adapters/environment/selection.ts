@@ -1,9 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
-import { stringify } from "yaml"
+import { isNode, parseDocument, stringify } from "yaml"
 import type { Environment } from "../../core/types/environment.js"
 import { readComposeModel } from "../settings/bundle.js"
-import type { ComposeModel } from "./compose-model.js"
 
 export async function stageSelection(
   stage: string,
@@ -25,56 +24,29 @@ export async function stageSelection(
   const files: string[] = [],
     variables: Record<string, string> = {},
     redactions: string[] = []
-  const usedNetworks = new Set<string>(["default"]),
-    usedVolumes = new Set<string>()
-  for (const source of sources) {
-    for (const [id, service] of Object.entries(source.model.services)) {
-      if (active.has(id)) {
-        for (const name of Array.isArray(service.networks)
-          ? (service.networks as string[])
-          : Object.keys((service.networks ?? {}) as object)) {
-          usedNetworks.add(name)
+  for (const [index, source] of sources.entries()) {
+    const document = parseDocument(source.source)
+    for (const id of Object.keys(source.model.services ?? {})) {
+      if (!active.has(id)) {
+        document.deleteIn(["services", id])
+        continue
+      }
+      const environment = source.model.services[id].environment
+      if (environment && Object.keys(plan.bindings[id] ?? {}).length) {
+        const values = { ...(environment as Record<string, string | number | null>) }
+        for (const key of Object.keys(plan.bindings[id] ?? {})) {
+          delete values[key]
         }
-        for (const volume of service.volumes ?? []) {
-          const name = typeof volume === "string" ? volume.split(":")[0] : volume.source
-          if (name) {
-            usedVolumes.add(name)
-          }
+        const path = ["services", id, "environment"]
+        const original = document.getIn(path, true)
+        const replacement = document.createNode(values)
+        if (isNode(original)) {
+          replacement.tag = original.tag
         }
+        document.setIn(path, replacement)
       }
     }
-  }
-  for (const [index, source] of sources.entries()) {
-    const model: ComposeModel = {
-      services: Object.fromEntries(
-        Object.entries(source.model.services)
-          .filter(([id]) => active.has(id))
-          .map(([id, original]) => {
-            const service = structuredClone(original)
-            const environment = service.environment as Record<string, unknown> | undefined
-            for (const key of Object.keys(plan.bindings[id] ?? {})) {
-              if (environment) {
-                delete environment[key]
-              }
-            }
-            return [id, service]
-          }),
-      ),
-    }
-    if (source.model.networks) {
-      model.networks = Object.fromEntries(
-        Object.entries(source.model.networks).filter(([id]) => usedNetworks.has(id)),
-      )
-    }
-    if (source.model.volumes) {
-      model.volumes = Object.fromEntries(
-        Object.entries(source.model.volumes).filter(([id]) => usedVolumes.has(id)),
-      )
-    }
-    const yaml = stringify(model)
-    if (/(?<!\$)\$\{/.test(yaml)) {
-      throw new Error("Unresolved Compose interpolation in active inputs")
-    }
+    const yaml = document.toString()
     const file = join(dirname(source.file), `.redpact-selected-${index}.yaml`)
     await mkdir(dirname(join(stage, file)), { recursive: true })
     await writeFile(join(stage, file), yaml, { flag: "wx", mode: 0o600 })
@@ -102,7 +74,7 @@ export async function stageSelection(
         }
       }
     }
-    override.services[id] = { environment, depends_on: plan.prerequisites[id] }
+    override.services[id] = { environment }
   }
   const file = ".redpact-bindings.yaml"
   await writeFile(join(stage, file), stringify(override), { flag: "wx", mode: 0o600 })

@@ -35,7 +35,9 @@ export type ComposeModel = {
 export type EffectiveCompose = Omit<ComposeModel, "services"> & {
   services: Record<
     string,
-    Pick<ComposeService, "profiles" | "healthcheck" | "depends_on" | "image"> & {
+    Pick<ComposeService, "profiles" | "healthcheck" | "depends_on" | "image" | "network_mode"> & {
+      networks?: Record<string, unknown>
+    } & {
       ports?: ComposePort[]
       build?: Build
     }

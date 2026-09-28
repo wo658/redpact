@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-const name = z.string().regex(/^[a-z][a-z0-9-]{0,63}$/)
+export const composeServiceName = z.string().min(1)
 export const variableName = z
   .string()
   .regex(/^[A-Za-z_][A-Za-z0-9_]*$/)
@@ -23,7 +23,7 @@ export const inputValue = z.union([
   z.strictObject({ secret: variableName }),
 ])
 export const connectionValue = z.strictObject({
-  service: name,
+  service: composeServiceName,
   port: z.number().int().min(1).max(65535),
   value: z.enum(["host", "port", "url"]),
   scheme: z.enum(["http", "https"]).optional(),

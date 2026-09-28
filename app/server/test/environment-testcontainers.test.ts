@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { execa } from "execa"
+import { getContainerRuntimeClient, ImageName } from "testcontainers"
 import { expect, test } from "vitest"
 import { createComposeAdapter } from "../src/adapters/environment/testcontainers.js"
 import { createGitAdapter } from "../src/adapters/git/isomorphic.js"
@@ -16,21 +16,19 @@ import { createSubmissions } from "../src/workflows/submissions.js"
 import { createTestExecution } from "./helpers/execution.js"
 import { createTestWorktrees } from "./helpers/worktrees.js"
 
-const dockerTest = process.env.REDPACT_DOCKER_TESTS === "1" ? test : test.skip
+const environmentTest = process.env.REDPACT_DOCKER_TESTS === "1" ? test : test.skip
 
-dockerTest(
-  "반복 실행은 명시적 빌드 태그를 남기지 않고 이름 있는 볼륨과 익명 볼륨을 함께 제거한다",
+environmentTest(
+  "반복 실행은 사용자 빌드 태그를 보존하고 실행 소유 이미지와 볼륨을 제거한다",
   async () => {
     const root = await mkdtemp(join(tmpdir(), "redpact-cleanup-docker-"))
     const project = join(root, "project")
     const data = join(root, "data")
     const namedImage = `redpact-cleanup-preserved-${randomUUID()}`
     const extraTag = `redpact-cleanup-extra-${randomUUID()}`
-    await execa("docker", ["pull", "alpine:3.21"])
-    await execa("docker", ["tag", "alpine:3.21", namedImage])
-    const originalImage = (
-      await execa("docker", ["image", "inspect", "--format", "{{.Id}}", namedImage])
-    ).stdout.trim()
+    const client = await getContainerRuntimeClient()
+    const external = `redpact-shared-${randomUUID()}`
+    await client.container.dockerode.createVolume({ Name: external })
     await mkdir(join(project, ".redpact"), { recursive: true })
     await writeFile(
       join(project, "Dockerfile"),
@@ -46,7 +44,7 @@ dockerTest(
   app:
     build: .
     command: [sh, -c, "trap 'echo shutdown-output; exit 0' TERM; while true; do sleep 1; done"]
-    volumes: ["data:/state", "/anonymous"]
+    volumes: ["data:/state", "/anonymous", "shared:/shared"]
     healthcheck:
       test: [CMD, "true"]
       interval: 1s
@@ -58,6 +56,7 @@ dockerTest(
       dockerfile: named.Dockerfile
       tags: ["${extraTag}"]
     image: ${namedImage}
+    pull_policy: build
     command: [sh, -c, "sleep 300"]
     healthcheck:
       test: [CMD, "true"]
@@ -70,6 +69,9 @@ dockerTest(
       REQUIRED: "\${UNSELECTED_SECRET:?must not be needed for cleanup}"
 volumes:
   data: {}
+  shared:
+    external: true
+    name: ${external}
 `,
     )
     await writeFile(
@@ -97,13 +99,13 @@ volumes:
       const container = environment.resources.find(
         (resource) => resource.kind === "container" && resource.service === "app",
       )!
-      await execa("docker", [
-        "exec",
-        container.id,
+      const handle = client.container.getById(container.id)
+      const result = await client.container.exec(handle, [
         "sh",
         "-c",
         "echo test-data >/state/value; echo anonymous-data >/anonymous/value; echo final-stdout >/proc/1/fd/1; echo final-stderr >/proc/1/fd/2",
       ])
+      expect(result.exitCode).toBe(0)
     }
     const runs = createTestExecution({
       store: storage.store,
@@ -139,7 +141,16 @@ volumes:
       for (let attempt = 0; attempt < 2; attempt++) {
         const run = await runs.start(submission.id, selection)
         await expect.poll(() => runs.get(run.id).state, { timeout: 90000 }).toBe("finished")
-        expect(runs.get(run.id).result?.outcome).toBe("passed")
+        const completed = runs.get(run.id)
+        expect(
+          completed.result?.outcome,
+          JSON.stringify(completed.result) +
+            "\n" +
+            (await readFile(
+              join(data, "environments", completed.environmentId!, "preparation.log"),
+              "utf8",
+            )),
+        ).toBe("passed")
         await expect
           .poll(() => environments.get(runs.get(run.id).environmentId!).state, { timeout: 30000 })
           .toBe("stopped")
@@ -147,28 +158,22 @@ volumes:
       for (const environment of captured) {
         expect(environments.get(environment.id).state).toBe("stopped")
         expect(
-          (
-            await execa("docker", [
-              "ps",
-              "-aq",
-              "--filter",
-              `label=com.docker.compose.project=${environment.projectName}`,
-            ])
-          ).stdout,
-        ).toBe("")
+          await client.container.dockerode.listContainers({
+            all: true,
+            filters: { label: [`com.docker.compose.project=${environment.projectName}`] },
+          }),
+        ).toEqual([])
         for (const resource of environment.resources.filter((item) => item.kind !== "container")) {
-          expect(
-            (await execa("docker", [resource.kind, "inspect", resource.id], { reject: false }))
-              .exitCode,
-          ).not.toBe(0)
+          const inspection =
+            resource.kind === "network"
+              ? client.network.getById(resource.id).inspect()
+              : client.container.dockerode.getVolume(resource.id).inspect()
+          await expect(inspection).rejects.toMatchObject({ statusCode: 404 })
         }
         for (const resource of environment.resources.filter(
-          (item) => item.kind === "container" && item.image,
+          (item) => item.kind === "container" && item.service === "app" && item.image,
         )) {
-          expect(
-            (await execa("docker", ["image", "inspect", resource.image!], { reject: false }))
-              .exitCode,
-          ).not.toBe(0)
+          expect(await client.image.exists(ImageName.fromString(resource.image!))).toBe(false)
         }
         const directory = join(data, "environments", environment.id)
         await expect(access(join(directory, "source"))).rejects.toThrow()
@@ -179,14 +184,11 @@ volumes:
         await expect(access(join(directory, "preparation.log"))).resolves.toBeUndefined()
       }
       expect(captured).toHaveLength(2)
-      expect(
-        (
-          await execa("docker", ["image", "inspect", "--format", "{{.Id}}", namedImage])
-        ).stdout.trim(),
-      ).toBe(originalImage)
-      expect(
-        (await execa("docker", ["image", "inspect", extraTag], { reject: false })).exitCode,
-      ).not.toBe(0)
+      expect((await client.image.inspect(ImageName.fromString(namedImage))).Id).toBe(
+        captured.at(-1)!.resources.find((item) => item.service === "named")!.image,
+      )
+      expect(await client.image.exists(ImageName.fromString(extraTag))).toBe(true)
+      expect((await client.container.dockerode.getVolume(external).inspect()).Name).toBe(external)
     } finally {
       await runs.close()
       for (const environment of environments.list(worktree.id)) {
@@ -195,7 +197,17 @@ volumes:
       await runs.stopEnvironment.idle()
       await environments.close()
       storage.close()
-      await execa("docker", ["image", "rm", namedImage, extraTag], { reject: false })
+      for (const image of [namedImage, extraTag]) {
+        await client.container.dockerode
+          .getImage(image)
+          .remove({ force: false })
+          .catch((error: { statusCode?: number }) => {
+            if (error.statusCode !== 404) {
+              throw error
+            }
+          })
+      }
+      await client.container.dockerode.getVolume(external).remove()
       await rm(root, { recursive: true, force: true })
     }
   },
