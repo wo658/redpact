@@ -38,7 +38,7 @@ returns the fixed plan without starting anything or proving readiness or approva
   },
   "tests": {
     "directory": "integration",
-    "env": { "APP_URL": { "service": "app", "port": 3000, "scheme": "http" } }
+    "env": { "APP_URL": "http://app.redpact.test:3000" }
   }
 }
 ```
@@ -62,34 +62,27 @@ writes from two dependencies fail even if their values are equal. Environment bi
 do not start their target service.
 
 `tests.env` is the common Integration and Playwright runner environment. Declare only
-runner variables that tests need; application variables are not copied. Values may be
-strings, secret references, or managed service URLs. Both runners resolve managed URLs
-using `<service>.redpact.test` DNS aliases and internal ports on the execution network. Host published ports
+runner variables that tests need; application variables are not copied. All values are
+plain strings. There is no secret, host, port or URL value type, reference lookup or
+server-environment fallback. Write URLs and ports as strings yourself, for example
+`"APP_URL": "http://app.redpact.test:3000"`. Managed services have
+`<service>.redpact.test` DNS aliases on the execution network; host published ports
 remain separate inspection endpoints.
 
-Enter environment values directly as JSON key-value strings in the shared
-`.redpact/settings.json`, using Dependencies for application values and Project settings
-for `tests.env`. No separate credential registration is required for strings. Empty
-strings, whitespace, `=` and `$` are literal; JSON `\n` represents a newline. There is
-no dotenv parser, shell expansion or automatic `.env` discovery.
+Enter values as JSON key-value strings in the shared `.redpact/settings.json`, using
+Dependencies for application values and Project settings for `tests.env`. Both editors
+use key and value fields. There is no separate credential store, input card or API.
+Empty strings, whitespace, `=` and `$` are literal; JSON `\n` represents a newline.
+There is no dotenv parser, shell expansion or automatic `.env` discovery.
 
-Existing `{ "secret": "KEY_NAME" }` references remain supported, with their private
-instance values and server fallback unchanged. They are not automatically converted
-or deleted. Project values override server values; an explicitly empty project value
-disables fallback. The credential controls and `request_keys` remain available for
-these references; do not send credential values through the agent.
+Every nonempty application/test value is masked in execution text, including application
+shutdown logs. Browser runs with any such value omit traces. Values are matched
+literally, longest first; short values can mask ordinary log text too. Accepted
+execution settings fix values for that execution; later edits affect future runs only.
 
-Every nonempty direct application/test value and resolved referenced value is masked
-in execution text, including application shutdown logs. Browser runs with any such
-value omit traces. Values are matched literally, longest first; short values can mask
-ordinary log text too. Managed service endpoint bindings are not treated as private
-values. Accepted execution settings fix direct values for that execution; later edits
-affect future executions only.
-
-Direct values remain plaintext in settings, their read APIs and captured configuration
-or source. Masking is not encryption and does not sanitize these records, screenshots
-or video. Keep sensitive settings out of Git/public exports, or retain private secret
-references when values must stay out of project configuration.
+Values remain plaintext in settings, their read APIs and captured configuration or
+source. Masking is not encryption and does not sanitize these records, screenshots or
+video. Keep sensitive settings out of Git/public exports.
 
 Inside a container, localhost is that container. A host-local service must be reachable
 from the runner and application that consume it. Merely changing an address does not
@@ -111,6 +104,10 @@ unknown keys, imports or format selector. Empty settings support inspection. Man
 application execution requires configured roots and Compose services.
 
 ## Incompatible settings change
+
+Secret references and typed service endpoints are also retired. Replace them in authored
+settings with explicit string values. Historical runtime records use the ordered
+[storage migration](storage.md); project settings are never rewritten automatically.
 
 Mode catalogs, execution-time selection, integration default files and worktree
 dependency overlays are retired. Rewrite existing settings manually with fixed roots

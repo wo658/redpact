@@ -2,7 +2,6 @@ import { App } from "@modelcontextprotocol/ext-apps"
 import { useCallback, useEffect, useState } from "react"
 import { createRoot } from "react-dom/client"
 import { EnvironmentCard, TestCard } from "@/components/mcp/cards"
-import { CredentialCard } from "@/components/mcp/credential-card"
 import { type CardActions, type Snapshot, snapshotSchema } from "@/components/mcp/model"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -97,33 +96,15 @@ function McpView() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      {data?.kind === "inputs" && (
-        <CredentialCard
-          key={data.token}
-          inputs={data.inputs ?? []}
-          save={async (name, value) => {
-            const result = await app.callServerTool({
-              name: "submit_key",
-              arguments: { token: data.token, name, value },
-            })
-            if (result.isError) {
-              throw new Error("Could not save key")
-            }
-            return { configured: result.structuredContent?.configured === true }
-          }}
-        />
-      )}
       {!data && !error && <Skeleton className="h-32 w-full" />}
-      {data && data.kind !== "tests" && data.kind !== "inputs" && (
+      {data && data.kind !== "tests" && (
         <EnvironmentCard
           key={`${data.review?.id ?? data.path}-${data.review?.revision ?? 0}`}
           data={data}
           actions={actions}
         />
       )}
-      {data && data.kind !== "environment" && data.kind !== "inputs" && (
-        <TestCard data={data} actions={actions} />
-      )}
+      {data && data.kind !== "environment" && <TestCard data={data} actions={actions} />}
     </main>
   )
 }

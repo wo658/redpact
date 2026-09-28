@@ -49,7 +49,10 @@ test("a journal write failure is retryable and never marks a failed step complet
     code: "ENOENT",
   })
   await migrateRuntime(files)
-  expect(await files.history()).toEqual(["001-fixed-environment-settings"])
+  expect(await files.history()).toEqual([
+    "001-fixed-environment-settings",
+    "002-flat-environment-values",
+  ])
 })
 
 test("validates every record before writes and includes the failing record path", async () => {

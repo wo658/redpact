@@ -3,7 +3,7 @@ import { settingsSchema } from "../src/core/settings-schema.js"
 
 const composeSettings = {
   composeFiles: ["compose.yaml"],
-  tests: { env: { APP_BASE_URL: { service: "app", port: 3000, scheme: "http" } } },
+  tests: { env: { APP_BASE_URL: "http://app.redpact.test:3000" } },
   services: ["app"],
 }
 test("rejects reserved variables and retired format fields", () => {

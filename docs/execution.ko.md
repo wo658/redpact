@@ -161,8 +161,8 @@ PNG가 없는 상태에서도 보여 줍니다. 소스가 있으면 탭, 파일 
 Screenshots 탭도 실행 가능한 capture 코드를 숨기지 않습니다. 프로젝트 Tests는 변경 파일
 검토와 별도로 Captures·Tests·Runs를 유지합니다.
 
-비밀값이 있는 실행은 trace archive를 생략합니다. 이미지·비디오·제출 소스는 자격 증명
-검사를 하지 않습니다. 알려진 비밀값을 텍스트에서 가리는 것은 악성 코드 sandbox가 아닙니다.
+비어 있지 않은 환경변수 값이 있는 실행은 trace archive를 생략합니다. 이미지·비디오·제출 소스는 자격 증명
+검사를 하지 않습니다. 환경변수 원문을 텍스트에서 가리는 것은 악성 코드 sandbox가 아닙니다.
 
 프로젝트에서 선택한 캡처 파일은 큰 이미지 위에 이름이 표시된 썸네일을 가로로
 나열합니다. 드롭다운을 열지 않고 썸네일을 클릭하거나 라디오 그룹의 방향키로
@@ -193,7 +193,7 @@ Unit, Integration, Playwright는 Docker 메모리·swap 제한과 외부 실행 
 호스트는 `<service>.redpact.test` 별칭, 포트는 컨테이너 내부 포트입니다. 포트를 공개하지
 않은 선택 서비스는 빈 맵이며 자격 증명이나 컨테이너 변수는 없습니다. 프로젝트 fixture가
 HTTP/DB 클라이언트와 정리를 소유합니다. Redpact SDK나 런타임 API 호출은 필요 없으며
-Integration과 Playwright는 `tests.env`를 공유하고 서비스 URL을 내부 DNS와 포트로 해석합니다.
+Integration과 Playwright는 `tests.env`를 공유하고 작성한 문자열 값을 그대로 사용합니다.
 
 추가 driver는 지원되는 루트 manifest와 고정 pnpm lockfile을 helper와 함께 제출합니다.
 [Order Desk provider](../examples/order-desk/tests/connections.js)와

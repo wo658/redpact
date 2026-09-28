@@ -428,9 +428,7 @@ function ConfigurationForm({
                 )}
                 {entry.kind === "json" && (
                   <FieldDescription>
-                    {t(
-                      "Choose a value type for each variable. Service endpoints resolve when tests run.",
-                    )}
+                    {t("Enter each environment variable as a key and a plaintext value.")}
                   </FieldDescription>
                 )}
               </Field>

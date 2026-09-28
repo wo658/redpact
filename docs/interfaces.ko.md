@@ -1,6 +1,6 @@
 ---
 title: HTTP와 MCP 인터페이스
-description: 공유 서비스, 요청 승인, 자격 증명과 로컬 접근 경계를 설명합니다.
+description: 공유 서비스, 요청 승인과 로컬 접근 경계를 설명합니다.
 ---
 
 # HTTP와 MCP 인터페이스
@@ -23,7 +23,6 @@ HTTP와 MCP는 같은 애플리케이션 workflow로 진입하고 실행·설정
 | `configure` | 절대 실행 `path`의 `describe`, `inspect`, `validate`. 스키마, 루트, 진단과 선택적 계획 반환 |
 | `run_tests` | 절대 `path`, 선택적 정확한 `tests` 경로. Integration 제출·실행 |
 | `get_run` | 반환된 실행 또는 검토 `id`로 상태, 결과와 환경 정리 조회 |
-| `request_keys` | 관찰된 `projectId`와 필요한 선언 자격 증명 `names`. 직접 사용자 입력 요청과 가용성 반환 |
 
 실행은 공유된 고정 프로젝트 설정에서 도출하며 `selection` 입력은 거부합니다.
 Configure는 설정 저장, 컨테이너 시작, 테스트 승인을 하지 않습니다.
@@ -53,7 +52,7 @@ snapshot을 제공합니다. 실행 이력과 리소스 제어는 지속적인 �
 다시 검증합니다. 나중의 파일 변경은 캡처 테스트를 대체하지 않습니다. 모든 앱 입력의
 동결, 충분한 테스트, TDD red나 Git 머지 승인을 입증하지는 않습니다.
 
-App 전용 `review_action`, `set_approval_policy`, `submit_key`는 이를 준수하는
+App 전용 `review_action`, `set_approval_policy`는 이를 준수하는
 클라이언트에서 모델에 숨겨집니다. 추측 불가능한 capability는 UI 전용 `_meta`로
 전달됩니다. Revision 검사로 오래된 작업을 거부하며 중복 최종 승인은 기존 실행을
 반환합니다. 기본 정책 변경은 새 요청에만 적용됩니다. Apps가 없는 호스트는 Ask를
@@ -62,17 +61,6 @@ App 전용 `review_action`, `set_approval_policy`, `submit_key`는 이를 준수
 브라우저 번들은 공식 Apps SDK를 사용하며 서버는 기존 SDK로 리소스·도구 메타데이터를
 등록합니다. 카드에 에셋을 포함하고 iframe HTTP 대신 host bridge를 사용합니다.
 영속 검토 복구는 [저장소](storage.md)에서 설명합니다.
-
-## 자격 증명 입력
-
-`{ "secret": "KEY_NAME" }`를 선언한 후 선택한 연결에 필요한 누락된 이름만 요청합니다.
-사용자는 카드나 Project Dependencies에서 직접 입력합니다. 에이전트는 값이 아닌
-가용성을 받으며 `submit_key`, HTTP 값 endpoint, 비공개 저장소를 읽어서는 안 됩니다.
-
-입력 capability는 프로젝트와 선언된 이름에 한정되고 30분 후 또는 재시작 시 만료되며
-실행을 승인하지 않습니다. 저장하면 카드 입력을 지웁니다. 공개 가용성과 비공개 편집 값은
-별도 endpoint입니다. Redaction은 선택한 알려진 값의 텍스트를 다루며 임의로 변환된
-출력, 스크린샷, 비디오와 작성 소스를 검사하지 않습니다.
 
 ## 로컬 접근 경계
 

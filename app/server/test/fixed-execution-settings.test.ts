@@ -12,9 +12,9 @@ const fixed = {
       kind: "shared-local",
       env: { app: { SEARCH_URL: "http://host.docker.internal:9200" } },
     },
-    remote: { kind: "remote", env: { app: { API_KEY: { secret: "API_KEY" } } } },
+    remote: { kind: "remote", env: { app: { API_KEY: "fixture-key" } } },
   },
-  tests: { env: { APP_URL: { service: "app", port: 3000, scheme: "http" } } },
+  tests: { env: { APP_URL: "http://app.redpact.test:3000" } },
 }
 
 test("고정 설정은 선택 없이 관리 서비스와 외부 연결의 실행 계획을 만든다", () => {
@@ -33,7 +33,7 @@ test("고정 설정은 선택 없이 관리 서비스와 외부 연결의 실행
   })
   expect(result.issues).toEqual([])
   expect(result.plan?.activeServices).toEqual(["app", "db", "payments"])
-  expect(result.plan?.requiredSecrets).toEqual(["API_KEY"])
+  expect(result.plan?.bindings.app.API_KEY).toBe("fixture-key")
 })
 
 test("모드 카탈로그와 외부 연결의 컨테이너 선언을 거부한다", () => {

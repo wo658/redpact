@@ -183,19 +183,9 @@ export function TestContainerView({
         </ContainerRow>
         {ready &&
           Object.entries(environment.endpoints).map(([name, endpoint]) => {
-            const binding = Object.values(environment.specification.tests.env).find(
-              (value) =>
-                typeof value === "object" &&
-                "service" in value &&
-                `${value.service}:${value.port}` === name,
-            )
             const browser = environment.specification.playwright
-            let scheme: string | undefined
-            if (binding && typeof binding === "object" && "service" in binding) {
-              scheme = binding.scheme ?? "http"
-            } else if (browser && `${browser.service}:${browser.port}` === name) {
-              scheme = "http"
-            }
+            const scheme =
+              browser && `${browser.service}:${browser.port}` === name ? browser.scheme : undefined
             return (
               <ContainerRow key={name} label={name}>
                 {scheme ? (

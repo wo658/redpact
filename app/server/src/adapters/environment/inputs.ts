@@ -46,7 +46,9 @@ export function checkCompose(model: ComposeModel, effective = false) {
     throw new Error("Compose include is not supported; list files explicitly")
   }
   if (model.secrets || model.configs) {
-    throw new Error("Compose file secrets/configs are not supported; use explicit input references")
+    throw new Error(
+      "Compose file secrets/configs are not supported; use explicit environment strings",
+    )
   }
   if (!model.services || typeof model.services !== "object") {
     throw new Error("Compose services are required")

@@ -52,7 +52,7 @@ Write tests before implementation and observe a real assertion failure. Do not t
 
 The retired Hurl implementation and skill were removed. Use the current server tests and Git history for historical context.
 
-Read-only Git inspection, existing-worktree routing, and managed worktree creation are implemented. Creation uses a separate native Git adapter with durable retry/recovery records. Test execution provisions temporary Compose environments. Project Container separately owns manual inspection environments; execution cannot reuse them. MCP Apps request approval and credential inputs are implemented; they do not establish human acceptance of code changes. Preserve their capability and client trust boundaries. Container declarations may validate but must not silently run without their requested environment.
+Read-only Git inspection, existing-worktree routing, and managed worktree creation are implemented. Creation uses a separate native Git adapter with durable retry/recovery records. Test execution provisions temporary Compose environments. Project Container separately owns manual inspection environments; execution cannot reuse them. MCP Apps request approval are implemented; they do not establish human acceptance of code changes. Preserve their capability and client trust boundaries. Container declarations may validate but must not silently run without their requested environment.
 
 ## Self-E2E through Redpact
 

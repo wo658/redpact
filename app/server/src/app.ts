@@ -26,7 +26,6 @@ import { playwrightRoutes } from "./interfaces/http/playwright.js"
 import { pluginUpdateRoutes } from "./interfaces/http/plugin-updates.js"
 import { projectFileRoutes } from "./interfaces/http/project-files.js"
 import { projectGraphRoutes } from "./interfaces/http/project-graph.js"
-import { projectSecretRoutes } from "./interfaces/http/project-secrets.js"
 import { projectSettingsRoutes } from "./interfaces/http/project-settings.js"
 import { pullRequestRoutes } from "./interfaces/http/pull-requests.js"
 import { reviewContentRoutes } from "./interfaces/http/review-content.js"
@@ -143,9 +142,6 @@ export function createApp(services: Services, options: { uiDirectory?: string } 
   }
   if (services.testContainer) {
     app.route("/api/projects", testContainerRoutes(services.testContainer))
-  }
-  if (services.projectSecrets) {
-    app.route("/api", projectSecretRoutes(services.projectSecrets))
   }
   if (services.captures && services.captureWorkflow) {
     app.route(

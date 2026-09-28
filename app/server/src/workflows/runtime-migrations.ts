@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from "node:util"
 import { Umzug } from "umzug"
 import {
   migrateEnvironmentSettings,
+  migrateFlatEnvironmentValues,
   validateCurrentEnvironmentRecord,
   validateMigrationHistory,
 } from "../core/runtime-migrations.js"
@@ -10,6 +11,7 @@ import type { MigrationFile, RuntimeMigrationFiles } from "../core/types/runtime
 // Append transformations; never change an applied migration's name or input contract.
 const migrations = [
   { name: "001-fixed-environment-settings", transform: migrateEnvironmentSettings },
+  { name: "002-flat-environment-values", transform: migrateFlatEnvironmentValues },
 ]
 const names = migrations.map(({ name }) => name)
 
@@ -21,7 +23,14 @@ export async function migrateRuntime(files: RuntimeMigrationFiles) {
   }
   try {
     const records = await files.environments(firstPending)
-    const planned = records.map((file) => ({ file, source: file.backup ?? file.source }))
+    const planned = await Promise.all(
+      records.map(async (file) => ({
+        file,
+        source: file.backup ?? file.source,
+        intermediates: [file.backup ?? file.source],
+        values: await files.environmentValues(file.id),
+      })),
+    )
     const completed = [...history]
     const migrator = new Umzug({
       logger: undefined,
@@ -29,7 +38,10 @@ export async function migrateRuntime(files: RuntimeMigrationFiles) {
         name,
         async up() {
           for (const item of planned) {
-            item.source = withRecordPath(item.file, () => transform(item.source, item.file.id))
+            item.source = withRecordPath(item.file, () =>
+              transform(item.source, item.file.id, item.values),
+            )
+            item.intermediates.push(item.source)
           }
         },
       })),
@@ -48,13 +60,15 @@ export async function migrateRuntime(files: RuntimeMigrationFiles) {
     // Umzug orders transformations in memory. Publish history only after all durable replacements.
     await migrator.up()
     validateMigrationHistory(completed, names)
-    for (const { file, source } of planned) {
+    for (const { file, source, intermediates } of planned) {
       withRecordPath(file, () => {
         validateCurrentEnvironmentRecord(source)
         if (
           file.backup !== undefined &&
           file.source !== file.backup &&
-          !isDeepStrictEqual(JSON.parse(file.source), JSON.parse(source))
+          !intermediates.some((value) =>
+            isDeepStrictEqual(JSON.parse(file.source), JSON.parse(value)),
+          )
         ) {
           throw new Error("Record differs from both its original backup and migrated output")
         }

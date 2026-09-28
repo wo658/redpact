@@ -1,6 +1,5 @@
 import { z } from "zod"
 
-const name = z.string().regex(/^[a-z][a-z0-9-]{0,63}$/)
 export const variableName = z
   .string()
   .regex(/^[A-Za-z_][A-Za-z0-9_]*$/)
@@ -18,13 +17,3 @@ export const relativeFile = z
     (value) => !value.startsWith("/") && !value.split(/[\\/]/).includes(".."),
     "Use a project-relative path",
   )
-export const inputValue = z.union([
-  z.strictObject({ value: z.string().max(10000) }),
-  z.strictObject({ secret: variableName }),
-])
-export const connectionValue = z.strictObject({
-  service: name,
-  port: z.number().int().min(1).max(65535),
-  value: z.enum(["host", "port", "url"]),
-  scheme: z.enum(["http", "https"]).optional(),
-})

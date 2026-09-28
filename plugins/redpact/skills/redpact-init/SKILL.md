@@ -41,7 +41,7 @@ features, remote publication or an unrequested merge.
 Application Container setup and dependency registration
 include bounded temporary execution to verify host access and the proposed connection; follow
 the dependency guide before advertising it as available. Ask for missing connection
-facts and use secure input for credentials. Do not run unrelated tests, unit commands,
+facts and request missing required environment values. Do not run unrelated tests, unit commands,
 persistent application/dev/preview processes or an unrequested Playwright capture.
 Readiness checks are required; screenshot review is not an init completion gate. Report authored/reused
 files, verified project and checkout paths, actual validation results and deferred

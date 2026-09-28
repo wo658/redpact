@@ -45,7 +45,7 @@ test("웹 연결 선언이 없는 포트는 HTTP로 검사하지 않는다", asy
 test("접속 검사 취소는 즉시 전달한다", async () => {
   const record = {
     settings: {
-      tests: { env: { APP: { service: "app", port: 8080, scheme: "http", value: "url" } } },
+      tests: { env: { APP: "http://app.redpact.test:8080" } },
     },
     specification: {},
   } as unknown as Environment

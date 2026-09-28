@@ -135,5 +135,5 @@ and verify the run in the intended worktree's list on the same instance. For cap
 apply the capture guide's artifact checks; for functional, inspect actual assertions.
 Report exact source identity, viewport and capture limitations. A started run,
 source catalog entry or attached image alone is not completed review evidence.
-Trace may be omitted by the runtime for secret-bearing executions; report availability
+Trace may be omitted by the runtime for executions with nonempty environment values; report availability
 rather than claiming every execution retained one.

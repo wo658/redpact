@@ -247,7 +247,7 @@ test("HTTP dependency discovery agrees with MCP configure selection preview", as
   expect((await request(`/api/worktrees/${worktreeId}/dependencies/missing`)).status).toBe(404)
   const selection = { services: ["app"], select: { payments: "mock" } }
   const preview = await (await request(`/api/worktrees/${worktreeId}/dependencies/plan`, {})).json()
-  expect(preview.plan.bindings.app).toEqual({ MODE: { value: "mock" } })
+  expect(preview.plan.bindings.app).toEqual({ MODE: "mock" })
   expect(
     (await operation("configure", { action: "validate", worktreeId })).structuredContent.plan,
   ).toEqual(preview.plan)
