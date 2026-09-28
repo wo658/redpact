@@ -26,29 +26,6 @@ export function planContainers(
       exists(id, `applicationServices.${application}.services`)
     }
   }
-  for (const [id, service] of Object.entries(model.services)) {
-    for (const other of Object.keys(service.depends_on ?? {})) {
-      exists(other, `compose.services.${id}.depends_on`)
-    }
-  }
-  const visiting = new Set<string>(),
-    done = new Set<string>()
-  function cycle(id: string) {
-    if (visiting.has(id)) {
-      issue("lifecycle_cycle", "compose", `Fixed prerequisite cycle at ${id}`)
-      return
-    }
-    if (done.has(id)) {
-      return
-    }
-    visiting.add(id)
-    for (const other of Object.keys(model.services[id]?.depends_on ?? {})) {
-      cycle(other)
-    }
-    visiting.delete(id)
-    done.add(id)
-  }
-  Object.keys(model.services).forEach(cycle)
   for (const [dependency, definition] of Object.entries(settings.dependencies)) {
     for (const config of [definition]) {
       const path = `dependencies.${dependency}`
@@ -83,9 +60,16 @@ export function planContainers(
     }
     active.add(id)
     plan.bindings[id] = {}
-    plan.prerequisites[id] = { ...model.services[id].depends_on }
+    plan.prerequisites[id] = Object.fromEntries(
+      Object.entries(model.services[id].depends_on ?? {}).map(([name, edge]) => [
+        name,
+        { condition: edge.condition ?? "service_started" },
+      ]),
+    )
     for (const other of Object.keys(plan.prerequisites[id])) {
-      visit(other, `${id}: fixed prerequisite`)
+      if (Object.hasOwn(model.services, other)) {
+        visit(other, `${id}: fixed prerequisite`)
+      }
     }
   }
   for (const id of settings.services) {
@@ -114,23 +98,6 @@ export function planContainers(
         }
         plan.bindings[target][key] = value
       }
-    }
-  }
-  // No hidden server-environment interpolation. Selected overrides can replace Compose placeholders.
-  for (const id of active) {
-    const service = structuredClone(model.services[id])
-    const env = service.environment as Record<string, unknown> | undefined
-    for (const key of Object.keys(plan.bindings[id])) {
-      if (env) {
-        delete env[key]
-      }
-    }
-    if (/(?<!\$)\$\{/.test(JSON.stringify(service))) {
-      issue(
-        "compose_input",
-        `compose.services.${id}`,
-        "Resolve Compose interpolation in project inputs or override the variable through dependency environment bindings",
-      )
     }
   }
   plan.activeServices = [...active].sort()

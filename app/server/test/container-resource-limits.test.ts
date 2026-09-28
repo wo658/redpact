@@ -64,3 +64,47 @@ dockerTest.each([
   },
   20000,
 )
+
+dockerTest(
+  "대량 출력을 제한하고 명시적 취소 뒤 컨테이너 실행을 중단한다",
+  async () => {
+    const name = `redpact-cancel-${randomUUID()}`
+    await execa("docker", ["run", "-d", "--name", name, "node:24-bookworm-slim", "sleep", "60"])
+    try {
+      const result = await executeLimitedContainer(
+        name,
+        [
+          "node",
+          "-e",
+          "process.stdout.write('a'.repeat(1024*1024));process.stderr.write('b'.repeat(1024*1024))",
+        ],
+        new AbortController().signal,
+        { memoryMiB: 128, timeoutSeconds: 10 },
+      )
+      expect(result.outcome).toBe("command_succeeded")
+      expect(result.truncated).toBe(true)
+      expect(result.stdout).toBe("a".repeat(256 * 1024))
+      expect(result.stderr).toBe("b".repeat(256 * 1024))
+      const controller = new AbortController()
+      const pending = executeLimitedContainer(
+        name,
+        ["node", "-e", "while(true){}"],
+        controller.signal,
+        { memoryMiB: 128, timeoutSeconds: 10 },
+      )
+      const timer = setTimeout(() => controller.abort(), 1000)
+      try {
+        const cancelled = await pending
+        expect(cancelled.outcome).toBe("cancelled")
+        expect(cancelled.resourceLimit).toBeUndefined()
+        const [container] = JSON.parse((await execa("docker", ["inspect", name])).stdout)
+        expect(container.State.Running).toBe(false)
+      } finally {
+        clearTimeout(timer)
+      }
+    } finally {
+      await execa("docker", ["rm", "-fv", name])
+    }
+  },
+  20000,
+)

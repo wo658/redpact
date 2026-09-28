@@ -108,7 +108,9 @@ verified by `REDPACT_DOCKER_TESTS=1` and `test/playwright-docker.test.ts`.
 
 `dependency-mode-names.test.ts` checks all four fixed kinds, rejection of managed
 services on external dependencies, and rejection of retired execution selection input.
-Fixture services are declarations, not evidence of actual PostgreSQL or remote execution.
+It also checks that authored Compose ports and mounts are accepted without additional
+Redpact policy. Fixture services are declarations, not evidence of actual PostgreSQL
+or remote execution.
 
 `runtime-migrations.test.ts` starts the real CLI with disposable legacy records,
 checks HTTP readback, exact original backups and restart stability, and verifies

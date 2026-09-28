@@ -109,3 +109,5 @@ TypeScript, Hono와 일반 함수를 사용합니다. controller 클래스, DI �
 구현: [의존성 연결](../app/server/src/main.ts),
 [Core 계약](../app/server/src/core/types/services.ts),
 [아키텍처 테스트](../app/server/test/architecture.test.ts).
+
+Docker 런타임 접근에는 공개 Testcontainers 런타임 클라이언트를 사용합니다. 전용 API와 해당 클라이언트가 노출하는 Docker 연결로 처리하는 제한된 예외는 [실행](execution.md)에 정리되어 있습니다.

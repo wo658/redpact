@@ -7,8 +7,8 @@ test("네 고정 의존성 종류를 함께 구성하고 실행 선택 API를 �
   const path = await step("관리 서비스와 외부 연결을 함께 선언한다", () =>
     node<string>(`
     import {mkdtempSync,mkdirSync,writeFileSync} from 'node:fs';
-    const root=mkdtempSync('/tmp/fixed-kinds-');mkdirSync(root+'/.redpact');
-    writeFileSync(root+'/compose.yaml',JSON.stringify({services:{app:{image:'alpine:3.21'},db:{image:'postgres:17'},payments:{image:'alpine:3.21'}}}));
+    const root=mkdtempSync('/tmp/fixed-kinds-');mkdirSync(root+'/.redpact');mkdirSync(root+'/data');
+    writeFileSync(root+'/compose.yaml',JSON.stringify({services:{app:{image:'alpine:3.21',ports:['127.0.0.1:54329:3000'],volumes:['./data:/data']},db:{image:'postgres:17'},payments:{image:'alpine:3.21'}}}));
     writeFileSync(root+'/.redpact/settings.json',JSON.stringify({composeFiles:['compose.yaml'],services:['app'],dependencies:{database:{kind:'isolated',services:['db']},payments:{kind:'mock',services:['payments']},search:{kind:'shared-local',env:{app:{SEARCH_URL:'http://host.docker.internal:9200'}}},remote:{kind:'remote',env:{app:{API_URL:'https://api.example.test'}}}}}));
     console.log(JSON.stringify(root));
   `),

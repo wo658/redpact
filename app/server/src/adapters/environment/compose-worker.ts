@@ -23,7 +23,8 @@ try {
     .withAutoCleanup(false)
     .withStartupTimeout(spec.timeoutMs)
     .withBuild()
-    .up()
+    .up(spec.services)
+  process.stdout.write(JSON.stringify({ endpoints: {} }))
 } catch (error) {
   process.stderr.write(
     `${error instanceof Error ? error.message : "Compose startup failed"}\nResources are retained.\n`,

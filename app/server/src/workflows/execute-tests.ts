@@ -242,7 +242,6 @@ export function createExecuteTests(deps: {
                     runtime: {
                       ownerId: environment.ownerId,
                       environmentId: environment.id,
-                      network: `${environment.projectName}_redpact-runner`,
                     },
                   }
                 : {}),

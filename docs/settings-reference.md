@@ -29,6 +29,11 @@ paths, conflicting variable writes and source limits are rejected. Accepted runs
 capture the shared settings source and digest separately from the execution
 checkout's source identity. Later edits affect future executions only.
 
+Compose service references are nonempty strings, without Redpact's lowercase identifier
+rule. Compose owns service-name syntax; dependency and Playwright target identifiers
+retain their settings schema. See [execution](execution.md#compose-and-source-capture)
+for the distinction between settings validation and Compose runtime behavior.
+
 Saving or validating settings never starts code or grants execution approval.
 Every execution owns fresh resources; sharing settings never reuses another run's
 containers, networks or credentials snapshot.

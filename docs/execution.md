@@ -64,12 +64,13 @@ the run environment and are removed with it. Preserve metadata, logs, results an
 from the test verdict, and remains retryable. Startup reconciles labelled resources
 and removes interrupted environments; it never reruns tests automatically.
 
-Before starting a temporary Compose environment, Redpact assigns every selected
-build service an environment-owned image tag, including services that declare both
-`build` and `image`. It overrides additional build tags and captures these temporary
-tags in an image-cleanup manifest. Cleanup does not re-evaluate original Compose files,
-inactive services or required environment expressions. Existing project image tags and
-image-only dependencies are preserved; no application credentials are needed again.
+Temporary Compose builds without an authored `image` use Compose's project-specific
+image tag with owner/environment labels. Cleanup records and removes only that owned
+tag. Authored `image`, `build.tags`, pull policy and build options remain unchanged;
+those tags and external networks/volumes are not cleanup targets. Named resources
+are removed only when their labels identify this environment. Anonymous volumes are
+removed with their owned container. Cleanup never treats a mounted volume as owned
+merely because an application uses it, and does not re-evaluate Compose expressions.
 Unit build images carry owner/run labels so cleanup also finds them when container
 startup fails before an image ID is recorded.
 
@@ -117,21 +118,36 @@ any HTTP response proves reachability, not application health.
 
 ## Compose and source capture
 
-Compose defines images, commands, internal ports, networks, healthchecks and fixed
-prerequisites. Redpact selects the service closure, applies dependency bindings,
-adds ownership and dynamic host-loopback publication, and observes readiness.
-Long-running services need healthchecks; completion jobs use the appropriate
-`service_completed_successfully` dependency. Validate before provisioning.
+Compose is the application execution definition. Redpact applies the configured
+service selection and explicit dependency environment bindings, records ownership,
+and adds runner connectivity where the service's network mode permits it. It does
+not impose a managed Compose subset: fixed host ports, host mounts, privileges,
+custom container names, external resources, `env_file`, configs/secrets and advanced
+build options are not rejected as Redpact policy. Authored port publications and
+image tags are preserved. Concurrent executions may conflict when the Compose
+project deliberately uses fixed ports or names; the native error is retained.
 
-The supported managed subset rejects host network/PID/IPC, privileged devices,
-fixed container names or host ports, external resources, host bind mounts, `env_file`,
-file secrets/configs, includes/extends, hooks and remote build inputs. Multiple
-explicit Compose files are supported; there is no profile selection field. Use a
-local Unix Docker socket and Compose supporting `!override` (v2.24.4+).
+Compose/Testcontainers handle native configuration, build, startup and wait errors.
+A healthcheck is optional. When present, its reported health is observed; otherwise
+a running service is accepted. Redpact does not add a host HTTP reachability gate;
+actual HTTP/DB behavior is established by test assertions. Completion jobs use `service_completed_successfully`.
+The Redpact settings schema, conflicting dependency bindings, input identity,
+cancellation and cleanup ownership checks remain separate from Compose policy.
 
-Compose capture follows selected local build contexts and their Docker ignore rules,
-including Dockerfile-specific precedence. Image-only services do not scan source.
-Paths, contents, modes and link text contribute to identity; symlinks are not traversed.
+`docker compose config` is used to resolve merged inputs and paths for capture,
+not to run an additional policy validator. Testcontainers 12.1.0 has no public
+resolved-model API. Resolved service definitions preserve Compose options before
+Testcontainers starts the selected services. The server passes its minimal process
+environment and explicitly supplied bindings, not arbitrary server credentials.
+Project `.env` and `env_file` are interpreted by Compose. Use a local Unix Docker
+socket and a Compose version supporting the constructs your project declares.
+
+Capture copies selected project-local build contexts with Docker ignore precedence.
+External, remote and linked build inputs remain at their authored locations and are
+handled by Compose/BuildKit; Redpact does not read or copy their contents. Host mounts
+and file-backed resources also remain external runtime inputs. These inputs are not
+an immutable captured application snapshot. Image-only services do not scan source.
+Paths, contents, modes and link text of captured files contribute to identity.
 Unit excludes host dependency directories, including `node_modules`, `.pnpm-store`,
 `.venv` and `venv`, before Docker build; links inside excluded directories are not
 followed or copied. Input capture has no fixed
@@ -224,3 +240,32 @@ Implementation: [execution workflow](../app/server/src/workflows/execute-tests.t
 [Unit workflow](../app/server/src/workflows/unit-tests.ts),
 [Playwright record workflow](../app/server/src/workflows/playwright.ts),
 [resource schema](../app/server/src/core/test-resource-schema.ts).
+
+## Testcontainers delegation
+
+The pinned `testcontainers@12.1.0` owns Compose startup, image build/pull,
+container handles, mapped-port discovery, container inspection, ordinary exec,
+archive retrieval, stop/removal and network removal. The exported runtime client
+also resolves existing container IDs after a worker exits or the server restarts;
+recovery does not reconstruct a live Compose environment handle. All runtime
+access uses the local socket selected by Testcontainers. Runner network IDs are
+resolved from the runtime rather than passed as an unverified generated name.
+
+Redpact still owns lifecycle admission, cancellation, durable identity, resource
+ownership, image retention, evidence and cleanup retries. Public Testcontainers
+APIs do not cover every operation in this pinned version. Its exposed Docker
+connection supplies these narrowly scoped exceptions:
+
+- Listing stopped containers and owned networks/volumes, daemon identity and limits.
+- Selective image deletion and volume inspection/removal. Image inspection uses
+  Testcontainers; deletion never prunes shared images or Docker build caches.
+- Finite final log snapshots: `ContainerClient.logs` always follows and suppresses
+  retrieval errors in this version. Cleanup must retain failures and shutdown output.
+- Bounded streaming exec, memory/swap updates and historical OOM queries. Ordinary
+  `exec` buffers the complete output and has no cancellation/output-limit contract.
+
+Compose input resolution still uses `docker compose config` for the capture contract
+above; the public runtime client does not expose a resolved-model API. Archive bytes come from Testcontainers and the
+host `tar` command extracts runner outputs. Revisit these exceptions and the
+failed-start patch when upgrading Testcontainers. They are not full delegation of
+image deletion, log snapshots or bounded execution to dedicated library APIs.

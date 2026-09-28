@@ -54,6 +54,10 @@ behavior, managed services, or both. External connections cannot declare service
 are never started or removed by Redpact. Shared services need fixture isolation for
 concurrent executions.
 
+Compose remains the execution definition; settings validation does not impose a
+restricted Compose subset. See [Compose and source capture](execution.md#compose-and-source-capture)
+for ownership, runtime input capture and native startup error handling.
+
 ## Environment and connections
 
 Dependency `env` is keyed by destination Compose service and variable. Strings override

@@ -1,6 +1,6 @@
 import { matchesGlob } from "node:path"
 import { z } from "zod"
-import { variableName } from "./settings-values.js"
+import { composeServiceName, variableName } from "./settings-values.js"
 import { unitTestSettingsSchema } from "./unit-test-schema.js"
 export const name = z.string().regex(/^[a-z][a-z0-9-]{0,63}$/)
 export const projectPath = z
@@ -15,7 +15,7 @@ export const projectPath = z
     "Use a normalized project-relative path",
   )
 const names = z
-  .array(name)
+  .array(composeServiceName)
   .max(100)
   .refine((v) => new Set(v).size === v.length, "Duplicate names")
 const bounded = <T extends z.ZodType>(key: z.ZodString, value: T, max: number) =>
@@ -47,7 +47,11 @@ export const dependencyDefinition = z
     description: explanation.optional(),
     kind: z.enum(["isolated", "mock", "shared-local", "remote"]),
     services: names.default([]),
-    env: bounded(name, bounded(serviceVariableName, containerBinding, 100), 100).default({}),
+    env: bounded(
+      composeServiceName,
+      bounded(serviceVariableName, containerBinding, 100),
+      100,
+    ).default({}),
   })
   .superRefine((dependency, ctx) => {
     if (dependency.kind === "isolated" && !dependency.services.length) {
@@ -105,7 +109,7 @@ export const settingsShape = z.strictObject({
         (targets) => Object.keys(targets).length > 0,
         "At least one Playwright target is required",
       ),
-      service: name,
+      service: composeServiceName,
       port: z.number().int().min(1).max(65535),
       scheme: z.enum(["http", "https"]).default("http"),
       viewport: z

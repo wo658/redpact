@@ -113,3 +113,5 @@ second current-state document.
 Implementation: [composition](../app/server/src/main.ts),
 [core contracts](../app/server/src/core/types/services.ts),
 [architecture tests](../app/server/test/architecture.test.ts).
+
+Docker runtime access uses the exported Testcontainers runtime client. The dedicated APIs and the limited operations performed through its exposed Docker connection are listed in [execution](execution.md).

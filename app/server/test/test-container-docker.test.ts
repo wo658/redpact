@@ -15,9 +15,10 @@ import { createTestContainer } from "../src/workflows/test-container.js"
 import { createTestWorktrees } from "./helpers/worktrees.js"
 
 const dockerTest = process.env.REDPACT_DOCKER_TESTS === "1" ? test : test.skip
-dockerTest.each(["0.0.0.0", "127.0.0.1"])(
-  "컨테이너 바인딩 %s의 호스트 접속 가능 여부를 확인하고 재실행한다",
-  async (host) => {
+dockerTest(
+  "컨테이너의 실제 HTTP 응답과 소스 변경 후 재실행을 확인한다",
+  async () => {
+    const host = "0.0.0.0"
     const root = await mkdtemp(join(tmpdir(), "redpact-manual-docker-"))
     const projectRoot = join(root, "project")
     const dataRoot = join(root, "data")
@@ -107,18 +108,6 @@ dockerTest.each(["0.0.0.0", "127.0.0.1"])(
       await expect(service.start(project.id)).resolves.toMatchObject({
         environment: { state: "preparing" },
       })
-      if (host === "127.0.0.1") {
-        await environments.idle()
-        const state = await service.inspect(project.id)
-        expect(state.environment?.state).toBe("failed")
-        const log = await readFile(
-          join(dataRoot, "environments", state.environment!.id, "preparation.log"),
-          "utf8",
-        )
-        expect(log).toContain("app:8080")
-        expect(log).toContain("not reachable from the host")
-        return
-      }
       const first = await ready()
       expect(await (await fetch(first.url)).text()).toBe("original")
       await writeFile(join(projectRoot, "arbitrary-cache/noise"), "changed")

@@ -56,11 +56,13 @@ Integration과 Playwright는 공유 러너 이미지를 유지하고, 임시 앱
 테스트 판정과 다르며 재시도할 수 있습니다. 시작 시 label로 리소스를 대조하고 중단된
 환경을 제거하며 테스트를 자동 재실행하지 않습니다.
 
-임시 Compose 환경을 시작하기 전에 선택된 모든 빌드 서비스에 환경 소유 이미지 태그를
-부여합니다. `build`와 `image`를 함께 선언한 서비스도 포함하며 추가 빌드 태그는 덮어씁니다.
-이 임시 태그를 이미지 정리용 manifest에 캡처하므로 원본 Compose 파일, 비활성 서비스,
-필수 환경변수 표현식을 다시 평가하지 않고 정리합니다. 기존 프로젝트 이미지 태그와
-이미지 전용 의존성은 보존하며 애플리케이션 자격증명을 다시 제공할 필요가 없습니다.
+`image`를 명시하지 않은 임시 Compose 빌드는 Compose의 프로젝트별 이미지 태그와
+소유자·환경 label을 사용합니다. 정리는 그 소유 태그만 기록하고 제거합니다.
+명시한 `image`, `build.tags`, pull 정책과 빌드 옵션은 변경하지 않으며, 해당 태그와
+외부 네트워크·볼륨은 정리 대상이 아닙니다. 이름 있는 리소스는 label이 이번 환경의
+소유권을 나타낼 때만 제거합니다. 익명 볼륨은 소유 컨테이너와 함께 제거합니다.
+앱이 마운트했다는 이유만으로 볼륨을 소유한 것으로 간주하지 않으며,
+정리할 때 Compose 표현식을 다시 평가하지 않습니다.
 Unit 빌드 이미지에는 소유자·실행 label을 붙여 이미지 ID 기록 전 컨테이너 시작이
 실패해도 정리할 수 있습니다.
 
@@ -104,21 +106,35 @@ Restart는 기존 소유 리소스를 제거한 후 새 입력을 캡처하며 �
 
 ## Compose와 소스 캡처
 
-Compose가 이미지, 명령, 내부 포트, 네트워크, healthcheck, 고정 선행 의존성을 정의합니다.
-Redpact는 서비스 집합을 선택하고 의존성 바인딩, 소유권, 동적 호스트 loopback 포트를
-적용한 후 준비 상태를 관찰합니다. 장기 실행 서비스에는 healthcheck가 필요하고
-완료 작업에는 적절한 `service_completed_successfully` 의존성을 사용합니다.
-프로비저닝 전에 검증하세요.
+Compose는 앱의 실행 정의입니다. Redpact는 설정된 서비스 선택과 명시적 의존성
+환경변수 바인딩을 적용하고 소유권을 기록하며, 서비스의 네트워크 모드가 허용하면
+러너 연결을 추가합니다. 별도의 관리용 Compose 부분집합을 강제하지 않습니다.
+고정 호스트 포트, 호스트 마운트, 권한, 컨테이너명, 외부 리소스, `env_file`,
+configs/secrets와 고급 빌드 옵션을 Redpact 정책으로 거부하지 않습니다.
+작성된 포트 공개와 이미지 태그를 보존합니다. 고정 포트나 이름을 의도적으로
+사용하면 동시 실행이 충돌할 수 있으며, 해당 네이티브 오류를 보존합니다.
 
-관리되는 Compose 부분집합은 host network/PID/IPC, privileged 장치, 고정 컨테이너명과
-호스트 포트, 외부 리소스, 호스트 bind mount, `env_file`, 파일 secrets/configs,
-include/extends, hook과 원격 빌드 입력을 거부합니다. 명시된 Compose 파일 여러 개는
-지원하지만 profile 선택은 없습니다. 로컬 Unix Docker socket과 `!override`를 지원하는
-Compose(v2.24.4+)를 사용하세요.
+Compose/Testcontainers가 네이티브 설정·빌드·시작·대기 오류를 처리합니다.
+healthcheck는 선택 사항입니다. 있으면 보고된 health를 관찰하고 없으면 실행 중인
+서비스를 인정합니다. Redpact는 호스트 HTTP 도달 가능 여부를 별도 시작 조건으로
+검사하지 않으며, 실제 HTTP·DB 동작은 테스트 어설션으로 확인합니다. 완료 작업에는 `service_completed_successfully`를 사용합니다.
+Redpact 설정 스키마, 의존성 바인딩 충돌, 입력 식별, 취소와 정리 소유권 검사는
+Compose 정책과 별도로 유지합니다.
 
-Compose 캡처는 선택된 로컬 build context와 Dockerfile별 우선순위를 포함한 Docker
-ignore 규칙을 따릅니다. 이미지 전용 서비스는 소스를 스캔하지 않습니다. 경로·내용·mode·
-링크 텍스트가 식별자에 포함되며 symlink를 따라가지 않습니다. Unit은 Docker 빌드 전
+`docker compose config`는 캡처에 필요한 병합 입력과 경로 해석에 사용하며,
+별도의 정책 검증기를 실행하기 위한 단계가 아닙니다. Testcontainers 12.1.0에는
+공개 유효 모델 API가 없습니다. 해석된 서비스 정의는 Compose 옵션을 보존한 채
+Testcontainers에 전달됩니다. 서버는 최소 프로세스 환경과 명시적으로 제공된
+바인딩만 전달하며 임의의 서버 자격증명을 전달하지 않습니다. 프로젝트 `.env`와
+`env_file`은 Compose가 해석합니다. 로컬 Unix Docker socket과 프로젝트가 선언한
+구문을 지원하는 Compose 버전을 사용하세요.
+
+캡처는 선택된 프로젝트 내부 build context에 Docker ignore 우선순위를 적용해
+복사합니다. 외부·원격·링크된 빌드 입력은 작성된 위치를 유지하고 Compose/BuildKit이
+처리하며, Redpact는 내용을 읽거나 복사하지 않습니다. 호스트 마운트와 파일 기반
+리소스도 외부 런타임 입력으로 유지합니다. 이 입력은 불변 앱 snapshot에 포함되지
+않습니다. 이미지 전용 서비스는 소스를 스캔하지 않습니다. 캡처한 파일의 경로·내용·
+mode·링크 텍스트가 식별자에 포함됩니다. Unit은 Docker 빌드 전
 `node_modules`, `.pnpm-store`, `.venv`, `venv` 등 호스트 의존성 디렉터리를 제외하며,
 제외된 디렉터리의 링크를 따라가거나 복사하지 않습니다. 입력 캡처에는 고정 파일 개수·전체 용량 상한이
 없으며 제출 테스트 제한은 별개입니다. 동시 편집, 외부 다운로드, 변경 가능한 이미지
@@ -205,3 +221,32 @@ Integration과 Playwright는 `tests.env`를 공유하고 작성한 문자열 값
 [Unit workflow](../app/server/src/workflows/unit-tests.ts),
 [Playwright record workflow](../app/server/src/workflows/playwright.ts),
 [리소스 스키마](../app/server/src/core/test-resource-schema.ts).
+
+## Testcontainers 위임
+
+고정 버전 `testcontainers@12.1.0`이 Compose 시작, 이미지 빌드·pull,
+컨테이너 핸들, 매핑 포트 조회, 컨테이너 검사, 일반 exec, 아카이브 조회,
+중지·제거와 네트워크 제거를 담당합니다. 공개 런타임 클라이언트는 워커 종료나
+서버 재시작 뒤에도 기존 컨테이너 ID를 조회합니다. 복구 과정에서 실행 중인
+Compose 환경 핸들을 재구성하지 않습니다. 모든 런타임 접근은 Testcontainers가
+선택한 로컬 소켓을 사용합니다. 러너 네트워크 ID는 생성한 이름을 그대로 넘기지
+않고 런타임에서 조회합니다.
+
+Redpact는 실행 수락, 취소, 영속 식별 정보, 리소스 소유권, 이미지 보존,
+증거와 정리 재시도를 계속 담당합니다. 고정 버전의 공개 Testcontainers API가
+지원하지 않는 다음 작업은 해당 클라이언트가 노출하는 Docker 연결로 처리합니다.
+
+- 중지된 컨테이너와 소유 네트워크·볼륨 목록, 데몬 식별 정보와 한도 조회.
+- 선택적 이미지 삭제와 볼륨 검사·제거. 이미지 검사는 Testcontainers를 사용하며,
+  삭제 시 공유 이미지나 Docker 빌드 캐시를 일괄 정리하지 않습니다.
+- 종료 로그 스냅샷: 이 버전의 `ContainerClient.logs`는 항상 스트림을 계속
+  구독하고 조회 오류를 숨깁니다. 정리는 오류와 종료 출력을 보존해야 합니다.
+- 출력 상한을 둔 스트리밍 exec, 메모리·swap 설정과 과거 OOM 조회.
+  일반 `exec`는 전체 출력을 버퍼링하며 취소·출력 상한 계약이 없습니다.
+
+Compose 입력 해석은 위 캡처 계약을 위해 `docker compose config`를 사용합니다.
+공개 런타임 클라이언트가 유효 모델 API를 제공하지 않기 때문입니다. 러너 출력의
+아카이브는 Testcontainers로 조회하고 호스트 `tar` 명령으로 추출합니다.
+Testcontainers 업그레이드 시 이러한 예외와 시작 실패 패치를 재평가합니다.
+이미지 삭제, 로그 스냅샷, 출력 상한을 둔 실행을 라이브러리 전용 API에 완전히
+위임한 것으로 간주하지 않습니다.

@@ -17,6 +17,15 @@ import type { CaptureRun, CaptureRunner } from "../../core/types/playwright.js"
 import type { ReadTestResources } from "../../core/types/test-resources.js"
 import { snapshotInputs } from "../environment/inputs.js"
 import { executeLimitedContainer } from "../environment/limited-command.js"
+import {
+  containersWithLabels,
+  copyContainerOutput,
+  inspectContainer,
+  removeContainer,
+  runnerNetwork,
+  runtimeIdentity,
+  runtimeSocket,
+} from "../environment/runtime.js"
 import { minimalEnvironment } from "../environment/testcontainers.js"
 
 import { cleanupPlaywrightWorktree } from "./worktree.js"
@@ -33,25 +42,12 @@ export function createCaptureRunner(
 ): CaptureRunner {
   const inputs = (id: string) => join(directory, "playwright-inputs", id)
   const output = (id: string, side: string) => join(directory, "playwright-runs", id, side)
-  async function docker(args: string[], timeout = 30000) {
-    return (
-      await execa("docker", args, {
-        env: minimalEnvironment(),
-        extendEnv: false,
-        timeout,
-        maxBuffer: 1024 * 1024,
-      })
-    ).stdout
-  }
   async function verifyRuntime(runtimeId?: string) {
-    const actual = (await docker(["info", "--format", "{{.ID}}"])).trim()
-    if (!actual || (runtimeId && actual !== runtimeId)) {
-      throw new Error("Docker runtime identity mismatch")
-    }
-    return actual
+    return runtimeIdentity(runtimeId)
   }
+
   async function owned(id: string, run: CaptureRun, side: string) {
-    const [v] = JSON.parse(await docker(["inspect", id]))
+    const v = await inspectContainer(id)
     if (
       v.Config.Labels?.["io.redpact.owner"] !== ownerId ||
       v.Config.Labels?.["io.redpact.capture"] !== run.id ||
@@ -104,7 +100,7 @@ export function createCaptureRunner(
       if (!target) {
         throw new Error("Selected application container is unavailable")
       }
-      const [container] = JSON.parse(await docker(["inspect", target.id]))
+      const container = await inspectContainer(target.id)
       if (
         container.Config.Labels?.["io.redpact.owner"] !== ownerId ||
         container.Config.Labels?.["io.redpact.environment"] !== environment.id
@@ -150,7 +146,7 @@ export function createCaptureRunner(
           ownerId,
           id: run.id,
           side,
-          network: `${environment.projectName}_redpact-runner`,
+          network: await runnerNetwork(environment.projectName, ownerId, environment.id),
           environment: {
             ...environment.settings.tests.env,
             REDPACT_CONNECTIONS_FILE: "/review/connections.json",
@@ -162,7 +158,7 @@ export function createCaptureRunner(
         }),
         ipc: true,
         detached: true,
-        env: minimalEnvironment(),
+        env: { ...minimalEnvironment(), DOCKER_HOST: await runtimeSocket() },
         extendEnv: false,
         cancelSignal: signal,
         forceKillAfterDelay: 2000,
@@ -207,7 +203,7 @@ export function createCaptureRunner(
       signal.throwIfAborted()
       const stage = join(inputs(run.id), `output-${side}`)
       await mkdir(stage, { recursive: true, mode: 0o700 })
-      await docker(["cp", `${id}:/review/output/.`, stage])
+      await copyContainerOutput(id, stage)
       const reportPath = join(stage, "report.json")
       if (!existsSync(reportPath)) {
         throw new Error(
@@ -252,23 +248,14 @@ export function createCaptureRunner(
       const recorded = run[side]
       if (recorded.runtimeId) {
         await verifyRuntime(recorded.runtimeId)
-        const ids = (
-          await docker([
-            "ps",
-            "-aq",
-            "--filter",
-            `label=io.redpact.owner=${ownerId}`,
-            "--filter",
-            `label=io.redpact.capture=${run.id}`,
-            "--filter",
-            `label=io.redpact.capture-side=${side}`,
-          ])
-        )
-          .split(/\s+/)
-          .filter(Boolean)
-        for (const id of ids) {
-          await owned(id, run, side)
-          await docker(["rm", "-fv", id])
+        const containers = await containersWithLabels([
+          `io.redpact.owner=${ownerId}`,
+          `io.redpact.capture=${run.id}`,
+          `io.redpact.capture-side=${side}`,
+        ])
+        for (const container of containers) {
+          await owned(container.Id, run, side)
+          await removeContainer(container.Id)
         }
       }
     },

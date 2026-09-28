@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+export const composeServiceName = z.string().min(1)
 export const variableName = z
   .string()
   .regex(/^[A-Za-z_][A-Za-z0-9_]*$/)

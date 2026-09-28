@@ -282,7 +282,7 @@ dockerTest(
 )
 
 dockerTest(
-  "database jobs run for each execution and named volumes do not leak rows between runs",
+  "동시 실행은 HTTP·DB 포트를 분리하고 각 실행의 마이그레이션과 데이터를 격리한다",
   async () => {
     const root = await mkdtemp(join(tmpdir(), "redpact-database-")),
       project = join(root, "project"),
@@ -332,13 +332,28 @@ dockerTest(
       ownerId: randomUUID(),
       adapter: createComposeAdapter(data),
     })
-    const runner = createVitestRunner(data)
+    const delegate = createVitestRunner(data)
+    let concurrent = false
+    const concurrentEndpoints: Array<Record<string, { host: string; port: number }>> = []
+    const runner: typeof delegate = {
+      ...delegate,
+      async execute(...args) {
+        if (concurrent) {
+          const environment = environments.get(args[6]!.runtime!.environmentId)
+          concurrentEndpoints.push(environment.endpoints)
+          await expect.poll(() => concurrentEndpoints.length, { timeout: 60000 }).toBe(2)
+          const endpoint = environment.endpoints["app:3000"]
+          expect((await fetch(`http://${endpoint.host}:${endpoint.port}/health`)).ok).toBe(true)
+        }
+        return delegate.execute(...args)
+      },
+    }
     const runs = createTestExecution({
       store: storage.store,
       worktrees,
       environments,
       runner,
-      scheduler: createScheduler(),
+      scheduler: createScheduler(() => 2),
       settings: createSettingsService(project),
     })
     const submissions = createSubmissions({
@@ -361,7 +376,9 @@ dockerTest(
       await expect.poll(() => runs.get(run.id).state, { timeout: 90000 }).toBe("finished")
       const environmentId = runs.get(run.id).environmentId!
       ids.push(environmentId)
-      expect(runs.get(run.id).result).toMatchObject({ outcome: "passed" })
+      expect(runs.get(run.id).result, JSON.stringify(runs.get(run.id).result)).toMatchObject({
+        outcome: "passed",
+      })
       const state = environments.get(environmentId)
       expect(state.services).toContainEqual({ name: "migrate", job: true })
       await expect
@@ -374,6 +391,16 @@ dockerTest(
       )
       await execute(
         "expect(await (await fetch(process.env.APP_URL+'/records')).json()).toEqual([]);",
+      )
+      concurrent = true
+      const insertion =
+        "const response=await fetch(process.env.APP_URL,{method:'POST',body:JSON.stringify({id:'same-id',value:'isolated'})});expect(response.ok).toBe(true);expect(await (await fetch(process.env.APP_URL+'/records')).json()).toEqual([{id:'same-id',value:'isolated'}]);"
+      await Promise.all([execute(insertion), execute(insertion)])
+      expect(concurrentEndpoints[0]["app:3000"].port).not.toBe(
+        concurrentEndpoints[1]["app:3000"].port,
+      )
+      expect(concurrentEndpoints[0]["db:5432"].port).not.toBe(
+        concurrentEndpoints[1]["db:5432"].port,
       )
       expect(ids[0]).not.toBe(ids[1])
     } finally {

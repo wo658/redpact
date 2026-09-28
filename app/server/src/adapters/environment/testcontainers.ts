@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs"
-import { appendFile, mkdir, rm, writeFile } from "node:fs/promises"
-import { join } from "node:path"
+import { appendFile, mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { dirname, isAbsolute, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { isDeepStrictEqual } from "node:util"
 import { execa } from "execa"
-import { stringify } from "yaml"
+import { parse, stringify } from "yaml"
 import { environmentRedactions, runnerServiceHost } from "../../core/runner-environment.js"
 import { testSelectionSchema } from "../../core/settings-schema.js"
 import type {
@@ -15,9 +15,19 @@ import type {
 import { minimalEnvironment } from "../process/environment.js"
 import { readJsonSettings } from "../settings/json.js"
 import { snapshotComposeInputs } from "./compose-inputs.js"
-import type { DockerInspection, EffectiveCompose } from "./compose-model.js"
-import { checkCompose, contained, validateComposeInputs } from "./inputs.js"
-import { verifyBrowserEndpoints } from "./reachability.js"
+import type { EffectiveCompose } from "./compose-model.js"
+
+import {
+  containerLogSnapshot,
+  containersWithLabels,
+  inspectContainer,
+  inspectImage,
+  removeContainer,
+  removeImage,
+  runtimeClient,
+  runtimeIdentity,
+  runtimeSocket,
+} from "./runtime.js"
 
 import { stageSelection } from "./selection.js"
 
@@ -27,41 +37,21 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
   function directory(record: Environment) {
     return join(dataDir, "environments", record.id)
   }
-  async function docker(args: string[], timeout = 30000) {
-    const result = await execa("docker", args, {
-      env: minimalEnvironment(),
-      extendEnv: false,
-      timeout,
-      maxBuffer: 4 * 1024 * 1024,
-      reject: false,
-    })
-    if (result.exitCode !== 0) {
-      throw new Error("Docker operation failed")
-    }
-    return args[0] === "logs" ? `${result.stdout}\n${result.stderr}` : result.stdout
-  }
-  async function imageId(name: string) {
-    const result = await execa("docker", ["image", "inspect", "--format", "{{.Id}}", name], {
-      env: minimalEnvironment(),
-      extendEnv: false,
-      timeout: 30000,
-      maxBuffer: 1024 * 1024,
-      reject: false,
-    })
-    return result.exitCode === 0 ? result.stdout.trim() : null
-  }
   async function runtime(record: Environment) {
-    const id = (await docker(["info", "--format", "{{.ID}}"])).trim()
-    if (!id || (record.runtimeId && record.runtimeId !== id)) {
-      throw new Error("Runtime identity mismatch")
-    }
-    return id
+    return runtimeIdentity(record.runtimeId)
   }
   async function ids(kind: string, project: string) {
-    const args = kind === "container" ? ["ps", "-aq"] : [kind, "ls", "-q"]
-    return (await docker([...args, "--filter", `label=com.docker.compose.project=${project}`]))
-      .split(/\s+/)
-      .filter(Boolean)
+    const client = await runtimeClient()
+    const filters = { label: [`com.docker.compose.project=${project}`] }
+    if (kind === "container") {
+      return (await containersWithLabels(filters.label)).map((item) => item.Id)
+    }
+    if (kind === "network") {
+      return (await client.container.dockerode.listNetworks({ filters })).map((item) => item.Id)
+    }
+    return ((await client.container.dockerode.listVolumes({ filters })).Volumes ?? []).map(
+      (item) => item.Name,
+    )
   }
   async function inspect(record: Environment): Promise<EnvironmentObservation> {
     const runtimeId = await runtime(record)
@@ -70,24 +60,26 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
     const observed = new Map<string, boolean>()
     for (const kind of ["container", "network", "volume"] as const) {
       for (const id of await ids(kind, record.projectName)) {
-        const [item]: DockerInspection[] = JSON.parse(
-          await docker([
-            kind === "container" ? "inspect" : kind,
-            ...(kind === "container" ? [] : ["inspect"]),
-            id,
-          ]),
-        )
-        const labels = kind === "container" ? item.Config.Labels : item.Labels
+        const client = await runtimeClient()
+        const item = kind === "container" ? await inspectContainer(id) : null
+        let metadata: { Labels?: Record<string, string> } | null = null
+        if (kind === "network") {
+          metadata = await client.network.getById(id).inspect()
+        }
+        if (kind === "volume") {
+          metadata = await client.container.dockerode.getVolume(id).inspect()
+        }
+        const labels = item ? item.Config.Labels : metadata?.Labels
         if (
           labels?.["io.redpact.owner"] !== record.ownerId ||
           labels?.["io.redpact.environment"] !== record.id
         ) {
-          throw new Error("Resource ownership mismatch")
+          continue
         }
         resources.push({
           kind,
           id,
-          ...(kind === "container"
+          ...(item
             ? {
                 image: item.Image,
                 service: labels?.["com.docker.compose.service"],
@@ -95,33 +87,26 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
               }
             : {}),
         })
-        if (kind !== "container") {
+        if (!item) {
           continue
         }
         const name = labels?.["com.docker.compose.service"] ?? ""
         const service = record.services.find((s) => s.name === name)
         observed.set(
           name,
-          service?.job
-            ? item.State.Status === "exited" && item.State.ExitCode === 0
-            : item.State.Running && item.State.Health?.Status === "healthy",
+          (observed.get(name) ?? true) &&
+            (service?.job
+              ? item.State.Status === "exited" && item.State.ExitCode === 0
+              : item.State.Running &&
+                (!item.State.Health || item.State.Health.Status === "healthy")),
         )
         for (const [port, bindings] of Object.entries(item.NetworkSettings.Ports ?? {})) {
           const binding = bindings?.[0]
-          if (binding) {
+          if (binding && port.endsWith("/tcp")) {
             endpoints[`${name}:${port.split("/")[0]}`] = {
-              host: "127.0.0.1",
+              host: client.info.containerRuntime.host,
               port: Number(binding.HostPort),
             }
-          }
-        }
-        for (const mount of item.Mounts ?? []) {
-          if (
-            mount.Type === "volume" &&
-            mount.Name &&
-            !resources.some((r) => r.kind === "volume" && r.id === mount.Name)
-          ) {
-            resources.push({ kind: "volume", id: mount.Name })
           }
         }
       }
@@ -162,7 +147,6 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         ) {
           throw new Error("Application inputs changed during preparation")
         }
-        await validateComposeInputs(stage, record.settings)
         const captured = await readJsonSettings(
           record.target.projectRoot,
           testSelectionSchema.parse(record.selection),
@@ -175,48 +159,51 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         ) {
           throw new Error("Settings or selection plan changed during capture")
         }
-        const selection = await stageSelection(stage, record)
+        const selection = await stageSelection(stage, record, record.target.projectRoot)
         redactValues.push(...environmentRedactions(record))
-        const context = JSON.parse(await docker(["context", "inspect"]))[0]
-        const host = context?.Endpoints?.docker?.Host
-        if (typeof host !== "string" || !host.startsWith("unix://")) {
-          throw new Error("Only a local Docker socket is supported")
-        }
+        const host = await runtimeSocket()
         update({ runtimeId: await runtime(record) })
         const files = selection.files
         const flags = [
           "compose",
           "--project-name",
           record.projectName,
+          "--project-directory",
+          dirname(join(record.target.projectRoot, record.settings.environment.compose.files[0])),
           ...files.flatMap((file) => ["-f", join(stage, file)]),
           ...record.settings.environment.compose.profiles.flatMap((profile) => [
             "--profile",
             profile,
           ]),
         ]
-        const env = { ...minimalEnvironment(), COMPOSE_DISABLE_ENV_FILE: "1" }
-        const config = await execa("docker", [...flags, "config", "--format", "json"], {
-          cwd: stage,
-          env,
-          extendEnv: false,
-          cancelSignal: signal,
-          timeout: 30000,
-          maxBuffer: 4 * 1024 * 1024,
-          reject: false,
-        })
+        const env = minimalEnvironment()
+        const config = await execa(
+          "docker",
+          [...flags, "--profile", "*", "config", "--format", "json"],
+          {
+            cwd: record.target.projectRoot,
+            env,
+            extendEnv: false,
+            cancelSignal: signal,
+            timeout: 30000,
+            maxBuffer: 4 * 1024 * 1024,
+            reject: false,
+          },
+        )
         if (config.exitCode !== 0) {
-          throw new Error("Compose effective configuration is invalid")
+          throw new Error(config.stderr || "Compose configuration could not be resolved")
         }
         const model: EffectiveCompose = JSON.parse(config.stdout)
-        checkCompose(model, true)
-        if (Object.keys(model.services).sort().join(",") !== record.plan.activeServices.join(",")) {
-          throw new Error("Effective services differ from the selection plan")
-        }
+        model.services = Object.fromEntries(
+          Object.entries(model.services).filter(([name]) =>
+            record.plan.activeServices.includes(name),
+          ),
+        )
         const previousBuildImages = new Set<string>()
         if (record.lifecycle === "manual") {
           for (const [name, service] of Object.entries(model.services)) {
             if (service.build && !service.image) {
-              const image = await imageId(`${record.projectName}-${name}`)
+              const image = (await inspectImage(`${record.projectName}-${name}`))?.Id
               if (image) {
                 previousBuildImages.add(image)
               }
@@ -229,6 +216,8 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
           networks: Record<string, unknown>
           volumes: Record<string, unknown>
         } = { services: {}, networks: {}, volumes: {} }
+        const runnerKey = `redpact-runner-${record.id}`
+        const runnerName = `${record.projectName}-runner`
         const jobs = new Set<string>()
         for (const service of Object.values(model.services)) {
           for (const [name, edge] of Object.entries(service.depends_on ?? {})) {
@@ -238,67 +227,70 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
           }
         }
         for (const [name, service] of Object.entries(model.services)) {
-          if (
-            service.profiles?.length &&
-            !service.profiles.some((p: string) =>
-              record.settings.environment.compose.profiles.includes(p),
-            )
-          ) {
-            delete model.services[name]
-            continue
-          }
-          if (!jobs.has(name) && (!service.healthcheck?.test || service.healthcheck.disable)) {
-            throw new Error(`Service ${name} requires a healthcheck`)
-          }
-          if (service.build) {
-            const build = service.build
-            contained(stage, build.context)
-            if (build.dockerfile?.startsWith("/") || build.dockerfile?.split("/").includes("..")) {
-              throw new Error("Dockerfile must stay in build context")
-            }
-            for (const value of Object.values(build.args ?? {})) {
-              if (redactValues.some((secret) => String(value).includes(secret))) {
-                throw new Error("Environment values cannot be build arguments")
-              }
-            }
-          }
-          const ports = (service.ports ?? []).map((p) => ({
-            target: Number(p.target),
-            published: "0",
-            host_ip: "127.0.0.1",
-            protocol: "tcp",
-          }))
           override.services[name] = {
             labels,
-            networks: { "redpact-runner": { aliases: [runnerServiceHost(name)] } },
-            ...(ports.length ? { ports } : {}),
-            ...(record.lifecycle === "run" && service.build
+            ...(!service.network_mode
               ? {
-                  image: `${record.projectName}-${name}`,
-                  pull_policy: "build",
-                  build: { labels, tags: [] },
+                  networks: {
+                    ...(service.networks ?? { default: {} }),
+                    [runnerKey]: { aliases: [runnerServiceHost(name)] },
+                  },
                 }
+              : {}),
+            ...(record.lifecycle === "run" && service.build && !service.image
+              ? { build: { labels } }
               : {}),
           }
         }
-        for (const name of Object.keys(model.networks ?? { default: {} })) {
-          override.networks[name] = { labels }
+        for (const [name, resource] of Object.entries(model.networks ?? { default: {} })) {
+          if (!resource?.external) {
+            override.networks[name] = { labels }
+          }
         }
-        override.networks["redpact-runner"] = { labels }
-        for (const name of Object.keys(model.volumes ?? {})) {
-          override.volumes[name] = { labels }
+        override.networks[runnerKey] = { external: true, name: runnerName }
+        for (const [name, resource] of Object.entries(model.volumes ?? {})) {
+          if (!resource?.external) {
+            override.volumes[name] = { labels }
+          }
         }
-        // Override the complete port sequence; merging entries could otherwise expose an unbound address.
-        const yaml = stringify(override)
-          .replace(/^( {4}ports:)/gm, "$1 !override")
-          .replace(/^( {6}tags:) \[\]/gm, "$1 !override []")
+        // Freeze Compose's resolved model; preserve authored ports, mounts, resources and build options.
+        // Only captured local build contexts move into the source snapshot.
+        for (const service of Object.values(model.services)) {
+          if (service.build) {
+            const path = relative(record.target.projectRoot, service.build.context)
+            if (
+              !isAbsolute(path) &&
+              path !== ".." &&
+              !path.startsWith("../") &&
+              existsSync(join(stage, path))
+            ) {
+              service.build.context = join(stage, path)
+            }
+          }
+        }
+        const resolvedFile = ".redpact-resolved.yaml"
+        await writeFile(
+          join(stage, resolvedFile),
+          stringify(model, (_key, value) => {
+            if (typeof value !== "string") {
+              return value
+            }
+            return value.replaceAll("$", "$$")
+          }),
+          {
+            mode: 0o600,
+            flag: "wx",
+          },
+        )
         const overrideFile = ".redpact-runtime.yaml"
-        await writeFile(join(stage, overrideFile), yaml, { mode: 0o600, flag: "wx" })
+        await writeFile(join(stage, overrideFile), stringify(override), { mode: 0o600, flag: "wx" })
         update({
           services: Object.keys(model.services).map((name) => ({ name, job: jobs.has(name) })),
         })
         if (record.lifecycle === "run") {
-          const localBuilds = Object.entries(model.services).filter(([, service]) => service.build)
+          const localBuilds = Object.entries(model.services).filter(
+            ([, service]) => service.build && !service.image,
+          )
           if (localBuilds.length) {
             // Capture only environment-owned tags; cleanup must not evaluate application variables.
             await writeFile(
@@ -313,6 +305,16 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
           }
         }
         signal.throwIfAborted()
+        // The runner network exists even when every application uses host/none networking.
+        const client = await runtimeClient()
+        await client.network.create({
+          Name: runnerName,
+          Labels: {
+            ...labels,
+            "com.docker.compose.project": record.projectName,
+            "com.docker.compose.network": "redpact-runner",
+          },
+        })
         let worker = new URL("./compose-worker.js", import.meta.url)
         if (!existsSync(worker)) {
           worker = new URL("./compose-worker.ts", import.meta.url)
@@ -325,7 +327,8 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
           extendEnv: false,
           input: JSON.stringify({
             directory: stage,
-            files: [...files, overrideFile],
+            files: [resolvedFile, overrideFile],
+            services: record.plan.activeServices,
             profiles: record.settings.environment.compose.profiles,
             projectName: record.projectName,
             timeoutMs: record.settings.environment.timeoutMs,
@@ -338,14 +341,11 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         })
         try {
           const result = await child
-          await writeFile(
-            join(root, "preparation.log"),
-            redact(`${result.stdout}\n${result.stderr}`),
-            { mode: 0o600 },
-          )
+          await writeFile(join(root, "preparation.log"), redact(result.stderr), { mode: 0o600 })
           if (result.exitCode !== 0) {
             throw new Error("Compose startup failed")
           }
+          update({ endpoints: JSON.parse(result.stdout).endpoints })
         } finally {
           // The Compose library spawns a CLI; kill the child group to prevent late up operations.
           if (child.pid) {
@@ -356,34 +356,10 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         }
         const observation = await inspect(current)
         update({ resources: observation.resources, endpoints: observation.endpoints })
-        const observedServices = observation.resources
-          .filter((resource) => resource.kind === "container")
-          .map((resource) => resource.service)
-          .sort()
-        if (observedServices.join(",") !== record.plan.activeServices.join(",")) {
-          throw new Error("Observed services differ from selection plan")
-        }
-        for (const resource of observation.resources.filter((r) => r.kind === "container")) {
-          const [container] = JSON.parse(await docker(["inspect", resource.id]))
-          const values = new Map<string, string>(
-            (container.Config.Env ?? []).map((line: string) => {
-              const i = line.indexOf("=")
-              return [line.slice(0, i), line.slice(i + 1)]
-            }),
-          )
-          for (const [key, binding] of Object.entries(
-            record.plan.bindings[resource.service ?? ""] ?? {},
-          )) {
-            if (typeof binding !== "string" ? values.has(key) : values.get(key) !== binding) {
-              throw new Error(`Service environment mismatch: ${resource.service}.${key}`)
-            }
-          }
-        }
         if (!observation.healthy) {
           throw new Error("Services or preparation jobs are not ready")
         }
         if (record.lifecycle === "manual") {
-          await verifyBrowserEndpoints(current, observation.endpoints, signal)
           const currentImages = new Set(
             observation.resources
               .filter((resource) => resource.kind === "container")
@@ -391,13 +367,15 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
           )
           for (const image of previousBuildImages) {
             if (!currentImages.has(image)) {
-              const tags: string[] | null = JSON.parse(
-                await docker(["image", "inspect", "--format", "{{json .RepoTags}}", image]),
-              )
-              const users = await docker(["ps", "-aq", "--filter", `ancestor=${image}`])
-              // A replaced project tag does not confer ownership of other tags or containers.
-              if (!tags?.length && !users.trim()) {
-                await docker(["image", "rm", image])
+              const built = await inspectImage(image)
+              const client = await runtimeClient()
+              const users = await client.container.dockerode.listContainers({
+                all: true,
+                filters: { ancestor: [image] },
+              })
+              // Never remove an image referenced by unrelated tags or containers.
+              if (built && !built.RepoTags?.length && !users.length) {
+                await removeImage(image)
               }
             }
           }
@@ -414,7 +392,7 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
           try {
             const lines: string[] = []
             for (const id of await ids("container", current.projectName)) {
-              const result = await docker(["logs", "--tail", "100", id])
+              const result = await containerLogSnapshot(id, 100)
               lines.push(`${id}\n${redact(result)}`)
             }
             await writeFile(join(root, "services.log"), lines.join("\n"), { mode: 0o600 })
@@ -434,22 +412,13 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         return
       }
       await runtime(record)
-      const runners = (
-        await docker([
-          "ps",
-          "-aq",
-          "--filter",
-          `label=io.redpact.owner=${record.ownerId}`,
-          "--filter",
-          `label=io.redpact.environment=${record.id}`,
-          "--filter",
-          "label=io.redpact.integration",
-        ])
-      )
-        .split(/\s+/)
-        .filter(Boolean)
-      for (const id of runners) {
-        await docker(["rm", "-fv", id])
+      const runners = await containersWithLabels([
+        `io.redpact.owner=${record.ownerId}`,
+        `io.redpact.environment=${record.id}`,
+        "io.redpact.integration",
+      ])
+      for (const runner of runners) {
+        await removeContainer(runner.Id)
       }
       const observed = await inspect(record)
       const deadline = Date.now() + record.settings.environment.stopTimeoutMs
@@ -462,11 +431,11 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         try {
           const timeout = Math.max(1, deadline - Date.now())
           if (resource.kind === "container") {
-            await docker(["stop", "--time", "5", resource.id], timeout)
-            const output = await docker(
-              ["logs", "--tail", "1000", resource.id],
-              Math.max(1, deadline - Date.now()),
-            )
+            const client = await runtimeClient()
+            await client.container.stop(client.container.getById(resource.id), {
+              timeout: Math.min(5000, timeout),
+            })
+            const output = await containerLogSnapshot(resource.id, 1000)
             const redactions = environmentRedactions(record)
             const log = redactions
               .reduce((text, secret) => text.split(secret).join("[REDACTED]"), output)
@@ -477,11 +446,21 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
               `\n${resource.service ?? resource.id} (${resource.id}) final log\n${log}\n`,
               { mode: 0o600 },
             )
-            await docker(["rm", "-fv", resource.id], Math.max(1, deadline - Date.now()))
+            await client.container.remove(client.container.getById(resource.id), {
+              removeVolumes: true,
+            })
           } else {
-            const remaining = await docker([resource.kind, "ls", "-q"], timeout)
-            if (remaining.split(/\s+/).includes(resource.id)) {
-              await docker([resource.kind, "rm", resource.id], timeout)
+            const client = await runtimeClient()
+            try {
+              if (resource.kind === "network") {
+                await client.network.remove(client.network.getById(resource.id))
+              } else {
+                await client.container.dockerode.getVolume(resource.id).remove()
+              }
+            } catch (error) {
+              if ((error as { statusCode?: number }).statusCode !== 404) {
+                throw error
+              }
             }
           }
         } catch {
@@ -495,21 +474,21 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
       const source = join(directory(record), "source")
       const imageCleanup = join(source, ".redpact-image-cleanup.yaml")
       if (record.lifecycle === "run" && existsSync(imageCleanup)) {
-        await docker(
-          [
-            "compose",
-            "--project-name",
-            record.projectName,
-            "--project-directory",
-            source,
-            "-f",
-            imageCleanup,
-            "down",
-            "--rmi",
-            "all",
-          ],
-          Math.max(1, deadline - Date.now()),
-        )
+        const manifest = parse(await readFile(imageCleanup, "utf8")) as {
+          services: Record<string, { image: string }>
+        }
+        for (const { image } of Object.values(manifest.services)) {
+          const built = await inspectImage(image)
+          if (built) {
+            if (
+              built.Config.Labels?.["io.redpact.owner"] !== record.ownerId ||
+              built.Config.Labels?.["io.redpact.environment"] !== record.id
+            ) {
+              throw new Error("Image ownership mismatch")
+            }
+            await removeImage(image)
+          }
+        }
       }
       await rm(join(directory(record), "source"), { recursive: true, force: true })
     },
