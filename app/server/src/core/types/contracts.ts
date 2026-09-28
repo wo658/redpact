@@ -147,7 +147,7 @@ export type TestRunner = {
     signal: AbortSignal,
     settings?: { tests: { timeoutMs: number } },
     environment?: Record<string, string>,
-    secretValues?: string[],
+    redactionValues?: string[],
     connections?: TestConnections,
   ): Promise<RunResult>
 }

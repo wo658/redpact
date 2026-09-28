@@ -10,7 +10,7 @@ process.once("disconnect", () => {
 })
 process.channel?.unref()
 
-// The child bounds Compose startup without putting resolved secrets in arguments or files.
+// The child bounds Compose startup and inherits only the prepared process environment.
 let input = ""
 for await (const chunk of process.stdin) {
   input += chunk
@@ -20,7 +20,6 @@ try {
   await new DockerComposeEnvironment(spec.directory, spec.files)
     .withProjectName(spec.projectName)
     .withProfiles(...spec.profiles)
-    .withEnvironment(spec.variables)
     .withAutoCleanup(false)
     .withStartupTimeout(spec.timeoutMs)
     .withBuild()

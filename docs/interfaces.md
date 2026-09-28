@@ -1,6 +1,6 @@
 ---
 title: HTTP and MCP interfaces
-description: Shared services, request approval, credentials and local access.
+description: Shared services, request approval and local access.
 ---
 
 # HTTP and MCP interfaces
@@ -24,7 +24,6 @@ normal preconditions even when called outside the viewer. See [architecture](arc
 | `configure` | `describe`, `inspect` or `validate` for an absolute execution `path`; returns schema, roots, diagnostics and optional plan |
 | `run_tests` | Absolute `path`, optional exact `tests` paths; submits and executes Integration |
 | `get_run` | Returned execution or review `id`; reads state, results and environment cleanup |
-| `request_keys` | Observed `projectId` and required declared credential `names`; requests direct user input and returns availability |
 
 Execution derives from the shared fixed project settings; `selection` is rejected.
 Configure does not save configuration, start containers or approve tests.
@@ -58,7 +57,7 @@ Admission and queued execution revalidate settings. Later file edits do not repl
 captured tests. This does not freeze every application input, prove sufficient tests,
 record a TDD red, or approve a Git merge.
 
-App-only `review_action`, `set_approval_policy` and `submit_key` are hidden from models
+App-only `review_action` and `set_approval_policy` are hidden from models
 by compliant clients. Unguessable capabilities are delivered in UI-only `_meta`.
 Revision checks reject stale actions; duplicate final approval returns the existing
 run. Changing the default policy affects future requests, never pending approvals.
@@ -67,19 +66,6 @@ A host without Apps cannot silently replace Ask with textual approval or Auto.
 The browser bundle uses the official Apps SDK; the server registers resources/tool
 metadata with its existing SDK. Cards contain their assets and use the host bridge
 rather than iframe HTTP. [Storage](storage.md) describes durable review recovery.
-
-## Credential inputs
-
-Declare `{ "secret": "KEY_NAME" }`, then request only the missing names needed by
-the selected connection. Users enter values in the card or Project Dependencies.
-The agent receives availability, not values, and must not call `submit_key`, read
-HTTP value endpoints or private secret storage.
-
-Input capabilities are scoped to a project and declared names, expire after 30
-minutes and at restart, and never authorize execution. Saving clears the card input.
-Public secret availability and private editable values are separate endpoints.
-Redaction covers known selected values in text, not arbitrary transformed output,
-screenshots, video or authored source.
 
 ## Local access boundary
 

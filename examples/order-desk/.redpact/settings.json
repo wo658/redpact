@@ -13,11 +13,7 @@
   "tests": {
     "timeoutMs": 10000,
     "env": {
-      "APP_URL": {
-        "service": "app",
-        "port": 3000,
-        "scheme": "http"
-      },
+      "APP_URL": "http://app.redpact.test:3000",
       "TZ": "UTC"
     },
     "directory": "tests"

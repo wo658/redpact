@@ -214,7 +214,7 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
         JSON.stringify({
           composeFiles: ["compose.yaml"],
           dependencies: {},
-          tests: { env: { APP_URL: { service: "app", port: 3000, scheme: "http" } } },
+          tests: { env: { APP_URL: "http://app.redpact.test:3000" } },
           services: ["app"],
         }),
       )

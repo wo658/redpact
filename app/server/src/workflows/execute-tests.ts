@@ -278,7 +278,7 @@ export function createExecuteTests(deps: {
                 current.settings,
                 environmentValues,
                 run.environmentId
-                  ? ((await deps.environments?.secretValues(run.environmentId)) ?? [])
+                  ? ((await deps.environments?.redactionValues(run.environmentId)) ?? [])
                   : [],
                 connections,
               )

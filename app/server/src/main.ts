@@ -38,7 +38,6 @@ import { openStore } from "./adapters/storage/files.js"
 import { loadInstance } from "./adapters/storage/instance.js"
 import { createMergeStore } from "./adapters/storage/merges.js"
 import { createRuntimeMigrationFiles } from "./adapters/storage/migrations.js"
-import { createProjectSecretStore } from "./adapters/storage/project-secrets.js"
 import { createReviewStore } from "./adapters/storage/reviews.js"
 import { createRunLogReader } from "./adapters/storage/run-logs.js"
 import { createUnitRunStore } from "./adapters/storage/unit-runs.js"
@@ -47,7 +46,6 @@ import { runtimePackageName } from "./adapters/updates/package.js"
 import { readRegistryTags, runtimePackage } from "./adapters/updates/registry.js"
 import { createApp } from "./app.js"
 import { instanceSettingsSchema, serverPortSchema } from "./core/instance-schema.js"
-import { environmentRedactions } from "./core/runner-environment.js"
 import { testSelectionSchema } from "./core/settings-schema.js"
 import { testResourceSchema } from "./core/test-resource-schema.js"
 import type { CaptureWorkflow } from "./core/types/playwright.js"
@@ -65,7 +63,6 @@ import { createPlaywrightCatalog } from "./workflows/playwright-catalog.js"
 import { createPluginUpdates } from "./workflows/plugin-updates.js"
 import { createProjectFiles } from "./workflows/project-files.js"
 import { createProjectGraph } from "./workflows/project-graph.js"
-import { createProjectSecrets } from "./workflows/project-secrets.js"
 import { createProjectSettings } from "./workflows/project-settings.js"
 import { createPullRequests } from "./workflows/pull-requests.js"
 import { createReviewContent } from "./workflows/review-content.js"
@@ -198,13 +195,8 @@ const command = new Command()
         ? (await worktrees.resolve(worktree.id)).settings
         : createSettingsService(process.cwd())
       const git = createGitService(settings.projectRoot, gitAdapter)
-      const projectSecrets = createProjectSecrets({
-        store: createProjectSecretStore(directory),
-        worktrees,
-      })
-      const composeAdapter = createComposeAdapter(directory, projectSecrets.resolve)
+      const composeAdapter = createComposeAdapter(directory)
       const environments = createEnvironments({
-        secrets: projectSecrets.resolve,
         store: storage.store,
         worktrees,
         adapter: composeAdapter,
@@ -250,13 +242,7 @@ const command = new Command()
       await environments.recover()
       captureWorkflow = createCaptureWorkflow({
         captures,
-        runner: createCaptureRunner(
-          directory,
-          instance.id,
-          (record) => environmentRedactions(record, projectSecrets.resolve(record)),
-          readTestResources,
-          (record) => projectSecrets.resolve(record),
-        ),
+        runner: createCaptureRunner(directory, instance.id, readTestResources),
         baseline: createCaptureBaselineCleanup(directory),
         worktrees,
         environments,
@@ -444,7 +430,6 @@ const command = new Command()
         }),
         changes,
         dataDirectory: directory,
-        projectSecrets,
         runs,
         executeTests,
         stopEnvironment,

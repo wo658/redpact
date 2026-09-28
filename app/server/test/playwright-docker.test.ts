@@ -91,13 +91,7 @@ test.skipIf(process.env.REDPACT_DOCKER_TESTS !== "1")(
       before: { state: "unavailable", cases: [] },
       after: { state: "running", cases: [] },
     }
-    const runner = createCaptureRunner(
-      join(root, "runtime"),
-      ownerId,
-      () => ["runner-secret"],
-      undefined,
-      () => ({ remoteToken: "runner-secret" }),
-    )
+    const runner = createCaptureRunner(join(root, "runtime"), ownerId)
     try {
       await mkdir(join(root, "ui-tests"))
       await writeFile(
@@ -166,13 +160,13 @@ test.skipIf(process.env.REDPACT_DOCKER_TESTS !== "1")(
           tests: {
             timeoutMs: 10000,
             env: {
-              SHARED_INPUT: { value: "common" },
-              MOCK_URL: { value: "http://mock.redpact.test:3000" },
-              REMOTE_URL: { value: `http://host.docker.internal:${external.getMappedPort(3000)}` },
-              TLS_URL: { value: `https://host.docker.internal:${external.getMappedPort(3443)}` },
-              REMOTE_TOKEN: { secret: "remoteToken" },
-              SHARED_URL: { value: `http://host.docker.internal:${address.port}` },
-              APP_URL: { service: "app", port: 3000, scheme: "http", value: "url" },
+              SHARED_INPUT: "common",
+              MOCK_URL: "http://mock.redpact.test:3000",
+              REMOTE_URL: `http://host.docker.internal:${external.getMappedPort(3000)}`,
+              TLS_URL: `https://host.docker.internal:${external.getMappedPort(3443)}`,
+              REMOTE_TOKEN: "runner-secret",
+              SHARED_URL: `http://host.docker.internal:${address.port}`,
+              APP_URL: "http://app.redpact.test:3000",
             },
           },
           environment: {

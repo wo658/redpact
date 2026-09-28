@@ -131,7 +131,7 @@ export type EnvironmentService = {
     runId: string,
     settingsDigest: string,
   ): Promise<Environment>
-  secretValues(id: string): Promise<string[]>
+  redactionValues(id: string): Promise<string[]>
   executionValues(id: string): Promise<Record<string, string>>
   healthy(id: string): Promise<boolean>
   finish(id: string, runId?: string): void

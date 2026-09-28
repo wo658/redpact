@@ -193,20 +193,12 @@ export const en = {
     "Test limits apply to each new unit, integration and Playwright execution. Blank values use 2048 MiB and 600 seconds. Application services and builds have separate limits.",
 
   "Test environment": "Test environment",
-  "Choose a value type for each variable. Service endpoints resolve when tests run.":
-    "Choose a value type for each variable. Service endpoints resolve when tests run.",
+  "Enter each environment variable as a key and a plaintext value.":
+    "Enter each environment variable as a key and a plaintext value.",
   "No environment variables.": "No environment variables.",
   "Variable {{number}}": "Variable {{number}}",
   "Remove variable {{number}}": "Remove variable {{number}}",
-  "Value type {{number}}": "Value type {{number}}",
-  "Text value": "Text value",
-  "Service endpoint": "Service endpoint",
-  "Secret reference": "Secret reference",
   "Value {{number}}": "Value {{number}}",
-  "Secret name {{number}}": "Secret name {{number}}",
-  "Service {{number}}": "Service {{number}}",
-  "Port {{number}}": "Port {{number}}",
-  "Scheme {{number}}": "Scheme {{number}}",
   "Use fields": "Use fields",
   "Edit JSON": "Edit JSON",
 
@@ -286,22 +278,10 @@ export const en = {
   "Add target service": "Add target service",
   Actions: "Actions",
   Delete: "Delete",
-  "Required connection keys": "Required connection keys",
-  "Enter only the keys needed for this connection. Values are saved directly to Redpact.":
-    "Enter only the keys needed for this connection. Values are saved directly to Redpact.",
-  "Could not save key. Request the input card again if it has expired.":
-    "Could not save key. Request the input card again if it has expired.",
 
   "Commit changes": "Commit changes",
-  "Execution secrets": "Execution secrets",
-  "Secret settings unavailable.": "Secret settings unavailable.",
   "Enter required keys here. Values are shared by this project's worktrees and hidden from execution logs. Changes apply to new environments.":
     "Enter required keys here. Values are shared by this project's worktrees and hidden from execution logs. Changes apply to new environments.",
-  Configured: "Configured",
-  "Value required before execution": "Value required before execution",
-  "Save secret": "Save secret",
-  "Clear secret": "Clear secret",
-  "Could not save secret. Try again.": "Could not save secret. Try again.",
 
   GitHub: "GitHub",
   "GitHub CLI path": "GitHub CLI path",
@@ -632,8 +612,6 @@ export const en = {
     "Clear optional fields to use defaults. Lists use one entry per line.",
   "Settings JSON": "Settings JSON",
   "Default or example": "Default or example",
-  "Edit the existing JSON structure, including service, secret and unset references.":
-    "Edit the existing JSON structure, including service, secret and unset references.",
   "Settings saved.": "Settings saved.",
   "Discard draft and load current file": "Discard draft and load current file",
   "Save settings": "Save settings",
@@ -743,8 +721,8 @@ export const en = {
     "Selected modes cannot write or unset the same variable on the same service, even if their values match. Choose modes without conflicting overrides.",
   "An environment override does not start its target service. That service must already be included in the execution selection, a selected mode, or Compose prerequisites.":
     "An environment override does not start its target service. That service must already be included in the execution selection, a selected mode, or Compose prerequisites.",
-  "A secret reference uses a project credential supplied in this Redpact instance, with server environment fallback when no project value is saved. An explicitly saved blank blocks fallback. Required missing credentials block execution.":
-    "A secret reference uses a project credential supplied in this Redpact instance, with server environment fallback when no project value is saved. An explicitly saved blank blocks fallback. Required missing credentials block execution.",
+  "Environment values are stored as plaintext in project settings. Hosts, ports, URLs and credentials use the same string values.":
+    "Environment values are stored as plaintext in project settings. Hosts, ports, URLs and credentials use the same string values.",
   "Execution dependencies": "Execution dependencies",
   "Selected project modes for this worktree's environments. Your agent supplies the selection when running tests.":
     "Selected project modes for this worktree's environments. Your agent supplies the selection when running tests.",

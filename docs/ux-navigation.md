@@ -95,7 +95,7 @@ Redpact
 │   │   │   │   └── All dependencies → fixed definitions (no selector)
 │   │   │   │       ├── Per-environment / Shared local / Remote connection / Mock
 │   │   │   │       ├── Additional services
-│   │   │   │       └── Environment overrides and secret value inputs
+│   │   │   │       └── Environment key-value overrides
 │   │   │   └── Fixed dependencies and environment bindings [dialog]
 │   │   └── Project settings [page]
 │   │       ├── General [section]

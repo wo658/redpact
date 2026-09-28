@@ -94,7 +94,7 @@ Redpact
 │   │   │   │   └── 모든 의존성 → 고정 정의 (선택 컨트롤 없음)
 │   │   │   │       ├── Per-environment / Shared local / Remote connection / Mock
 │   │   │   │       ├── Additional services
-│   │   │   │       └── 환경 override와 비밀값 입력
+│   │   │   │       └── 환경 key-value override
 │   │   │   └── Fixed dependencies and environment bindings [대화상자]
 │   │   └── Project settings [페이지]
 │   │       ├── General [섹션]
