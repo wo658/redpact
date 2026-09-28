@@ -47,6 +47,7 @@ import { runtimePackageName } from "./adapters/updates/package.js"
 import { readRegistryTags, runtimePackage } from "./adapters/updates/registry.js"
 import { createApp } from "./app.js"
 import { instanceSettingsSchema, serverPortSchema } from "./core/instance-schema.js"
+import { environmentRedactions } from "./core/runner-environment.js"
 import { testSelectionSchema } from "./core/settings-schema.js"
 import { testResourceSchema } from "./core/test-resource-schema.js"
 import type { CaptureWorkflow } from "./core/types/playwright.js"
@@ -252,7 +253,7 @@ const command = new Command()
         runner: createCaptureRunner(
           directory,
           instance.id,
-          (record) => Object.values(projectSecrets.resolve(record)),
+          (record) => environmentRedactions(record, projectSecrets.resolve(record)),
           readTestResources,
           (record) => projectSecrets.resolve(record),
         ),

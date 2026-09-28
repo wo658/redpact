@@ -7,7 +7,7 @@ import {
 } from "../core/environment-policy.js"
 import { executionSettingsSchema } from "../core/execution-settings.js"
 import { problem } from "../core/problems.js"
-import { runnerEnvironment } from "../core/runner-environment.js"
+import { environmentRedactions, runnerEnvironment } from "../core/runner-environment.js"
 import { testSelectionSchema } from "../core/settings-schema.js"
 import type { Store } from "../core/types/contracts.js"
 import type { Environment, EnvironmentAdapter } from "../core/types/environment.js"
@@ -301,9 +301,7 @@ export function createEnvironments(deps: {
     async secretValues(id: string) {
       const record = get(id)
       const values = secretValues(record)
-      return record.plan.requiredSecrets
-        .map((name) => values[name])
-        .filter((value): value is string => Boolean(value))
+      return environmentRedactions(record, values)
     },
     async executionValues(id: string) {
       const record = await refresh(id)

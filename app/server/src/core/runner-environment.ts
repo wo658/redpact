@@ -53,3 +53,21 @@ export function runnerConnections(environment?: Pick<Environment, "plan" | "endp
     ),
   }
 }
+
+// Capture policy is independent of how a value was authored or named.
+export function environmentRedactions(
+  record: Pick<Environment, "plan" | "settings">,
+  secrets: Record<string, string | undefined>,
+): string[] {
+  const literals = [
+    ...Object.values(record.plan.bindings).flatMap(Object.values),
+    ...Object.values(record.settings.tests.env),
+  ].flatMap((binding) => ("value" in binding && !("service" in binding) ? [binding.value] : []))
+  return [
+    ...new Set(
+      [...literals, ...record.plan.requiredSecrets.map((name) => secrets[name])].filter(
+        (value): value is string => Boolean(value),
+      ),
+    ),
+  ].sort((a, b) => b.length - a.length)
+}

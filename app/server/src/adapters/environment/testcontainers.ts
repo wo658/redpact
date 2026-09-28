@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 import { isDeepStrictEqual } from "node:util"
 import { execa } from "execa"
 import { stringify } from "yaml"
-import { runnerServiceHost } from "../../core/runner-environment.js"
+import { environmentRedactions, runnerServiceHost } from "../../core/runner-environment.js"
 import { testSelectionSchema } from "../../core/settings-schema.js"
 import type {
   Environment,
@@ -182,12 +182,7 @@ export function createComposeAdapter(
         secrets = typeof secretSource === "function" ? secretSource(record) : secretSource
         const selection = await stageSelection(stage, record, secrets)
         const variables = selection.variables
-        redactValues.push(
-          ...record.plan.requiredSecrets
-            .map((name) => secrets[name])
-            .filter((value): value is string => Boolean(value))
-            .sort((a, b) => b.length - a.length),
-        )
+        redactValues.push(...environmentRedactions(record, secrets))
         const context = JSON.parse(await docker(["context", "inspect"]))[0]
         const host = context?.Endpoints?.docker?.Host
         if (typeof host !== "string" || !host.startsWith("unix://")) {
@@ -492,10 +487,7 @@ export function createComposeAdapter(
               ["logs", "--tail", "1000", resource.id],
               Math.max(1, deadline - Date.now()),
             )
-            const redactions = record.plan.requiredSecrets
-              .map((name) => secrets[name])
-              .filter((value): value is string => Boolean(value))
-              .sort((a, b) => b.length - a.length)
+            const redactions = environmentRedactions(record, secrets)
             const log = redactions
               .reduce((text, secret) => text.split(secret).join("[REDACTED]"), output)
               .slice(-65536)

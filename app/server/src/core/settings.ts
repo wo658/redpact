@@ -37,7 +37,7 @@ export function describeSettings() {
     workflow: [
       "Preserve existing unrelated settings and omitted environment defaults. Write one fixed project configuration in rulesRoot/.redpact/settings.json. All linked worktrees share it. Compose, Dockerfile and test paths resolve in the execution checkout.",
       "Declare root services and one fixed definition for each dependency. Compose provisions managed services and mocks. shared-local and remote dependencies declare existing connections and never provision containers.",
-      "Declare only the variables needed by Integration and Playwright in tests.env. Both runners receive these values; application environment values are not inherited. Use secret references for credentials.",
+      "Declare only the variables needed by Integration and Playwright in tests.env. Both runners receive these values; application environment values are not inherited. Store direct key-value strings in the shared JSON settings. Direct nonempty values and resolved secret references are masked in execution text; settings and captured source remain plaintext. Existing secret references remain supported.",
       "Call configure validate with the execution path. Validation creates a plan but never runs containers, establishes readiness or grants approval.",
       "run_tests executes Integration. Unit and Playwright use their dedicated UI/API. Each run owns fresh resources and cleanup.",
     ],
