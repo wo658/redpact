@@ -33,7 +33,7 @@ returns the fixed plan without starting anything or proving readiness or approva
     },
     "provider": {
       "kind": "remote",
-      "env": { "app": { "API_KEY": { "secret": "API_KEY" } } }
+      "env": { "app": { "API_KEY": "replace-with-your-local-value" } }
     }
   },
   "tests": {
@@ -67,11 +67,29 @@ strings, secret references, or managed service URLs. Both runners resolve manage
 using `<service>.redpact.test` DNS aliases and internal ports on the execution network. Host published ports
 remain separate inspection endpoints.
 
-Use `{ "secret": "KEY_NAME" }` and enter credentials through the project credential
-controls or `request_keys`. Do not submit credential values through the agent. Project
-values override server values; an explicitly empty project value disables fallback.
-Resolved secrets are redacted from execution text; secret-bearing browser runs omit
-traces. Source, screenshots and video are not scanned for secrets.
+Enter environment values directly as JSON key-value strings in the shared
+`.redpact/settings.json`, using Dependencies for application values and Project settings
+for `tests.env`. No separate credential registration is required for strings. Empty
+strings, whitespace, `=` and `$` are literal; JSON `\n` represents a newline. There is
+no dotenv parser, shell expansion or automatic `.env` discovery.
+
+Existing `{ "secret": "KEY_NAME" }` references remain supported, with their private
+instance values and server fallback unchanged. They are not automatically converted
+or deleted. Project values override server values; an explicitly empty project value
+disables fallback. The credential controls and `request_keys` remain available for
+these references; do not send credential values through the agent.
+
+Every nonempty direct application/test value and resolved referenced value is masked
+in execution text, including application shutdown logs. Browser runs with any such
+value omit traces. Values are matched literally, longest first; short values can mask
+ordinary log text too. Managed service endpoint bindings are not treated as private
+values. Accepted execution settings fix direct values for that execution; later edits
+affect future executions only.
+
+Direct values remain plaintext in settings, their read APIs and captured configuration
+or source. Masking is not encryption and does not sanitize these records, screenshots
+or video. Keep sensitive settings out of Git/public exports, or retain private secret
+references when values must stay out of project configuration.
 
 Inside a container, localhost is that container. A host-local service must be reachable
 from the runner and application that consume it. Merely changing an address does not

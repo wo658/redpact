@@ -135,6 +135,8 @@ manual deletion of a referenced record can break its dependants.
 
 ## Private values and evidence
 
+Direct environment strings remain in the shared project settings and captured settings/source records; they are not moved into private-secrets. Existing secret references and private records are retained unchanged. See [environment values](configuration.md) for masking, execution snapshots and plaintext limits.
+
 Project secret values live in private instance storage and override server environment
 fallbacks. Explicit blank values disable fallback. Public records expose references
 and availability; `connections.json` contains mapped addresses, not credentials.
