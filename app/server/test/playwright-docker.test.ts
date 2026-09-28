@@ -176,7 +176,13 @@ test.skipIf(process.env.REDPACT_DOCKER_TESTS !== "1")(
             stopTimeoutMs: 30000,
           },
         },
-        plan: { activeServices: ["app"] },
+        plan: {
+          activeServices: ["app"],
+          bindings: {},
+          excludedServices: [],
+          prerequisites: {},
+          reasons: {},
+        },
         endpoints: { "app:3000": { host: "127.0.0.1", port: 12345 } },
         resources: [{ kind: "container", id: target, service: "app" }],
       } as unknown as Environment
