@@ -244,20 +244,27 @@ test
               "Playwright / 스크린샷 / 프로젝트 Playwright 기록",
               "Playwright / Test / 실행 전 기능 테스트 파일",
             ]
-      expect(evidence.cases).toHaveLength({ capture: 12, demo: 1, functional: 30 }[purpose])
+      expect(evidence.cases).toHaveLength({ capture: 19, demo: 1, functional: 38 }[purpose])
       const expectedFiles = {
         capture: [
           "project/captures/desktop-update.spec.ts",
           "project/captures/desktop-update.spec.ts",
           "project/captures/desktop-update.spec.ts",
           "project/captures/mcp-app.spec.ts",
-          ...Array(4).fill("project/captures/workspace-history.spec.ts"),
+          ...Array(9).fill("project/captures/workspace-history.spec.ts"),
+          ...Array(2).fill("project/result-rows.ts"),
           "project/captures/application.spec.ts",
           "project/captures/dependencies.spec.ts",
           "project/captures/problem-notice.spec.ts",
           "project/captures/word-wrap.spec.ts",
         ],
         functional: [
+          "project/tests/execution-progress.spec.ts",
+          "project/tests/plugin-updates.spec.ts",
+          "project/tests/screenshot-gallery.spec.ts",
+          "project/tests/window-controls.spec.ts",
+          ...Array(2).fill("project/result-rows.ts"),
+          ...Array(2).fill("project/tests/workspace-history.spec.ts"),
           "project/tests/header-location.spec.ts",
           "project/tests/mcp-app.spec.ts",
           "project/tests/capture-viewport.spec.ts",

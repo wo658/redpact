@@ -88,7 +88,11 @@ test("의존성 개요에서 고정 종류와 연결 근거를 읽고 실제 설
       await page
         .getByRole("textbox", { name: "value", exact: true })
         .fill("https://updated.example.test")
+      const saving = page.waitForResponse(
+        (response) => response.url().endsWith(endpoint) && response.request().method() === "PUT",
+      )
       await page.getByRole("button", { name: "저장", exact: true }).click()
+      expect((await saving).ok()).toBeTruthy()
       await expect(page.getByText("https://updated.example.test", { exact: true })).toBeVisible()
       const saved = JSON.parse((await (await request.get(endpoint)).json()).source)
       expect(saved.dependencies.payment.env.app.PAYMENT_URL).toBe("https://updated.example.test")

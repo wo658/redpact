@@ -38,11 +38,17 @@ const fixtures = createServer(async (req, res) => {
       }
     }
     const { source, input } = JSON.parse(body)
-    const result = await execute(
+    const execution = execute(
       process.execPath,
-      ["--input-type=module", "-e", source, JSON.stringify(input)],
+      [
+        "--input-type=module",
+        "-e",
+        `process.argv[1] = (await import("node:fs")).readFileSync(0, "utf8");\n${source}`,
+      ],
       { timeout: 60000, maxBuffer: 4 * 1024 * 1024 },
     )
+    execution.child.stdin.end(JSON.stringify(input))
+    const result = await execution
     res.writeHead(200, { "content-type": "application/json" }).end(result.stdout)
   } catch (error) {
     res

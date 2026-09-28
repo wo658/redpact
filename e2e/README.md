@@ -121,7 +121,7 @@ It also exercises restart after a record was converted but completion was not re
 
 `target.ts` uses the consumer-specific connection manifest to reach the disposable
 image's fixture service on port 54319. It needs no Docker CLI, Docker socket or host
-filesystem mount. The fixture endpoint executes bounded setup commands only inside
+filesystem mount. The fixture endpoint sends JSON input through stdin to avoid operating-system argument size limits, while preserving `process.argv[1]` for fixture scripts. It executes bounded setup commands only inside
 that image and rejects browser-origin requests. It is not included in product packages
 and must never be deployed as a normal server. Browser verification uses the separate
 Playwright entry; the fixture service does not launch browsers.
