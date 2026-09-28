@@ -88,7 +88,7 @@ TypeScript, Hono와 일반 함수를 사용합니다. controller 클래스, DI �
 - Unit 명령과 Playwright는 임시 컨테이너에서 실행합니다. Integration Vitest는
   임시 컨테이너에서 실행합니다. Integration과 Playwright는 실행별 네트워크에서
   서비스 이름으로 앱에 접근합니다.
-- MCP Apps는 요청 승인과 자격 증명 입력을 구현합니다. 클라이언트가 App 전용
+- MCP Apps는 요청 승인을 구현합니다. 클라이언트가 App 전용
   메타데이터를 모델 문맥에서 숨겨야 합니다. 코드 검토 수락이나 신뢰된 로컬
   프로세스로부터의 격리를 입증하는 기능은 아닙니다.
 - GitHub 게시에는 native Git과 인증된 `gh`를 재사용하며 PR 식별자는 GitHub가 소유합니다.

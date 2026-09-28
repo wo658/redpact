@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 import { isDeepStrictEqual } from "node:util"
 import { execa } from "execa"
 import { parse, stringify } from "yaml"
-import { runnerServiceHost } from "../../core/runner-environment.js"
+import { environmentRedactions, runnerServiceHost } from "../../core/runner-environment.js"
 import { testSelectionSchema } from "../../core/settings-schema.js"
 import type {
   Environment,
@@ -33,10 +33,7 @@ import { stageSelection } from "./selection.js"
 
 export { minimalEnvironment } from "../process/environment.js"
 
-export function createComposeAdapter(
-  dataDir: string,
-  secretSource: NodeJS.ProcessEnv | ((record: Environment) => NodeJS.ProcessEnv) = process.env,
-): EnvironmentAdapter {
+export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
   function directory(record: Environment) {
     return join(dataDir, "environments", record.id)
   }
@@ -128,7 +125,6 @@ export function createComposeAdapter(
     fingerprint: (root, inputs) => snapshotComposeInputs(root, inputs),
     inspect,
     async prepare(record, signal, observe) {
-      let secrets: NodeJS.ProcessEnv = {}
       signal = AbortSignal.any([signal, AbortSignal.timeout(record.settings.environment.timeoutMs)])
       const root = directory(record)
       const stage = join(root, "source")
@@ -163,15 +159,8 @@ export function createComposeAdapter(
         ) {
           throw new Error("Settings or selection plan changed during capture")
         }
-        secrets = typeof secretSource === "function" ? secretSource(record) : secretSource
-        const selection = await stageSelection(stage, record, secrets, record.target.projectRoot)
-        const variables = selection.variables
-        redactValues.push(
-          ...record.plan.requiredSecrets
-            .map((name) => secrets[name])
-            .filter((value): value is string => Boolean(value))
-            .sort((a, b) => b.length - a.length),
-        )
+        const selection = await stageSelection(stage, record, record.target.projectRoot)
+        redactValues.push(...environmentRedactions(record))
         const host = await runtimeSocket()
         update({ runtimeId: await runtime(record) })
         const files = selection.files
@@ -187,7 +176,7 @@ export function createComposeAdapter(
             profile,
           ]),
         ]
-        const env = { ...minimalEnvironment(), ...variables }
+        const env = minimalEnvironment()
         const config = await execa(
           "docker",
           [...flags, "--profile", "*", "config", "--format", "json"],
@@ -286,17 +275,7 @@ export function createComposeAdapter(
             if (typeof value !== "string") {
               return value
             }
-            const references = Object.entries(variables)
-              .filter(([, secret]) => secret)
-              .sort((a, b) => b[1].length - a[1].length)
-            for (const [name, secret] of references) {
-              value = value.replaceAll(secret, `__redpact_${record.id}_${name}__`)
-            }
-            value = value.replaceAll("$", "$$")
-            for (const [name] of references) {
-              value = value.replaceAll(`__redpact_${record.id}_${name}__`, `\${${name}}`)
-            }
-            return value
+            return value.replaceAll("$", "$$")
           }),
           {
             mode: 0o600,
@@ -352,7 +331,6 @@ export function createComposeAdapter(
             services: record.plan.activeServices,
             profiles: record.settings.environment.compose.profiles,
             projectName: record.projectName,
-            variables,
             timeoutMs: record.settings.environment.timeoutMs,
           }),
           cancelSignal: signal,
@@ -433,7 +411,6 @@ export function createComposeAdapter(
         await rm(join(directory(record), "source"), { recursive: true, force: true })
         return
       }
-      const secrets = typeof secretSource === "function" ? secretSource(record) : secretSource
       await runtime(record)
       const runners = await containersWithLabels([
         `io.redpact.owner=${record.ownerId}`,
@@ -459,10 +436,7 @@ export function createComposeAdapter(
               timeout: Math.min(5000, timeout),
             })
             const output = await containerLogSnapshot(resource.id, 1000)
-            const redactions = record.plan.requiredSecrets
-              .map((name) => secrets[name])
-              .filter((value): value is string => Boolean(value))
-              .sort((a, b) => b.length - a.length)
+            const redactions = environmentRedactions(record)
             const log = redactions
               .reduce((text, secret) => text.split(secret).join("[REDACTED]"), output)
               .slice(-65536)

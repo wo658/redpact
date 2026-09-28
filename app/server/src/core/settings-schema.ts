@@ -25,17 +25,10 @@ const serviceVariableName = z
   .min(1)
   .max(256)
   .regex(/^[A-Za-z_][A-Za-z0-9_]*$/)
-export const secretBinding = z.strictObject({ secret: variableName })
 export const containerBinding = z.union([
   z.string().max(10000),
-  secretBinding,
   z.strictObject({ unset: z.literal(true) }),
 ])
-export const testEndpoint = z.strictObject({
-  service: composeServiceName,
-  port: z.number().int().min(1).max(65535),
-  scheme: z.enum(["http", "https"]),
-})
 export const dependencyModeName = z
   .string()
   .regex(/^(isolated|shared-local|remote|mock)$/, "Use isolated, shared-local, remote or mock")
@@ -153,11 +146,7 @@ export const settingsShape = z.strictObject({
     .strictObject({
       directory: projectPath.default("integration"),
       timeoutMs: z.number().int().min(1).max(60000).default(10000),
-      env: bounded(
-        variableName,
-        z.union([z.string().max(10000), secretBinding, testEndpoint]),
-        100,
-      ).default({}),
+      env: bounded(variableName, z.string().max(10000), 100).default({}),
     })
     .default({ directory: "integration", timeoutMs: 10000, env: {} }),
 })

@@ -64,7 +64,6 @@ beforeEach(async () => {
           bindings: { app: {} },
           prerequisites: { app: {} },
           reasons: { app: ["root"] },
-          requiredSecrets: [],
         },
         settings,
         issues: [],

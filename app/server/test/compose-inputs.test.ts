@@ -26,7 +26,7 @@ async function fixture() {
     activeServices: ["app"],
     excludedServices: [],
     reasons: { app: [] },
-    requiredSecrets: [],
+
     bindings: { app: {} },
     prerequisites: { app: {} },
   }

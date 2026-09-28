@@ -92,9 +92,8 @@ through the actual HTTP API. The native application check executes capture and
 functional targets separately and verifies that successful functional execution
 produces no PNG screenshots.
 
-`environment-inputs.test.ts` covers literal environment values, init credential card
-metadata and distinct value/status HTTP reads through the actual application.
-It does not establish that the current MCP host renders the input card.
+`environment-inputs.test.ts` covers plaintext key-value persistence, rejection of retired
+value types, and removal of credential APIs/tools through the actual application.
 
 `dependency-topology.test.ts` verifies fixed dependency definitions, application-service
 relationships, and revision-preserving rejection of unsupported kinds through HTTP and MCP.

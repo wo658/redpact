@@ -195,20 +195,12 @@ export const ko = {
     "각 단위·통합·Playwright 테스트의 새 실행에 적용됩니다. 비워 두면 2048 MiB와 600초를 사용합니다. 앱 서비스와 빌드는 별도 한도를 사용합니다.",
 
   "Test environment": "테스트 환경",
-  "Choose a value type for each variable. Service endpoints resolve when tests run.":
-    "변수마다 값의 종류를 선택하세요. Service endpoint는 테스트 실행 시 결정됩니다.",
+  "Enter each environment variable as a key and a plaintext value.":
+    "각 환경변수를 key와 평문 value로 입력하세요.",
   "No environment variables.": "환경변수가 없습니다.",
   "Variable {{number}}": "변수 {{number}}",
   "Remove variable {{number}}": "변수 {{number}} 삭제",
-  "Value type {{number}}": "값 종류 {{number}}",
-  "Text value": "직접 입력",
-  "Service endpoint": "Service endpoint",
-  "Secret reference": "Secret 참조",
   "Value {{number}}": "값 {{number}}",
-  "Secret name {{number}}": "Secret 이름 {{number}}",
-  "Service {{number}}": "Service {{number}}",
-  "Port {{number}}": "Port {{number}}",
-  "Scheme {{number}}": "Scheme {{number}}",
   "Use fields": "입력 폼으로 보기",
   "Edit JSON": "JSON 편집",
 
@@ -287,22 +279,10 @@ export const ko = {
   "Add target service": "대상 service 추가",
   Actions: "작업",
   Delete: "삭제",
-  "Required connection keys": "연결에 필요한 키",
-  "Enter only the keys needed for this connection. Values are saved directly to Redpact.":
-    "이 연결에 필요한 키만 입력하세요. 값은 Redpact에 직접 저장됩니다.",
-  "Could not save key. Request the input card again if it has expired.":
-    "키를 저장하지 못했습니다. 입력 카드가 만료되었다면 다시 요청하세요.",
 
   "Commit changes": "커밋 변경 파일",
-  "Execution secrets": "실행 secret",
-  "Secret settings unavailable.": "Secret 설정을 불러올 수 없습니다.",
   "Enter required keys here. Values are shared by this project's worktrees and hidden from execution logs. Changes apply to new environments.":
     "필요한 키를 여기에서 입력하세요. 값은 이 프로젝트의 worktree가 공유하며 실행 로그에서 숨겨집니다. 변경 사항은 새 실행 환경에 적용됩니다.",
-  Configured: "입력 완료",
-  "Value required before execution": "실행 전 값 입력 필요",
-  "Save secret": "Secret 저장",
-  "Clear secret": "Secret 비우기",
-  "Could not save secret. Try again.": "Secret을 저장하지 못했습니다. 다시 시도하세요.",
   GitHub: "GitHub",
   "GitHub CLI path": "GitHub CLI 경로",
   "Check GitHub connection": "GitHub 연결 확인",
@@ -631,8 +611,6 @@ export const ko = {
     "선택 항목을 비우면 기본값을 사용합니다. 목록은 한 줄에 하나씩 입력하세요.",
   "Settings JSON": "설정 JSON",
   "Default or example": "기본값 또는 예시",
-  "Edit the existing JSON structure, including service, secret and unset references.":
-    "service, secret, unset 참조를 포함한 기존 JSON 구조를 편집합니다.",
   "Settings saved.": "설정을 저장했습니다.",
   "Discard draft and load current file": "편집 취소 후 현재 파일 불러오기",
   "Save settings": "설정 저장",
@@ -742,8 +720,8 @@ export const ko = {
     "선택한 여러 mode가 같은 서비스의 같은 변수를 설정하거나 unset하면 값이 같아도 충돌합니다. 변경 대상이 겹치지 않도록 mode를 선택하세요.",
   "An environment override does not start its target service. That service must already be included in the execution selection, a selected mode, or Compose prerequisites.":
     "env override만으로 대상 서비스가 실행되지는 않습니다. 대상 서비스는 실행 선택, 선택한 mode의 추가 서비스 또는 Compose 필수 의존성에 포함되어야 합니다.",
-  "A secret reference uses a project credential supplied in this Redpact instance, with server environment fallback when no project value is saved. An explicitly saved blank blocks fallback. Required missing credentials block execution.":
-    "secret 참조는 이 Redpact 인스턴스에 입력한 프로젝트 인증 값을 사용합니다. 저장한 프로젝트 값이 없으면 서버 환경변수를 사용하고, 명시적으로 빈 값을 저장하면 이 대체도 차단됩니다. 실행에 필요한 인증 값이 없으면 실행이 중단됩니다.",
+  "Environment values are stored as plaintext in project settings. Hosts, ports, URLs and credentials use the same string values.":
+    "환경변수 값은 프로젝트 설정에 평문으로 저장합니다. 호스트, 포트, URL, 인증 값 모두 같은 문자열을 사용합니다.",
   "Execution dependencies": "실행 Dependencies",
   "Selected project modes for this worktree's environments. Your agent supplies the selection when running tests.":
     "이 worktree의 환경에 선택된 프로젝트 mode입니다. 에이전트가 테스트 실행 시 구성을 선택합니다.",

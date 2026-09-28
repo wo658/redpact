@@ -165,7 +165,7 @@ test("환경변수 표에서 원문을 보고 key value를 추가하고 수정�
     dependencies: {
       payment: {
         kind: "mock",
-        env: { app: { URL: "https://example.test", TOKEN: { secret: "CLOUD_KEY" } } },
+        env: { app: { URL: "https://example.test", TOKEN: "cloud-value" } },
       },
     },
     tests: { timeoutMs: 1234 },
@@ -188,16 +188,13 @@ test("환경변수 표에서 원문을 보고 key value를 추가하고 수정�
       source = JSON.parse(input.source)
       return { source: input.source, revision: "next", issues: [] }
     },
-    projectSecrets: async () => [],
-    projectSecretValue: async () => ({ value: "actual-cloud-value" }),
-    saveProjectSecret: async () => ({ name: "CLOUD_KEY", configured: true }),
   }
   render(createElement(ProjectDependencies, { api, projectId: "project" }))
   const user = userEvent.setup({ document })
   await userEvent
     .setup({ document })
     .click(await screen.findByRole("tab", { name: "Configuration" }))
-  await screen.findByText("actual-cloud-value")
+  await screen.findByText("cloud-value")
   assert.equal(screen.queryByText("Execution secrets"), null)
   await user.click(screen.getByRole("button", { name: "Add environment variable" }))
   await user.type(screen.getByRole("textbox", { name: "key" }), "MOCK_MODE")
@@ -216,12 +213,11 @@ test("환경변수 표에서 원문을 보고 key value를 추가하고 수정�
   assert.equal(source.dependencies.payment.env.app.URL, "http://mock:3000")
 })
 
-test("invalid dependency settings retain centered diagnostics without requesting secrets", async () => {
+test("invalid dependency settings retain centered diagnostics", async () => {
   await i18n.changeLanguage("en")
   const { ProjectDependencies } = await server.ssrLoadModule(
     "/src/components/dependency-viewer.tsx",
   )
-  let secretReads = 0
   const file = "/workspace/example/.redpact/settings.json"
   const api = {
     projectDependencies: async () => ({
@@ -238,14 +234,9 @@ test("invalid dependency settings retain centered diagnostics without requesting
         },
       ],
     }),
-    projectSecrets: async () => {
-      secretReads += 1
-      return []
-    },
   }
   render(createElement(ProjectDependencies, { api, projectId: "project" }))
   const diagnostic = await screen.findByText("Invalid input: expected string, received undefined")
-  assert.equal(secretReads, 0)
   assert.ok(screen.getByText(`${file}:105:16 · unitTests.dockerfile · schema`))
   const centered = diagnostic.closest('[data-slot="empty"]')
   assert.ok(centered, "blocking diagnostics must use the centered content state")
@@ -821,7 +812,7 @@ const dependencyCatalog = {
         app: {
           URL: "http://payments:8080",
           OLD_KEY: { unset: true },
-          TOKEN: { secret: "PAYMENT_TOKEN" },
+          TOKEN: "actual-payment-token",
           EMPTY: "",
         },
       },
@@ -839,7 +830,6 @@ test("project catalog browses definitions without execution, preserves values an
   )
   const calls = []
   const api = {
-    projectSecretValue: async () => ({ value: "actual-payment-token" }),
     projectDependencies: async (id) => {
       calls.push(id)
       return id === "w1"
@@ -897,7 +887,6 @@ test("dependency source changes abort slow reads and never display stale definit
   let finishSlow
   let firstSignal
   const api = {
-    projectSecrets: async () => [],
     projectDependencies: (id, signal) => {
       if (id === "w1") {
         firstSignal = signal
@@ -939,7 +928,6 @@ test("dependency navigation preserves the worktree review selection and hides de
         omitted: [],
       }
     },
-    projectSecrets: async () => [],
     projectDependencies: async () => dependencyCatalog,
     getBranches: async () => ["main", "local"],
     getTracking: async () => ({ tracking: { mainBranch: null, hideMerged: false }, branches: [] }),
@@ -988,7 +976,6 @@ test("dependency transport errors recover on a server invalidation", async () =>
       createElement(ProjectDependencies, {
         projectId: "w1",
         api: {
-          projectSecrets: async () => [],
           projectDependencies: async () => {
             if (++calls === 1) {
               throw new Error("Server offline")
@@ -1699,7 +1686,6 @@ test("project Dependencies reports shared rule diagnostics without choosing a wo
     createElement(ProjectDependencies, {
       projectId: "p1",
       api: {
-        projectSecrets: async () => [],
         projectDependencies: async (id) => {
           reads.push(id)
           return {
@@ -1760,7 +1746,6 @@ test("project dependency rules remain accessible without attached worktrees", as
       initialProjects: [project],
       api: {
         worktrees: async () => [],
-        projectSecrets: async () => [],
         projectDependencies: async (id) => {
           calls.push(id)
           return dependencyCatalog
@@ -3911,28 +3896,6 @@ test("설정과 기록이 없는 단위 테스트는 하나의 설정 안내만 
   assert.ok(screen.queryByRole("tab", { name: "Code" }) === null)
 })
 
-test("초기 설정 입력 카드는 필요한 키만 직접 전달하고 저장 후 입력을 비운다", async () => {
-  await i18n.changeLanguage("en")
-  const { CredentialCard } = await server.ssrLoadModule("/src/components/mcp/credential-card.tsx")
-  const writes = []
-  render(
-    createElement(CredentialCard, {
-      inputs: [{ name: "CLOUD_KEY", configured: false }],
-      save: async (name, value) => {
-        writes.push({ name, value })
-        return { configured: true }
-      },
-    }),
-  )
-  const user = userEvent.setup({ document })
-  const input = screen.getByLabelText("CLOUD_KEY")
-  await user.type(input, "user-entered-value")
-  await user.click(screen.getByRole("button", { name: "Save" }))
-  await screen.findByText("Configured")
-  assert.equal(input.value, "")
-  assert.deepEqual(writes, [{ name: "CLOUD_KEY", value: "user-entered-value" }])
-})
-
 test("환경변수 저장 충돌은 초안을 유지하고 중복 key는 덮어쓰지 않는다", async () => {
   await i18n.changeLanguage("en")
   const { EnvironmentEditor } = await server.ssrLoadModule("/src/components/environment-editor.tsx")
@@ -4312,8 +4275,8 @@ test("테스트 환경은 JSON 대신 변수별 입력으로 수정하고 참조
   const source = {
     tests: {
       env: {
-        URL: { service: "app", port: 3000, scheme: "http" },
-        TOKEN: { secret: "KEY" },
+        URL: "http://app.redpact.test:3000",
+        TOKEN: "key-value",
         TEXT: "hello\nworld",
       },
     },
@@ -4337,7 +4300,7 @@ test("테스트 환경은 JSON 대신 변수별 입력으로 수정하고 참조
   const input = await screen.findByRole("textbox", { name: "Value 3" })
   assert.equal(input.value, "hello\nworld")
   assert.equal(screen.queryByRole("textbox", { name: "Test environment (JSON)" }), null)
-  assert.equal(screen.getByRole("combobox", { name: "Value type 1" }).value, "Service endpoint")
+  assert.equal(screen.queryByRole("combobox", { name: "Value type 1" }), null)
   const user = userEvent.setup({ document })
   await user.clear(input)
   await user.type(input, "updated")
@@ -4394,19 +4357,25 @@ test("환경변수 입력은 중복 이름 저장을 막고 잘못된 JSON 초�
   await user.clear(json)
   await user.paste('{"ENDPOINT":{"service":"web","port":443,"scheme":"https"},"EMPTY":""}')
   await user.click(screen.getByRole("button", { name: "Use fields" }))
-  assert.equal(screen.getByRole("spinbutton", { name: "Port 1" }).value, "443")
+  assert.ok(screen.getByRole("alert"))
+  assert.equal(screen.queryByRole("spinbutton", { name: "Port 1" }), null)
+  await user.clear(json)
+  await user.paste('{"ENDPOINT":"https://web.redpact.test:443","EMPTY":""}')
+  await user.click(screen.getByRole("button", { name: "Use fields" }))
+  assert.equal(
+    screen.getByRole("textbox", { name: "Value 1" }).value,
+    "https://web.redpact.test:443",
+  )
   assert.equal(screen.getByRole("textbox", { name: "Value 2" }).value, "")
   await user.click(screen.getByRole("button", { name: "Remove variable 1" }))
   await user.click(screen.getByRole("button", { name: "Add environment variable" }))
   const added = screen.getByRole("textbox", { name: "Variable 2", exact: true })
   await user.type(added, "TOKEN")
-  await user.click(screen.getByRole("combobox", { name: "Value type 2" }))
-  await user.click(await screen.findByRole("option", { name: "Secret reference" }))
-  await user.type(screen.getByRole("textbox", { name: "Secret name 2" }), "API_KEY")
+  await user.type(screen.getByRole("textbox", { name: "Value 2" }), "plain-token")
   const serialized = JSON.parse(
     added.closest("form").querySelector('input[name="tests.env"]').value,
   )
-  assert.deepEqual(serialized, { EMPTY: "", TOKEN: { secret: "API_KEY" } })
+  assert.deepEqual(serialized, { EMPTY: "", TOKEN: "plain-token" })
 })
 
 test("의존성 Overview가 앱 관계와 미구현 권장을 설정 및 실행 증거와 구분한다", async () => {

@@ -7,23 +7,15 @@ import { readComposeModel } from "../settings/bundle.js"
 export async function stageSelection(
   stage: string,
   record: Pick<Environment, "plan" | "settings">,
-  secrets: NodeJS.ProcessEnv,
   sourceRoot = stage,
 ) {
   const plan = record.plan
   if (!plan) {
     throw new Error("Missing environment plan")
   }
-  for (const name of plan.requiredSecrets) {
-    if (secrets[name] === undefined) {
-      throw new Error(`Missing secret reference: ${name}`)
-    }
-  }
   const { sources } = await readComposeModel(sourceRoot, record.settings.environment.compose.files)
   const active = new Set(plan.activeServices)
-  const files: string[] = [],
-    variables: Record<string, string> = {},
-    redactions: string[] = []
+  const files: string[] = []
   for (const [index, source] of sources.entries()) {
     const document = parseDocument(source.source)
     for (const id of Object.keys(source.model.services ?? {})) {
@@ -53,31 +45,15 @@ export async function stageSelection(
     files.push(file)
   }
   const override: { services: Record<string, unknown> } = { services: {} }
-  let index = 0
   for (const id of plan.activeServices) {
     const environment: Record<string, string | null> = {}
     for (const [key, binding] of Object.entries(plan.bindings[id])) {
-      if ("unset" in binding) {
-        environment[key] = null
-      } else if ("value" in binding) {
-        environment[key] = binding.value.replaceAll("$", "$$")
-      } else {
-        const value = secrets[binding.secret]
-        if (value === undefined) {
-          throw new Error(`Missing secret reference: ${binding.secret}`)
-        }
-        const variable = `REDPACT_BIND_${index++}`
-        variables[variable] = value
-        environment[key] = `\${${variable}}`
-        if (value) {
-          redactions.push(value)
-        }
-      }
+      environment[key] = typeof binding === "string" ? binding.replaceAll("$", "$$") : null
     }
     override.services[id] = { environment }
   }
   const file = ".redpact-bindings.yaml"
   await writeFile(join(stage, file), stringify(override), { flag: "wx", mode: 0o600 })
   files.push(file)
-  return { files, variables, redactions }
+  return { files }
 }

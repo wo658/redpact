@@ -68,7 +68,7 @@ export function createVitestRunner(
       signal,
       settings,
       environment,
-      secretValues = [],
+      redactionValues = [],
       connections = { version: 1, services: {} },
     ) {
       if (signal.aborted) {
@@ -135,7 +135,7 @@ export function createVitestRunner(
             ...environment,
             REDPACT_CONNECTIONS_FILE: "/review/connections.json",
             REDPACT_REPORT: "/review/output/report.json",
-            REDPACT_REDACT_VALUES: JSON.stringify(secretValues),
+            REDPACT_REDACT_VALUES: JSON.stringify(redactionValues),
           },
         }),
         ipc: true,
@@ -177,7 +177,7 @@ export function createVitestRunner(
         )
         await copyContainerOutput(id, directory)
         const redact = (text: string) =>
-          secretValues
+          redactionValues
             .filter((value) => value.length > 0)
             .sort((a, b) => b.length - a.length)
             .reduce((result, value) => result.split(value).join("[REDACTED]"), text)

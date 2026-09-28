@@ -1,5 +1,5 @@
 import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import type { Api, DependencyMode, SettingsDocument } from "@/lib/api"
 import { DataTable } from "./data-table"
@@ -8,6 +8,7 @@ import { Button } from "./ui/button"
 import { Field, FieldGroup, FieldLabel } from "./ui/field"
 import { Input } from "./ui/input"
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
+import { Textarea } from "./ui/textarea"
 
 type Binding = NonNullable<DependencyMode["env"]>[string][string]
 type Props = {
@@ -23,7 +24,6 @@ type Draft = {
   key: string
   value: string
   original?: string
-  secret?: string
   document: SettingsDocument
 }
 
@@ -33,44 +33,10 @@ export function EnvironmentEditor(props: Props) {
   const [draft, setDraft] = useState<Draft>()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
-  const [values, setValues] = useState<Record<string, string>>({})
   const env = useMemo(() => mode.env ?? {}, [mode.env])
-  useEffect(() => {
-    const abort = new AbortController()
-    const names = [
-      ...new Set(
-        Object.values(env).flatMap((row) =>
-          Object.values(row).flatMap((value) =>
-            typeof value !== "string" && "secret" in value ? [value.secret] : [],
-          ),
-        ),
-      ),
-    ]
-    setValues({})
-    void Promise.all(
-      names.map(
-        async (name) =>
-          [name, (await api.projectSecretValue(projectId, name, abort.signal)).value] as const,
-      ),
-    )
-      .then((entries) => {
-        if (!abort.signal.aborted) {
-          setValues(Object.fromEntries(entries))
-        }
-      })
-      .catch(() => {
-        if (!abort.signal.aborted) {
-          setError(t("Could not load environment values."))
-        }
-      })
-    return () => abort.abort()
-  }, [api, projectId, env, t])
   function text(value: Binding) {
     if (typeof value === "string") {
       return value || t("Empty string")
-    }
-    if ("secret" in value) {
-      return values[value.secret] ?? t("Loading…")
     }
     return t("Unset")
   }
@@ -83,10 +49,6 @@ export function EnvironmentEditor(props: Props) {
         throw new Error(t("Repair project settings before editing environment values."))
       }
       const binding = original ? env[target]?.[original] : undefined
-      const secret = typeof binding === "object" && "secret" in binding ? binding.secret : undefined
-      if (secret && !Object.hasOwn(values, secret)) {
-        throw new Error(t("Could not load environment values."))
-      }
       let value = ""
       if (binding !== undefined) {
         value = typeof binding === "string" ? binding : text(binding)
@@ -96,7 +58,6 @@ export function EnvironmentEditor(props: Props) {
         key: original ?? "",
         value,
         original,
-        secret,
         document,
       })
     } catch (failure) {
@@ -112,26 +73,21 @@ export function EnvironmentEditor(props: Props) {
     setBusy(true)
     setError("")
     try {
-      if (draft.secret && !remove) {
-        await api.saveProjectSecret(projectId, draft.secret, draft.value)
-        setValues((previous) => ({ ...previous, [draft.secret as string]: draft.value }))
-      } else {
-        const source = JSON.parse(draft.document.source as string)
-        const definition = source.dependencies[dependency]
-        const entries = { ...(definition.env?.[draft.target] ?? {}) }
-        if (!remove && draft.key !== draft.original && Object.hasOwn(entries, draft.key)) {
-          throw new Error(t("This key already exists."))
-        }
-        if (draft.original) {
-          delete entries[draft.original]
-        }
-        const next = remove ? entries : { ...entries, [draft.key]: draft.value }
-        definition.env = { ...definition.env, [draft.target]: next }
-        await api.saveProjectConfiguration(projectId, {
-          source: `${JSON.stringify(source, null, 2)}\n`,
-          revision: draft.document.revision,
-        })
+      const source = JSON.parse(draft.document.source as string)
+      const definition = source.dependencies[dependency]
+      const entries = { ...(definition.env?.[draft.target] ?? {}) }
+      if (!remove && draft.key !== draft.original && Object.hasOwn(entries, draft.key)) {
+        throw new Error(t("This key already exists."))
       }
+      if (draft.original) {
+        delete entries[draft.original]
+      }
+      const next = remove ? entries : { ...entries, [draft.key]: draft.value }
+      definition.env = { ...definition.env, [draft.target]: next }
+      await api.saveProjectConfiguration(projectId, {
+        source: `${JSON.stringify(source, null, 2)}\n`,
+        revision: draft.document.revision,
+      })
       setDraft(undefined)
       refresh()
     } catch (failure) {
@@ -233,13 +189,13 @@ export function EnvironmentEditor(props: Props) {
                 value={draft.key}
                 required
                 pattern="[A-Za-z_][A-Za-z0-9_]*"
-                disabled={busy || !!draft.secret}
+                disabled={busy}
                 onChange={(event) => setDraft({ ...draft, key: event.target.value })}
               />
             </Field>
             <Field>
               <FieldLabel htmlFor="env-value">{t("value")}</FieldLabel>
-              <Input
+              <Textarea
                 id="env-value"
                 value={draft.value}
                 maxLength={10000}

@@ -13,7 +13,6 @@ import type {
 } from "../core/types/playwright.js"
 import type { PluginUpdates } from "../core/types/plugin-updates.js"
 import type { ProjectFiles } from "../core/types/project-files.js"
-import type { ProjectSecrets } from "../core/types/project-secrets.js"
 import type { PullRequestService } from "../core/types/pull-requests.js"
 import type { ReviewContentService } from "../core/types/review-content.js"
 import type { ReviewTests } from "../core/types/reviews.js"
@@ -39,7 +38,6 @@ export type Services = {
   reviewContent?: ReviewContentService
   testContainer?: TestContainer
   projectFiles?: ProjectFiles
-  projectSecrets?: ProjectSecrets
   pullRequests?: PullRequestService
   playwrightCatalog?: PlaywrightCatalog
   captures?: CaptureService

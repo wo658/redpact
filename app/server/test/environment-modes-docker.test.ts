@@ -66,7 +66,7 @@ dockerTest(
           storage: { ...service, environment: { ROLE: "provider" } },
           db: {
             image: "postgres:17-alpine",
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose input explicitly backed by a secret reference.
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose input explicitly replaced by the environment override.
             environment: { POSTGRES_PASSWORD: "${DB_PASSWORD:?required}" },
             healthcheck: {
               test: ["CMD", "pg_isready", "-U", "postgres"],
@@ -100,7 +100,7 @@ dockerTest(
                   },
                 },
               },
-              remote: { env: { api: { API_TOKEN: { secret: "UNAVAILABLE_REMOTE_TOKEN" } } } },
+              remote: { env: { api: { API_TOKEN: "unused-token" } } },
             },
           },
           "payments-worker": {
@@ -118,13 +118,13 @@ dockerTest(
                     API_URL: "http://payments:3000",
                     API_TOKEN: { unset: true },
                   },
-                  db: { POSTGRES_PASSWORD: { secret: "TEST_DB_PASSWORD" } },
+                  db: { POSTGRES_PASSWORD: "fixture-password" },
                 },
               },
             },
           },
         },
-        tests: { env: { APP_URL: { service: "api", port: 3000, scheme: "http" } } },
+        tests: { env: { APP_URL: "http://api.redpact.test:3000" } },
         services: ["app"],
       }),
     )
@@ -145,8 +145,7 @@ dockerTest(
       services: ["api", "worker"],
       select: { "payments-api": "mock", "payments-worker": "mock" },
     })
-    const storage = openStore(data),
-      secrets: NodeJS.ProcessEnv = {}
+    const storage = openStore(data)
     const worktrees = createTestWorktrees({
       store: storage.store,
       git: createGitAdapter(),
@@ -158,8 +157,7 @@ dockerTest(
       store: storage.store,
       worktrees,
       ownerId: randomUUID(),
-      adapter: createComposeAdapter(data, secrets),
-      secrets,
+      adapter: createComposeAdapter(data),
     })
     const runner = createVitestRunner(data)
     const runs = createTestExecution({
@@ -191,9 +189,6 @@ dockerTest(
         { "payments-api": "isolated", "payments-worker": "isolated" },
       ].map((select) => ({ services: ["api", "worker"], select }))
       for (const [index, selection] of selections.entries()) {
-        if (index === 1) {
-          secrets.TEST_DB_PASSWORD = randomUUID()
-        }
         await configureFixed(selection)
         const validation = await createSettingsService(project).read()
         expect(validation.valid, JSON.stringify(validation.issues)).toBe(true)
@@ -270,7 +265,7 @@ dockerTest(
       }
       const reopened = storage.store.getEnvironment(ids[0])
       expect(reopened?.selection).toEqual(selections[0])
-      expect(JSON.stringify(reopened)).not.toContain(secrets.TEST_DB_PASSWORD)
+      expect(reopened?.settingsDigest).toBe(environments.get(ids[0]).settingsDigest)
     } finally {
       for (const id of ids) {
         await runs.stopEnvironment(id)
@@ -304,37 +299,26 @@ dockerTest(
             services: ["db"],
             env: {
               db: {
-                POSTGRES_PASSWORD: {
-                  secret: "TEST_DB_PASSWORD",
-                },
+                POSTGRES_PASSWORD: "fixture-password",
               },
               migrate: {
-                PGPASSWORD: {
-                  secret: "TEST_DB_PASSWORD",
-                },
+                PGPASSWORD: "fixture-password",
               },
               app: {
-                PGPASSWORD: {
-                  secret: "TEST_DB_PASSWORD",
-                },
+                PGPASSWORD: "fixture-password",
               },
             },
           },
         },
         tests: {
           env: {
-            APP_URL: {
-              service: "app",
-              port: 3000,
-              scheme: "http",
-            },
+            APP_URL: "http://app.redpact.test:3000",
           },
         },
         services: ["app"],
       }),
     )
-    const storage = openStore(data),
-      secrets = { TEST_DB_PASSWORD: randomUUID() }
+    const storage = openStore(data)
     const worktrees = createTestWorktrees({
       store: storage.store,
       git: createGitAdapter(),
@@ -346,8 +330,7 @@ dockerTest(
       store: storage.store,
       worktrees,
       ownerId: randomUUID(),
-      adapter: createComposeAdapter(data, secrets),
-      secrets,
+      adapter: createComposeAdapter(data),
     })
     const delegate = createVitestRunner(data)
     let concurrent = false

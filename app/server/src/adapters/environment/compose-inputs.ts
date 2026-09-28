@@ -34,10 +34,7 @@ type Inputs = Pick<Environment, "settings" | "plan">
 async function resolveInputs(root: string, inputs: Inputs) {
   const temporary = await mkdtemp(join(tmpdir(), "redpact-compose-config-"))
   try {
-    const placeholders = Object.fromEntries(
-      inputs.plan.requiredSecrets.map((name) => [name, "redpact-input-inspection"]),
-    )
-    const selected = await stageSelection(temporary, inputs, placeholders, root)
+    const selected = await stageSelection(temporary, inputs, root)
     const result = await execa(
       "docker",
       [
@@ -55,7 +52,7 @@ async function resolveInputs(root: string, inputs: Inputs) {
       ],
       {
         cwd: root,
-        env: { ...minimalEnvironment(), ...selected.variables },
+        env: minimalEnvironment(),
         extendEnv: false,
         timeout: 30000,
         maxBuffer: 4 * 1024 * 1024,

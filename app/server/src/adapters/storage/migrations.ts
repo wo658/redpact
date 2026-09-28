@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto"
 import { link, lstat, mkdir, open, readdir, readFile, rename, unlink } from "node:fs/promises"
 import { dirname, join } from "node:path"
+import { z } from "zod"
 import type { RuntimeMigrationFiles } from "../../core/types/runtime-migrations.js"
 
 async function readOptional(path: string): Promise<string | undefined> {
@@ -46,6 +47,18 @@ export function createRuntimeMigrationFiles(root: string): RuntimeMigrationFiles
     join(root, ".migrations", "backups", migration, "environments", `${id}.json`)
   const journal = join(root, ".migrations", "completed.json")
   return {
+    async environmentValues(id) {
+      if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) {
+        throw new Error("Invalid environment migration identity")
+      }
+      const source = await readOptional(join(root, "private-secrets", `environment-${id}.json`))
+      if (source === undefined) {
+        return {}
+      }
+      return z
+        .strictObject({ version: z.literal(1), data: z.record(z.string(), z.string().max(10000)) })
+        .parse(JSON.parse(source)).data
+    },
     async history() {
       const source = await readOptional(journal)
       return source === undefined ? [] : JSON.parse(source)

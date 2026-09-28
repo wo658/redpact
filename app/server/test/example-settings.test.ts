@@ -21,12 +21,8 @@ for (const relative of ["../../../examples/order-desk/"]) {
     expect(catalog.valid, JSON.stringify(catalog.issues)).toBe(true)
     expect(Object.keys(catalog.settings?.dependencies ?? {})).toEqual(["payments"])
     expect(Object.keys(catalog.settings?.applicationServices ?? {})).toHaveLength(5)
-    expect(catalog.settings?.tests.env.APP_URL).toEqual({
-      service: "app",
-      port: 3000,
-      scheme: "http",
-    })
+    expect(catalog.settings?.tests.env.APP_URL).toEqual("http://app.redpact.test:3000")
     expect(catalog.plan?.activeServices).toEqual(["app"])
-    expect(catalog.plan?.bindings.app.PAYMENTS_MODE).toEqual({ value: "mock" })
+    expect(catalog.plan?.bindings.app.PAYMENTS_MODE).toEqual("mock")
   })
 }

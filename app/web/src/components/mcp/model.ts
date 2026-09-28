@@ -36,9 +36,7 @@ const submission = z.object({
   ),
 })
 export const snapshotSchema = z.object({
-  kind: z.enum(["environment", "review", "tests", "inputs"]),
-  inputs: z.array(z.object({ name: z.string(), configured: z.boolean() })).optional(),
-  projectId: z.string().optional(),
+  kind: z.enum(["environment", "review", "tests"]),
   policy: policy.optional(),
   nextPolicy: policy.optional(),
   token: z.string().optional(),
@@ -89,5 +87,3 @@ export function keyedRows<T>(values: T[], name: (value: T) => string) {
     return { value, key: `${label}:${occurrence}` }
   })
 }
-
-export type SecretStatus = { name: string; configured: boolean }

@@ -11,7 +11,7 @@ Inspect repository facts before asking; dependency topology decisions require th
 | Absolute target project directory | Current worktree, repository instructions, and the requested application; in a monorepo identify the actual application root | Multiple plausible targets and no clear requested app |
 | Actual application build and startup contract | Manifests, lockfiles, source, scripts, existing images, Dockerfile and Compose; identify runtime files, listening address/port, storage and readiness | Required behavior or unsupported runtime constraints remain unresolved after inspection |
 | Required dependencies and supported alternatives | Application configuration and clients, unconditional Compose prerequisites, implemented mocks and existing external integrations | Reuse existing connections and explicit decisions; ask only for unresolved fixed topology or provider choices |
-| Test source location and connections | Existing isolated Vitest bundle; use the schema's default directory only if suitable; identify service ports and any required test environment/secret names | Existing tests cannot be bundled without a scope decision or an external endpoint cannot be inferred |
+| Test source location and connections | Existing isolated Vitest bundle; use the schema's default directory only if suitable; identify service ports and any required test environment keys | Existing tests cannot be bundled without a scope decision or an external endpoint cannot be inferred |
 | Instance observation destination | Actual instance settings path and projects schema from `configure describe` | The connected service cannot supply enough information to identify the instance safely |
 
 Choose setup capabilities from the requested work and inspected project. Ordinary init of a runnable web application or server includes the application Container baseline below; it does not depend on having integration tests or third-party dependencies. Add unit commands, integration and Playwright as needed. Empty Compose catalogs are valid for explicit draft-only/unit-only setup or projects without a runnable server, but do not establish application Container readiness. An empty dependency catalog is valid for an app without dependencies. Unit commands require their declared Dockerfile runtime.
@@ -52,9 +52,9 @@ Initialize a complete valid configuration for the selected capabilities:
   without valid required inputs remain absent and are reported as unconfigured;
   do not enable a capability merely to make every top-level key appear.
 - Optional descriptions require real facts. Omit them when unavailable. Do not
-  generate fictional dependencies or conflicting union alternatives. Declare
-  necessary secret references without reading or storing private values; request
-  missing declared credentials through secure input.
+  generate fictional dependencies or conflicting union alternatives. Use plaintext key-value strings for environment values, including hosts, ports,
+  URLs and credentials. Ask for missing required values without inventing a secret
+  reference or separate credential registration. Keep sensitive values out of Git.
 - Keep project, instance and tracking settings in their respective files. Fill only fields supported by each file's own schema;
   `projectsSchema` does not describe the entire instance file. Preserve existing
   instance preferences. The fixed execution configuration requires real root services. Browser display language is not a project setting.

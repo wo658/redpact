@@ -47,50 +47,6 @@ export function mcpRoutes(services: Services) {
   return createMcpHonoApp().all("/", async (c) => {
     const server = new McpServer({ name: "redpact", version: "0.1.0" })
     registerApps(server, services.reviews)
-    if (services.projectSecrets) {
-      const secrets = services.projectSecrets
-      server.registerTool(
-        "request_keys",
-        {
-          description:
-            "Show an MCP input card for required external service credentials during setup. Supply only declared names actually needed by the requested external integration. Never send credential values through agent arguments. Returns availability only; the user enters values in the card.",
-          inputSchema: z.strictObject({
-            projectId: z.string().min(1),
-            names: z.array(z.string().min(1)).min(1).max(100),
-          }),
-          _meta: uiMeta(environmentResource),
-          annotations: { ...readOnly, readOnlyHint: false },
-        },
-        async ({ projectId, names }) => {
-          try {
-            const request = await secrets.request(projectId, names)
-            return {
-              ...output({ projectId, inputs: request.inputs }),
-              _meta: { redpact: { kind: "inputs", projectId, ...request } },
-            }
-          } catch (error) {
-            return invoke(() => {
-              throw error
-            })
-          }
-        },
-      )
-      server.registerTool(
-        "submit_key",
-        {
-          description:
-            "Save one credential from its scoped user input card. UI capability required.",
-          inputSchema: z.strictObject({
-            token: z.string().min(32),
-            name: z.string().min(1),
-            value: z.string().max(10000),
-          }),
-          _meta: { ui: { resourceUri: environmentResource, visibility: ["app"] } },
-          annotations: { ...readOnly, readOnlyHint: false },
-        },
-        ({ token, name, value }) => invoke(() => secrets.submit(token, name, value)),
-      )
-    }
     server.registerTool(
       "configure",
       {

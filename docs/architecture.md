@@ -90,7 +90,7 @@ between record files.
   health observations, resource identities, cancellation and cleanup.
 - Unit, Integration Vitest and Playwright execute in temporary containers. Integration
   and Playwright join a per-execution network with service-name access to the application.
-- MCP Apps implement request approval and credential inputs. Their capabilities
+- MCP Apps implement request approval. Their capabilities
   rely on the client keeping App-only metadata out of model context; this does not
   establish code-review acceptance or isolation from trusted local processes.
 - GitHub publication reuses native Git and authenticated `gh`; GitHub owns PR identity.

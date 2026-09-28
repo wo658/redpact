@@ -199,8 +199,8 @@ scrolls vertically instead of shrinking into the remaining height; its run link 
 available below the image. Project Tests retains
 Captures, Tests and Runs independently of changed-file review.
 
-Secret-bearing runs omit trace archives. Images, videos and submitted source are not
-credential-scanned. Known secret redaction in text is not a hostile-code sandbox.
+Runs with nonempty environment values omit trace archives. Images, videos and submitted source are not
+credential-scanned. Literal environment-value redaction in text is not a hostile-code sandbox.
 
 ## Limits and verdicts
 

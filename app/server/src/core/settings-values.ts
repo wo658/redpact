@@ -18,13 +18,3 @@ export const relativeFile = z
     (value) => !value.startsWith("/") && !value.split(/[\\/]/).includes(".."),
     "Use a project-relative path",
   )
-export const inputValue = z.union([
-  z.strictObject({ value: z.string().max(10000) }),
-  z.strictObject({ secret: variableName }),
-])
-export const connectionValue = z.strictObject({
-  service: composeServiceName,
-  port: z.number().int().min(1).max(65535),
-  value: z.enum(["host", "port", "url"]),
-  scheme: z.enum(["http", "https"]).optional(),
-})

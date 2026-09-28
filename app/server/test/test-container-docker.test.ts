@@ -44,7 +44,7 @@ dockerTest(
       join(projectRoot, ".redpact/settings.json"),
       JSON.stringify({
         composeFiles: ["compose.yaml"],
-        tests: { env: { APP_URL: { service: "app", port: 8080, scheme: "http" } } },
+        tests: { env: { APP_URL: "http://app.redpact.test:8080" } },
         services: ["app"],
       }),
     )
