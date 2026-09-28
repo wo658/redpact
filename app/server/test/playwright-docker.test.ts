@@ -23,7 +23,19 @@ test.skipIf(process.env.REDPACT_DOCKER_TESTS !== "1")(
       (await execa("docker", args, { timeout: 60000 })).stdout.trim()
     const projectName = `redpact-${environmentId}`
     const network = `${projectName}_redpact-runner`
-    await docker(["network", "create", network])
+    await docker([
+      "network",
+      "create",
+      "--label",
+      `com.docker.compose.project=${projectName}`,
+      "--label",
+      "com.docker.compose.network=redpact-runner",
+      "--label",
+      `io.redpact.owner=${ownerId}`,
+      "--label",
+      `io.redpact.environment=${environmentId}`,
+      network,
+    ])
     const shared = createServer((_q, response) => response.end("shared-local"))
     await new Promise<void>((resolve) => shared.listen(0, "127.0.0.1", resolve))
     const address = shared.address()

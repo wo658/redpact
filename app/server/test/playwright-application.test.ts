@@ -81,7 +81,19 @@ test
     let networkCreated = false
     let target = ""
     try {
-      await docker(["network", "create", network])
+      await docker([
+        "network",
+        "create",
+        "--label",
+        `com.docker.compose.project=${projectName}`,
+        "--label",
+        "com.docker.compose.network=redpact-runner",
+        "--label",
+        `io.redpact.owner=${ownerId}`,
+        "--label",
+        `io.redpact.environment=${environmentId}`,
+        network,
+      ])
       networkCreated = true
       target = await docker([
         "run",
