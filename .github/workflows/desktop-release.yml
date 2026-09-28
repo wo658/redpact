@@ -63,23 +63,23 @@ jobs:
           tauriScript: pnpm exec tauri
           args: --target ${{ matrix.target }} --config src-tauri/tauri.release.conf.json --bundles ${{ matrix.bundles }}
           tagName: ${{ github.ref_name }}
-          releaseName: Redpact ${{ github.ref_name }} — Plugin updates and execution evidence
+          releaseName: Redpact ${{ github.ref_name }} — Environment values and container execution
           releaseBody: |
-            Adds Redpact plugin update checks and CLI installation for Codex and Claude Code using each installed marketplace. Includes personal/local marketplace support and Codex timestamp build comparison. Publishes plugin 0.2.0 through the repository catalogs, with Cursor packaging and Copilot installation guidance.
+            Redpact 0.8.0 · Beta simplifies environment values to explicit strings and delegates Docker runtime access, Compose startup and container lifecycle operations to Testcontainers. Fixes service aliases and Integration runner network discovery.
 
-            Improves execution progress and readable result rows, screenshot thumbnail selection, workspace navigation labels, CLI startup URLs and current English/Korean documentation.
+            Breaking settings/API change from 0.7.0: manually replace secret references and typed host/port/URL bindings in .redpact/settings.json with explicit strings. The separate credential store, credential HTTP endpoints and request_keys MCP tool are removed. Omitted defaults and explicit application unsets remain supported. Values are plaintext in settings and captured evidence; execution text masks nonempty values, and browser traces are omitted when values are present. Screenshots and video are not sanitized.
 
-            No settings or storage migration is required from 0.6.1. Existing projects keep their fixed settings. Plugin installation does not update the app or an existing agent session: restart the agent session after installing. Other agents are not yet supported by the in-app updater; Cursor/Copilot packaging does not establish MCP Apps support.
+            Startup migration 002-flat-environment-values preserves original runtime records and converts historical bindings using captured values. Missing historical private-secrets snapshots block startup: restore the matching snapshot from a backup before retrying. Back up the complete instance before upgrading if rollback is required. Project settings are not rewritten automatically; no reset is required for valid, migratable records.
 
-            Publication waits for native desktop checks and npm installation verification. macOS builds are ad-hoc signed, not Apple notarized. Installation smoke tests do not cover every native WebView interaction or upgrades from every prior version.
+            Publication requires native desktop checks and the npm installation matrix on Linux, macOS and Windows with Node 24 and 26. macOS builds are ad-hoc signed, not Apple notarized. Installation checks do not cover every native WebView interaction or every prior-version upgrade.
 
-            설치된 마켓플레이스를 기준으로 Codex·Claude Code의 Redpact 플러그인 업데이트 확인과 CLI 설치를 지원합니다. 개인·로컬 마켓플레이스와 Codex 날짜 빌드 비교를 포함하며, 저장소 카탈로그로 플러그인 0.2.0을 배포합니다. Cursor 패키지 구성과 Copilot 설치 안내도 추가합니다.
+            Redpact 0.8.0 · Beta는 환경값을 명시적 문자열로 단순화하고 Docker 런타임 접근, Compose 시작 및 컨테이너 수명주기 처리를 Testcontainers에 위임합니다. 서비스 별칭과 Integration 실행기 네트워크 탐색을 수정합니다.
 
-            실행 진행 상태와 읽기 쉬운 결과 행, 스크린샷 썸네일 선택, 작업공간 탐색 이름, CLI 시작 URL 및 최신 한영 문서를 개선합니다.
+            0.7.0 대비 설정·API 호환성 변경: .redpact/settings.json의 비밀값 참조와 형식화된 host/port/URL 바인딩을 명시적 문자열로 직접 바꾸세요. 별도 자격 증명 저장소, 자격 증명 HTTP 엔드포인트와 request_keys MCP 도구는 제거됩니다. 생략된 기본값과 애플리케이션 변수의 명시적 unset은 유지됩니다. 설정과 캡처된 증거에는 값이 평문으로 남습니다. 실행 텍스트에서는 비어 있지 않은 값을 가리고, 값이 있으면 브라우저 trace를 저장하지 않습니다. 스크린샷과 영상의 값은 가리지 않습니다.
 
-            0.6.1에서 설정·저장소 마이그레이션은 필요하지 않으며 기존 고정 설정을 유지합니다. 플러그인 설치는 앱이나 기존 에이전트 세션을 갱신하지 않으므로 설치 후 새 세션을 시작하세요. 앱 내 업데이트는 다른 에이전트를 아직 지원하지 않으며 Cursor·Copilot 패키지 구성은 MCP Apps 지원 검증을 뜻하지 않습니다.
+            시작 시 002-flat-environment-values 마이그레이션이 원본 런타임 기록을 보존하고 캡처된 값으로 과거 바인딩을 변환합니다. 과거 private-secrets 스냅샷이 없으면 시작이 차단되므로 백업에서 해당 스냅샷을 복원한 뒤 재시도하세요. 롤백이 필요하면 업그레이드 전에 전체 인스턴스를 백업하세요. 프로젝트 설정은 자동 변환하지 않으며, 유효하고 변환 가능한 기록은 초기화할 필요가 없습니다.
 
-            네이티브 데스크톱과 npm 설치 검증을 통과한 뒤 공개됩니다. macOS 빌드는 임시 서명되며 Apple 공증을 받지 않았습니다. 설치 스모크 검사는 모든 네이티브 WebView 동작이나 모든 이전 버전의 업데이트를 검증하지 않습니다.
+            네이티브 데스크톱 검사와 Linux·macOS·Windows의 Node 24·26 npm 설치 검증을 통과한 뒤 공개됩니다. macOS 빌드는 임시 서명되며 Apple 공증을 받지 않았습니다. 설치 검사는 모든 네이티브 WebView 동작이나 모든 이전 버전의 업그레이드를 검증하지 않습니다.
           releaseDraft: true
           prerelease: false
           uploadUpdaterJson: true
