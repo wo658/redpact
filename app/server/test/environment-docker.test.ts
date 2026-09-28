@@ -199,7 +199,7 @@ dockerTest(
         timeout: 240000,
         reject: false,
       })
-      expect(result.exitCode, result.stderr).toBe(0)
+      expect(result.exitCode, result.stdout + result.stderr).toBe(0)
       expect(result.stdout).toContain('"observed":"passed"')
       const [p] = await (await fetch(`${base}/api/projects`)).json()
       const [worktree] = await (await fetch(`${base}/api/projects/${p.id}/worktrees`)).json()

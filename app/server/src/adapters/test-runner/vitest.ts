@@ -17,6 +17,7 @@ import {
   containersWithLabels,
   copyContainerOutput,
   removeContainer,
+  runnerNetwork,
   runtimeClient,
   runtimeSocket,
 } from "../environment/runtime.js"
@@ -126,9 +127,14 @@ export function createVitestRunner(
           config: await readFile(configPath, "utf8"),
           id: runId,
           ...connections.runtime,
-          network: (
-            await (await runtimeClient()).network.getById(connections.runtime.network).inspect()
-          ).Id,
+          network: connections.runtime.network
+            ? (await (await runtimeClient()).network.getById(connections.runtime.network).inspect())
+                .Id
+            : await runnerNetwork(
+                undefined,
+                connections.runtime.ownerId,
+                connections.runtime.environmentId,
+              ),
           limits,
           connections: { version: connections.version, services: connections.services },
           environment: {

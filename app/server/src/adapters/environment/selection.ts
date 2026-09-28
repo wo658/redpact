@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
-import { isNode, parseDocument, stringify } from "yaml"
+import { isAlias, isNode, parseDocument, stringify } from "yaml"
 import type { Environment } from "../../core/types/environment.js"
 import { readComposeModel } from "../settings/bundle.js"
 
@@ -18,6 +18,14 @@ export async function stageSelection(
   const files: string[] = []
   for (const [index, source] of sources.entries()) {
     const document = parseDocument(source.source)
+    // Materialize service aliases before editing bindings on their shared anchor.
+    for (const id of Object.keys(source.model.services ?? {})) {
+      const path = ["services", id]
+      const node = document.getIn(path, true)
+      if (isAlias(node)) {
+        document.setIn(path, node.resolve(document)?.clone())
+      }
+    }
     for (const id of Object.keys(source.model.services ?? {})) {
       if (!active.has(id)) {
         document.deleteIn(["services", id])

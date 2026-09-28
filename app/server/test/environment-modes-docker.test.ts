@@ -376,7 +376,9 @@ dockerTest(
       await expect.poll(() => runs.get(run.id).state, { timeout: 90000 }).toBe("finished")
       const environmentId = runs.get(run.id).environmentId!
       ids.push(environmentId)
-      expect(runs.get(run.id).result).toMatchObject({ outcome: "passed" })
+      expect(runs.get(run.id).result, JSON.stringify(runs.get(run.id).result)).toMatchObject({
+        outcome: "passed",
+      })
       const state = environments.get(environmentId)
       expect(state.services).toContainEqual({ name: "migrate", job: true })
       await expect
