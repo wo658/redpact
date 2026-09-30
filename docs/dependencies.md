@@ -22,6 +22,22 @@ Each dependency has one fixed definition; there are no selectable modes or recom
 The primary settings file supplies root services, dependency services and bindings.
 Compose prerequisites extend that service set. Binding a variable does not start its target.
 
+## Reading the overview
+
+Select a diagram node to read its name, application/dependency type, configured
+kind and authored description. Compose services remain collapsed with a count.
+Used by and Uses show relationship counts and the other service's name and type;
+relationship descriptions stay visible. Code evidence expands separately to show
+complete paths and optional line numbers. These are authored source references,
+not observed execution results. Empty relationships mean none were authored.
+
+Application details place Used by and Uses side by side when the detail column has
+at least 640px, and stack them on narrower screens within the shared 768px reading
+width. Dependencies show only Used by across the column. Nodes and disclosures
+support keyboard activation; selecting a node does not move focus or execute code.
+Missing descriptions are not inferred. Configuration and kinds do not establish
+readiness, connectivity or approval.
+
 ## Shared configuration, independent execution
 
 `rulesRoot` identifies the shared settings location. Compose, Dockerfile, app and test

@@ -20,6 +20,7 @@ test("의존성 개요에서 고정 종류와 연결 근거를 읽고 실제 설
         ...source,
         applicationServices: {
           web: { services: ["app"], description: "Application under review" },
+          gateway: { services: ["gateway"], description: "Routes requests to the application" },
         },
         dependencies: {
           payment: {
@@ -29,6 +30,12 @@ test("의존성 개요에서 고정 종류와 연결 근거를 읽고 실제 설
           search: { kind: "shared-local", env: { app: { SEARCH_URL: "http://search.test" } } },
         },
         relationships: [
+          {
+            from: "gateway",
+            to: { kind: "application", name: "web" },
+            description: "Forward incoming requests",
+            evidence,
+          },
           {
             from: "web",
             to: { kind: "dependency", name: "payment" },
@@ -58,16 +65,68 @@ test("의존성 개요에서 고정 종류와 연결 근거를 읽고 실제 설
       await expect(page.getByRole("button", { name: "앱 서비스: web", exact: true })).toBeVisible()
       const graph = page.getByRole("region", { name: "서비스 의존 관계" })
       await expect(
-        graph.locator('.edgePaths path[data-id="edge_service0_service1_0"]'),
+        graph.locator('.edgePaths path[data-id="edge_service0_service2_1"]'),
       ).toHaveCount(1)
-      await page.getByRole("button", { name: "의존 서비스: payment", exact: true }).click()
+      const details = page.getByRole("region", { name: "서비스 상세" })
+      await expect(details.getByRole("heading", { name: "web", exact: true })).toBeVisible()
+      await expect(details.getByText("앱 서비스", { exact: true }).first()).toBeVisible()
+      const incoming = details.getByRole("region", { name: "사용하는 서비스 · 1" })
+      const outgoing = details.getByRole("region", { name: "의존하는 서비스 · 1" })
+      await expect(incoming.getByText("gateway", { exact: true })).toBeVisible()
+      await expect(outgoing.getByText("payment", { exact: true })).toBeVisible()
+      const left = await incoming.boundingBox()
+      const right = await outgoing.boundingBox()
+      expect(left).not.toBeNull()
+      expect(right).not.toBeNull()
+      if (!left || !right) {
+        throw new Error("관계 영역의 위치를 읽을 수 없습니다.")
+      }
+      if ((page.viewportSize()?.width ?? 1920) < 768) {
+        expect(right.y).toBeGreaterThan(left.y)
+      } else {
+        expect(Math.abs(right.y - left.y)).toBeLessThan(2)
+        expect(right.x).toBeGreaterThan(left.x)
+      }
+      const compose = details.getByRole("button", { name: "Compose 서비스 · 1", exact: true })
+      await compose.focus()
+      await page.keyboard.press("Enter")
+      await expect(compose).toHaveAttribute("aria-expanded", "true")
+      await expect(details.getByText("app", { exact: true })).toBeVisible()
+      await page.keyboard.press("Space")
+      await expect(compose).toHaveAttribute("aria-expanded", "false")
+      const payment = page.getByRole("button", { name: "의존 서비스: payment", exact: true })
+      await payment.focus()
+      await page.keyboard.press("Enter")
+      await expect(payment).toBeFocused()
+      await expect(payment).toHaveAttribute("aria-pressed", "true")
     })
     await test.step("서비스 상세에서 연결의 코드 근거를 확인한다", async () => {
       const details = page.getByRole("region", { name: "서비스 상세" })
-      await expect(
-        details.getByText("ui-tests/project/tests/dependencies.spec.ts:3").first(),
-      ).toBeVisible()
+      const evidence = details.getByRole("button", { name: "코드 근거 · 1", exact: true })
+      await expect(evidence).toHaveAttribute("aria-expanded", "false")
+      await expect(details.getByText("ui-tests/project/tests/dependencies.spec.ts:3")).toBeHidden()
+      await evidence.focus()
+      await page.keyboard.press("Enter")
+      await expect(evidence).toHaveAttribute("aria-expanded", "true")
+      await expect(details.getByText("ui-tests/project/tests/dependencies.spec.ts:3")).toBeVisible()
+      await page.keyboard.press("Space")
+      await expect(evidence).toHaveAttribute("aria-expanded", "false")
       await expect(details.getByText("Verify payment", { exact: true })).toBeVisible()
+    })
+    await test.step("연결 미작성 노드는 실행 상태를 추측하지 않고 빈 관계를 표시한다", async () => {
+      const search = page.getByRole("button", { name: "의존 서비스: search", exact: true })
+      await search.focus()
+      await page.keyboard.press("Space")
+      await expect(search).toBeFocused()
+      const details = page.getByRole("region", { name: "서비스 상세" })
+      await expect(details.getByRole("heading", { name: "search", exact: true })).toBeVisible()
+      await expect(details.getByRole("region", { name: "사용하는 서비스 · 0" })).toBeVisible()
+      await expect(details.getByText("작성된 의존 관계가 없습니다.", { exact: true })).toBeVisible()
+      await expect(details.getByRole("region", { name: /의존하는 서비스/ })).toHaveCount(0)
+      await expect(details.getByRole("button", { name: /코드 근거/ })).toHaveCount(0)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        page.viewportSize()?.width ?? 1920,
+      )
     })
     await test.step("설정 탭에서 기존 환경변수 편집 기능을 사용한다", async () => {
       await page.getByRole("tab", { name: "설정", exact: true }).click()

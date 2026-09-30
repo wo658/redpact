@@ -236,6 +236,7 @@ export const ko = {
   "Not assessed": "Not assessed",
   "Mode configured": "Mode configured",
   "Implementation needed": "구현 필요",
+  "Code evidence": "코드 근거",
   "Compose services": "Compose 서비스",
   "Authored relationships and mode assessments. Configuration does not establish readiness.":
     "작성된 의존 관계와 모드 평가입니다. 설정 여부는 실행 준비 완료를 의미하지 않습니다.",

@@ -13,11 +13,13 @@ import {
   dependencyNodeKey as nodeKey,
 } from "@/lib/dependency-diagram"
 import { dependencyModeLabel } from "@/lib/dependency-modes"
+import { cn } from "@/lib/utils"
 import { DependencyDiagram } from "./dependency-diagram"
 import { EmptyState } from "./feedback"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
+import { Separator } from "./ui/separator"
 
 export function DependencyOverview({ settings }: { settings: DependencySettings }) {
   const { t } = useTranslation()
@@ -98,20 +100,34 @@ function NodeDetails({ node, settings }: { node: Node; settings: DependencySetti
   return (
     <section
       aria-label={t("Service details")}
-      className="flex w-full min-w-0 content-width-768 flex-col gap-4 [overflow-wrap:anywhere]"
+      className="@container flex w-full min-w-0 content-width-768 flex-col gap-5 [overflow-wrap:anywhere]"
     >
-      <div>
-        <h3 className="break-all text-base font-medium">{node.name}</h3>
-        <p className="text-sm text-muted-foreground">
-          {application?.description ?? dependency?.description}
-        </p>
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-base font-semibold">{node.name}</h3>
+          <Badge variant="outline">
+            {t(node.kind === "application" ? "Application service" : "Dependency")}
+          </Badge>
+          {dependency && <Badge variant="outline">{t(dependencyModeLabel(dependency.kind))}</Badge>}
+        </div>
+        {(application?.description ?? dependency?.description) && (
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+            {application?.description ?? dependency?.description}
+          </p>
+        )}
+        {application && <ServiceList services={application.services} />}
+        {!!dependency?.services?.length && <ServiceList services={dependency.services} />}
       </div>
-      {application && <ServiceList services={application.services} />}
-      {dependency && <ModeAssessments dependency={dependency} />}
-      <div className="flex min-w-0 flex-col gap-6">
-        <RelationshipList title={t("Used by")} relationships={incoming} />
+      <Separator />
+      <div
+        className={cn(
+          "grid min-w-0 grid-cols-1 gap-6",
+          node.kind === "application" && "@min-[640px]:grid-cols-2",
+        )}
+      >
+        <RelationshipList title={t("Used by")} relationships={incoming} direction="incoming" />
         {node.kind === "application" && (
-          <RelationshipList title={t("Uses")} relationships={outgoing} />
+          <RelationshipList title={t("Uses")} relationships={outgoing} direction="outgoing" />
         )}
       </div>
     </section>
@@ -121,28 +137,42 @@ function NodeDetails({ node, settings }: { node: Node; settings: DependencySetti
 function RelationshipList({
   title,
   relationships,
+  direction,
 }: {
   title: string
+  direction: "incoming" | "outgoing"
   relationships: ServiceRelationship[]
 }) {
   const { t } = useTranslation()
   return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <h4 className="text-sm font-medium">{title}</h4>
+    <section
+      aria-label={`${title} · ${relationships.length}`}
+      className="flex min-w-0 flex-col gap-3"
+    >
+      <h4 className="flex items-baseline gap-2 text-base font-semibold">
+        {title}
+        <span className="text-sm font-normal text-muted-foreground">{relationships.length}</span>
+      </h4>
       {relationships.length ? (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex min-w-0 flex-col gap-5">
           {relationships.map((relation) => (
             <li
               key={`${relation.from}:${relation.to.kind}:${relation.to.name}`}
-              className="flex flex-col gap-1 text-sm"
+              className="flex min-w-0 flex-col gap-2 text-sm leading-relaxed"
             >
-              <p className="break-all">
-                {relation.from} → {relation.to.name}{" "}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">
+                  {direction === "incoming" ? relation.from : relation.to.name}
+                </span>
                 <Badge variant="outline">
-                  {t(relation.to.kind === "application" ? "Application service" : "Dependency")}
+                  {t(
+                    direction === "incoming" || relation.to.kind === "application"
+                      ? "Application service"
+                      : "Dependency",
+                  )}
                 </Badge>
-              </p>
-              <p>{relation.description}</p>
+              </div>
+              <p className="whitespace-pre-wrap text-muted-foreground">{relation.description}</p>
               <SourceList evidence={relation.evidence} />
             </li>
           ))}
@@ -150,7 +180,7 @@ function RelationshipList({
       ) : (
         <p className="text-sm text-muted-foreground">{t("No authored relationships.")}</p>
       )}
-    </div>
+    </section>
   )
 }
 
@@ -167,17 +197,29 @@ export function ModeAssessments({ dependency }: { dependency: DependencyDefiniti
 }
 
 function SourceList({ evidence }: { evidence: SourceEvidence[] }) {
+  const { t } = useTranslation()
+  if (!evidence.length) {
+    return null
+  }
   return (
-    <ul className="text-xs text-muted-foreground">
-      {evidence.map((source) => (
-        <li key={`${source.path}:${source.line}`} className="break-all">
-          <code>
-            {source.path}
-            {source.line === undefined ? "" : `:${source.line}`}
-          </code>
-        </li>
-      ))}
-    </ul>
+    <Collapsible>
+      <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
+        <ChevronDownIcon data-icon="inline-start" />
+        {t("Code evidence")} · {evidence.length}
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <ul className="flex min-w-0 flex-col gap-2 py-2 text-sm text-muted-foreground">
+          {evidence.map((source) => (
+            <li key={`${source.path}:${source.line}`}>
+              <code>
+                {source.path}
+                {source.line === undefined ? "" : `:${source.line}`}
+              </code>
+            </li>
+          ))}
+        </ul>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
 
@@ -187,7 +229,7 @@ function ServiceList({ services }: { services: string[] }) {
     <Collapsible>
       <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
         <ChevronDownIcon data-icon="inline-start" />
-        {t("Compose services")}
+        {t("Compose services")} · {services.length}
       </CollapsibleTrigger>
       <CollapsibleContent>
         <ul className="flex flex-col gap-1 p-2 text-sm">
