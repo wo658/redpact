@@ -41,7 +41,7 @@ export function DependencyOverview({ settings }: { settings: DependencySettings 
     return <EmptyState>{t("No dependencies declared.")}</EmptyState>
   }
   return (
-    <div className="flex min-w-0 flex-col gap-6">
+    <div className="mx-auto flex w-full min-w-0 content-width-768 flex-col gap-6">
       {!applications.length && (
         <p className="text-sm text-muted-foreground">
           {t("Application services are not described yet. Ask your agent to update the topology.")}
@@ -100,7 +100,7 @@ function NodeDetails({ node, settings }: { node: Node; settings: DependencySetti
   return (
     <section
       aria-label={t("Service details")}
-      className="@container flex w-full min-w-0 content-width-768 flex-col gap-5 [overflow-wrap:anywhere]"
+      className="@container flex w-full min-w-0 flex-col gap-5 [overflow-wrap:anywhere]"
     >
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">

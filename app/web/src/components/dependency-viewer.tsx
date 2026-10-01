@@ -238,7 +238,7 @@ export function DependencyCatalog({
     return <EmptyState>{t("No dependencies declared.")}</EmptyState>
   }
   return (
-    <div className="flex w-full min-w-0 content-width-768 flex-col gap-6">
+    <div className="mx-auto flex w-full min-w-0 content-width-768 flex-col gap-6">
       {entries.map(([name, definition]) => (
         <section key={name} aria-label={name} className="flex min-w-0 flex-col gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">

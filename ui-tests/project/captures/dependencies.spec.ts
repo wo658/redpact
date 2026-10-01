@@ -128,10 +128,17 @@ test("의존성 페이지의 빈 상태와 설정된 상태를 검토한다", as
 
 async function capture(page: Page, info: TestInfo, name: string) {
   await test.step(`${name} 페이지를 캡처한다`, async () => {
-    await page.evaluate(() => document.fonts.ready)
-    await info.attach(name, {
-      body: await page.screenshot({ animations: "disabled", scale: "css" }),
-      contentType: "image/png",
-    })
+    const original = page.viewportSize()
+    for (const width of [1920, 390]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 1080 })
+      await page.evaluate(() => document.fonts.ready)
+      await info.attach(`${name} / ${width}px`, {
+        body: await page.screenshot({ animations: "disabled", scale: "css" }),
+        contentType: "image/png",
+      })
+    }
+    if (original) {
+      await page.setViewportSize(original)
+    }
   })
 }

@@ -33,7 +33,11 @@ not observed execution results. Empty relationships mean none were authored.
 
 Application details place Used by and Uses side by side when the detail column has
 at least 640px, and stack them on narrower screens within the shared 768px reading
-width. Dependencies show only Used by across the column. Nodes and disclosures
+width. The diagram and service details share one centered reading column with
+matching widths and left edges. The configuration list uses the same shared
+[reading-width policy](frontend.md#layout-and-reading-width), while text remains
+left-aligned. Large diagrams scroll inside the column without shrinking their labels.
+Dependencies show only Used by across the column. Nodes and disclosures
 support keyboard activation; selecting a node does not move focus or execute code.
 Missing descriptions are not inferred. Configuration and kinds do not establish
 readiness, connectivity or approval.
