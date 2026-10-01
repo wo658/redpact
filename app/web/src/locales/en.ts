@@ -226,6 +226,7 @@ export const en = {
   "Not assessed": "Not assessed",
   "Mode configured": "Configured",
   "Implementation needed": "Implementation needed",
+  "Code evidence": "Code evidence",
   "Compose services": "Compose services",
   "Authored relationships and mode assessments. Configuration does not establish readiness.":
     "Authored relationships and mode assessments. Configuration does not establish readiness.",

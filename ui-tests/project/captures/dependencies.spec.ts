@@ -80,6 +80,7 @@ test("의존성 페이지의 빈 상태와 설정된 상태를 검토한다", as
     })
     await test.step("고정 종류와 연결의 코드 근거를 확인한다", async () => {
       const details = page.getByRole("region", { name: "서비스 상세" })
+      await details.getByRole("button", { name: "코드 근거 · 1", exact: true }).click()
       await expect(
         details.getByText("ui-tests/project/tests/dependencies.spec.ts:3").first(),
       ).toBeVisible()
@@ -96,14 +97,12 @@ test("의존성 페이지의 빈 상태와 설정된 상태를 검토한다", as
       await expect(page.getByText("https://example.test", { exact: true })).toBeVisible()
       await expect(page.getByRole("button", { name: "환경변수 추가" })).toHaveCount(2)
       await capture(page, info, "Dependencies / 설정 / 환경변수 목록")
-      await page.setViewportSize({ width: 390, height: 844 })
       await expect(page.getByRole("heading", { name: "payment", exact: true })).toBeVisible()
       await expect(page.getByRole("heading", { name: "search", exact: true })).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-        390,
+        page.viewportSize()?.width ?? 1920,
       )
-      await capture(page, info, "Dependencies / 모바일 / 고정 의존성 목록")
-      await page.setViewportSize({ width: 1920, height: 1080 })
+      await capture(page, info, "Dependencies / 설정 / 고정 의존성 목록")
       await page.getByRole("button", { name: "PAYMENT_URL 수정" }).click()
       await expect(page.getByRole("textbox", { name: "value", exact: true })).toBeVisible()
       await capture(page, info, "Dependencies / 설정 / 환경변수 편집")
@@ -129,10 +128,17 @@ test("의존성 페이지의 빈 상태와 설정된 상태를 검토한다", as
 
 async function capture(page: Page, info: TestInfo, name: string) {
   await test.step(`${name} 페이지를 캡처한다`, async () => {
-    await page.evaluate(() => document.fonts.ready)
-    await info.attach(name, {
-      body: await page.screenshot({ animations: "disabled", scale: "css" }),
-      contentType: "image/png",
-    })
+    const original = page.viewportSize()
+    for (const width of [1920, 390]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 1080 })
+      await page.evaluate(() => document.fonts.ready)
+      await info.attach(`${name} / ${width}px`, {
+        body: await page.screenshot({ animations: "disabled", scale: "css" }),
+        contentType: "image/png",
+      })
+    }
+    if (original) {
+      await page.setViewportSize(original)
+    }
   })
 }
