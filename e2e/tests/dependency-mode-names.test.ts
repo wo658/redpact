@@ -30,15 +30,20 @@ test("네 고정 의존성 종류를 함께 구성하고 실행 선택 API를 �
     for (const kind of ["shared-local", "remote"]) {
       const settings = JSON.parse(current.body.source)
       settings.dependencies.search = { kind, services: ["db"] }
-      expect(
-        (
-          await http(endpoint, "PUT", {
-            source: JSON.stringify(settings),
-            revision: current.body.revision,
-          })
-        ).status,
-      ).toBe(400)
+      await node(
+        `import {writeFileSync} from 'node:fs';const {path,settings}=JSON.parse(process.argv[1]);writeFileSync(path+'/.redpact/settings.json',JSON.stringify(settings));console.log('null');`,
+        { path, settings },
+      )
+      const result = await rpc<{ structuredContent: { validation: { valid: boolean } } }>(
+        "tools/call",
+        { name: "configure", arguments: { action: "validate", path } },
+      )
+      expect(result.structuredContent.validation.valid).toBe(false)
     }
+    await node(
+      `import {writeFileSync} from 'node:fs';const {path,source}=JSON.parse(process.argv[1]);writeFileSync(path+'/.redpact/settings.json',source);console.log('null');`,
+      { path, source: current.body.source },
+    )
     const result = await rpc<{ isError?: boolean }>("tools/call", {
       name: "configure",
       arguments: { action: "validate", path, selection: { services: ["app"], select: {} } },

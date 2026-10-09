@@ -6,23 +6,20 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { build } from "esbuild"
 
-const redpact = process.argv.includes("--redpact")
 const pluginRoot =
   process.env.REDPACT_PREVIEW_PLUGIN_ROOT ??
   fileURLToPath(new URL("dist/redpact-marketplace/plugins/redpact-app/", import.meta.url))
-const entry = redpact
-  ? join(pluginRoot, "dist/server.mjs")
-  : fileURLToPath(new URL("dist/marketplace/plugins/sidebar-lab/dist/server.mjs", import.meta.url))
+const entry = join(pluginRoot, "dist/server.mjs")
 const client = new Client({ name: "sidebar-browser-harness", version: "0.1.0" })
 await client.connect(
   new StdioClientTransport({
-    command: redpact ? join(pluginRoot, "bin/node") : process.execPath,
+    command: join(pluginRoot, "bin/node"),
     env: Object.fromEntries(Object.entries(process.env).filter(([, value]) => value !== undefined)),
     args: [entry],
   }),
 )
 const result = await client.readResource({
-  uri: redpact ? "ui://redpact-app/0.5.1/page.html" : "ui://sidebar-lab/main.html",
+  uri: "ui://redpact-app/0.5.1/page.html",
 })
 const html = result.contents[0].text
 const frames = result.contents[0]._meta?.ui?.csp?.frameDomains ?? []
@@ -34,22 +31,17 @@ const bundled = await build({
   platform: "browser",
   write: false,
 })
-const port = Number(process.env.PORT ?? (redpact ? 4320 : 4319))
+const port = Number(process.env.PORT ?? 4320)
 const origin = `http://127.0.0.1:${port}`
-const allowed = new Set(
-  redpact
-    ? [
-        "get_redpact_page",
-        "redpact_viewer_request",
-        "redpact_viewer_events",
-        "start_redpact_server",
-        "install_redpact_runtime",
-        "stop_redpact_server",
-        "connect_redpact_project",
-        "get_redpact_evidence",
-      ]
-    : ["get_lab_state", "increment_lab", "reset_lab"],
-)
+const allowed = new Set([
+  "open_redpact_app",
+  "get_redpact_page",
+  "redpact_viewer_request",
+  "redpact_viewer_events",
+  "start_redpact_server",
+  "install_redpact_runtime",
+  "stop_redpact_server",
+])
 async function callTool(req, res) {
   let body = ""
   for await (const chunk of req) {
@@ -94,15 +86,10 @@ const server = createServer(async (req, res) => {
       res.writeHead(200, { "Content-Type": "text/javascript" }).end(bundled.outputFiles[0].text)
       return
     }
-    if (req.url === "/") {
+    if (req.url === "/" || req.url?.startsWith("/?")) {
       res
         .writeHead(200, { "Content-Type": "text/html" })
-        .end(
-          (await readFile(new URL("test/harness.html", import.meta.url), "utf8")).replaceAll(
-            "Sidebar Lab",
-            redpact ? "Redpact App" : "Sidebar Lab",
-          ),
-        )
+        .end(await readFile(new URL("test/harness.html", import.meta.url), "utf8"))
       return
     }
     res.writeHead(404).end()

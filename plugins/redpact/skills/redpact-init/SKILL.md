@@ -1,48 +1,34 @@
 ---
 name: redpact-init
-description: Initialize a project for local Redpact by configuring observation, runnable application containers with verified host access, unit commands, and managed test capabilities as needed. Declare fixed dependencies only after verifying worktree usability and resolving required user inputs. Use for Redpact project setup; feature development and review belong to redpact.
+description: Inspect and configure an actual project for Redpact through authored files and MCP validation. Resolve fixed dependencies and verify the agreed managed execution without project-management UI. Feature development belongs to redpact.
 ---
 
 # Redpact Init
 
-Configure the target application for the connected local Redpact service. Resolve
-its absolute path from the request and workspace; the target need not be the
-Redpact repository. Keep the installed service independent from the application.
+Resolve the actual target checkout and shared primary settings root from the request,
+repository and connected runtime. Keep the Redpact service separate from the target.
+Read the [configuration guide](references/configuration.md) before authoring.
 
-Read the [configuration guide](references/configuration.md) and follow its setup,
-observation readback, live discovery, validation and completion requirements.
-Before authoring, follow [schema-complete initialization](references/configuration.md#schema-complete-initialization):
-check the connected runtime schema, populate every applicable supported field with
-a valid default or inspected value, and diagnose unsupported keys before saving.
-Plugin installation alone does not initialize a project or update the runtime.
-For a runnable web application or server, ordinary init includes a usable Container
-baseline even when integration tests or fixed dependencies have not been requested.
-Follow [application Container setup](references/configuration.md#application-container-baseline).
-Respect explicit draft-only/unit-only scope and projects without a runnable server;
-do not create placeholder services for them.
-Load the [dependency guide](../redpact/references/dependencies.md) only when application
-services, fixed dependencies or connection inputs need setup. Present configured topology
-as a Mermaid v12 flowchart following that guide. Preserve unrelated settings.
+Inspect the application and `configure describe`, preserve unrelated configuration,
+and write the supported `.redpact/settings.json` directly. Configure observation in
+the instance file only when needed; verify actual discovery separately from validation.
+There is no settings editor, folder picker, project-management wizard or manual
+Container to operate. The host owns worktrees, files and Git.
 
-Perform Git project setup directly in the intended base-branch checkout; read the
-[init checkout lifecycle](references/configuration.md#init-checkout-lifecycle).
-Implement Mock adapters, environment wiring, Dockerfiles and Compose there.
-Ordinary feature worktrees reuse the shared fixed configuration. The live settings contract
-still uses the shared primary rulesRoot, not a checkout-local settings override.
-Do not claim init complete until the setup is committed on the intended base
-and a fresh worktree runs the agreed baseline configuration without infrastructure edits.
-Inspect existing services and explicit provider choices, then configure one fixed
-kind per dependency. Ask only for unresolved topology decisions, missing endpoints
-or private inputs. Reuse accepted choices and authorized mock implementation;
-do not invent a mode catalog or require a second selectable baseline.
-Request private keys only for the agreed connections through secure input.
-Init authorizes the scoped local setup commit after verification, not unrelated
-features, remote publication or an unrequested merge.
-Application Container setup and dependency registration
-include bounded temporary execution to verify host access and the proposed connection; follow
-the dependency guide before advertising it as available. Ask for missing connection
-facts and request missing required environment values. Do not run unrelated tests, unit commands,
-persistent application/dev/preview processes or an unrequested Playwright capture.
-Readiness checks are required; screenshot review is not an init completion gate. Report authored/reused
-files, verified project and checkout paths, actual validation results and deferred
-runtime checks; configuration validation proves neither readiness nor approval.
+Use the [dependency guide](../redpact/references/dependencies.md) when services,
+connections or fixed dependency kinds need setup. Reuse inspected facts and accepted
+choices. Ask only for unresolved topology, endpoints or private inputs; never invent
+a mock implementation, credentials, mode catalog or alternate configuration format.
+
+Choose the capabilities needed by the request: Unit, Integration and/or Playwright.
+A runnable service needs real Dockerfile/Compose definitions for managed execution;
+unit-only or draft-only scope does not require placeholder services. Validate the
+actual checkout, then request the agreed managed smoke check when authorized.
+Under Ask, only a person can approve through the App or exact connected review.
+Validation alone proves neither readiness nor approval. Do not launch persistent
+development processes or unrelated tests/captures as an initialization side effect.
+
+Report authored/reused files, execution and shared settings paths, discovery and
+validation results, observed managed evidence and remaining limits. Use an actual
+returned review path for evidence. Setup-only requests end here; authorized feature
+work continues through the main redpact workflow without another onboarding round.

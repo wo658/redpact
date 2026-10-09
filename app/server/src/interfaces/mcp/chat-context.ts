@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/server"
-import { reviewContextInput, workspaceStatusInput } from "../../core/chat-context-schema.js"
+import { reviewContextInput, workspaceStatusInput } from "../../core/verification-schema.js"
 import { getReviewContext, getWorkspaceStatus } from "../../workflows/chat-context.js"
 import type { Services } from "../../workflows/services.js"
 import { invoke, readOnly } from "./result.js"
@@ -9,7 +9,7 @@ export function registerChatContextTools(server: McpServer, services: Services) 
     "get_workspace_status",
     {
       description:
-        "Read the explicit absolute working checkout's shared settings diagnostics, existing observed binding, pending execution approvals, recent/active execution identities and cleanup attention. Does not register projects, create worktrees, write settings, run tests or grant approval. Freshness and human acceptance are separate from passing results. Follow nextActions for missing evidence and use get_review_context for a specific execution.",
+        "Read the explicit absolute working checkout's shared settings diagnostics, existing observed binding, pending execution approvals, recent/active execution identities and cleanup attention. Does not register projects, create worktrees, write settings, run tests or grant approval. Freshness and human acceptance are separate from passing results. Use get_review_context for a specific execution.",
       inputSchema: workspaceStatusInput,
       annotations: readOnly,
     },

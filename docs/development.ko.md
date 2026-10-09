@@ -31,7 +31,7 @@ skill 지시는 고유 목적을 유지하며 병렬 제품 설명서가 아닙�
    확인할 수 있지만 사실과 번역 의미는 리뷰어가 확인해야 합니다.
 
 소문자와 hyphen으로 된 안정된 slug를 사용합니다. 영어는 `name.md`, 한국어는
-`name.ko.md`이며 `title`, `description` frontmatter가 필요합니다. `meta.en.json`과
+`name.md`이며 `title`, `description` frontmatter가 필요합니다. `meta.en.json`과
 `meta.ko.json`은 같은 page ID를 나열합니다. 문서 사이에는 상대 Markdown 링크를
 사용하고 렌더러가 선택 언어를 유지합니다. `../` 링크는 GitHub 소스를 열며 로컬 미push
 내용보다 오래될 수 있습니다. 언어 간 heading anchor를 공유하거나 ID가 다르면 페이지를

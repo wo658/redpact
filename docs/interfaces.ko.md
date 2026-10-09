@@ -64,6 +64,14 @@ Unit과 Playwright는 캡처한 요청을 한 번 승인합니다. 모델은 승
 테스트를 실행하지 않습니다. 수집 오류는 진단으로 남습니다. 런타임 경계는
 [실행](execution.md)을 참고하세요.
 
+기존 체크아웃 연결은 `{ path }`만 받는 `POST /api/projects`와
+`POST /api/projects/:id/worktrees`를 사용합니다. MCP 실행도 같은 연결 워크플로를
+사용합니다. 연결은 같은 식별로 과거 연결 해제 기록을 재활성화할 수 있지만 워크트리를
+생성하거나 `.redpact/settings.json`을 쓰지 않습니다. 프로젝트·인스턴스 설정·tracking
+조회와 work item·제출·실행·일반 환경 list/get/stop 계약은 유지합니다.
+프로젝트 관리, 설정 쓰기, 디렉터리 선택기, 일반 파일, Git 변경·그래프·PR·워크트리
+생성, 수동 Container 시작, 호스트 플러그인 업데이트 API는 없습니다.
+
 ## 요청 승인과 Apps
 
 번들 리소스는 `ui://redpact/environment.html`, `ui://redpact/tests.html`입니다.
@@ -104,8 +112,7 @@ Ask를 Auto로 몰래 바꿀 수 없습니다. 뷰어의 명시적 검토 동작
 
 `get_workspace_status`는 지정한 체크아웃을 등록하거나 코드를 실행하지 않고 조회합니다.
 공유 설정 루트와 진단, 이미 관찰된 연결, 승인 대기와 제한된 실행 요약을 반환합니다.
-활성 실행과 미완료 정리는 최근 이력 페이지와 별도로 조회합니다. `nextActions`는 가능한
-작업의 참조이며 사전 승인이나 런타임 준비 상태의 증명이 아닙니다.
+활성 실행과 미완료 정리는 최근 이력 페이지와 별도로 조회합니다. 상태는 관찰한 사실과 진단을 보고하며 명령을 지시하거나 작업을 미리 승인하지 않습니다.
 
 `get_review_context`는 실행 또는 대기 요청 하나의 제한된 실패 정보, 근거 참조와 상대
 `reviewPath`를 반환합니다. 같은 뷰어 출처와 결합해서 사용하며 환경 인증 값이나 UI
@@ -121,11 +128,11 @@ Integration 승인 미리보기는 요청 당시 저장된 앱 서비스 선택,
 Playwright 종료만으로 환경 제거를 증명하지 않습니다. 카드와 검토 요약은 명시적인 정리
 근거가 없으면 정리를 `unknown`으로, 정리 오류가 기록되었으면 `failed`로 표시합니다.
 
-뷰어는 같은 workflow를 통해 `GET /api/workspace-status?path=...`와
-`GET /api/review-context?kind=...&id=...`를 사용합니다. 명시적인 뷰어 승인·취소는
+정확한 기록 뷰어는 `GET /api/review-context?kind=...&id=...`를 사용합니다.
+`GET /api/workspace-status?path=...`는 읽기 전용 체크아웃 관찰 API입니다. 명시적인 뷰어 승인·취소는
 `/api/execution-reviews/:kind/:id/approve`와 `/cancel`을 사용하며 승인은 예상 revision과
 Integration의 해당 승인 대상을 확인합니다. 기존 same-origin·local-host 경계를 유지합니다.
-모델용 도구에는 뷰어 승인 작업을 노출하지 않습니다. [탐색](ux-navigation.md)을 참고하세요.
+모델용 도구에는 뷰어 승인 작업을 노출하지 않습니다. [탐색](frontend.md)을 참고하세요.
 
 워크트리의 `scope=evidence` 이벤트 구독에는 Integration과 Unit/Playwright 검토 기록,
 보존된 실행 근거와 공유 프로젝트 설정이 포함됩니다. 다른 워크트리의 기록을 받지 않으면서

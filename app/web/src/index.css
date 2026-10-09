@@ -408,21 +408,6 @@
     max-width: none;
   }
 
-  /* Gutters sit outside the 640px settings content. */
-  .settings-page {
-    width: 100%;
-    min-width: 0;
-    max-width: calc(var(--content-width-640) + 3rem);
-    margin-inline: auto;
-    padding: 2rem 1rem;
-  }
-
-  @media (min-width: 40rem) {
-    .settings-page {
-      padding: 3rem 1.5rem;
-    }
-  }
-
   .diff {
     font-size: 0.8125rem;
   }
@@ -483,24 +468,12 @@
     border-bottom: 1px solid var(--border);
   }
 
-  .project-files-layout {
-    grid-template-rows: minmax(100px, 30%) minmax(0, 1fr);
-  }
-
-  .project-files-layout > .review-list {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-  }
-
   @container workspace (min-width: 900px) {
     .review-layout {
       grid-template-columns: 280px minmax(0, 1fr);
       grid-template-rows: minmax(0, 1fr);
     }
     .review-list {
-      border-bottom: 0;
-    }
-    .project-files-layout > .review-list {
       border-bottom: 0;
     }
   }
@@ -521,16 +494,6 @@
   .image-diff-sides {
     flex-direction: row;
   }
-}
-
-:root[data-desktop="macos"] {
-  --native-navigation-left: 88px;
-  --native-controls-width: 0px;
-}
-
-:root[data-desktop="windows"] {
-  --native-navigation-left: 8px;
-  --native-controls-width: 138px;
 }
 
 .native-window-controls {
@@ -554,15 +517,6 @@
   display: none;
 }
 
-/* Browser desktops keep navigation permanently available; small screens still use the sheet trigger. */
-@media (min-width: 768px) {
-  :root:not([data-desktop])
-    [data-slot="sidebar-wrapper"][data-desktop-toggle="false"]
-    .sidebar-workspace-toggle {
-    display: none;
-  }
-}
-
 :root:is([data-desktop="macos"], [data-desktop="windows"]) .desktop-titlebar {
   display: flex;
   position: fixed;
@@ -573,75 +527,6 @@
   user-select: none;
 }
 
-:root:is([data-desktop="macos"], [data-desktop="windows"]) .native-sidebar-toolbar {
-  position: fixed;
-  z-index: 11;
-  top: 0;
-  left: var(--native-navigation-left);
-  height: 48px;
-  user-select: none;
-}
-
-:root:is([data-desktop="macos"], [data-desktop="windows"]) [data-slot="sidebar-wrapper"] {
-  padding-top: 48px;
-}
-
-:root:is([data-desktop="macos"], [data-desktop="windows"]) [data-slot="sidebar-container"] {
-  top: 48px;
-  height: calc(100svh - 48px);
-}
-
-/* Keep Mermaid's ELK geometry and neo shapes within the viewer's live theme. */
-.dependency-diagram svg {
-  font-family: var(--font-sans) !important;
-}
-.dependency-diagram .node rect,
-.dependency-diagram .node polygon,
-.dependency-diagram .node path {
-  fill: var(--card) !important;
-  stroke: var(--border) !important;
-}
-.dependency-diagram .node[aria-pressed="true"] rect,
-.dependency-diagram .node[aria-pressed="true"] path {
-  fill: var(--accent) !important;
-  stroke: var(--primary) !important;
-}
-.dependency-diagram text,
-.dependency-diagram tspan {
-  fill: var(--foreground) !important;
-}
-.dependency-diagram .flowchart-link {
-  stroke: var(--muted-foreground) !important;
-}
-.dependency-diagram marker path {
-  fill: var(--muted-foreground) !important;
-  stroke: var(--muted-foreground) !important;
-}
-.dependency-diagram .node[role="button"] {
-  cursor: pointer;
-}
-.dependency-diagram .node:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 4px;
-}
-
-.dependency-diagram .flowchart-link.dependency-connected {
-  stroke: var(--primary) !important;
-  stroke-width: 2px;
-}
-
-.dependency-diagram .nodeLabel,
-.dependency-diagram .nodeLabel p {
-  color: var(--foreground) !important;
-  font-family: var(--font-sans) !important;
-}
-
-.dependency-diagram .cluster rect {
-  fill: var(--muted) !important;
-  stroke: var(--border) !important;
-}
-.dependency-diagram .cluster-label,
-.dependency-diagram .cluster-label p {
-  color: var(--foreground) !important;
-  font-family: var(--font-sans) !important;
+:root:is([data-desktop="macos"], [data-desktop="windows"]) .execution-viewer {
+  padding-top: calc(48px + 1.5rem);
 }

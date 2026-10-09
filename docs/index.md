@@ -1,73 +1,39 @@
 ---
 title: Develop in chat, review with Redpact
-description: Ask an agent to develop with TDD in a worktree and inspect recorded execution evidence when a decision needs you.
+description: Managed verification and recorded evidence for agent development.
 ---
 
 # Develop in chat, review with Redpact
 
-Redpact connects a coding conversation to managed verification and human review.
-Ask the agent to implement a change in an isolated worktree, write a failing test,
-and record the checks against the actual application. Open Redpact when you need to
-approve execution, inspect a failure or judge the recorded screens and source.
+Ask the coding agent to implement a change with TDD in an isolated worktree.
+Redpact captures execution inputs, runs Unit, Integration and Playwright checks,
+and opens the exact recorded request or result when a human decision is needed.
 
-## One conversation, shared evidence
-
-```mermaid
-flowchart LR
-    A["Ask for a change"] --> W["Agent: worktree and failing test"]
-    W --> I["Agent: implement and request verification"]
-    I --> X["Redpact: approval, execution and evidence"]
-    X --> R["Human: inspect evidence"]
-    R --> A
-```
-
-The host agent edits code and settings and performs Git operations. Redpact runs
-Unit, Integration and Playwright checks, records what actually happened and links
-the conversation to the same evidence in its viewer. Subagents can divide the work;
-the coordinating agent still verifies their combined result in the intended checkout.
-
-A local failing assertion supports the TDD cycle. A registered request, a parsed test
-or a failed environment setup does not prove that assertion ran. Keep the observed
-red and green evidence distinct from the user's acceptance of the change.
-
-## What belongs where
-
-| Surface | Responsibility |
+| Owner | Responsibility |
 | --- | --- |
-| Chat and MCP | Inspect checkout status, diagnose configuration, request and cancel execution, retrieve evidence and explain remaining work |
-| Redpact viewer | Current work, execution history, specific run evidence and resource problems |
-| Approval card | Human decision about the captured execution request |
-| Host agent and editor | Worktrees, file edits, diffs, commits, pull requests and merges |
+| Host conversation and agent | Worktrees, subagents, files, configuration, local TDD, Git and publication |
+| Redpact MCP | Configuration diagnostics, managed execution, status, cancellation and evidence lookup |
+| Redpact viewer and Apps | Human execution approval, recorded source/results/screens and worktree-bound history |
 
-The default viewer is a review workspace. Generic file browsing, Git Graph and
-independent workspace tabs are not part of that interface. Advanced test catalogs,
-manual Container and configuration remain available when needed. See
-[viewer navigation](ux-navigation.md) for the exact destinations.
+The viewer opens an execution link from chat. Its history stays bound to that
+record's worktree. With no execution context, it asks you to open a record from the
+conversation. Project management, settings editors, test launch catalogs, manual
+containers and Git operations are outside the viewer.
 
-## Ask for a verifiable change
+> Implement quantity editing in a worktree using TDD. First observe the intended
+> assertion fail, then implement it. Use subagents for independent work. Request
+> managed API and browser checks against this checkout and return the recorded
+> execution links, desktop/mobile captures and remaining review decisions.
 
-> Implement order quantity editing in an isolated worktree. First observe a test
-> fail for the requested behavior, then implement it. Use Redpact to run the relevant
-> checks against this checkout, capture the desktop and mobile user states, and
-> return the recorded evidence and anything that still needs my decision.
+Under Ask, a person approves the captured request in an MCP App or the connected
+review screen. Approval authorizes execution; it does not accept the code change.
+A passing result, current-source freshness and human acceptance are separate facts.
+A collection or environment failure does not establish a TDD assertion failure.
 
-The agent begins with checkout status and the shared configuration. Tests execute
-through the MCP entry matching their runtime; approval requests stay pending until
-a human uses the supported App controls or the connected execution review. Review links refer to the same local
-instance and execution. See [review your first change](review-workflow.md).
+Start with [installation](installation.md), [configuration](configuration.md) and
+[the review workflow](review-workflow.md). [Results](results.md) explains evidence;
+[test authoring](tests.md) defines supported runtimes. All worktrees share one fixed
+configuration while each run owns its temporary resources. See [dependencies](dependencies.md).
 
-## Three independent facts
-
-A passing result describes the assertions or command that ran. It does not establish
-that current files match those inputs, or that a person accepted the change. Redpact
-keeps execution outcome, source freshness and human acceptance separate. Unknown
-freshness remains unknown; neither the agent nor a status badge may invent approval.
-
-All worktrees share one fixed configuration, while each run owns fresh temporary
-resources. Read [dependencies and worktrees](dependencies.md) to understand which
-services are isolated and which external data remains shared.
-
-Start with [installation](installation.md), [project setup](first-project.md) and
-[your first execution](first-run.md). Use [results](results.md) to interpret evidence
-and [test authoring](tests.md) to extend coverage. Redpact is pre-release; this site
-describes the implementation and does not connect to local projects itself.
+Redpact is pre-release. This documentation describes the implementation and does
+not connect to local projects itself.

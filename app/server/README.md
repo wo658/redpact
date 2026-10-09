@@ -12,7 +12,7 @@ The default server binds loopback on port 54318. See the canonical documentation
 
 - [Installation and connection](../../docs/installation.md)
 - [Architecture](../../docs/architecture.md)
-- [Settings ownership](../../docs/settings-reference.md)
+- [Settings ownership](../../docs/configuration.md)
 - [Execution and environments](../../docs/execution.md)
 - [HTTP/MCP and generated API reference](../../docs/interfaces.md)
 - [Runtime data and recovery](../../docs/storage.md)

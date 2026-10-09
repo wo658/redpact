@@ -3,16 +3,11 @@ import { mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
-import { createChangeWatcher } from "../src/adapters/changes/watch.js"
-import { readHistory } from "../src/adapters/git/history.js"
 import { createGitAdapter } from "../src/adapters/git/isomorphic.js"
 import { parseSource } from "../src/adapters/parser/source.js"
 import { createScheduler } from "../src/adapters/process/queue.js"
 import { createSettingsService } from "../src/adapters/settings/json.js"
 import { openStore } from "../src/adapters/storage/files.js"
-import { eventScope } from "../src/workflows/event-scope.js"
-import { createObserveProjects } from "../src/workflows/observe-projects.js"
-import { createProjectGraph } from "../src/workflows/project-graph.js"
 import { createSubmissions } from "../src/workflows/submissions.js"
 import {
   createTestApp as createApp,
@@ -30,93 +25,6 @@ let services: Services & { worktrees: ReturnType<typeof createWorktrees> }
 let app: ReturnType<typeof createApp>
 const headers = { "Content-Type": "application/json" }
 
-test("project management preserves identity and rejects implicit reconnection", async () => {
-  const project = await services.worktrees.connect(repository, "Original")
-  const renamed = await app.request(`/api/projects/${project.id}`, {
-    method: "PATCH",
-    headers,
-    body: JSON.stringify({ name: "Renamed" }),
-  })
-  expect(renamed.status).toBe(200)
-  expect(storage.store.getProject(project.id)?.name).toBe("Renamed")
-  const disconnected = await app.request(`/api/projects/${project.id}`, { method: "DELETE" })
-  expect(disconnected.status).toBe(200)
-  expect(await services.worktrees.listProjects()).toEqual([])
-  await expect(services.worktrees.connect(repository)).rejects.toMatchObject({
-    code: "project_disconnected",
-  })
-  const restored = await app.request(`/api/projects/${project.id}/reconnect`, { method: "POST" })
-  expect(restored.status).toBe(200)
-  expect(await services.worktrees.connect(repository)).toMatchObject({
-    id: project.id,
-    name: "Renamed",
-  })
-})
-
-test("disconnected projects survive restart, stop observation and preserve submissions", async () => {
-  const project = await services.worktrees.connect(repository)
-  const worktree = await services.worktrees.ensure(project.id, repository)
-  const work = await services.submissions.createWork("Retained evidence", worktree.id)
-  const submission = await services.submissions.submitForWork(work.id, [
-    { path: "example.test.ts", source: 'test("retained", () => {})' },
-  ])
-  await services.worktrees.disconnectProject(project.id)
-  const readTests = vi.fn()
-  const observe = createObserveProjects({
-    worktrees: services.worktrees,
-    submissions: services.submissions,
-    files: { readTests } as never,
-    checkouts: async () => [repository],
-  })
-  expect(await observe([repository])).toEqual({ watchPaths: [], issues: [] })
-  expect(readTests).not.toHaveBeenCalled()
-  expect(services.submissions.get(submission.id)).toMatchObject({
-    id: submission.id,
-    worktreeId: worktree.id,
-  })
-  await expect(services.worktrees.resolve(worktree.id)).rejects.toMatchObject({
-    code: "project_disconnected",
-  })
-  await services.runs.close()
-  storage.close()
-  storage = openStore(join(directory, "state"))
-  expect(storage.store.getProject(project.id)?.disconnectedAt).toBeTruthy()
-  expect(storage.store.getSubmission(submission.id)?.worktreeId).toBe(worktree.id)
-})
-
-test("active project operations block disconnect without affecting another project", async () => {
-  const active = new Set<string>()
-  const worktrees = createWorktrees({
-    store: storage.store,
-    git: createGitAdapter(),
-    settings: createSettingsService,
-    activity: (id) => active.has(id),
-  })
-  const project = await worktrees.connect(repository)
-  const other = await worktrees.connect(directory)
-  active.add(project.id)
-  await expect(worktrees.disconnectProject(project.id)).rejects.toMatchObject({
-    code: "worktree_busy",
-  })
-  expect(worktrees.getProject(project.id).disconnectedAt).toBeUndefined()
-  expect((await worktrees.disconnectProject(other.id)).disconnectedAt).toBeTruthy()
-  active.clear()
-  expect((await worktrees.disconnectProject(project.id)).disconnectedAt).toBeTruthy()
-})
-
-test("Git initialization cannot implicitly reconnect a disconnected directory", async () => {
-  const root = join(directory, "later-git")
-  await mkdir(root)
-  const project = await services.worktrees.connect(root)
-  await services.worktrees.disconnectProject(project.id)
-  execFileSync("git", ["-C", root, "init", "-q"])
-  await expect(services.worktrees.connect(root)).rejects.toMatchObject({
-    code: "project_disconnected",
-  })
-  expect(storage.store.listProjects()).toHaveLength(1)
-  expect((await services.worktrees.connect(root, undefined, true)).id).toBe(project.id)
-  expect((await services.worktrees.listProjects())[0].location.kind).toBe("git")
-})
 function git(...args: string[]) {
   return execFileSync("git", args, { cwd: repository, encoding: "utf8", stdio: "pipe" }).trim()
 }
@@ -203,6 +111,30 @@ async function connect() {
   expect(response.status).toBe(201)
   return response.json()
 }
+
+test("과거 연결 해제 기록은 조회로 바뀌지 않고 명시적 경로 연결로 같은 ID를 복구한다", async () => {
+  const project = await services.worktrees.connect(repository)
+  const worktree = await services.worktrees.ensure(project.id, repository)
+  const file = join(directory, "state/projects", `${project.id}.json`)
+  await writeFile(
+    file,
+    JSON.stringify({
+      version: 1,
+      data: { ...project, disconnectedAt: "2026-10-09T00:00:00.000Z" },
+    }),
+  )
+  const source = await readFile(file, "utf8")
+  expect(await services.worktrees.observed(repository)).toMatchObject({
+    projectId: project.id,
+    worktreeId: worktree.id,
+    disconnected: true,
+  })
+  expect(await readFile(file, "utf8")).toBe(source)
+  const response = await request("/api/projects", { path: repository })
+  expect(response.status).toBe(201)
+  expect(await response.json()).toEqual(project)
+  expect((await services.worktrees.ensure(project.id, repository)).id).toBe(worktree.id)
+})
 
 test("connects linked worktrees to one project and resolves shared settings through HTTP and MCP", async () => {
   const project = await connect()
@@ -515,6 +447,8 @@ test("directory projects accept only their root and never require Git to validat
     readiness: "not_checked",
     provisioning: "unsupported",
   })
+  await mkdir(join(root, ".redpact"))
+  await writeFile(join(root, ".redpact/settings.json"), "{}")
   const response = await request(`/api/worktrees/${worktree.id}/settings`)
   expect(response.status).toBe(200)
   expect((await response.json()).valid).toBe(true)
@@ -719,7 +653,10 @@ test("writes current Worktree records without transforming submitted source", as
 
 test("HTTP discovers existing and newly created Git worktrees while preserving IDs", async () => {
   const project = await connect()
-  await services.worktrees.setTracking(project.id, { mainBranch: null, hideMerged: false })
+  await writeFile(
+    join(repository, ".redpact/tracking.json"),
+    JSON.stringify({ mainBranch: null, hideMerged: false }),
+  )
   const initialResponse = await request(`/api/projects/${project.id}/worktrees`)
   expect(initialResponse.status).toBe(200)
   const initial = await initialResponse.json()
@@ -771,7 +708,10 @@ test("unconfigured tracking hides merged worktrees against the primary checkout 
   ])
   expect(tracking).not.toHaveProperty("mainWorktreeId")
   expect(storage.store.getProject(project.id)?.tracking).toBeUndefined()
-  await services.worktrees.setTracking(project.id, { mainBranch: "local", hideMerged: false })
+  await writeFile(
+    join(repository, ".redpact/tracking.json"),
+    JSON.stringify({ mainBranch: "local", hideMerged: false }),
+  )
   expect(await services.worktrees.listWorktrees(project.id)).toHaveLength(2)
   expect((await services.worktrees.getTracking(project.id)).tracking.hideMerged).toBe(false)
 })
@@ -791,7 +731,10 @@ test("project tracking hides clean merged checkouts but preserves the main branc
   execFileSync("git", ["-C", linked, "restore", "."])
   execFileSync("git", ["-C", linked, "switch", "-c", "feature/tracking"], { stdio: "pipe" })
   const project = await connect()
-  await services.worktrees.setTracking(project.id, { mainBranch: null, hideMerged: false })
+  await writeFile(
+    join(repository, ".redpact/tracking.json"),
+    JSON.stringify({ mainBranch: null, hideMerged: false }),
+  )
   const original = await services.worktrees.listWorktrees(project.id)
   expect(original).toHaveLength(2)
   const linkedRoot = await realpath(linked)
@@ -799,12 +742,10 @@ test("project tracking hides clean merged checkouts but preserves the main branc
   if (!target) {
     throw new Error("Missing linked worktree")
   }
-  const saved = await request(`/api/projects/${project.id}/tracking`, {
-    mainBranch: "main",
-    hideMerged: true,
-  })
-  expect(saved.status).toBe(200)
-  expect(await (await request(`/api/projects/${project.id}/branches`)).json()).toContain("main")
+  await writeFile(
+    join(repository, ".redpact/tracking.json"),
+    JSON.stringify({ mainBranch: "main", hideMerged: true }),
+  )
   expect((await (await request(`/api/projects/${project.id}/tracking`)).json()).tracking).toEqual({
     mainBranch: "main",
     hideMerged: true,
@@ -834,24 +775,15 @@ test("project tracking hides clean merged checkouts but preserves the main branc
     mainBranch: "main",
     hideMerged: true,
   })
-  expect(
-    (
-      await request(`/api/projects/${project.id}/tracking`, {
-        mainBranch: "missing",
-        hideMerged: true,
-      })
-    ).status,
-  ).toBe(400)
-  expect(
-    (await request(`/api/projects/${project.id}/tracking`, { mainBranch: null, hideMerged: true }))
-      .status,
-  ).toBe(400)
-  expect((await services.worktrees.getTracking(project.id)).tracking.mainBranch).toBe("main")
-  const updated = await request(`/api/projects/${project.id}/tracking`, {
-    mainBranch: "main",
-    hideMerged: false,
-  })
-  expect(updated.status).toBe(200)
+  await writeFile(
+    join(repository, ".redpact/tracking.json"),
+    JSON.stringify({ mainBranch: null, hideMerged: true }),
+  )
+  await expect(services.worktrees.getTracking(project.id)).rejects.toThrow("tracking.json")
+  await writeFile(
+    join(repository, ".redpact/tracking.json"),
+    JSON.stringify({ mainBranch: "main", hideMerged: false }),
+  )
   expect((await (await request(`/api/projects/${project.id}/tracking`)).json()).tracking).toEqual({
     mainBranch: "main",
     hideMerged: false,
@@ -868,7 +800,10 @@ test("project tracking hides clean merged checkouts but preserves the main branc
 test("saved tracking remains readable when the primary checkout switches branches", async () => {
   git("branch", "-m", "main")
   const project = await connect()
-  await services.worktrees.setTracking(project.id, { mainBranch: "main", hideMerged: false })
+  await writeFile(
+    join(repository, ".redpact/tracking.json"),
+    JSON.stringify({ mainBranch: "main", hideMerged: false }),
+  )
   git("switch", "-c", "other-at-same-commit")
   expect(await services.worktrees.getTracking(project.id)).toEqual({
     projectRoot: await realpath(repository),
@@ -881,7 +816,10 @@ test("saved tracking remains readable when the primary checkout switches branche
 
 test("live worktrees follow removal, restoration and Git moves without rewriting history", async () => {
   const project = await connect()
-  await services.worktrees.setTracking(project.id, { mainBranch: null, hideMerged: false })
+  await writeFile(
+    join(repository, ".redpact/tracking.json"),
+    JSON.stringify({ mainBranch: null, hideMerged: false }),
+  )
   const initial = await services.worktrees.listWorktrees(project.id)
   const linkedRoot = await realpath(linked)
   const repositoryRoot = await realpath(repository)
@@ -1143,7 +1081,10 @@ test("tracking settings do not discover worktrees or inspect file changes", asyn
     settings: createSettingsService,
   })
   const project = await isolated.connect(repository)
-  await isolated.setTracking(project.id, { mainBranch: null, hideMerged: false })
+  await writeFile(
+    join(repository, ".redpact/tracking.json"),
+    JSON.stringify({ mainBranch: null, hideMerged: false }),
+  )
   const discover = vi
     .spyOn(adapter, "listWorktrees")
     .mockRejectedValue(new Error("Discovery unavailable"))
@@ -1176,7 +1117,7 @@ test("identity and shared settings resolution do not inspect file changes", asyn
   expect(status).not.toHaveBeenCalled()
 })
 
-test("tracking reads and writes do not wait for worktree admission", async () => {
+test("authored tracking reads do not wait for worktree admission", async () => {
   const project = await connect()
   const branch = git("branch", "--show-current")
   let release!: () => void
@@ -1193,9 +1134,10 @@ test("tracking reads and writes do not wait for worktree admission", async () =>
   await ready
   try {
     const saved = await Promise.race([
-      services.worktrees
-        .setTracking(project.id, { mainBranch: branch, hideMerged: false })
-        .then(() => true),
+      writeFile(
+        join(repository, ".redpact/tracking.json"),
+        JSON.stringify({ mainBranch: branch, hideMerged: false }),
+      ).then(() => true),
       new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 500)),
     ])
     expect(saved).toBe(true)
@@ -1228,18 +1170,6 @@ test("agent-authored tracking and selections are read from project files", async
   expect(await services.worktrees.getSelection(worktree.id)).toEqual(selection)
 })
 
-test("tracking UI writes the primary project file without rewriting identity", async () => {
-  const project = await connect()
-  const record = join(directory, "state/projects", `${project.id}.json`)
-  const original = await readFile(record, "utf8")
-  const tracking = { mainBranch: git("branch", "--show-current"), hideMerged: false }
-  await services.worktrees.setTracking(project.id, tracking)
-  expect(await readFile(record, "utf8")).toBe(original)
-  expect(JSON.parse(await readFile(join(repository, ".redpact/tracking.json"), "utf8"))).toEqual(
-    tracking,
-  )
-})
-
 test("retired execution preference records do not become project configuration", async () => {
   const project = await connect()
   const worktree = await services.worktrees.ensure(project.id, repository)
@@ -1262,7 +1192,7 @@ test("a separate Redpact instance reads the same authored preferences", async ()
   const worktree = await services.worktrees.ensure(project.id, linked)
   const selection = { services: ["app"], select: {} }
   const tracking = { mainBranch: git("branch", "--show-current"), hideMerged: false }
-  await services.worktrees.setTracking(project.id, tracking)
+  await writeFile(join(repository, ".redpact/tracking.json"), JSON.stringify(tracking))
   const other = openStore(join(directory, "other-state"))
   try {
     const instance = createWorktrees({
@@ -1314,30 +1244,23 @@ test("worktree diff reads the configured primary branch and retains committed fe
   expect(await changed.json()).toMatchObject({ available: false })
 })
 
-test("connection initializes missing primary settings and preserves authored files", async () => {
+test("connection leaves missing primary settings absent and preserves authored files", async () => {
   const file = join(repository, ".redpact/settings.json")
   await rm(file)
   const project = await services.worktrees.connect(linked)
   const settings = await services.worktrees.projectSettings(project.id)
-  expect((await settings.read()).valid).toBe(true)
-  expect(JSON.parse(await readFile(file, "utf8"))).toEqual({
-    composeFiles: [],
-    services: [],
-    dependencies: {},
-    tests: { directory: "integration", timeoutMs: 10000, env: {} },
-  })
+  expect((await settings.read()).valid).toBe(false)
+  await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" })
   expect(
     JSON.parse(await readFile(join(linked, ".redpact/settings.json"), "utf8")).tests.timeoutMs,
   ).toBe(2345)
-  const selected = await settings.read({ services: ["app"], select: {} })
-  expect(selected.valid).toBe(true)
-  expect(selected.plan).toBeUndefined()
   await writeFile(file, "invalid authored content")
   await services.worktrees.connect(repository)
   expect(await readFile(file, "utf8")).toBe("invalid authored content")
   await rm(file)
   await services.worktrees.connect(repository)
-  expect((await settings.read()).valid).toBe(true)
+  expect((await settings.read()).valid).toBe(false)
+  await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" })
 })
 
 test("image HTTP reads the configured merge base and validates paths before reading files", async () => {
@@ -1393,10 +1316,13 @@ test("coalesces slow worktree discovery into one fresh follow-up", async () => {
     settings: createSettingsService,
   })
   const project = await worktrees.connect(repository)
-  await worktrees.setTracking(project.id, {
-    mainBranch: git("branch", "--show-current"),
-    hideMerged: false,
-  })
+  await writeFile(
+    join(repository, ".redpact/tracking.json"),
+    JSON.stringify({
+      mainBranch: git("branch", "--show-current"),
+      hideMerged: false,
+    }),
+  )
   const first = worktrees.listWorktrees(project.id)
   await entered.promise
   const repeated = Array.from({ length: 20 }, () => worktrees.listWorktrees(project.id))
@@ -1460,62 +1386,10 @@ function deferredRead() {
   return { promise, resolve }
 }
 
-test("사이드바 표시 설정은 저장되고 작업 폴더 없는 브랜치도 읽을 수 있다", async () => {
-  const project = await connect()
-  const mainBranch = git("branch", "--show-current")
-  git("branch", "already-merged")
-  git("checkout", "-b", "branch-only")
-  await writeFile(join(repository, "branch.txt"), "committed branch content\n")
-  git("add", "branch.txt")
-  git("-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "branch change")
-  git("checkout", mainBranch)
-  await writeFile(join(repository, "unrelated.txt"), "uncommitted primary content")
-  const saved = await request(`/api/projects/${project.id}/tracking`, {
-    mainBranch,
-    hideMerged: true,
-    showBranches: true,
-  })
-  expect(saved.status).toBe(200)
-  expect(
-    (await (await request(`/api/projects/${project.id}/tracking`)).json()).tracking.showBranches,
-  ).toBe(true)
-  const response = await request(`/api/projects/${project.id}/branch-reviews`)
-  expect(response.status).toBe(200)
-  const branches = await response.json()
-  expect(branches.map((b: { name: string }) => b.name)).toContain("branch-only")
-  expect(branches.map((b: { name: string }) => b.name)).not.toContain("already-merged")
-  expect(branches.find((b: { name: string }) => b.name === "branch-only").worktrees).toEqual([])
-  const diff = await request(`/api/projects/${project.id}/branch-diff?branch=branch-only`)
-  expect(diff.status).toBe(200)
-  const body = await diff.json()
-  expect(body.patch).toContain("+committed branch content")
-  expect(body.patch).not.toContain("uncommitted primary content")
-  expect(git("branch", "--show-current")).toBe(mainBranch)
-  expect((await request(`/api/projects/${project.id}/branch-diff?branch=HEAD`)).status).toBe(404)
-})
-
-test("사라진 작업 폴더는 브랜치 목록에서 구분하며 조회로 다시 만들지 않는다", async () => {
-  const project = await connect()
-  git("worktree", "add", "-b", "missing-worktree", join(directory, "missing"))
-  await rm(join(directory, "missing"), { recursive: true })
-  await services.worktrees.setTracking(project.id, { mainBranch: null, hideMerged: false })
-  const response = await request(`/api/projects/${project.id}/branch-reviews`)
-  expect(response.status).toBe(200)
-  const rows = await response.json()
-  expect(rows.find((b: { name: string }) => b.name === "missing-worktree").worktrees).toEqual([
-    { path: join(await realpath(directory), "missing"), missing: true },
-  ])
-  expect(
-    (await services.worktrees.listWorktrees(project.id)).some(
-      (w) => w.branch === "missing-worktree",
-    ),
-  ).toBe(false)
-})
-
 test("directory projects discover Git on listing and retain project and historical worktree identities", async () => {
   const root = join(directory, "later-git")
   await mkdir(root)
-  const project = await services.worktrees.connect(root, "My project")
+  const project = await services.worktrees.connect(root)
   const old = await services.worktrees.ensure(project.id, root)
   const oldRecord = await readFile(join(directory, "state/worktrees", `${old.id}.json`), "utf8")
   execFileSync("git", ["-C", root, "init", "-q"])
@@ -1544,18 +1418,6 @@ test("directory projects discover Git on listing and retain project and historic
   expect(storage.store.getProject(project.id)?.location.kind).toBe("git")
 })
 
-test("reconnecting after Git initialization upgrades the same directory project", async () => {
-  const root = join(directory, "reconnect-git")
-  await mkdir(root)
-  const project = await services.worktrees.connect(root, "Keep name")
-  execFileSync("git", ["-C", root, "init", "-q"])
-  const connected = await services.worktrees.connect(root)
-  expect(connected.id).toBe(project.id)
-  expect(connected.name).toBe("Keep name")
-  expect(connected.location.kind).toBe("git")
-  expect(storage.store.listProjects()).toHaveLength(1)
-})
-
 test("invalid or missing Git metadata does not hide directory projects or downgrade Git projects", async () => {
   const root = join(directory, "broken-git")
   await mkdir(root)
@@ -1565,53 +1427,6 @@ test("invalid or missing Git metadata does not hide directory projects or downgr
   const existing = await connect()
   await rename(join(repository, ".git"), join(repository, ".git-away"))
   expect(await (await request("/api/projects")).json()).toContainEqual(existing)
-})
-
-test("an open directory project observes git init and exposes committed graph history", async () => {
-  const root = join(directory, "live-git")
-  await mkdir(root)
-  const project = await services.worktrees.connect(root)
-  const scopeServices = {
-    ...services,
-    executeTests: services.runs,
-    dataDirectory: join(directory, "state"),
-  }
-  const scope = await eventScope(scopeServices, { projectId: project.id })
-  const watcher = createChangeWatcher()
-  const changed = vi.fn()
-  const failed = vi.fn()
-  const subscription = watcher.subscribe(scope.roots, changed, failed)
-  try {
-    await subscription.ready
-    execFileSync("git", ["-C", root, "init", "-q"])
-    execFileSync("git", [
-      "-C",
-      root,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@example.com",
-      "commit",
-      "--allow-empty",
-      "-qm",
-      "First commit",
-    ])
-    await expect.poll(() => changed.mock.calls.length, { timeout: 5000 }).toBeGreaterThan(0)
-    await eventScope(scopeServices, { projectId: project.id })
-    expect(services.worktrees.getProject(project.id).location.kind).toBe("git")
-    const graph = createProjectGraph({
-      image: async () => ({ before: null, after: null }),
-      fetch: async () => ({ remotes: [] }),
-      store: storage.store,
-      read: readHistory,
-      diff: async () => ({ available: false, reason: "Unused", patch: "", omitted: [] }),
-    })
-    expect((await graph.history(project.id, { limit: 20 })).commits[0].message).toBe("First commit")
-    expect(failed).not.toHaveBeenCalled()
-  } finally {
-    await subscription.close()
-    await watcher.close()
-  }
 })
 
 test("Git promotion keeps nested project paths and refuses unrelated identity changes", async () => {

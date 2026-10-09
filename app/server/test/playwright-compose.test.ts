@@ -90,7 +90,10 @@ test.skipIf(process.env.REDPACT_DOCKER_TESTS !== "1")(
       })
     const connected = await worktrees.connect(project),
       worktree = await worktrees.ensure(connected.id, project)
-    await worktrees.projects.update(connected.id, { mainBranch: "main", hideMerged: false })
+    await writeFile(
+      join(project, ".redpact/tracking.json"),
+      JSON.stringify({ mainBranch: "main", hideMerged: false }),
+    )
     const environments = createEnvironments({
       store: storage.store,
       worktrees,

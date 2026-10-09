@@ -24,11 +24,10 @@ test.each([false, true])(
         projects: { root: async () => root },
         directory: root,
         files: createSettingsFiles(),
-        validateProject: (path, source) => readJsonSettings(path, undefined, { file, source }),
       })
-      await editor.saveProject("p", {
-        revision: null,
-        source: JSON.stringify({
+      await writeFile(
+        file,
+        JSON.stringify({
           composeFiles: [],
           unitTests: {
             dockerfile: "unit.Dockerfile",
@@ -37,7 +36,7 @@ test.each([false, true])(
             patterns: ["unit/**/*.test.ts"],
           },
         }),
-      })
+      )
       expect((await readJsonSettings(root)).valid).toBe(true)
       const deps = {
         worktrees: {

@@ -23,23 +23,25 @@ test("환경변수는 문자열만 수락하고 secret API와 MCP 도구를 제�
     expect(result.tools.map((tool) => tool.name)).not.toContain("request_keys")
     expect(result.tools.map((tool) => tool.name)).not.toContain("submit_key")
   })
-  await step("secret와 host·port·URL 객체는 거부하고 기존 설정 revision을 보존한다", async () => {
-    const path = `/api/projects/${project.id}/configuration`
-    const current = (await http<{ source: string; revision: string }>(path)).body
+  await step("직접 작성한 secret와 host·port·URL 객체를 검증에서 거부한다", async () => {
     for (const value of [
       { secret: "TOKEN" },
       { service: "app", port: 3000, value: "host" },
       { service: "app", port: 3000, value: "port" },
       { service: "app", port: 3000, scheme: "http" },
     ]) {
-      const saved = await http(path, "PUT", {
-        source: JSON.stringify({ tests: { env: { TOKEN: value } } }),
-        revision: current.revision,
-      })
-      expect(saved.status).toBe(400)
-      const after = (await http<{ source: string; revision: string }>(path)).body
-      expect(after.source).toBe(current.source)
-      expect(after.revision).toBe(current.revision)
+      const source = JSON.stringify({ tests: { env: { TOKEN: value } } })
+      await node(
+        `import {writeFileSync} from 'node:fs'; const {root,source}=JSON.parse(process.argv[1]);writeFileSync(root+'/.redpact/settings.json',source);console.log('null');`,
+        { root, source },
+      )
+      const result = await rpc<{ structuredContent: { validation: { valid: boolean } } }>(
+        "tools/call",
+        { name: "configure", arguments: { action: "validate", path: root } },
+      )
+      expect(result.structuredContent.validation.valid).toBe(false)
+      const after = await http<{ source: string }>(`/api/projects/${project.id}/configuration`)
+      expect(after.body.source).toBe(source)
     }
   })
 })
@@ -69,11 +71,10 @@ test("원문 key-value는 특수문자와 빈 문자열을 보존하고 비밀�
     const source = JSON.parse(current.body.source)
     source.dependencies = { provider: { kind: "remote", env: { app: values } } }
     source.tests = { env: { TOKEN: "runner-only" } }
-    const saved = await http(`/api/projects/${project.id}/configuration`, "PUT", {
-      source: JSON.stringify(source),
-      revision: current.body.revision,
-    })
-    expect(saved.status).toBe(200)
+    await node(
+      `import {writeFileSync} from 'node:fs';const {root,source}=JSON.parse(process.argv[1]);writeFileSync(root+'/.redpact/settings.json',JSON.stringify(source));console.log('null');`,
+      { root, source },
+    )
   })
   await step("원문과 주입 대상 분리 및 비밀값 등록 불필요를 확인한다", async () => {
     const saved = await http<{ source: string }>(`/api/projects/${project.id}/configuration`)

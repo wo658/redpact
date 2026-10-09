@@ -54,27 +54,15 @@ call `POST /api/worktrees/:id/playwright/cleanup-worktree`. The service refuses 
 when drafts differ from recorded sources or execution/resource cleanup is unfinished.
 Do not bypass that refusal with shell deletion. Correct and record the final drafts
 or leave them for the user. Cleanup never removes execution history; a deleted WT's
-recorded code and screenshots remain in project Runs and Log.
+recorded code and screenshots remain in execution history.
 
-## Review scope follows source files
+## Recorded source and review
 
-Worktree UI Review includes current worktree drafts and project scenario files added,
-modified or renamed since the configured main-branch merge base. Committed, staged,
-unstaged and untracked changes count. Deleted sources and unchanged maintained files
-are excluded. All recorded cases and images in a matching file/target are included;
-this is not per-case change detection, pixel comparison or application dependency
-impact analysis. Application-only edits do not select unchanged maintained scenarios.
-For task-specific evidence of those edits, author a meaningful worktree draft rather
-than changing maintained code solely to make it appear in review.
-
-Inspect `GET /api/worktrees/:id/playwright/catalog` for included files, the comparison
-revision and diagnostics. If comparison is unavailable, the catalog includes drafts
-only with a diagnostic; never describe that as complete changed-project coverage.
-Project Screenshots and Tests retain full maintained scope. Unfiltered execution
-history, recorded sources and artifacts stay in Runs and Log after draft cleanup.
-The review filter does not narrow execution: Run Playwright executes the entire
-selected target. Verify full results through the run endpoint even when UI Review
-shows only a subset. Active cancellation and cleanup remain available.
+A chosen target executes the complete matching source set in the selected checkout.
+Read its captured source, cases and images through `get_execution` and open the exact
+`get_review_context` path. Worktree-bound history retains previous attempts and
+artifacts after draft cleanup. Current source visibility does not prove execution,
+and an old passing run does not validate later application edits.
 
 ## Choose the purpose before authoring
 
@@ -125,14 +113,6 @@ Report exactly which browser scenarios and rendered images were observed, source
 identity and image/browser/viewport conditions. Linux web captures do not prove
 native desktop-shell behavior. An unsupported installed server is a setup or
 verification gap, not an excuse to manufacture run records or silently bypass gates.
-
-Project Playwright separates Screenshots, Tests and Runs. Screenshots lists named
-capture images and links their generation source. Tests lists maintained project functional
-source files even before execution. Worktree results remain in worktree review and Runs. Runs retains executed source and diagnostic
-attachments for both purposes. Functional failure screenshots do not enter the
-Screenshots list. Project Screenshots excludes worktree runs; Runs preserves both scopes.
-
-
 
 ## Completion evidence
 

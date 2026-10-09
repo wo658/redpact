@@ -151,14 +151,13 @@ test("연속 저장한 테스트는 최종 내용으로 한 번만 제출된다"
       `import {writeFileSync} from 'node:fs'; const {checkout, source} = JSON.parse(process.argv[1]); writeFileSync(checkout + '/e2e/tests/saved.test.ts', source); console.log('null');`,
       { checkout, source: initial },
     )
-    const settings = await http<{ source: string; revision: string }>("/api/instance/settings")
+    const settings = await http<{ file: string; source: string }>("/api/instance/settings")
     const value = JSON.parse(settings.body.source)
     value.projects = [...new Set([...(value.projects ?? []), checkout])]
-    const saved = await http("/api/instance/settings", "PUT", {
-      source: JSON.stringify(value),
-      revision: settings.body.revision,
-    })
-    expect(saved.status).toBe(200)
+    await node(
+      `import {writeFileSync} from 'node:fs';const {file,source}=JSON.parse(process.argv[1]);writeFileSync(file,source);console.log('null');`,
+      { file: settings.body.file, source: JSON.stringify(value) },
+    )
   })
   async function latestSource() {
     const page = await http<Page>(`/api/submissions?worktreeId=${worktreeId}`)

@@ -21,13 +21,8 @@
       },
       "functional": {
         "purpose": "functional",
-        "testMatch": ["project/tests/**/!(product-demo).spec.ts"],
+        "testMatch": ["project/tests/**/*.spec.ts"],
         "scope": "project"
-      },
-      "demo": {
-        "scope": "project",
-        "purpose": "functional",
-        "testMatch": ["project/tests/product-demo.spec.ts"]
       }
     }
   },

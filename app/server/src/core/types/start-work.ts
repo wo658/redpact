@@ -11,10 +11,3 @@ export type WorkStart = {
   createdAt: string
   state: "prepared" | "attempted" | "created" | "completed"
 }
-export type WorktreeAdapter = {
-  plan(
-    commonGitdir: string,
-    input: StartWorkInput,
-  ): Promise<{ checkoutRoot: string; revision: string }>
-  create(commonGitdir: string, request: WorkStart): Promise<void>
-}

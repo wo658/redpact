@@ -43,17 +43,13 @@ export function createAppServer(options: {
       inputSchema: z.toJSONSchema(z.object(config.inputSchema)) as Tool["inputSchema"],
     })
   }
-  const selection = {
-    projectId: z.string().uuid().optional(),
-    worktreeId: z.string().uuid().optional(),
-  }
-  async function snapshot(selected: { projectId?: string; worktreeId?: string } = {}) {
-    const page = await readPage(options.runtime, selected)
+  async function snapshot() {
+    const page = await readPage(options.runtime)
     return {
       content: [
         {
           type: "text" as const,
-          text: `Redpact: ${page.status.state}. ${page.runs.length} recent executions loaded.`,
+          text: `Redpact: ${page.status.state}.`,
         },
       ],
       _meta: {
@@ -142,20 +138,35 @@ export function createAppServer(options: {
       title: "Redpact",
       icons,
       description:
-        "Open the Redpact local App Page to start its server and inspect review evidence. Opening does not start the server or run tests.",
-      inputSchema: {},
+        "Open an exact recorded execution in the Redpact App Page with kind and id, or open the runtime page without a selection. Opening does not run tests or approve requests.",
+      inputSchema: {
+        kind: z.enum(["unit", "integration", "playwright"]).optional(),
+        id: z.string().uuid().optional(),
+      },
       annotations: { readOnlyHint: true, openWorldHint: false },
       _meta: {
         ui: { resourceUri: pageUri },
         "openai/ui": { entrypoints: [{ type: "global" }, { type: "thread" }] },
       },
     },
-    () => snapshot(),
+    async ({ kind, id }) => {
+      if (Boolean(kind) !== Boolean(id)) {
+        throw new Error("Provide both execution kind and id, or neither.")
+      }
+      const result = await snapshot()
+      return {
+        ...result,
+        _meta: {
+          ...result._meta,
+          ...(kind && id ? { reviewPath: `/?page=review&kind=${kind}&id=${id}` } : {}),
+        },
+      }
+    },
   )
   registerTool(
     "get_redpact_page",
     {
-      inputSchema: selection,
+      inputSchema: {},
       description: "Read the local App Page.",
       annotations: { readOnlyHint: true },
       _meta: { ui: { visibility: ["app"] } },
@@ -209,45 +220,6 @@ export function createAppServer(options: {
       authorize(token)
       await options.runtime.stop()
       return snapshot()
-    },
-  )
-  registerTool(
-    "connect_redpact_project",
-    {
-      inputSchema: { token: z.string(), path: z.string().min(1) },
-      description: "Connect the explicitly selected local project without running tests.",
-      _meta: { ui: { visibility: ["app"] } },
-      annotations: {
-        readOnlyHint: false,
-        destructiveHint: false,
-        openWorldHint: false,
-        idempotentHint: true,
-      },
-    },
-    async ({ token, path }) => {
-      authorize(token)
-      const result = z
-        .object({ id: z.string() })
-        .parse(await options.runtime.request("/api/projects", { path }))
-      return snapshot({ projectId: result.id })
-    },
-  )
-  registerTool(
-    "get_redpact_evidence",
-    {
-      inputSchema: { id: z.string().uuid(), kind: z.enum(["integration", "unit", "playwright"]) },
-      description: "Read the selected execution's recorded evidence for the App Page.",
-      annotations: { readOnlyHint: true },
-      _meta: { ui: { visibility: ["app"] } },
-    },
-    async ({ id, kind }) => {
-      const evidence = z
-        .object({ text: z.string() })
-        .parse(await options.runtime.request(`/api/runs/executions/${kind}/${id}/copy`))
-      return {
-        content: [{ type: "text", text: "Selected execution evidence loaded." }],
-        _meta: { evidence: evidence.text },
-      }
     },
   )
   server.server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }))

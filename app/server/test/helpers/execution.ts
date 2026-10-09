@@ -87,7 +87,6 @@ export function createTestApp(services: TestServices) {
           executeTests: services.runs,
         })
       : undefined,
-    workStarts: services.worktrees?.workStarts,
     executeTests: services.runs,
     stopEnvironment: services.runs.stopEnvironment,
   })

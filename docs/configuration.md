@@ -73,11 +73,11 @@ server-environment fallback. Write URLs and ports as strings yourself, for examp
 `<service>.redpact.test` DNS aliases on the execution network; host published ports
 remain separate inspection endpoints.
 
-Enter values as JSON key-value strings in the shared `.redpact/settings.json`, using
-Dependencies for application values and Project settings for `tests.env`. Both editors
-use key and value fields. There is no separate credential store, input card or API.
-Empty strings, whitespace, `=` and `$` are literal; JSON `\n` represents a newline.
-There is no dotenv parser, shell expansion or automatic `.env` discovery.
+The host agent or user edits JSON values in the shared `.redpact/settings.json`.
+Redpact supplies inspection and validation, with no settings editor or write API.
+There is no separate credential store or input card. Empty strings, whitespace,
+`=` and `$` are literal; JSON `\n` represents a newline. There is no dotenv parser,
+shell expansion or automatic `.env` discovery.
 
 Every nonempty application/test value is masked in execution text, including application
 shutdown logs. Browser runs with any such value omit traces. Values are matched
@@ -116,12 +116,41 @@ settings with explicit string values. Historical runtime records use the ordered
 Mode catalogs, execution-time selection, integration default files and worktree
 dependency overlays are retired. Rewrite existing settings manually with fixed roots
 and dependency definitions. There are no backward readers or automatic migrations.
-The old selection and overlay files do not affect the plan. See
-[settings ownership](settings-reference.md) for file ownership and captured inputs.
+The old selection and overlay files do not affect the plan.
+
+## File ownership and setup
+
+`configure describe` reports `rulesRoot` (the shared primary application root),
+`projectRoot` (the selected execution checkout) and the instance settings location.
+Inspect existing manifests, Dockerfiles, Compose services and tests before authoring.
+Write one fixed plan at `rulesRoot/.redpact/settings.json`, preserving unrelated fields.
+A linked worktree's own settings copy does not override the primary file.
+
+The primary `.redpact/tracking.json` retains read-only discovery/baseline preferences
+such as `mainBranch`, `hideMerged` and `showBranches`. The viewer does not edit it.
+
+Instance `projects` contains absolute directories to observe. Edit that file directly
+when observation is needed, then verify the actual binding with `get_workspace_status`
+or the advertised read-only project/worktree API. Saving an observation path or passing
+validation alone does not establish successful discovery. Existing-checkout binding
+never creates a Git worktree or initializes project settings.
+
+HTTP, MCP and execution use the same strict validation. Paths must be normalized
+project-relative paths. Duplicate/unknown keys and dependency variable collisions fail.
+Compose service names are nonempty strings; dependency and target identifiers use
+the schema's lowercase identifiers. Use the generated schema for exact constraints.
+
+Execution captures settings separately from checkout inputs. Ask requests retain
+policy and input identities; later settings changes cannot silently replace approved
+inputs. [Execution](execution.md) owns freshness checks and their limits.
+Runtime snapshots use ordered [storage migrations](storage.md); authored project
+settings have no compatibility migration or automatic rewrite.
 
 ## Instance settings
 
-**Settings → Instance configuration** controls the instance separately. `configure describe` reports that settings file's location. Instance `projects` lists absolute directories to observe. `server.port` applies after restart. Optional `github.cliPath` selects an absolute GitHub CLI executable.
+Edit the instance file identified by `configure describe`. `server.port` applies
+after restart. `approval` controls future requests; changing it does not approve
+pending requests. App-only human policy controls retain their capability boundary.
 
 Per-execution limits belong in that instance file:
 
