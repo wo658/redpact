@@ -43,7 +43,7 @@ function localApiBoundary(): Plugin {
   }
 }
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
   const target = new URL(process.env.REDPACT_API_URL ?? "http://127.0.0.1:54318")
   if (
     target.protocol !== "http:" ||
@@ -70,7 +70,7 @@ export default defineConfig(() => {
     },
   }
   return {
-    plugins: [localApiBoundary(), materialIcons(), react(), tailwindcss()],
+    plugins: [localApiBoundary(), materialIcons(mode === "sidebar"), react(), tailwindcss()],
     server: { host: "127.0.0.1", proxy },
     preview: { host: "127.0.0.1", proxy },
     resolve: {

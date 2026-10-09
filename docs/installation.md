@@ -308,6 +308,216 @@ Approval and credential cards require a compatible MCP Apps host. Plugin install
 alone does not prove card support; an unavailable approval UI must not be bypassed.
 See [the interface contract](interfaces.md).
 
+## Local Sidebar App experiment
+
+[Sidebar Lab](../examples/sidebar-app/README.md) is a standalone local plugin for
+checking whether your desktop host exposes MCP Apps global sidebar entrypoints.
+It runs a local STDIO MCP process with an in-memory counter; it does not use the
+Redpact service, Docker, project files, or a cloud backend. Requires Node 24+, pnpm,
+and a Codex desktop host with local plugins. The host still uses its normal model
+connection; this is not an offline model.
+
+From this repository root:
+
+```sh
+cd examples/sidebar-app
+pnpm install --frozen-lockfile
+pnpm build
+codex plugin marketplace add "$PWD/dist/marketplace"
+codex plugin add sidebar-lab@sidebar-lab-local
+```
+
+Restart the desktop app after saving ongoing work. Open Sidebar Lab from the host
+sidebar if it appears. If absent, ask the agent to call `open_sidebar_lab` to test
+inline MCP Apps separately. A working tool or inline card does not prove global
+sidebar support. The example declares `openai/ui.entrypoints: [{ type: "global" }]`;
+actual discovery depends on the host's support for local plugin entrypoints.
+
+Increment, Refresh and Reset call the local MCP server through the UI bridge.
+The screen shows its process ID and start time. State survives reopening a view
+connected to the same process, but resets when that process restarts; different
+host connections may own different processes. There is no installation or Docker
+start/stop functionality in this example.
+
+The build bundles its server and UI into `dist/marketplace`. Generated MCP settings
+use the build machine's absolute Node and server paths. Keep that build directory
+in place. Rebuild and reinstall after moving it or changing source; this experiment
+is not a portable distribution archive. Plugin installation alone does not install
+Node. Remove with `codex plugin remove sidebar-lab@sidebar-lab-local`.
+
+For local verification:
+
+```sh
+pnpm typecheck
+pnpm test
+pnpm exec playwright install chromium
+pnpm preview
+# In another terminal in examples/sidebar-app:
+pnpm test:browser
+```
+
+The browser harness at `http://127.0.0.1:4319` loads the real bundled UI through the
+MCP Apps AppBridge and calls the real bundled STDIO server. It checks counter
+operations, view reload, error recovery, dark mode and desktop/mobile layout.
+Screenshots are written to `dist/evidence/`. The harness is not the ChatGPT host
+and cannot establish sidebar discovery, host approval behavior or installation
+compatibility. Test those separately in the desktop app. Close the preview with
+Ctrl+C to stop its owned MCP process.
+
+See the official [Extensions](https://developers.openai.com/plugins/build/extensions)
+and [plugin packaging](https://developers.openai.com/plugins/build/plugins) guides.
+
+## Local Redpact App Page experiment
+
+[Redpact App](../examples/sidebar-app/README.md) is an independent local STDIO MCP
+App Page. Its macOS arm64 bootstrap bundles official Node 26.0.0, npm and pnpm 11.2.2,
+with their licenses, but does **not** include the Redpact server. The page works
+before Redpact is installed. Users do not need a separate Node, npm, pnpm or Redpact
+installation to use this artifact. Installing the runtime requires network access
+to the public npm registry. Docker and project-specific execution tools remain
+separate prerequisites for features that need them.
+
+Contributors building the bootstrap require Node, pnpm, and installed workspace dependencies
+(`pnpm install --frozen-lockfile` at the repository root). The plugin bundles the same
+`app/web` viewer using relative asset paths. From the repository root:
+
+```sh
+cd examples/sidebar-app
+pnpm install --frozen-lockfile
+pnpm bundle:redpact
+codex plugin marketplace add "$PWD/dist/redpact-marketplace"
+codex plugin add redpact-app@redpact-app-local
+```
+
+`bundle:redpact` checks the official Node archive against its release SHA-256 list,
+includes its npm distribution, and installs the pinned pnpm CLI into the plugin.
+`pnpm build` then rebuilds the companion and page without downloading tooling.
+The artifact uses portable `plugin.json` and `mcp.json`: contained commands and
+`${PLUGIN_ROOT}` resolve from the installed plugin copy, not the source checkout.
+Windows, Linux and macOS Intel artifacts are not yet packaged.
+
+After saving work and restarting Codex, look for **Redpact App** in Global Apps.
+`open_redpact_app` declares `global` and `thread` entrypoints. Actual Global Apps
+visibility must be checked in the host; a browser harness or Sidebar Lab cannot
+establish it.
+
+When the plugin-managed runtime is missing, the page shows **Install Redpact** and
+an **npm / pnpm** selector. Installation is an explicit action; opening the page or
+refreshing it does not install anything. The companion installs the fixed public
+package `@wo658/redpact@0.8.0` with the selected bundled package manager, with lifecycle
+scripts disabled. Progress is polled while the installation runs. Failures remain
+visible and the button allows a retry; details are written to `install.log`.
+There is no arbitrary package name, registry or command input.
+
+Successful installs live under `~/.redpact/app-page/packages/0.8.0-npm` or
+`~/.redpact/app-page/packages/0.8.0-pnpm`. The default is pnpm. A verified existing
+installation is reused; if both are present, npm is selected first. This lookup
+covers plugin-managed packages, not unrelated global installations or desktop apps.
+Each attempt uses a temporary directory and publishes its installation directory
+only after the package version, entrypoint and viewer have been checked. It does
+not change global PATH, globally installed packages, or project dependencies.
+`REDPACT_APP_INSTALL_DIR` overrides the package root for the MCP process.
+
+When the plugin's MCP session starts, it automatically starts an already installed
+managed runtime if the endpoint is stopped. A healthy existing server is reused;
+an unrecognized listener blocks startup. Missing packages still require explicit
+installation. Automatic startup failures are written to the MCP process stderr;
+the startup screen remains available for manual recovery. Status polling never
+restarts a runtime that was stopped during the session.
+
+**Start Redpact** appears on the startup screen after installation succeeds. While running, the existing Desktop/Web viewer fills the entire app area,
+without a plugin header or additional navigation. **Refresh**, **Open local viewer**
+and lifecycle recovery controls appear only when a connection or viewer error occurs.
+The private app-only MCP stop tool remains available to the host.
+Starting does not execute tests or create
+containers. Stop uses the existing private parent IPC channel and can interrupt
+active work in its owned runtime, while preserving stored evidence. An external
+server on the port can be read but cannot be stopped by another plugin session.
+An unrecognized listener blocks startup. Lifecycle changes are serialized.
+
+The plugin also registers a separate `redpact-verification` HTTP MCP connection to
+`http://127.0.0.1:54322/mcp`, the same runtime and evidence store used by the sidebar.
+It exposes the runtime's model tools directly, preserving its approval cards and
+capability boundary; the App-only viewer bridge remains private. See
+[MCP interfaces](interfaces.md) for the verification contracts. The bundled installer
+still downloads public 0.8.0, whose tool set is older; expanded verification tools
+require a runtime built from this source or a future release containing it.
+After starting or updating a runtime, reconnect the host's MCP connection if its tool
+catalog is stale or was unavailable during startup. A custom `REDPACT_APP_PORT` also
+requires updating this HTTP MCP URL in the plugin manifest.
+
+The default plugin port is `54322`, with runtime data in
+`~/.redpact/app-page/54322` and startup output in `app-start.log` there.
+`REDPACT_APP_PORT` and `REDPACT_APP_DATA_DIR` override those values. Package files
+and runtime evidence are separate. Runtime update requests from the viewer report
+that the App installer owns updates; the companion does not run an independent
+npm self-update behind the page.
+
+Before installation or startup, the page displays the corresponding setup screen. Once
+the runtime is healthy, it displays the existing full Redpact viewer: project/worktree
+navigation, files, diffs, tests, environments and settings. The viewer retains its own
+responsive sidebar, theme and language preferences. The plugin's entrypoint icon and
+branding use the Redpact favicon artwork.
+
+The App resource bundles the existing React viewer, styles, fonts and icons directly.
+It requires no nested iframe, browser HTTP connection or loopback CSP exception.
+Codex can block HTTP frames even when the resource declares a loopback origin;
+the App therefore uses the supported MCP Apps tool bridge instead.
+
+API calls travel through an App-only capability-authenticated tool to the fixed
+local runtime. Arbitrary origins, non-API paths and redirects are rejected; browser
+cookies and authorization headers are not forwarded. Requests support the viewer's
+GET/POST/PUT/PATCH/DELETE operations. JSON request bodies are limited to 1 MiB of
+text and responses to 16 MiB; larger artifacts must be opened in the standalone
+viewer. Binary responses become local blob URLs, revoked when the view unmounts.
+The runtime's own Host, Origin and Fetch Metadata checks remain unchanged.
+
+The companion keeps real scoped SSE subscriptions and the App polls their revision
+and error state once per second. Unmounted scopes close their subscriptions; abandoned
+subscriptions expire after 30 seconds and MCP disconnect closes all subscriptions.
+The shell checks runtime health every five seconds (installation progress every second).
+A stopped or unhealthy runtime returns to the startup screen without automatically
+installing, restarting or executing tests. Connection failures expose **Refresh**
+and **Open local viewer**, which opens the installed package's standalone viewer.
+Neither server health nor a passing test means a change has been accepted.
+
+Closing the page does not itself close the MCP session. Disconnecting the owning
+MCP session stops its child runtime; pending package installation is cancelled.
+A later session reuses the installed package and stored data. Remove the companion
+with `codex plugin remove redpact-app@redpact-app-local`; active sessions must first
+disconnect to stop their owned processes. Plugin removal preserves the managed
+package directory and runtime data. Uninstalling a separate global Redpact package
+or moving its desktop application to Trash also leaves runtime data untouched.
+
+For verification, install Playwright Chromium (`pnpm exec playwright install chromium`),
+then run `pnpm typecheck`, `pnpm test`, and both real package installation checks:
+
+```sh
+REDPACT_TEST_MANAGER=npm pnpm test:redpact:browser
+REDPACT_TEST_MANAGER=pnpm pnpm test:redpact:browser
+```
+
+Each test copies only the bootstrap to a temporary location, excludes system
+Node/Redpact/pnpm from its child PATH, installs from the real registry, and exercises
+start/stop/restart, the viewer, project persistence, MCP shutdown and responsive UI.
+The folder-picker response uses an explicit fixture; project connection, file reads,
+API requests, navigation and lifecycle checks use the actual installed runtime.
+These checks do not submit test evidence through Redpact or prove actual Codex rendering. Captures and installation logs
+are under `dist/redpact-evidence/npm/` and `dist/redpact-evidence/pnpm/`.
+`pnpm preview:redpact` opens a manual harness at `http://127.0.0.1:4320`.
+Neither harness proves Global Apps discovery or host approval behavior.
+
+The setup screen shows one primary action for its current state: **Install Redpact**
+before installation, **Installing…** during installation, and **Start Redpact** when
+installed and stopped. Installation failures show **Try again** with the diagnostic.
+**Installation options** contains the package-manager selector and installation paths;
+**Connection details** contains the address, runtime data directory and startup log.
+Unavailable start/stop actions are hidden. Refresh and recovery controls appear for
+connection failures. The setup shell follows the host's light/dark theme and reflows
+for narrow App panels.
+
+The installation and stopped screens share a centered logo, short state heading and primary action in both themes. They omit promotional descriptions, repeated branding and footer copy; connection and installation diagnostics remain available when needed.
+
 ## Agent plugin updates
 
 Settings → Agent plugins checks installed Redpact plugins in Codex and Claude Code.

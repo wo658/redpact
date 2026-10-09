@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react"
+import { viewerFetch } from "@/lib/viewer-transport"
+import { viewerUrl } from "@/lib/viewer-url"
 import { desktopInvoke } from "./desktop"
 
 export type UpdateStatus = {
@@ -12,7 +14,7 @@ export type UpdateStatus = {
 }
 
 async function runtimeStatus(check = false): Promise<UpdateStatus> {
-  const response = await fetch(check ? "/api/updates/check" : "/api/updates", {
+  const response = await viewerFetch(viewerUrl(check ? "/api/updates/check" : "/api/updates"), {
     method: check ? "POST" : "GET",
     signal: AbortSignal.timeout(12000),
   })
@@ -23,7 +25,7 @@ async function runtimeStatus(check = false): Promise<UpdateStatus> {
 }
 
 async function installRuntime(version: string | null): Promise<UpdateStatus> {
-  const response = await fetch("/api/updates/install", {
+  const response = await viewerFetch(viewerUrl("/api/updates/install"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ version: version }),

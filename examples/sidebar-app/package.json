@@ -1,0 +1,33 @@
+{
+  "name": "redpact-sidebar-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs && node build-redpact.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/marketplace/plugins/sidebar-lab/dist/server.mjs",
+    "preview": "node preview.mjs",
+    "test:browser": "node test/browser.mjs",
+    "preview:redpact": "node preview.mjs --redpact",
+    "test:redpact:browser": "node test/redpact-browser.mjs",
+    "bundle:redpact": "node bundle-runtime.mjs && node build-redpact.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "1.7.5",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "eventsource": "3.0.7",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "esbuild": "0.28.2",
+    "playwright": "1.62.1",
+    "typescript": "~6.0.3",
+    "vitest": "4.0.18"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

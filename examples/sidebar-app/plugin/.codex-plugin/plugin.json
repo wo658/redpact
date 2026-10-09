@@ -1,0 +1,14 @@
+{
+  "name": "sidebar-lab",
+  "version": "0.1.0",
+  "description": "Test a local MCP-powered ChatGPT sidebar app.",
+  "author": { "name": "Redpact contributors" },
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Sidebar Lab",
+    "shortDescription": "Test a local sidebar app and MCP controls.",
+    "developerName": "Redpact contributors",
+    "category": "Developer Tools",
+    "defaultPrompt": ["Open Sidebar Lab."]
+  }
+}

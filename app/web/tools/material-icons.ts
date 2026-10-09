@@ -9,7 +9,7 @@ const packageRoot = path.dirname(require.resolve("material-icon-theme/package.js
 const virtualId = "virtual:material-icons"
 const resolvedId = `\0${virtualId}`
 
-export function materialIcons(): Plugin {
+export function materialIcons(inline = false): Plugin {
   const manifest = generateManifest({ activeIconPack: "react" })
   const files = new Map<string, string>()
   // Upstream declaration re-exports use extensionless paths under NodeNext.
@@ -20,7 +20,9 @@ export function materialIcons(): Plugin {
     }
     const name = path.basename(definition.iconPath)
     files.set(name, path.join(packageRoot, "icons", name))
-    definition.iconPath = `material-icons/${name}`
+    definition.iconPath = inline
+      ? `data:image/svg+xml;base64,${readFileSync(path.join(packageRoot, "icons", name)).toString("base64")}`
+      : `material-icons/${name}`
   }
   files.set("LICENSE", path.join(packageRoot, "LICENSE"))
   return {
@@ -48,6 +50,9 @@ export function materialIcons(): Plugin {
       })
     },
     generateBundle() {
+      if (inline) {
+        return
+      }
       for (const [name, file] of files) {
         this.emitFile({
           type: "asset",

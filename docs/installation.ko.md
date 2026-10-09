@@ -301,6 +301,202 @@ Gemini CLI는 이 마켓플레이스 카탈로그 대신 `gemini-extension.json`
 지원을 증명할 수 없으며, 승인 UI가 없다고 승인을 우회해서는 안 됩니다.
 [인터페이스 계약](interfaces.md)을 참고하세요.
 
+## 로컬 Sidebar App 실험
+
+[Sidebar Lab](../examples/sidebar-app/README.md)은 데스크톱 호스트가 로컬 MCP Apps의
+전역 사이드바 진입점을 표시하는지 확인하는 독립 플러그인입니다. 메모리 카운터를
+가진 로컬 STDIO MCP 프로세스로 실행하며 Redpact 서비스, Docker, 프로젝트 파일,
+클라우드 백엔드를 사용하지 않습니다. Node 24+, pnpm, 로컬 플러그인을 지원하는
+Codex 데스크톱 호스트가 필요합니다. 호스트의 일반 모델 연결은 유지되므로
+오프라인 모델이라는 뜻은 아닙니다.
+
+저장소 루트에서 실행합니다.
+
+```sh
+cd examples/sidebar-app
+pnpm install --frozen-lockfile
+pnpm build
+codex plugin marketplace add "$PWD/dist/marketplace"
+codex plugin add sidebar-lab@sidebar-lab-local
+```
+
+진행 중인 작업을 저장한 후 데스크톱 앱을 재시작합니다. 호스트 사이드바에
+Sidebar Lab이 나타나면 엽니다. 나타나지 않으면 에이전트에게 `open_sidebar_lab`
+호출을 요청해 인라인 MCP Apps를 별도로 확인합니다. 도구나 인라인 카드가 동작해도
+전역 사이드바 지원을 증명하지는 않습니다. 예시는
+`openai/ui.entrypoints: [{ type: "global" }]`을 선언하며, 실제 노출은 호스트의
+로컬 플러그인 진입점 지원에 따라 달라집니다.
+
+Increment, Refresh, Reset은 UI 브리지를 통해 로컬 MCP 서버를 호출합니다.
+화면에 프로세스 ID와 시작 시간을 표시합니다. 같은 프로세스에 연결된 화면을 다시
+열면 상태가 유지되지만 프로세스를 재시작하면 초기화됩니다. 호스트 연결마다 서로
+다른 프로세스가 생길 수 있습니다. 이 예시에는 설치나 Docker 시작·중지 기능이 없습니다.
+
+빌드는 서버와 UI를 `dist/marketplace`에 번들링합니다. 생성된 MCP 설정은 빌드한
+컴퓨터의 Node와 서버 절대 경로를 사용하므로 빌드 디렉터리를 유지해야 합니다.
+경로를 옮기거나 소스를 수정하면 다시 빌드하고 설치합니다. 이 실험은 다른 컴퓨터로
+이동 가능한 배포 아카이브가 아닙니다. 플러그인 설치는 Node를 설치하지 않습니다.
+제거 명령은 `codex plugin remove sidebar-lab@sidebar-lab-local`입니다.
+
+로컬 검증 명령입니다.
+
+```sh
+pnpm typecheck
+pnpm test
+pnpm exec playwright install chromium
+pnpm preview
+# examples/sidebar-app 디렉터리의 다른 터미널에서:
+pnpm test:browser
+```
+
+`http://127.0.0.1:4319`의 브라우저 검증 호스트는 MCP Apps AppBridge로 실제 번들 UI를
+열고 실제 번들 STDIO 서버를 호출합니다. 카운터 조작, 화면 새로고침, 오류 복구,
+다크 모드, 데스크톱·모바일 레이아웃을 확인합니다. 스크린샷은 `dist/evidence/`에
+저장합니다. 이 호스트는 ChatGPT가 아니므로 사이드바 노출, 호스트 승인 동작,
+설치 호환성을 증명하지 않습니다. 해당 항목은 데스크톱 앱에서 별도로 확인합니다.
+Ctrl+C로 미리보기를 종료하면 소유한 MCP 프로세스도 종료됩니다.
+
+공식 [Extensions](https://developers.openai.com/plugins/build/extensions) 및
+[플러그인 패키징](https://developers.openai.com/plugins/build/plugins) 가이드를 참고하세요.
+
+## 로컬 Redpact App Page 실험
+
+[Redpact App](../examples/sidebar-app/README.md)은 독립적인 로컬 STDIO MCP App Page입니다.
+macOS arm64 부트스트랩에 공식 Node 26.0.0, npm, pnpm 11.2.2와 라이선스를 포함하지만
+**Redpact 서버는 포함하지 않습니다**. Redpact 설치 전에도 페이지가 열립니다.
+사용자가 Node, npm, pnpm 또는 Redpact를 따로 설치할 필요는 없습니다. 런타임 설치에는
+공개 npm 레지스트리 네트워크 접근이 필요합니다. Docker와 프로젝트별 실행 도구는
+해당 기능이 필요로 할 때 별도 전제 조건으로 남습니다.
+
+부트스트랩을 빌드하는 기여자는 Node, pnpm과 루트에서 `pnpm install --frozen-lockfile`로
+설치한 워크스페이스 의존성이 필요합니다. 플러그인은 기존 `app/web` 뷰어를 상대 자산
+경로로 빌드해 포함합니다. 저장소 루트에서 실행합니다.
+
+```sh
+cd examples/sidebar-app
+pnpm install --frozen-lockfile
+pnpm bundle:redpact
+codex plugin marketplace add "$PWD/dist/redpact-marketplace"
+codex plugin add redpact-app@redpact-app-local
+```
+
+`bundle:redpact`는 공식 Node 아카이브를 릴리스 SHA-256 목록과 대조하고 그 안의
+npm 배포본 및 고정 버전 pnpm CLI를 플러그인에 포함합니다. 이후 `pnpm build`는
+도구를 다시 다운로드하지 않고 앱과 페이지를 빌드합니다. portable `plugin.json`과
+`mcp.json`을 사용하며 내부 명령 경로와 `${PLUGIN_ROOT}`는 소스 저장소가 아닌 설치된
+플러그인 복사본을 기준으로 해석됩니다. Windows, Linux, macOS Intel 배포본은 아직
+패키징하지 않았습니다.
+
+작업을 저장하고 Codex를 재시작한 뒤 Global Apps에서 **Redpact App**을 찾습니다.
+`open_redpact_app`은 `global`과 `thread` 진입점을 선언합니다. 실제 노출은 호스트에서
+확인해야 하며 브라우저 검증 호스트나 Sidebar Lab만으로 증명할 수 없습니다.
+
+플러그인 관리 런타임이 없으면 **Install Redpact**와 **npm / pnpm** 선택기가 나타납니다.
+명시적으로 눌러야 설치하며 페이지 열기나 새로고침은 설치를 시작하지 않습니다.
+선택한 번들 패키지 매니저로 공개 패키지 `@wo658/redpact@0.8.0`을 설치하며 라이프사이클
+스크립트는 실행하지 않습니다. 설치 중에는 진행 상태를 주기적으로 읽습니다. 실패를
+표시하고 버튼으로 재시도할 수 있으며 상세 기록은 `install.log`에 남깁니다.
+임의의 패키지 이름, 레지스트리 또는 명령은 입력할 수 없습니다.
+
+설치 결과는 `~/.redpact/app-page/packages/0.8.0-npm` 또는
+`~/.redpact/app-page/packages/0.8.0-pnpm`에 저장합니다. 기본 선택은 pnpm입니다.
+검증된 기존 설치가 있으면 재사용하며 두 가지가 모두 있으면 npm을 먼저 선택합니다.
+이 탐지는 플러그인 관리 패키지만 대상으로 하며 다른 전역 설치나 데스크톱 앱은
+탐색하지 않습니다. 임시 디렉터리에 설치한 후 패키지 버전, 진입점, 뷰어를 확인해야
+완료 디렉터리로 이동합니다. 전역 PATH·전역 패키지·프로젝트 의존성을 바꾸지 않습니다.
+MCP 프로세스의 `REDPACT_APP_INSTALL_DIR`로 패키지 루트를 변경할 수 있습니다.
+
+플러그인의 MCP 세션을 시작하면 관리 대상 런타임이 이미 설치되어 있고 엔드포인트가
+중지된 경우 자동으로 실행합니다. 정상 실행 중인 서버는 재사용하고, 알 수 없는
+서비스가 포트를 사용하면 시작하지 않습니다. 패키지가 없으면 명시적으로 설치해야
+합니다. 자동 시작 오류는 MCP 프로세스 stderr에 기록하며, 시작 화면에서 수동으로
+복구할 수 있습니다. 세션 도중 중지한 런타임을 상태 조회가 다시 실행하지 않습니다.
+
+시작 화면의 **Start Redpact**는 설치 전에는 숨깁니다. 실행 중에는 기존 Desktop/Web
+뷰어가 앱 전체 영역을 채우며 플러그인 상단바나 추가 탐색 메뉴를 표시하지 않습니다.
+연결 또는 뷰어 오류가 발생한 경우에만 **Refresh**, **Open local viewer**와 런타임 복구
+버튼을 표시합니다. 호스트는 비공개 앱 전용 MCP 중지 도구를 계속 사용할 수 있습니다.
+시작은 테스트 실행이나 컨테이너 생성을 수행하지 않습니다. Stop은
+기존 비공개 부모 IPC 채널을 사용하고 소유 런타임의 진행 중 작업을 중단할 수 있지만
+저장된 증거는 보존합니다. 같은 포트의 외부 서버를 조회할 수는 있어도 다른 플러그인
+세션이 중지할 수는 없습니다. 알 수 없는 서버가 포트를 점유하면 시작을 차단합니다.
+시작·중지는 순서대로 처리합니다.
+
+플러그인은 사이드바와 같은 런타임·증거 저장소의
+`http://127.0.0.1:54322/mcp`에 별도 `redpact-verification` HTTP MCP 연결도 등록합니다.
+런타임의 모델 도구를 직접 노출해 승인 카드와 capability 경계를 유지하며 App 전용 뷰어
+브리지는 비공개로 유지합니다. 검증 계약은 [MCP 인터페이스](interfaces.ko.md)를 참고하세요.
+번들 설치기는 여전히 이전 도구 구성을 가진 공개 0.8.0을 다운로드합니다. 확장된 검증 도구는
+이 소스로 빌드한 런타임이나 이를 포함하는 후속 릴리스가 필요합니다.
+런타임 시작·업데이트 후 도구 목록이 오래되었거나 시작 시 연결하지 못했다면 호스트의 MCP
+연결을 다시 연결하세요. `REDPACT_APP_PORT`를 변경하면 플러그인 manifest의 HTTP MCP URL도
+함께 변경해야 합니다.
+
+기본 포트는 `54322`, 런타임 데이터는 `~/.redpact/app-page/54322`, 시작 출력은 그 안의
+`app-start.log`에 저장합니다. `REDPACT_APP_PORT`와 `REDPACT_APP_DATA_DIR`로 변경할
+수 있습니다. 패키지 파일과 실행 증거는 분리됩니다. 뷰어의 런타임 업데이트 요청에는
+App 설치기가 업데이트를 관리한다고 알리며 페이지 뒤에서 독립 npm 자체 업데이트를
+수행하지 않습니다.
+
+미설치 또는 미실행 상태에서는 해당 설치·시작 화면을 표시합니다. 런타임이 정상적으로
+실행되면 기존 Redpact 전체 뷰어를 표시하며 프로젝트·워크트리 탐색, 파일, Diff, 테스트,
+환경과 설정을 사용할 수 있습니다. 뷰어의 반응형 사이드바, 테마와 언어 설정도 유지합니다.
+플러그인 진입점 아이콘과 브랜드 표시는 Redpact favicon 이미지를 사용합니다.
+
+App 리소스에 기존 React 뷰어와 스타일·폰트·아이콘을 직접 포함합니다. 중첩 iframe,
+브라우저 HTTP 연결 또는 루프백 CSP 예외를 요구하지 않습니다. Codex는 리소스에
+루프백 출처를 선언해도 HTTP 프레임을 차단할 수 있으므로 지원되는 MCP Apps 도구
+연결을 사용합니다.
+
+API 요청은 앱 전용 접근 권한을 검증하는 도구를 통해 고정 로컬 런타임으로 전달합니다.
+임의 출처·API 외 경로·리디렉션을 거부하며 브라우저 쿠키나 인증 헤더를 전달하지
+않습니다. 뷰어의 GET/POST/PUT/PATCH/DELETE 요청을 지원합니다. JSON 요청 본문은
+텍스트 1 MiB, 응답은 16 MiB로 제한하며 더 큰 결과물은 독립 뷰어에서 열어야 합니다.
+바이너리 응답은 로컬 blob URL로 표시하고 화면을 닫으면 URL을 해제합니다.
+런타임의 Host·Origin·Fetch Metadata 검사는 변경하지 않습니다.
+
+컴패니언은 실제 범위별 SSE 구독을 유지하고 App은 변경 번호와 오류 상태를 1초마다
+조회합니다. 화면에서 범위가 사라지면 구독을 닫으며 방치된 구독은 30초 후 만료하고
+MCP 연결 종료 시 모든 구독을 닫습니다. 외부 화면은 5초마다 런타임 상태를 확인하고
+설치 진행 중에는 1초마다 확인합니다. 서버가 중지되거나 비정상이면 시작 화면으로
+돌아가며 자동 설치·재시작·테스트 실행은 하지 않습니다. 연결 오류가 나면 **Refresh**와
+**Open local viewer**를 표시하며 후자는 설치 패키지의 독립 뷰어를 엽니다.
+정상 서버나 테스트 통과는 변경 수락을 의미하지 않습니다.
+
+페이지를 닫는 것만으로 MCP 세션을 닫지 않습니다. 소유 MCP 세션이 끊기면 자식 런타임을
+종료하고 진행 중 패키지 설치를 취소합니다. 이후 세션은 설치 패키지와 저장 데이터를
+재사용합니다. `codex plugin remove redpact-app@redpact-app-local`로 앱 플러그인을 제거하며
+활성 세션의 소유 프로세스를 멈추려면 해당 연결을 먼저 종료해야 합니다. 플러그인 제거는
+관리 패키지 경로와 런타임 데이터를 보존합니다. 별도 전역 Redpact를 제거하거나 데스크톱
+앱을 휴지통으로 옮겨도 런타임 데이터는 그대로 남습니다.
+
+검증하려면 Playwright Chromium(`pnpm exec playwright install chromium`) 설치 후
+`pnpm typecheck`, `pnpm test`와 두 가지 실제 패키지 설치 테스트를 실행합니다.
+
+```sh
+REDPACT_TEST_MANAGER=npm pnpm test:redpact:browser
+REDPACT_TEST_MANAGER=pnpm pnpm test:redpact:browser
+```
+
+각 테스트는 부트스트랩만 임시 경로에 복사하고 자식 프로세스 PATH에서 시스템
+Node·Redpact·pnpm을 제외한 뒤 실제 레지스트리 설치, 시작·중지·재시작, 뷰어,
+프로젝트 유지, MCP 종료와 반응형 화면을 확인합니다. 폴더 선택 응답만 명시적인
+픽스처로 대체하며 프로젝트 연결·파일 조회·API·탐색·수명주기는 실제 설치 런타임을
+사용합니다. Redpact에 테스트 증거를 제출하거나 실제 Codex 렌더링을 증명하는 검사는 아닙니다.
+캡처와 설치 로그는 `dist/redpact-evidence/npm/` 및 `dist/redpact-evidence/pnpm/`에
+저장합니다. `pnpm preview:redpact`는 `http://127.0.0.1:4320`에서 수동 검증 호스트를
+엽니다. 두 검증 호스트 모두 Global Apps 노출이나 호스트 승인 동작을 증명하지 않습니다.
+
+설정 화면은 현재 상태에 맞는 주요 동작 하나를 표시합니다. 설치 전에는 **Install Redpact**,
+설치 중에는 **Installing…**, 설치 후 중지 상태에서는 **Start Redpact**를 표시합니다.
+설치 실패 시 진단 내용과 **Try again** 버튼을 표시합니다. **Installation options**를
+펼치면 패키지 매니저 선택과 설치 경로를, **Connection details**를 펼치면 연결 주소,
+런타임 데이터 디렉터리와 시작 로그를 확인할 수 있습니다. 사용할 수 없는 시작·중지 버튼은
+숨기고, 연결 실패 시 새로고침과 복구 버튼을 표시합니다. 설정 화면은 호스트의 밝은·어두운
+테마를 따르며 좁은 App 패널에서도 재배치됩니다.
+
+설치 전과 중지 화면은 두 테마 모두 중앙의 로고, 짧은 상태 제목과 주요 동작으로 통일합니다. 홍보성 설명, 반복 브랜드와 하단 문구를 표시하지 않으며, 연결·설치 오류의 진단 정보는 필요할 때 제공합니다.
+
 ## 에이전트 플러그인 업데이트
 
 설정 → 에이전트 플러그인에서 Codex와 Claude Code에 설치된 Redpact 플러그인을

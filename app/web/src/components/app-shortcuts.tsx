@@ -6,11 +6,18 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { desktopInvoke, repositoryUrl } from "@/lib/desktop"
+import { viewerUrl } from "@/lib/viewer-url"
 
 function GitHubIcon(props: ComponentProps<"svg">) {
   return (
     <svg aria-hidden="true" viewBox="0 0 19 19" {...props}>
-      <use href="/icons.svg#github-icon" />
+      <use
+        href={
+          typeof document !== "undefined" && document.getElementById("github-icon")
+            ? "#github-icon"
+            : viewerUrl("/icons.svg#github-icon")
+        }
+      />
     </svg>
   )
 }

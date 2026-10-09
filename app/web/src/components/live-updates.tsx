@@ -1,5 +1,7 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { hasViewerTransport, viewerEvents } from "@/lib/viewer-transport"
+import { viewerUrl } from "@/lib/viewer-url"
 import { toast } from "./ui/toast"
 
 const Revision = createContext(0)
@@ -23,7 +25,10 @@ export function LiveUpdates({
   const { t } = useTranslation()
   const [revision, setRevision] = useState(0)
   useEffect(() => {
-    if (!enabled || !window.EventSource) {
+    if (!enabled) {
+      return
+    }
+    if (!window.EventSource && !hasViewerTransport()) {
       return
     }
     let active = true
@@ -57,7 +62,7 @@ export function LiveUpdates({
     if (scope) {
       query.set("scope", scope)
     }
-    const events = new window.EventSource(`/api/events${query.size ? `?${query}` : ""}`)
+    const events = viewerEvents(viewerUrl(`/api/events${query.size ? `?${query}` : ""}`))
     events.onmessage = () => {
       if (!active) {
         return

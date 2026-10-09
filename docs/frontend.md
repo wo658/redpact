@@ -10,6 +10,14 @@ a demo. Separate demo surfaces cannot establish real execution or approval behav
 Use [UX navigation](ux-navigation.md) for page ownership and [architecture](architecture.md)
 for service boundaries. Keep operational behavior out of styling-only abstractions.
 
+The local Sidebar App renders the same connected React viewer after explicit runtime
+startup; installation and stopped states stay in an isolated companion shell. Its
+bundled entry uses an App-only MCP transport for API reads/writes, scoped live changes
+and binary artifacts. Fonts and icons are inline; no nested iframe or browser network
+permission is required. Standalone and desktop entries retain HTTP and native SSE.
+See the [App Page installation contract](installation.md#local-redpact-app-page-experiment)
+for lifecycle, access boundaries, size limits and host verification requirements.
+
 ## Components and visual rules
 
 Use the adopted shadcn Base UI Nova primitives, `render` composition and Base UI event

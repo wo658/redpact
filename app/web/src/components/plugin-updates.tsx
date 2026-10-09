@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { viewerFetch } from "@/lib/viewer-transport"
+import { viewerUrl } from "@/lib/viewer-url"
 import type {
   PluginAgent,
   PluginUpdateStatus,
@@ -24,7 +26,7 @@ async function request(
   body?: unknown,
   signal?: AbortSignal,
 ): Promise<PluginUpdatesState> {
-  const response = await fetch(`/api/plugin-updates${action}`, {
+  const response = await viewerFetch(viewerUrl(`/api/plugin-updates${action}`), {
     method: action ? "POST" : "GET",
     signal,
     ...(body

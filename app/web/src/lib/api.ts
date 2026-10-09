@@ -1,4 +1,6 @@
 import type { ProjectEntry } from "../../../server/src/core/types/project-files"
+import { viewerFetch } from "./viewer-transport"
+import { viewerUrl } from "./viewer-url"
 export type ResourceLimit = {
   kind: "memory" | "time"
   source: "process_rss" | "docker_oom" | "wall_clock"
@@ -384,14 +386,14 @@ export class ApiError extends Error {
   }
 }
 
-export function createApi(fetcher: typeof fetch = fetch) {
+export function createApi(fetcher: typeof fetch = viewerFetch) {
   async function request<T>(
     path: string,
     body?: unknown,
     signal?: AbortSignal,
     method?: "PUT" | "PATCH" | "DELETE",
   ): Promise<T> {
-    const response = await fetcher(`/api${path}`, {
+    const response = await fetcher(viewerUrl(`/api${path}`), {
       method: method ?? (body === undefined ? "GET" : "POST"),
       headers: {
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
@@ -661,7 +663,9 @@ export function createApi(fetcher: typeof fetch = fetch) {
       ),
     projectPlaywrightSource: async (id: string, path: string, signal?: AbortSignal) => {
       const response = await fetcher(
-        `/api/projects/${encodeURIComponent(id)}/playwright/source?path=${encodeURIComponent(path)}`,
+        viewerUrl(
+          `/api/projects/${encodeURIComponent(id)}/playwright/source?path=${encodeURIComponent(path)}`,
+        ),
         { signal, cache: "no-store", redirect: "error" },
       )
       if (!response.ok) {
@@ -677,7 +681,9 @@ export function createApi(fetcher: typeof fetch = fetch) {
       ),
     captureSource: async (id: string, path: string, signal?: AbortSignal) => {
       const response = await fetcher(
-        `/api/playwright-runs/${encodeURIComponent(id)}/source?path=${encodeURIComponent(path)}`,
+        viewerUrl(
+          `/api/playwright-runs/${encodeURIComponent(id)}/source?path=${encodeURIComponent(path)}`,
+        ),
         { signal, cache: "no-store", redirect: "error" },
       )
       if (!response.ok) {
@@ -711,7 +717,9 @@ export function createApi(fetcher: typeof fetch = fetch) {
     cancelPlaywright: (id: string) =>
       request<CaptureRun>(`/playwright-runs/${encodeURIComponent(id)}/cancel`, {}),
     captureArtifact: (id: string, side: "before" | "after", artifact: string) =>
-      `/api/playwright-runs/${encodeURIComponent(id)}/${side}/artifacts/${encodeURIComponent(artifact)}`,
+      viewerUrl(
+        `/api/playwright-runs/${encodeURIComponent(id)}/${side}/artifacts/${encodeURIComponent(artifact)}`,
+      ),
     getTracking: (projectId: string, signal?: AbortSignal) =>
       request<{
         projectRoot: string

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sidebar Lab</title>
+<style>
+:root { color-scheme:light; --bg:#fbfbfb; --fg:#1b1b1b; --muted:#646464; --line:#dedede; --accent:#3547a8; }
+:root[data-theme="dark"] { color-scheme:dark; --bg:#17181a; --fg:#eeeeee; --muted:#b2b2b2; --line:#424242; --accent:#a7b5ff; }
+* { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui,sans-serif; }
+main { max-width:760px; margin:auto; padding:clamp(20px,5vw,48px); }
+header { border-bottom:1px solid var(--line); padding-bottom:24px; } .eyebrow { color:var(--accent); font-size:12px; font-weight:700; letter-spacing:.12em; }
+h1 { font-size:32px; margin:8px 0; letter-spacing:-.03em; } p { color:var(--muted); } #status { font-size:13px; }
+section { padding:28px 0; } h2 { font-size:16px; margin:0; } #count { font-size:88px; font-weight:600; line-height:1.3; font-variant-numeric:tabular-nums; }
+.actions { display:flex; flex-wrap:wrap; gap:10px; } button { font:inherit; padding:10px 18px; border:1px solid var(--line); border-radius:8px; color:var(--fg); background:var(--bg); cursor:pointer; }
+button:first-child { background:var(--fg); color:var(--bg); } button:disabled { opacity:.45; cursor:wait; } button:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+#details { overflow-wrap:anywhere; font-size:12px; } #error { color:#b34838; white-space:pre-wrap; overflow-wrap:anywhere; } footer { border-top:1px solid var(--line); padding-top:20px; font-size:13px; color:var(--muted); }
+</style>
+</head>
+<body><main>
+<header><div class="eyebrow">LOCAL PLUGIN EXPERIMENT</div><h1>Sidebar Lab</h1><p>A small app running through your local MCP connection.</p><div id="status" role="status">Connecting…</div></header>
+<section aria-labelledby="counter-title"><h2 id="counter-title">Local counter</h2><div id="count" aria-live="polite">—</div><div class="actions"><button type="button" data-tool="increment_lab" disabled>Increment</button><button type="button" data-tool="get_lab_state" disabled>Refresh</button><button type="button" data-tool="reset_lab" disabled>Reset</button></div><p id="details">Waiting for the local process.</p><p id="error" role="alert"></p></section>
+<footer>No Redpact service, Docker, or cloud backend required. The counter belongs to this MCP process and resets when it restarts.</footer>
+</main><script type="module">/* APP_SCRIPT */</script></body></html>

@@ -12,6 +12,7 @@ import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { Field, FieldLabel } from "./ui/field"
 import { Switch } from "./ui/switch"
+import { ViewerImage } from "./viewer-asset"
 
 type CaptureReviewProps = { api: Api; worktreeId: string; actionsContainer?: HTMLElement | null }
 export function CaptureReview(props: CaptureReviewProps) {
@@ -309,7 +310,7 @@ function CaptureImage({ api, run, image }: { api: Api; run: CaptureRun; image: C
         )}
       </figcaption>
       <div className="overflow-auto bg-muted/30">
-        <img
+        <ViewerImage
           src={api.captureArtifact(run.id, "after", image.id)}
           alt={image.name}
           style={{ maxWidth: "100%", height: "auto", objectFit: "contain", display: "block" }}

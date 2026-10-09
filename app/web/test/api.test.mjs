@@ -118,3 +118,25 @@ test("통합 실행은 파일 필터 없이 제출 ID를 기존 실행 API에 �
   assert.equal(calls[0].init.method, "POST")
   assert.deepEqual(JSON.parse(calls[0].init.body), { submissionId: "submission-id" })
 })
+
+test("embedded viewer keeps API reads, writes, source and artifacts under its capability path", async () => {
+  const previous = globalThis.document
+  globalThis.document = { querySelector: () => ({ getAttribute: () => "/session-capability/" }) }
+  try {
+    const calls = []
+    const api = createApi(async (url, init) => {
+      calls.push({ url, init })
+      return Response.json([])
+    })
+    await api.projects()
+    await api.connect("/repo", "Project")
+    assert.equal(calls[0].url, "/session-capability/api/projects")
+    assert.equal(calls[1].url, "/session-capability/api/projects")
+    assert.equal(
+      api.captureArtifact("run", "after", "image"),
+      "/session-capability/api/playwright-runs/run/after/artifacts/image",
+    )
+  } finally {
+    globalThis.document = previous
+  }
+})

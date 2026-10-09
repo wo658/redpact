@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Redpact</title></head>
+<body><div id="root" hidden></div><div id="setup"></div>
+<template id="setup-template">
+<style>
+:host{color-scheme:light;--background:#fbfbfb;--foreground:#1b1b1b;--muted:#71737a;--line:#e8e8e8;--surface:#fff;--accent:#6e78d5;--error:#92681b;display:block;min-height:100dvh;background:var(--background);color:var(--foreground);font:14px/1.5 "Inter Variable",system-ui,sans-serif}
+:host([data-theme=dark]){color-scheme:dark;--background:#101011;--foreground:#e3e4e6;--muted:#a1a2a5;--line:#24252a;--surface:#17181a;--accent:#7987e1;--error:#d5ad68}
+*{box-sizing:border-box}[hidden],:host([hidden]){display:none!important}button,select{font:inherit;color:inherit}button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 18px;min-height:38px;font-size:13px;font-weight:500;transition:opacity .15s}button:hover:not(:disabled){opacity:.8}button:disabled{opacity:.5;cursor:default}:focus-visible{outline:2px solid var(--accent);outline-offset:4px}.primary{background:var(--foreground);color:var(--background);border-color:var(--foreground)}.secondary{background:transparent}.muted{color:var(--muted)}
+main{min-height:100dvh;display:flex;flex-direction:column;padding:24px 32px}header{display:none;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:9px;font-size:14px;letter-spacing:-.02em}.mark{width:24px;height:24px}.status{font-size:12px;color:var(--muted);text-align:right}.content{width:100%;max-width:320px;margin:auto;padding:48px 0;text-align:center}.hero-mark{width:44px;height:44px;margin-bottom:24px}h1{font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.04em;margin:0 0 12px}p{margin:0}#runtime-message{color:var(--muted);line-height:1.65;max-width:360px}.actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:24px}#install-status{color:var(--muted);font-size:13px;margin-top:16px;overflow-wrap:anywhere}details{margin-top:28px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}summary{cursor:pointer;width:fit-content;margin:auto;padding:4px 0}details[open]{text-align:left}details p{margin:12px 0;overflow-wrap:anywhere}dl{margin:16px 0 0}dt{font-size:12px;margin-top:14px}dd{margin:4px 0 0;overflow-wrap:anywhere;color:var(--foreground);font-family:ui-monospace,monospace;font-size:12px}.field{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:16px 0}select{min-width:100px;min-height:36px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}#error{color:var(--error);white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;margin-top:20px}#error:empty{display:none}.recovery-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}.recovery-actions:not(:has(> :not([hidden]))){display:none}footer{color:var(--muted);font-size:12px;padding-top:24px}
+:host([data-running=true]){position:fixed;inset:0 0 auto;z-index:1000;min-height:0;border-bottom:1px solid var(--line)}:host([data-running=true]) header{display:flex}:host([data-running=true]) main{min-height:0;padding:16px 24px}:host([data-running=true]) .content{max-width:none;padding:0;margin:0;text-align:left}:host([data-running=true]) footer,:host([data-running=true]) .hero-mark{display:none}
+@media(max-width:500px){main{padding:20px 24px}.content{padding:48px 0}header{gap:12px}.status{font-size:11px}footer{font-size:11px}}@media(prefers-reduced-motion:reduce){button{transition:none}}
+</style>
+<main>
+<header><div class="brand"><img class="mark" src="APP_FAVICON" alt=""><strong>Redpact</strong></div><span class="status" id="status" role="status">Connecting…</span></header>
+<div class="content">
+<section id="offline" aria-labelledby="offline-title">
+<img class="hero-mark" src="APP_FAVICON" alt="">
+<h1 id="offline-title">Connecting…</h1>
+<p id="runtime-message" hidden></p>
+</section>
+<section id="installation" hidden>
+<div class="actions"><button id="install" type="button" class="primary">Install Redpact</button></div>
+<p id="install-status" role="status" hidden></p>
+<details><summary>Installation options</summary>
+<div class="field"><label for="manager">Package manager</label><select id="manager"><option value="pnpm">pnpm</option><option value="npm">npm</option></select></div>
+<dl><dt>Installation directory</dt><dd id="install-directory"></dd><dt>Installation log</dt><dd id="install-log"></dd></dl>
+</details>
+</section>
+<div id="start-actions" class="actions" hidden><button type="button" id="start" class="primary" disabled>Start Redpact</button></div>
+<p id="error" role="alert"></p>
+<div class="recovery-actions"><button type="button" id="refresh" class="secondary" hidden disabled>Refresh</button><button id="viewer" type="button" hidden>Open local viewer ↗</button><button type="button" id="stop" hidden disabled>Stop Redpact</button></div>
+<details id="runtime-details" hidden><summary>Connection details</summary><p id="ownership"></p><dl><dt>Address</dt><dd id="command"></dd><dt>Data directory</dt><dd id="data-dir"></dd><dt>Startup log</dt><dd id="log-path"></dd></dl></details>
+</div>
+</main>
+</template><script type="module">/* APP_SCRIPT */</script></body></html>

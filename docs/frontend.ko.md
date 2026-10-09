@@ -10,6 +10,13 @@ description: 공유 시각 규칙, 내비게이션, 실시간 증거와 접근�
 [UX 내비게이션](ux-navigation.md), 서비스 경계는 [아키텍처](architecture.md)를 따릅니다.
 스타일 전용 추상화가 실행 동작을 소유하지 않게 합니다.
 
+로컬 Sidebar App은 명시적인 런타임 시작 후 같은 연결형 React 뷰어를 렌더링하며
+설치·중지 상태는 격리된 컴패니언 화면에서 처리합니다. 번들 진입점은 API 읽기·쓰기,
+범위별 실시간 변경과 바이너리 결과물에 앱 전용 MCP 연결을 사용합니다. 폰트와 아이콘은
+인라인으로 포함하며 중첩 iframe이나 브라우저 네트워크 권한이 필요하지 않습니다.
+독립 Web·Desktop 진입점은 HTTP와 기본 SSE를 유지합니다. 수명주기, 접근 경계,
+크기 제한과 호스트 검증은 [App Page 설치 계약](installation.ko.md#로컬-redpact-app-page-실험)을 따릅니다.
+
 ## 컴포넌트와 시각 규칙
 
 채택된 shadcn Base UI Nova primitive, `render` 조합과 Base UI event 계약을 사용합니다.

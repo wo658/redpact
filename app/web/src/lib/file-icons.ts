@@ -53,5 +53,8 @@ export function folderIconUrl(path: string, expanded: boolean, light = false) {
 function iconUrl(id: string | undefined) {
   const definition = id && manifest.iconDefinitions?.[id]
   const iconPath = definition ? definition.iconPath : undefined
+  if (iconPath?.startsWith("data:")) {
+    return iconPath
+  }
   return `${import.meta.env.BASE_URL}${iconPath ?? "material-icons/file.svg"}`
 }

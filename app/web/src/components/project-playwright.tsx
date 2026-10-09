@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/coss-tabs"
 import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "./ui/field"
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group"
 import { UnifiedDiff } from "./unified-diff"
+import { ViewerImage, ViewerLink } from "./viewer-asset"
 
 type ImageRecord = { run: CaptureRun; scenario: CaptureCase; image: CaptureArtifact }
 type Page = "screenshots" | "tests" | "runs"
@@ -299,7 +300,7 @@ function CaptureView({
                   return (
                     <FieldLabel key={item.id} htmlFor={id} className="min-w-44 max-w-44 shrink-0">
                       <Field>
-                        <img
+                        <ViewerImage
                           src={api.captureArtifact(capture.run.id, "after", capture.image.id)}
                           alt=""
                           loading="lazy"
@@ -338,7 +339,7 @@ function CaptureView({
               <h2 className="text-base font-medium [overflow-wrap:anywhere]">
                 {record.image.name}
               </h2>
-              <img
+              <ViewerImage
                 src={api.captureArtifact(record.run.id, "after", record.image.id)}
                 alt={record.image.name}
                 className="block h-auto w-full shrink-0 object-contain md:min-h-0 md:w-auto md:max-w-full md:flex-1"
@@ -574,14 +575,14 @@ function StoredCase({
       <div className="flex flex-wrap gap-3">
         {scenario.artifacts.map((artifact) =>
           artifact.contentType === "image/png" ? (
-            <img
+            <ViewerImage
               key={artifact.id}
               src={api.captureArtifact(run.id, "after", artifact.id)}
               alt={artifact.name}
               className="block max-h-[60vh] max-w-full object-contain"
             />
           ) : (
-            <a
+            <ViewerLink
               key={artifact.id}
               className="text-sm underline"
               href={api.captureArtifact(run.id, "after", artifact.id)}
@@ -589,7 +590,7 @@ function StoredCase({
               rel="noreferrer"
             >
               {artifact.name} · {artifact.contentType}
-            </a>
+            </ViewerLink>
           ),
         )}
       </div>
