@@ -16,10 +16,16 @@ test("프로젝트 통합 테스트 화면에는 실행 선택 폼이 없다", a
   }, project.id)
   await test.step("프로젝트 테스트로 이동한다", async () => {
     await page.goto("/")
-    if (!(await page.getByRole("button", { name: "Tests", exact: true }).isVisible())) {
+    await expect(page.getByRole("heading", { name: "Current work", exact: true })).toBeVisible()
+    if ((page.viewportSize()?.width ?? 1920) < 768) {
       await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+      await expect(page.getByRole("dialog", { name: "Sidebar", exact: true })).toBeVisible()
+    } else {
+      await expect(page.locator('[data-slot="sidebar"]')).toHaveAttribute("data-state", "expanded")
     }
-    await page.getByRole("button", { name: "Tests", exact: true }).click()
+    const tests = page.getByRole("button", { name: "Tests", exact: true })
+    await expect(tests).toBeInViewport()
+    await tests.click()
     if ((page.viewportSize()?.width ?? 1920) < 768) {
       await page.keyboard.press("Escape")
     }
