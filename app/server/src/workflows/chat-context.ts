@@ -9,13 +9,12 @@ import {
   reviewSummaryBase,
   unitReviewContext,
   unknownFreshness,
-  workspaceNextActions,
 } from "../core/chat-context.js"
-import type { reviewContextInput } from "../core/chat-context-schema.js"
 import { problem } from "../core/problems.js"
 import type { ReviewContext, WorkspaceStatus } from "../core/types/chat-context.js"
 import type { CaptureRun } from "../core/types/playwright.js"
 import type { UnitRun } from "../core/types/unit-tests.js"
+import type { reviewContextInput } from "../core/verification-schema.js"
 import type { Services } from "./services.js"
 import { cancelExecution } from "./verification.js"
 
@@ -116,7 +115,7 @@ export async function getWorkspaceStatus(
     freshness: unknownFreshness(),
     humanAcceptance: "not_recorded" as const,
   }
-  return { ...status, nextActions: workspaceNextActions(status) }
+  return status
 }
 function integrationContext(services: Services, id: string): ReviewContext {
   const pending = services.reviews?.get(id)

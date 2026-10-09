@@ -1,25 +1,16 @@
 import { type APIRequestContext, expect, type Page } from "@playwright/test"
+import { node } from "./target"
 
 export async function openMcpEnvironment(page: Page, request: APIRequestContext) {
-  const connected = await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })
+  const connected = await request.post("/api/projects", { data: { path: "/app" } })
   expect(connected.ok()).toBeTruthy()
   const project = await connected.json()
   const endpoint = `/api/projects/${project.id}/configuration`
   const original = await (await request.get(endpoint)).json()
-  const configured = await request.put(endpoint, {
-    data: {
-      revision: original.revision,
-      source: JSON.stringify({
-        ...JSON.parse(original.source),
-        dependencies: {
-          payment: { kind: "remote", env: { app: { PAYMENT_URL: "https://payment.test" } } },
-          search: { kind: "shared-local", env: { app: { SEARCH_URL: "http://search.test" } } },
-        },
-        relationships: [],
-      }),
-    },
-  })
-  expect(configured.ok()).toBeTruthy()
+  await node(
+    `import {writeFileSync} from 'node:fs'; const original=JSON.parse(process.argv[1]); writeFileSync('/app/.redpact/settings.json',JSON.stringify({...JSON.parse(original),dependencies:{payment:{kind:'remote',env:{app:{PAYMENT_URL:'https://payment.test'}}},search:{kind:'shared-local',env:{app:{SEARCH_URL:'http://search.test'}}}},relationships:[]})); console.log('null');`,
+    original.source,
+  )
   let session: string | undefined
   let id = 0
   async function rpc(method: string, params: unknown) {
@@ -45,14 +36,10 @@ export async function openMcpEnvironment(page: Page, request: APIRequestContext)
     return value.result
   }
   async function restore() {
-    const latest = await (await request.get(endpoint)).json()
-    expect(
-      (
-        await request.put(endpoint, {
-          data: { source: original.source, revision: latest.revision },
-        })
-      ).ok(),
-    ).toBeTruthy()
+    await node(
+      `import {writeFileSync} from 'node:fs'; writeFileSync('/app/.redpact/settings.json',JSON.parse(process.argv[1])); console.log('null');`,
+      original.source,
+    )
     if (session) {
       await request.delete("/mcp", { headers: { "mcp-session-id": session } })
     }

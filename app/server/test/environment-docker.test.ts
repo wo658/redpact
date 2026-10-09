@@ -1,4 +1,4 @@
-import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
@@ -6,12 +6,17 @@ import { expect, test } from "vitest"
 const dockerTest = process.env.REDPACT_DOCKER_TESTS === "1" ? test : test.skip
 
 import { spawn } from "node:child_process"
+import { createHash, randomUUID } from "node:crypto"
 import { once } from "node:events"
 import { fileURLToPath } from "node:url"
 import { execa } from "execa"
+import { createSettingsService } from "../src/adapters/settings/json.js"
+import { openStore } from "../src/adapters/storage/files.js"
+import { loadInstance } from "../src/adapters/storage/instance.js"
+import { executionSettingsSchema } from "../src/core/execution-settings.js"
 
 dockerTest(
-  "서버 충돌 후 수동 Container를 복구하고 중단된 준비 자원을 정리한다",
+  "기존 수동 환경의 준비 중·준비 완료 기록을 복구하고 실제 Docker 자원을 정리한다",
   async () => {
     const root = await mkdtemp(join(tmpdir(), "redpact-compose-restart-"))
     const projectRoot = join(root, "project")
@@ -63,81 +68,139 @@ dockerTest(
     }
     let server = await launch()
     let worktreeId = ""
+    const fixtureIds: string[] = []
     try {
       const [project] = await server.request("/api/projects")
       const [worktree] = await server.request(`/api/projects/${project.id}/worktrees`)
       worktreeId = worktree.id
-      const { environment: env } = await server.request(
-        `/api/projects/${project.id}/test-container/start`,
-        {},
-      )
-      await expect
-        .poll(async () => (await server.request(`/api/environments/${env.id}`)).state, {
-          timeout: 60000,
-        })
-        .toBe("ready")
-      const before = await server.request(`/api/environments/${env.id}`)
-      server.child.kill("SIGKILL")
-      expect((await server.exited)[1]).toBe("SIGKILL")
-      // The observed writer exit makes removing this test-owned lock safe.
-      await rm(join(data, ".writer.lock"))
-      server = await launch()
-      const after = await server.request(`/api/environments/${env.id}`)
-      expect(after.state).toBe("stopped")
-      expect(after.id).toBe(before.id)
-      expect(after.inputDigest).toBe(before.inputDigest)
-      expect(
-        (await execa("docker", ["ps", "-aq", "--filter", `label=io.redpact.environment=${env.id}`]))
-          .stdout,
-      ).toBe("")
-      await expect
-        .poll(async () => (await server.request(`/api/environments/${env.id}`)).state, {
-          timeout: 30000,
-        })
-        .toBe("stopped")
-      await writeFile(composePath, compose.replace("[CMD, 'true']", "[CMD, 'false']"))
-      const { environment: pending } = await server.request(
-        `/api/projects/${project.id}/test-container/start`,
-        {},
-      )
-      await expect
-        .poll(
-          async () =>
-            (
-              await execa("docker", [
-                "ps",
-                "-q",
-                "--filter",
-                `label=io.redpact.environment=${pending.id}`,
-              ])
-            ).stdout,
-          { timeout: 30000 },
-        )
-        .toBeTruthy()
-      server.child.kill("SIGKILL")
-      await server.exited
-      // The test observed the writer exit; this is not automatic stale-lock stealing.
-      await rm(join(data, ".writer.lock"))
-      server = await launch()
-      const recovered = await server.request(`/api/environments/${pending.id}`)
-      expect(recovered.state).toBe("stopped")
-      expect(recovered.id).toBe(pending.id)
-      await expect
-        .poll(async () => (await server.request(`/api/environments/${pending.id}`)).state, {
-          timeout: 30000,
-        })
-        .toBe("stopped")
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-      expect(
-        (
+      const validation = await createSettingsService(projectRoot).read()
+      expect(validation.valid, JSON.stringify(validation.issues)).toBe(true)
+      if (!validation.settings || !validation.digest || !validation.plan || !validation.bundle) {
+        throw new Error("Missing fixture execution settings")
+      }
+      for (const state of ["ready", "preparing"] as const) {
+        server.child.kill("SIGTERM")
+        expect((await server.exited)[0]).toBe(0)
+        const runtime = openStore(data)
+        const { instance } = loadInstance(data)
+        const id = randomUUID()
+        fixtureIds.push(id)
+        const projectName = `redpact-${instance.id}-${createHash("sha256").update(project.id).digest("hex").slice(0, 16)}`
+        const labels = [
+          "--label",
+          `io.redpact.owner=${instance.id}`,
+          "--label",
+          `io.redpact.environment=${id}`,
+          "--label",
+          `com.docker.compose.project=${projectName}`,
+        ]
+        const environmentDirectory = join(data, "environments", id)
+        try {
+          await execa("docker", ["network", "create", ...labels, `${projectName}_legacy`])
           await execa("docker", [
-            "ps",
-            "-aq",
-            "--filter",
-            `label=io.redpact.environment=${pending.id}`,
+            "run",
+            "-d",
+            ...labels,
+            "--label",
+            "com.docker.compose.service=probe",
+            "--network",
+            `${projectName}_legacy`,
+            "--health-cmd",
+            state === "ready" ? "true" : "false",
+            "--health-interval",
+            "1s",
+            "--health-timeout",
+            "1s",
+            "--health-retries",
+            "120",
+            "postgres:17-alpine",
+            "sh",
+            "-c",
+            "echo retained-service-log; sleep 3600",
           ])
-        ).stdout,
-      ).toBe("")
+          const time = new Date().toISOString()
+          // Seed a previous runtime's record; retired HTTP creation must remain unavailable.
+          runtime.store.saveEnvironment({
+            id,
+            requestId: randomUUID(),
+            ownerId: instance.id,
+            projectName,
+            target: {
+              projectId: project.id,
+              worktreeId,
+              projectRoot: worktree.projectRoot,
+              checkoutRoot: worktree.checkoutRoot,
+            },
+            settings: executionSettingsSchema.parse({
+              environment: { compose: { files: validation.settings.composeFiles } },
+              tests: {},
+            }),
+            specification: validation.settings,
+            selection: { services: ["probe"], select: {} },
+            plan: validation.plan,
+            bundle: validation.bundle.files.map(({ path, sha256 }) => ({ path, sha256 })),
+            settingsDigest: validation.digest,
+            inputDigest: `retained-${state}`,
+            runtimeId: (await execa("docker", ["info", "--format", "{{.ID}}"])).stdout.trim(),
+            state,
+            lifecycle: "manual",
+            runIds: [],
+            resources: [],
+            endpoints: {},
+            services: [{ name: "probe", job: false }],
+            errors: [],
+            createdAt: time,
+            updatedAt: time,
+          })
+          await mkdir(join(environmentDirectory, "source"), { recursive: true })
+          await writeFile(join(environmentDirectory, "source", "captured-input"), "retained input")
+          await writeFile(
+            join(environmentDirectory, "preparation.log"),
+            "retained preparation evidence",
+          )
+        } finally {
+          runtime.close()
+        }
+        server = await launch()
+        const recovered = await server.request(`/api/environments/${id}`)
+        expect(recovered).toMatchObject({
+          id,
+          state: "stopped",
+          lifecycle: "manual",
+          inputDigest: `retained-${state}`,
+          settingsDigest: validation.digest,
+          resources: [],
+        })
+        expect(
+          (await server.request(`/api/environments?worktreeId=${worktreeId}`)).map(
+            (item: { id: string }) => item.id,
+          ),
+        ).toContain(id)
+        expect(
+          (await execa("docker", ["ps", "-aq", "--filter", `label=io.redpact.environment=${id}`]))
+            .stdout,
+        ).toBe("")
+        expect(
+          (
+            await execa("docker", [
+              "network",
+              "ls",
+              "-q",
+              "--filter",
+              `label=io.redpact.environment=${id}`,
+            ])
+          ).stdout,
+        ).toBe("")
+        await expect(
+          readFile(join(environmentDirectory, "source", "captured-input")),
+        ).rejects.toMatchObject({ code: "ENOENT" })
+        expect(await readFile(join(environmentDirectory, "preparation.log"), "utf8")).toBe(
+          "retained preparation evidence",
+        )
+        expect(await readFile(join(environmentDirectory, "services.log"), "utf8")).toContain(
+          "retained-service-log",
+        )
+      }
     } finally {
       if (server.child.exitCode === null && server.child.signalCode === null) {
         if (worktreeId) {
@@ -155,6 +218,30 @@ dockerTest(
         }
         server.child.kill("SIGTERM")
         await server.exited
+      }
+      for (const id of fixtureIds) {
+        const containers = (
+          await execa("docker", ["ps", "-aq", "--filter", `label=io.redpact.environment=${id}`])
+        ).stdout
+          .split(/\s+/)
+          .filter(Boolean)
+        if (containers.length) {
+          await execa("docker", ["rm", "-fv", ...containers])
+        }
+        const networks = (
+          await execa("docker", [
+            "network",
+            "ls",
+            "-q",
+            "--filter",
+            `label=io.redpact.environment=${id}`,
+          ])
+        ).stdout
+          .split(/\s+/)
+          .filter(Boolean)
+        if (networks.length) {
+          await execa("docker", ["network", "rm", ...networks])
+        }
       }
       await rm(root, { recursive: true, force: true })
     }

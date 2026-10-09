@@ -169,6 +169,11 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
         return json
       }
       expect((await fetch(`${base}/api/health`)).status).toBe(200)
+      const settingsFile = join(project, ".redpact/settings.json")
+      await expect(readFile(settingsFile, "utf8")).rejects.toMatchObject({ code: "ENOENT" })
+      const missing = await fetch(`${base}/api/settings`)
+      expect(missing.status).toBe(422)
+      expect(await missing.json()).toMatchObject({ valid: false })
       const describe = await request("/mcp", {
         jsonrpc: "2.0",
         id: 1,
@@ -176,12 +181,7 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
         params: { name: "configure", arguments: { action: "describe" } },
       })
       expect(describe.result.structuredContent.specification.path).toBe(".redpact/settings.json")
-      expect(JSON.parse(await readFile(join(project, ".redpact/settings.json"), "utf8"))).toEqual({
-        composeFiles: [],
-        services: [],
-        dependencies: {},
-        tests: { directory: "integration", timeoutMs: 10000, env: {} },
-      })
+      await expect(readFile(settingsFile, "utf8")).rejects.toMatchObject({ code: "ENOENT" })
       await writeFile(
         join(project, "compose.yaml"),
         JSON.stringify({
@@ -209,8 +209,9 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
           },
         }),
       )
+      await mkdir(join(project, ".redpact"))
       await writeFile(
-        join(project, ".redpact/settings.json"),
+        settingsFile,
         JSON.stringify({
           composeFiles: ["compose.yaml"],
           dependencies: {},
@@ -225,6 +226,10 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
         params: { name: "configure", arguments: { action: "validate" } },
       })
       expect(validation.result.isError).not.toBe(true)
+      expect(validation.result.structuredContent).toMatchObject({
+        validation: { valid: true },
+        environment: { readiness: "not_checked" },
+      })
       const configured = await request("/api/settings")
       expect(configured.valid).toBe(true)
       const work = await request("/api/work-items", { intent: "Verify installed runtime" })

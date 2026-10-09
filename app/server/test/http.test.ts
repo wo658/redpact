@@ -37,22 +37,6 @@ describe("local HTTP boundary", () => {
     const app = createApp({} as never)
     expect((await app.request("http://evil.example/api/health")).status).toBe(403)
   })
-
-  test("same-origin mutations reach the service without credentials", async () => {
-    const setTracking = vi.fn(async () => ({ id: "project" }))
-    const app = createApp({ projectSettings: { update: setTracking } } as never)
-    const response = await app.request("http://localhost/api/projects/project/tracking", {
-      method: "POST",
-      headers: {
-        Origin: "http://localhost",
-        "Sec-Fetch-Site": "same-origin",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ mainBranch: "main", hideMerged: false }),
-    })
-    expect(response.status).toBe(200)
-    expect(setTracking).toHaveBeenCalledWith("project", { mainBranch: "main", hideMerged: false })
-  })
 })
 
 test("live events are streamed under the local HTTP boundary and release watchers on disconnect", async () => {

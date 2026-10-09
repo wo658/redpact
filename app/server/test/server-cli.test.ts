@@ -1,17 +1,17 @@
 import { execFileSync, spawn } from "node:child_process"
-import { randomUUID } from "node:crypto"
 import { once } from "node:events"
 import { existsSync } from "node:fs"
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises"
 import { get } from "node:http"
 import { networkInterfaces, tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { expect, test } from "vitest"
 
-test("serve preserves a disconnected default project across restart", async () => {
+test("serve without --project preserves a disconnected binding across restart", async () => {
   const root = await mkdtemp(join(tmpdir(), "redpact-disconnected-cli-"))
   let projectId = ""
+  let retainedSource = ""
   try {
     for (const restarting of [false, true]) {
       const child = spawn(
@@ -19,8 +19,7 @@ test("serve preserves a disconnected default project across restart", async () =
         [
           fileURLToPath(new URL("../dist/cli.js", import.meta.url)),
           "serve",
-          "--project",
-          root,
+          ...(!restarting ? ["--project", root] : []),
           "--data-dir",
           join(root, "state"),
           "--port",
@@ -45,7 +44,7 @@ test("serve preserves a disconnected default project across restart", async () =
           projectId = projects[0].id
           expect(
             (await fetch(`${origin}/api/projects/${projectId}`, { method: "DELETE" })).status,
-          ).toBe(200)
+          ).toBe(404)
         } else {
           expect(projects).toEqual([])
           const retained = await (
@@ -54,10 +53,20 @@ test("serve preserves a disconnected default project across restart", async () =
           expect(retained).toHaveLength(1)
           expect(retained[0]).toMatchObject({ id: projectId })
           expect(retained[0].disconnectedAt).toBeTruthy()
+          expect(await readFile(join(root, "state", "projects", `${projectId}.json`), "utf8")).toBe(
+            retainedSource,
+          )
         }
       } finally {
         child.kill("SIGTERM")
         await exit
+      }
+      if (!restarting) {
+        const file = join(root, "state", "projects", `${projectId}.json`)
+        const record = JSON.parse(await readFile(file, "utf8"))
+        record.data.disconnectedAt = new Date().toISOString()
+        retainedSource = JSON.stringify(record)
+        await writeFile(file, retainedSource)
       }
     }
   } finally {
@@ -112,8 +121,15 @@ test.each(["missing", "invalid"])(
       expect(schema.status).toBe(200)
       expect((await schema.json()).path).toBe(".redpact/settings.json")
       const validation = await fetch(`http://127.0.0.1:${port}/api/settings`, { headers })
-      expect(validation.status).toBe(state === "missing" ? 200 : 422)
-      expect((await validation.json()).valid).toBe(state === "missing")
+      expect(validation.status).toBe(422)
+      expect((await validation.json()).valid).toBe(false)
+      if (state === "missing") {
+        expect(existsSync(join(directory, ".redpact/settings.json"))).toBe(false)
+      } else {
+        expect(await readFile(join(directory, ".redpact/settings.json"), "utf8")).toBe(
+          "version: [\n",
+        )
+      }
       const mcp = await fetch(`http://127.0.0.1:${port}/mcp`, {
         method: "POST",
         headers: {
@@ -132,6 +148,26 @@ test.each(["missing", "invalid"])(
       expect((await mcp.json()).result.structuredContent.specification.path).toBe(
         ".redpact/settings.json",
       )
+      await writeFile(join(directory, ".redpact/settings.json"), "{}")
+      const validated = await fetch(`http://127.0.0.1:${port}/mcp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/call",
+          params: { name: "configure", arguments: { action: "validate", path: directory } },
+        }),
+      })
+      expect(validated.status).toBe(200)
+      expect((await validated.json()).result.structuredContent).toMatchObject({
+        validation: { valid: true },
+        environment: { readiness: "not_checked" },
+      })
+      expect(await readFile(join(directory, ".redpact/settings.json"), "utf8")).toBe("{}")
       child.kill("SIGTERM")
       expect((await exit)[0]).toBe(0)
       expect(existsSync(join(data, ".writer.lock"))).toBe(false)
@@ -206,29 +242,29 @@ test("serve without --project requires worktree selection and still describes se
     })
     expect(connected.status).toBe(201)
     const project = await connected.json()
-    const creation = await fetch(`http://127.0.0.1:${port}/api/work-starts`, {
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        requestId: randomUUID(),
-        projectId: project.id,
-        intent: "CLI creation",
-        baseRef: "HEAD",
-        branch: "codex/cli-test",
-        path: join(directory, "created"),
-      }),
+    const checkout = join(directory, "created")
+    execFileSync("git", ["-C", repository, "worktree", "add", "-qb", "codex/cli-test", checkout])
+    const resolveCheckout = () =>
+      fetch(`http://127.0.0.1:${port}/api/projects/${project.id}/worktrees`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ path: checkout }),
+      })
+    const binding = await resolveCheckout()
+    expect(binding.status).toBe(201)
+    const created = await binding.json()
+    expect(created).toMatchObject({
+      projectId: project.id,
+      projectRoot: await realpath(checkout),
     })
-    expect(creation.status).toBe(200)
-    const created = await creation.json()
-    expect(created.projectId).toBe(project.id)
     expect(existsSync(join(created.projectRoot, ".git"))).toBe(true)
-    const work = await fetch(`http://127.0.0.1:${port}/api/work-items/${created.workItemId}`, {
-      headers,
-    })
-    expect(await work.json()).toMatchObject({
-      intent: "CLI creation",
-      worktreeId: created.worktreeId,
-    })
+    expect(
+      execFileSync("git", ["-C", checkout, "branch", "--show-current"], {
+        encoding: "utf8",
+      }).trim(),
+    ).toBe("codex/cli-test")
+    expect((await (await resolveCheckout()).json()).id).toBe(created.id)
+    expect(existsSync(join(repository, ".redpact/settings.json"))).toBe(false)
     child.kill("SIGTERM")
     expect((await exit)[0]).toBe(0)
   } finally {

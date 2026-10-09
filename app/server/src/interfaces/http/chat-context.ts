@@ -2,12 +2,8 @@ import { zValidator } from "@hono/zod-validator"
 import { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
-import {
-  reviewContextInput,
-  reviewContextSchema,
-  workspaceStatusInput,
-  workspaceStatusSchema,
-} from "../../core/chat-context-schema.js"
+import { reviewContextSchema, workspaceStatusSchema } from "../../core/chat-context-schema.js"
+import { reviewContextInput, workspaceStatusInput } from "../../core/verification-schema.js"
 import {
   approveReview,
   cancelReview,

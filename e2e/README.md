@@ -3,7 +3,7 @@
 These acceptance tests exercise the built Redpact application through real HTTP,
 MCP, Git worktrees, filesystem events, and persisted submissions. They do not import
 server Core or rerun the unit-test suite. Nested Docker provisioning inside the target application is outside this suite's
-coverage. Browser probes, including test-code diffs and capture viewport filtering, run as
+coverage. Browser probes of exact execution source, output, images and approval run as
 Playwright functional tests through the separate runner. The application image contains
 no installed browser or Playwright test runtime.
 
@@ -21,26 +21,25 @@ no installed browser or Playwright test runtime.
    checkout, so that checkout must contain this directory.
 4. Ensure the primary project is in the connected instance's observed `projects`.
    Preserve other entries and approval policy. Verify the project root and selected
-   checkout through that same instance's `/api/projects`, tracking, and worktrees
+   checkout through that same instance's `/api/projects` and worktrees
    endpoints.
 5. Call `configure validate` with the checkout path. The discovered bundle must include
-   `target.ts`, `worktree-evidence.test.ts`, and `chat-context.test.ts`.
+   `target.ts`, `worktree-evidence.test.ts`, `chat-context.test.ts`, and `host-boundaries.test.ts`.
 6. Call `run_tests` with that same path and
-   `tests: ["worktree-evidence.test.ts", "chat-context.test.ts"]`. Honor any Ask approval. Use a fresh
+   `tests: ["worktree-evidence.test.ts", "chat-context.test.ts", "host-boundaries.test.ts"]`.
+   Honor any Ask approval. Use a fresh
    environment after application changes. Read `get_run` until terminal.
 7. Verify `run.target.projectRoot` is the requested checkout. On the connected
    server, `/api/submissions?worktreeId=<run.target.worktreeId>` must contain
    `run.submissionId`, and `/api/runs?submissionId=<run.submissionId>` must contain
-   the run. Select that same checkout in the connected viewer and verify the run in
-   Execution history; Current work also shows its recent evidence and any pending
-   approval, active execution, or cleanup issue. Open the execution's review and
-   confirm its recorded submission. Report run and environment IDs, actual case
+   the run. Open that execution's `reviewPath` in the connected viewer, or use
+   `/?page=history&worktree=<run.target.worktreeId>` for its checkout's recorded history.
+   Confirm the recorded submission. Report run and environment IDs, actual case
    results, and that server's origin.
 
 Do not copy run records between projects or servers. A local `pnpm test` result
-alone does not create a Redpact submission. "No test submissions" means this selected
-worktree has no recorded bundle in the retained Tools → Tests view; it does not
-classify tests as unit or E2E.
+alone does not create a Redpact submission. A viewer opened without an execution or
+worktree link intentionally has no project manager or test catalog.
 
 ## Environment and extension
 
@@ -65,82 +64,37 @@ the example against the real settings/Compose reader and discovers its acceptanc
 scenarios. The regular server suite remains independent of Docker self-E2E execution.
 Typecheck the portable bundle with
 `pnpm --filter @redpact/server exec tsc -p ../../e2e/tsconfig.json`.
-Retained environments can be inspected and explicitly stopped in the web Environment screen.
+Retained environments can be inspected through the environment API and explicitly
+stopped without deleting recorded evidence.
 
-## Actual application UI captures
+## Actual application verification
 
-`ui-tests/project/captures/application.spec.ts` and `dependencies.spec.ts` exercise this
-repository's real app using page-state screenshots and named Korean checkpoints. The shared settings example includes
-the Playwright app service and loopback port. Its target patterns are relative to
-`ui-tests`: `project/captures/**/*.spec.ts` for captures and
-`project/tests/**/!(product-demo).spec.ts` for functional scenarios. The separate
-`demo` target selects `project/tests/product-demo.spec.ts`. All three targets use
-project scope.
-Use `run_playwright` with the absolute checkout and declared `captures` target on
-the connected instance; these sources are separate from `run_tests`.
+`ui-tests/project/tests` verifies the actual connected viewer and MCP cards. The
+viewer accepts an exact execution link or a worktree-bound history link; it has no
+project manager, settings editor, catalog runner or standalone dashboard.
+`chat-review` checks this boundary and invalid routes. `execution-approval` checks
+captured inputs, both Integration approval gates, stale-input rejection, cancellation
+and live updates. `result-rows` checks recorded source, logs, images, attachments,
+progress and browser history at desktop and mobile widths. `mcp-app` exercises the
+real bundled card resources; `window-controls` covers the retained native shell.
 
-Native adapter verification is available after building this checkout's app image:
+The corresponding five files in `ui-tests/project/captures` record viewable states.
+Use `run_playwright` with the actual checkout and the declared `functional` or
+`captures` target. Target patterns are `project/tests/**/*.spec.ts` and
+`project/captures/**/*.spec.ts`; both have project scope. Capture completion alone
+is not visual approval. Inspect the images and identify seeded record fixtures as
+fixtures, not application execution evidence.
 
-```sh
-docker build -f e2e/Dockerfile -t redpact-playwright-app:current .
-REDPACT_APPLICATION_IMAGE=redpact-playwright-app:current pnpm --filter @redpact/server exec vitest run test/playwright-application.test.ts
-```
+The native runner checks described in [development](../docs/development.md) cover
+actual capture collection, delayed/path attachments, crops, high-DPI pages and
+artifact persistence. They do not create a connected Integration submission.
 
-Set `REDPACT_CAPTURE_EVIDENCE_DIR` to an absolute temporary output directory to retain
-that native check's source, screenshots, video and trace. It verifies browser execution
-and artifact persistence, and does not create a connected integration submission.
-
-`playwright-purpose.test.ts` verifies purpose discovery, current source visibility
-before execution, catalog boundaries and rejection of overlapping target patterns
-through the actual HTTP API. The native application check executes capture and
-functional targets separately and verifies that successful functional execution
-produces no PNG screenshots.
-
-`environment-inputs.test.ts` covers plaintext key-value persistence, rejection of retired
-value types, and removal of credential APIs/tools through the actual application.
-
-`dependency-topology.test.ts` verifies fixed dependency definitions, application-service
-relationships, and revision-preserving rejection of unsupported kinds through HTTP and MCP.
-
-`chat-context.test.ts` verifies that checkout status reads do not register a project,
-then explicitly connects a disposable project and records a Unit attempt. The target
-has no Docker socket, so this attempt must record an execution error rather than a
-claimed assertion failure. HTTP and MCP must return matching review context, the same
-checkout/execution identity, bounded evidence references, and unknown freshness with
-human acceptance unrecorded.
-
-`ui-tests/project/tests/chat-review.spec.ts` exercises Current work, Execution history,
-the checkout selector, and collapsed Tools at desktop and mobile widths.
-`execution-approval.spec.ts` renders the actual MCP Unit approval card, verifies its
-captured command and input identity, rejects approval after the checkout changes, and
-removes the approval control after chat cancellation. It also opens the MCP-returned
-execution review link in the connected viewer at desktop and mobile widths, checks
-captured command/input digests and reload identity, rejects changed inputs, and confirms
-viewer cancellation through MCP and a second reload. A separate case waits for the actual
-scoped EventSource to open before creating and cancelling requests in chat, then checks
-Current work and execution detail without reloading. The corresponding
-`ui-tests/project/captures/chat-review.spec.ts` and `execution-approval.spec.ts` record
-reviewable screenshots of both navigation and pending approval details. These request and rejection scenarios do not establish a
-successful nested Unit execution or human acceptance of code changes.
-
-`ui-tests/project/tests/capture-viewport.spec.ts` seeds isolated capture records, verifies
-their public API readback, and checks the real Mobile toggle from the separate
-Chromium runner. `test-code-diff.spec.ts` verifies desktop and mobile diff rendering
-through the same Playwright entry.
-It does not claim those seeded PNGs were application captures. Actual automatic
-collection, delayed/path attachments, crops and high-DPI pages are independently
-verified by `REDPACT_DOCKER_TESTS=1` and `test/playwright-docker.test.ts`.
-
-`dependency-mode-names.test.ts` checks all four fixed kinds, rejection of managed
-services on external dependencies, and rejection of retired execution selection input.
-It also checks that authored Compose ports and mounts are accepted without additional
-Redpact policy. Fixture services are declarations, not evidence of actual PostgreSQL
-or remote execution.
-
-`runtime-migrations.test.ts` starts the real CLI with disposable legacy records,
-checks HTTP readback, exact original backups and restart stability, and verifies
-that missing captured choices and future migration history leave inputs intact.
-It also exercises restart after a record was converted but completion was not recorded.
+`host-boundaries.test.ts` verifies retired Git, project, settings and manual-container
+management APIs return 404 while checkout binding, configuration validation and
+recorded history remain available. Configuration tests author files directly and
+call MCP validation; reads must not silently repair invalid authored content.
+`runtime-migrations.test.ts` verifies original backups, retained evidence, interrupted
+migration recovery and rejection of unsupported history through the real CLI.
 
 ## Container-runner fixture transport
 

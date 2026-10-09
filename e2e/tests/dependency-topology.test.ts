@@ -54,17 +54,25 @@ test("앱과 의존성 지도를 조회하고 고정 연결 종류를 검증한�
     expect(result.structuredContent.plan.activeServices).toEqual(["app"])
     expect(result.structuredContent.environment.readiness).toBe("not_checked")
   })
-  await step("HTTP 설정 편집은 sandbox 모드를 거부하고 기존 설정을 보존한다", async () => {
-    const url = `/api/projects/${project.id}/configuration`
-    const current = await http<{ source: string; revision: string }>(url)
-    const value = JSON.parse(current.body.source)
-    value.dependencies.payments.kind = "sandbox"
-    const saved = await http(url, "PUT", {
-      source: JSON.stringify(value),
-      revision: current.body.revision,
-    })
-    expect(saved.status).toBe(400)
-    const after = await http<{ source: string }>(url)
-    expect(after.body.source).toBe(current.body.source)
-  })
+  await step(
+    "직접 작성한 sandbox 종류는 검증에서 거부하고 파일을 자동 수정하지 않는다",
+    async () => {
+      const url = `/api/projects/${project.id}/configuration`
+      const current = await http<{ source: string; revision: string }>(url)
+      const value = JSON.parse(current.body.source)
+      value.dependencies.payments.kind = "sandbox"
+      const source = JSON.stringify(value)
+      await node(
+        `import {writeFileSync} from 'node:fs';const {root,source}=JSON.parse(process.argv[1]);writeFileSync(root+'/.redpact/settings.json',source);console.log('null');`,
+        { root, source },
+      )
+      const validation = await rpc<{ structuredContent: { validation: { valid: boolean } } }>(
+        "tools/call",
+        { name: "configure", arguments: { action: "validate", path: root } },
+      )
+      expect(validation.structuredContent.validation.valid).toBe(false)
+      const after = await http<{ source: string }>(url)
+      expect(after.body.source).toBe(source)
+    },
+  )
 })

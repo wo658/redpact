@@ -1,9 +1,18 @@
-# Local MCP App examples
+# Local Redpact App Page
 
-Setup, installation, verification and limitations are maintained in the product documentation:
+This package bundles the actual connected viewer and its App-only MCP bridge.
+The companion retains runtime installation, start/stop and recovery. Development,
+configuration and Git work stay in the host conversation.
 
-- [Sidebar Lab](../../docs/installation.md#local-sidebar-app-experiment): an independent counter that checks the MCP Apps bridge.
-- [Redpact App Page](../../docs/installation.md#local-redpact-app-page-experiment): an independent manager MCP that installs the runtime with npm or pnpm, controls it, and presents review evidence.
+See [installation](../../docs/installation.md#local-redpact-app-page-experiment) for
+supported host setup, trust boundaries and verification limitations.
 
-`build.mjs` builds Sidebar Lab. `build-redpact.mjs` builds the companion from
-`src/redpact/`. Neither browser harness establishes Global Apps discovery in Codex.
+- `pnpm build` bundles `app/web/src/entries/sidebar.tsx` and `src/redpact/main.ts`.
+- `pnpm bundle:redpact` also supplies the contained Node/npm/pnpm tools.
+- `pnpm test` and `pnpm typecheck` check the companion.
+- `pnpm preview` runs the local MCP browser harness on port 4320.
+- `pnpm test:browser` verifies the source-built runtime and viewer through that harness.
+
+The harness does not establish native Codex Global Apps discovery. Installer tests
+and the connected source smoke cover separate responsibilities; a published older
+runtime is not evidence for current viewer behavior.

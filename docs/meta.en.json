@@ -6,8 +6,6 @@
     "dependencies",
     "---Start your project---",
     "installation",
-    "first-project",
-    "first-run",
     "---Develop and review from chat---",
     "review-workflow",
     "results",
@@ -17,13 +15,11 @@
     "troubleshooting",
     "---Implementation reference---",
     "architecture",
-    "settings-reference",
     "execution",
     "git",
     "storage",
     "interfaces",
     "frontend",
-    "ux-navigation",
     "desktop",
     "development"
   ]

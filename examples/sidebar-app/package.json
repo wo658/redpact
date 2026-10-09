@@ -4,14 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.mjs && node build-redpact.mjs",
+    "build": "node build-redpact.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "start": "node dist/marketplace/plugins/sidebar-lab/dist/server.mjs",
+    "start": "node dist/redpact-marketplace/plugins/redpact-app/dist/server.mjs",
     "preview": "node preview.mjs",
-    "test:browser": "node test/browser.mjs",
-    "preview:redpact": "node preview.mjs --redpact",
-    "test:redpact:browser": "node test/redpact-browser.mjs",
+    "test:browser": "node test/redpact-browser.mjs",
     "bundle:redpact": "node bundle-runtime.mjs && node build-redpact.mjs"
   },
   "dependencies": {

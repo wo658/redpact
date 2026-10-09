@@ -177,6 +177,7 @@ test("현재 체크아웃의 설정·승인·실행 상태를 쓰기 없이 묶�
   const { call, app, services, worktreeId, reviewId } = fixture()
   const result = await call("get_workspace_status", { path: "/repo/feature" })
   expect(result.isError).not.toBe(true)
+  expect(result.structuredContent).not.toHaveProperty("nextActions")
   expect(result.structuredContent).toMatchObject({
     projectRoot: "/repo/feature",
     rulesRoot: "/repo/main",

@@ -1,5 +1,6 @@
 import { isAbsolute } from "node:path"
 import { z } from "zod"
+import { executionKind } from "./chat-context-schema.js"
 import { captureInputSchema } from "./playwright-schema.js"
 import { name, projectPath } from "./settings-schema.js"
 
@@ -8,9 +9,11 @@ export const verificationPath = z
   .min(1)
   .max(4096)
   .refine(isAbsolute, "Use an absolute checkout path")
-export const executionKind = z.enum(["integration", "unit", "playwright"])
+export { executionKind }
 export const executionIdentity = z.strictObject({ kind: executionKind, id: z.string().uuid() })
 export const unitExecutionInput = z.strictObject({ path: verificationPath })
+export const workspaceStatusInput = unitExecutionInput
+export const reviewContextInput = executionIdentity
 export const playwrightExecutionInput = captureInputSchema.extend({
   path: verificationPath,
   target: name,

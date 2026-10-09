@@ -1,7 +1,6 @@
 import { realpath, stat } from "node:fs/promises"
 import { isAbsolute, join, relative } from "node:path"
 import { problem } from "../core/problems.js"
-import { trackingSchema } from "../core/tracking-schema.js"
 import type { Store } from "../core/types/contracts.js"
 import type { GitAdapter } from "../core/types/git.js"
 import type { PreferenceFiles } from "../core/types/preferences.js"
@@ -10,10 +9,7 @@ import type { ProjectSettingsService } from "../core/types/services.js"
 export function createProjectSettings(deps: {
   preferences: PreferenceFiles
   store: Pick<Store, "getProject">
-  git: Pick<
-    GitAdapter,
-    "primaryRoot" | "currentBranch" | "listBranches" | "branchReviews" | "branchDiff"
-  >
+  git: Pick<GitAdapter, "primaryRoot" | "currentBranch">
 }): ProjectSettingsService {
   const project = (id: string) =>
     deps.store.getProject(id) ?? problem("not_found", "Project not found")
@@ -77,47 +73,6 @@ export function createProjectSettings(deps: {
     async read(id) {
       const projectRoot = await root(id)
       return { projectRoot, tracking: await tracking(id, projectRoot) }
-    },
-    async branches(id) {
-      const { location } = project(id)
-      return location.kind === "git" ? deps.git.listBranches(location.commonGitdir) : []
-    },
-    async branchReviews(id) {
-      if (project(id).location.kind !== "git") {
-        return []
-      }
-      const value = await tracking(id)
-      const rows = await deps.git.branchReviews(await root(id), value.mainBranch)
-      return rows.filter(
-        (row) => !value.hideMerged || !row.merged || row.worktrees.some((w) => !w.missing),
-      )
-    },
-    async branchDiff(id, branch) {
-      const saved = project(id)
-      if (
-        saved.location.kind !== "git" ||
-        !(await deps.git.listBranches(saved.location.commonGitdir)).includes(branch)
-      ) {
-        problem("not_found", "Local branch not found")
-      }
-      return deps.git.branchDiff(await root(id), branch, (await tracking(id)).mainBranch)
-    },
-    async update(id, input) {
-      const parsed = trackingSchema.safeParse(input)
-      if (!parsed.success) {
-        problem("invalid_input", parsed.error.message)
-      }
-      const saved = project(id)
-      if (saved.location.kind !== "git") {
-        problem("invalid_input", "Tracking preferences require a Git project")
-      }
-      const branches = await deps.git.listBranches(saved.location.commonGitdir)
-      if (parsed.data.mainBranch && !branches.includes(parsed.data.mainBranch)) {
-        problem("invalid_input", "Main branch must be an existing local branch")
-      }
-      const updated = { ...project(id), tracking: parsed.data }
-      await deps.preferences.saveTracking(await root(id), parsed.data)
-      return updated
     },
   }
 }

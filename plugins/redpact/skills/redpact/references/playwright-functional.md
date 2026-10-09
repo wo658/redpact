@@ -27,11 +27,8 @@ behavior change and pass afterward. Collection, readiness and environment errors
 setup outcomes. Preserve reviewed assertions and use fresh application inputs.
 
 Use `worktree/tests` for task-only checks and `project/tests` for maintained regression
-coverage. Both retain executed code and results in history. Worktree UI Review shows
-current drafts and changed maintained files; unchanged project tests remain in project
-Tests and full execution history. File-level filtering includes all recorded cases in
-the file. Execute the whole chosen target and inspect its complete result, including
-cases excluded from the worktree review filter.
+coverage. Both retain executed code and results in history. Execute the complete
+chosen target, inspect every recorded case, and open the exact run from chat.
 
 Named screenshots are optional diagnostics here; do not create capture checkpoints
 for every action. Functional targets run only the current worktree sources. For a

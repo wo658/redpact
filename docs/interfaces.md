@@ -66,6 +66,15 @@ prefer an explicit path when authoring. Discovery observes declared roots and na
 Git registrations without creating worktrees or running tests. Collection errors
 remain diagnostics. [Execution](execution.md) describes runtime boundaries.
 
+Existing-checkout binding uses `POST /api/projects` with only `{ path }` and
+`POST /api/projects/:id/worktrees` with `{ path }`. MCP execution uses the same
+binding workflow. Binding may reactivate an old disconnected record with the same
+identity; it never creates worktrees or writes `.redpact/settings.json`. Project,
+instance configuration and tracking readers remain available. Work items,
+submissions, execution and general environment list/get/stop retain their contracts.
+There are no project-management, settings-write, directory-picker, generic-file,
+Git mutation/graph/PR/worktree-creation, manual-Container-start or host-plugin-update APIs.
+
 ## Request approval and Apps
 
 The bundled resources are `ui://redpact/environment.html` and
@@ -111,8 +120,8 @@ rather than iframe HTTP. [Storage](storage.md) describes durable review recovery
 `get_workspace_status` reads the named checkout without registering it or executing
 code. It returns the shared settings root and diagnostics, existing observed binding,
 pending approvals and bounded execution summaries. Active and unfinished cleanup
-records are queried independently of the recent history page. `nextActions` references
-available operations; they are guidance, not preapproval or proof of runtime readiness.
+records are queried independently of the recent history page. It reports observed
+facts and diagnostics; it does not prescribe commands or preapprove work.
 
 `get_review_context` returns one execution or pending review with bounded failures,
 evidence references and a relative `reviewPath`. Resolve it against the same viewer
@@ -131,12 +140,12 @@ Playwright completion alone does not prove environment removal. Its card and rev
 summary report cleanup as `unknown` without explicit cleanup evidence, or `failed`
 when a cleanup error was recorded.
 
-The viewer uses `GET /api/workspace-status?path=...` and
-`GET /api/review-context?kind=...&id=...` through the same workflows. Explicit viewer
+The exact-record viewer uses `GET /api/review-context?kind=...&id=...`;
+`GET /api/workspace-status?path=...` is a read-only checkout observation API. Explicit viewer
 approval and cancellation use `/api/execution-reviews/:kind/:id/approve` and `/cancel`;
 approval checks the expected revision and the appropriate Integration subject.
 They keep the existing same-origin/local-host boundary. Model-facing tools never
-expose the viewer's approval operation. See [navigation](ux-navigation.md).
+expose the viewer's approval operation. See [navigation](frontend.md).
 
 The worktree's `scope=evidence` event subscription includes Integration and
 Unit/Playwright review records, retained execution evidence and shared project settings.

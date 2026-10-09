@@ -1,11 +1,14 @@
 import assert from "node:assert/strict"
-import { spawn } from "node:child_process"
+import { fork, spawn } from "node:child_process"
 import { once } from "node:events"
-import { access, cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { setTimeout as delay } from "node:timers/promises"
+import { fileURLToPath } from "node:url"
+import { Client } from "@modelcontextprotocol/sdk/client/index.js"
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import { chromium } from "playwright"
 
 async function freePort() {
@@ -16,6 +19,7 @@ async function freePort() {
   await new Promise((resolve) => server.close(resolve))
   return port
 }
+const installed = process.env.REDPACT_TEST_RUNTIME === "installed"
 const manager = process.env.REDPACT_TEST_MANAGER ?? "pnpm"
 assert.ok(["npm", "pnpm"].includes(manager))
 const root = await mkdtemp(join(tmpdir(), "redpact-app-browser-"))
@@ -28,335 +32,249 @@ const runtimePort = await freePort()
 const hostPort = await freePort()
 const origin = `http://127.0.0.1:${hostPort}`
 const runtimeOrigin = `http://127.0.0.1:${runtimePort}`
-const output = new URL(`../dist/redpact-evidence/${manager}/`, import.meta.url)
-await mkdir(output, { recursive: true })
-await mkdir(join(root, "project"))
-await writeFile(
-  join(root, "project", "README.md"),
-  "# Sidebar viewer fixture\nFull viewer source inspection.\n",
+const output = new URL(
+  `../dist/redpact-evidence/${installed ? manager : "source"}/`,
+  import.meta.url,
 )
+await mkdir(output, { recursive: true })
+const dataDir = join(root, "data")
+await mkdir(dataDir)
+const children = []
 let preview
-let startedPid
 let browser
+let client
 let logs = ""
-async function startPreview() {
-  preview = spawn(process.execPath, ["preview.mjs", "--redpact"], {
-    cwd: new URL("..", import.meta.url),
-    env: {
-      PATH: "/usr/bin:/bin",
-      REDPACT_PREVIEW_PLUGIN_ROOT: pluginRoot,
-      PORT: String(hostPort),
-      REDPACT_APP_PORT: String(runtimePort),
-      REDPACT_APP_DATA_DIR: join(root, "data"),
-      REDPACT_APP_INSTALL_DIR: join(root, "packages"),
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-  })
-  preview.stdout.on("data", (data) => {
+function capture(child) {
+  children.push(child)
+  child.stdout?.on("data", (data) => {
     logs += data
   })
-  preview.stderr.on("data", (data) => {
+  child.stderr?.on("data", (data) => {
     logs += data
   })
-  for (let i = 0; i < 100; i++) {
+  return child
+}
+async function healthy(url) {
+  for (let i = 0; i < 150; i++) {
     try {
-      if ((await fetch(origin)).ok) {
+      if ((await fetch(url)).ok) {
         return
       }
     } catch {}
-    if (preview.exitCode !== null) {
-      throw new Error(logs)
-    }
     await delay(100)
   }
-  throw new Error(`미리보기 시작 실패: ${logs}`)
+  throw new Error(`로컬 서버 준비 실패: ${logs}`)
 }
-async function stopPreview() {
-  if (preview && preview.exitCode === null) {
-    const ended = once(preview, "exit")
-    preview.kill("SIGTERM")
-    await ended
+async function startPreview() {
+  preview = capture(
+    spawn(process.execPath, ["preview.mjs"], {
+      cwd: new URL("..", import.meta.url),
+      env: {
+        PATH: "/usr/bin:/bin",
+        REDPACT_PREVIEW_PLUGIN_ROOT: pluginRoot,
+        PORT: String(hostPort),
+        REDPACT_APP_PORT: String(runtimePort),
+        REDPACT_APP_DATA_DIR: dataDir,
+        REDPACT_APP_INSTALL_DIR: join(root, "packages"),
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    }),
+  )
+  await healthy(origin)
+}
+async function stop(child) {
+  if (!child || child.exitCode !== null) {
+    return
   }
+  const ended = once(child, "exit")
+  if (child.connected) {
+    child.send({ runtimeControl: "shutdown" })
+  } else {
+    child.kill("SIGTERM")
+  }
+  await ended
 }
-async function snapshotMeta() {
+async function appTool(name, args = {}) {
   const response = await fetch(`${origin}/tool`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: "get_redpact_page", arguments: {} }),
+    body: JSON.stringify({ name, arguments: args }),
   })
-  return (await response.json())._meta
+  assert.equal(response.ok, true)
+  const result = await response.json()
+  assert.equal(result.isError ?? false, false)
+  return result._meta
 }
-async function snapshot() {
-  return (await snapshotMeta()).page
+async function sourceRequest() {
+  const project = join(root, "project")
+  await mkdir(join(project, ".redpact"), { recursive: true })
+  await writeFile(
+    join(project, ".redpact/settings.json"),
+    JSON.stringify({
+      unitTests: {
+        dockerfile: "unit.Dockerfile",
+        cwd: ".",
+        command: "echo native-review",
+        patterns: ["test/*.test.ts"],
+      },
+    }),
+  )
+  await writeFile(
+    join(project, "unit.Dockerfile"),
+    "FROM node:24-slim\nWORKDIR /workspace\nCOPY . .\n",
+  )
+  await writeFile(join(dataDir, "settings.json"), JSON.stringify({ approval: "ask" }))
+  const entry =
+    process.env.REDPACT_TEST_RUNTIME_ENTRY ??
+    fileURLToPath(new URL("../../../app/server/dist/main.js", import.meta.url))
+  capture(
+    fork(entry, ["--port", String(runtimePort), "--data-dir", dataDir], {
+      execArgv: [],
+      env: { ...process.env, REDPACT_RUNTIME_SUPERVISED: "1" },
+      stdio: ["ignore", "pipe", "pipe", "ipc"],
+    }),
+  )
+  await healthy(`${runtimeOrigin}/api/health`)
+  client = new Client({ name: "native-review-smoke", version: "1" })
+  await client.connect(new StreamableHTTPClientTransport(new URL(`${runtimeOrigin}/mcp`)))
+  const result = await client.callTool({ name: "run_unit_tests", arguments: { path: project } })
+  assert.equal(result.isError ?? false, false, JSON.stringify(result.content))
+  const request = result.structuredContent
+  assert.equal(request.state, "awaiting_approval", "실제 MCP 요청은 실행 전 승인 대기여야 한다")
+  return request.id
+}
+async function captures(page, app, state) {
+  for (const width of [1280, 640, 390]) {
+    await page.setViewportSize({ width, height: 900 })
+    assert.equal(
+      await app.locator("body").evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+      "전체·반폭·모바일에서 가로 넘침이 없어야 한다",
+    )
+    await page.screenshot({
+      path: new URL(`${width}-${state}.png`, output).pathname,
+      fullPage: true,
+    })
+  }
 }
 try {
+  const id = installed ? undefined : await sourceRequest()
   await startPreview()
   browser = await chromium.launch({ headless: true })
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
-  const pageErrors = []
-  page.on("pageerror", (error) => pageErrors.push(error.message))
-  page.on("console", (message) => {
-    if (message.type() === "error") {
-      console.error(message.text())
-    }
-  })
-  const eventFailures = []
+  const errors = []
+  page.on("pageerror", (error) => errors.push(error.message))
   await page.addInitScript(() => {
+    window.localStorage.setItem("redpact:theme", "dark")
     window.cspViolations = []
     document.addEventListener("securitypolicyviolation", (event) =>
       window.cspViolations.push(event.violatedDirective),
     )
   })
-  page.on("response", (response) => {
-    if (response.url().includes("/api/events") && response.status() >= 400) {
-      eventFailures.push(new URL(response.url()).search)
-    }
-  })
   await page.goto(origin)
   const app = page.frameLocator("iframe")
-  await app.getByRole("heading", { name: "Welcome to Redpact", exact: true }).waitFor()
-  assert.equal(
-    await app.locator("#runtime-message").isVisible(),
-    false,
-    "정상 설치 화면에는 부가 설명을 표시하지 않아야 한다",
-  )
-  await assert.rejects(
-    fetch(`${runtimeOrigin}/api/health`),
-    "페이지 열기만으로 서버를 실행하면 안 된다",
-  )
-  await page.screenshot({ path: new URL("1280-missing.png", output).pathname, fullPage: true })
-  await assert.rejects(
-    access(join(pluginRoot, "runtime")),
-    "플러그인에 Redpact 런타임을 미리 넣지 않아야 한다",
-  )
-  assert.equal(
-    (await snapshot()).status.installation.state,
-    "missing",
-    "설치되지 않은 상태를 감지해야 한다",
-  )
-  assert.equal(
-    await app.getByRole("button", { name: "Start Redpact", exact: true }).isVisible(),
-    false,
-    "설치 전에는 실행할 수 없는 시작 버튼을 숨겨야 한다",
-  )
-  for (const width of [640, 390]) {
-    await page.setViewportSize({ width, height: 900 })
-    assert.equal(
-      await app.locator("body").evaluate(() => document.documentElement.scrollWidth > innerWidth),
-      false,
-      "설치 화면이 반폭과 모바일에서 넘치지 않아야 한다",
+  if (installed) {
+    await app.getByRole("heading", { name: "Welcome to Redpact", exact: true }).waitFor()
+    await captures(page, app, "missing")
+    await assert.rejects(fetch(`${runtimeOrigin}/api/health`), "설치 전 서버를 실행하면 안 된다")
+    await app.getByText("Installation options", { exact: true }).click()
+    await app.getByLabel("Package manager", { exact: true }).selectOption(manager)
+    await app.getByRole("button", { name: "Install Redpact", exact: true }).click()
+    await app
+      .getByRole("heading", { name: "Redpact is ready", exact: true })
+      .waitFor({ timeout: 240000 })
+    const state = (await appTool("get_redpact_page")).page
+    assert.equal(state.status.installation.state, "installed")
+    assert.equal(state.status.installation.manager, manager)
+    await captures(page, app, "ready")
+    await app.getByRole("button", { name: "Start Redpact", exact: true }).click()
+    await app.locator("body[data-running=true]").waitFor({ timeout: 60000 })
+    const first = await appTool("get_redpact_page")
+    assert.equal(first.page.status.owned, true)
+    await appTool("stop_redpact_server", { token: first.controlToken })
+    await app.getByRole("heading", { name: "Redpact is ready", exact: true }).waitFor()
+    await assert.rejects(fetch(`${runtimeOrigin}/api/health`))
+    await app.getByRole("button", { name: "Start Redpact", exact: true }).click()
+    await app.locator("body[data-running=true]").waitFor()
+    assert.notEqual(
+      (await appTool("get_redpact_page")).page.status.startedPid,
+      first.page.status.startedPid,
     )
-    await page.screenshot({
-      path: new URL(`${width}-missing.png`, output).pathname,
-      fullPage: true,
-    })
-  }
-  await page.getByRole("button", { name: "Dark theme" }).click()
-  await app.locator('#setup[data-theme="dark"]').waitFor()
-  for (const width of [1280, 390]) {
-    await page.setViewportSize({ width, height: 900 })
-    await page.screenshot({
-      path: new URL(`${width}-missing-dark.png`, output).pathname,
-      fullPage: true,
-    })
-  }
-  await page.reload()
-  await app.getByRole("heading", { name: "Welcome to Redpact", exact: true }).waitFor()
-  await page.setViewportSize({ width: 1280, height: 900 })
-  await app.getByText("Installation options", { exact: true }).click()
-  await app.getByLabel("Package manager", { exact: true }).selectOption(manager)
-  await app.getByRole("button", { name: "Install Redpact", exact: true }).click()
-  await app.locator("#installation").waitFor({ state: "hidden", timeout: 240000 })
-  await app.getByRole("heading", { name: "Redpact is ready", exact: true }).waitFor()
-  for (const width of [1280, 390]) {
-    await page.setViewportSize({ width, height: 900 })
-    assert.equal(
-      await app.getByRole("button", { name: "Stop Redpact", exact: true }).isVisible(),
-      false,
-      "중지 상태에는 중지 버튼을 숨겨야 한다",
+    await stop(preview)
+    await assert.rejects(
+      fetch(`${runtimeOrigin}/api/health`),
+      "소유 MCP 종료는 런타임을 정리해야 한다",
     )
-    await page.screenshot({ path: new URL(`${width}-ready.png`, output).pathname, fullPage: true })
-  }
-  await page.getByRole("button", { name: "Dark theme" }).click()
-  await app.locator('#setup[data-theme="dark"]').waitFor()
-  for (const width of [1280, 390]) {
-    await page.setViewportSize({ width, height: 900 })
+  } else {
+    await app.getByRole("heading", { name: "Open an execution from chat", exact: true }).waitFor()
     assert.equal(
-      await app.locator("#runtime-message").isVisible(),
+      await app.locator("html").evaluate((element) => element.classList.contains("dark")),
       false,
-      "정상 시작 화면에도 부가 설명을 표시하지 않아야 한다",
+      "App 첫 표시는 저장된 독립 뷰어 선호보다 호스트의 밝은 테마를 따라야 한다",
     )
-    await page.screenshot({
-      path: new URL(`${width}-ready-dark.png`, output).pathname,
-      fullPage: true,
-    })
-  }
-  await page.setViewportSize({ width: 1280, height: 900 })
-  const installed = (await snapshot()).status.installation
-  assert.equal(installed.state, "installed", "실제 패키지 설치 완료가 확인되어야 한다")
-  assert.equal(installed.manager, manager, "사용자가 선택한 패키지 매니저로 설치되어야 한다")
-  await app.getByRole("button", { name: "Start Redpact", exact: true }).click()
-  await app.locator("body[data-running=true]").waitFor({ timeout: 60000 })
-  const globalEvents = await fetch(`${runtimeOrigin}/api/events`, {
-    signal: AbortSignal.timeout(5000),
-  })
-  assert.equal(globalEvents.status, 200, "설치 런타임의 전체 프로젝트 이벤트 API를 확인해야 한다")
-  await globalEvents.body.cancel()
-  const state = await snapshot()
-  startedPid = state.status.startedPid
-  assert.ok(Number.isInteger(startedPid), "이번 테스트가 시작한 서버 PID를 확인해야 한다")
-  assert.equal((await (await fetch(`${runtimeOrigin}/api/health`)).json()).status, "ok")
-  const viewer = app
-  await viewer.getByRole("button", { name: "Open project folder", exact: true }).waitFor()
-  assert.equal(
-    await app.locator("#setup header").isVisible(),
-    false,
-    "실행 중에는 기존 Desktop/Web에 없는 플러그인 상단바를 표시하면 안 된다",
-  )
-  // 운영체제 폴더 선택만 대체하고 프로젝트 연결과 이후 조회는 실제 런타임을 사용한다.
-  await page.route("**/tool", (route) => {
-    const request = route.request().postDataJSON()
-    if (
-      request.name === "redpact_viewer_request" &&
-      request.arguments.path === "/api/dialogs/directory"
-    ) {
-      return route.fulfill({
-        json: {
-          content: [],
-          _meta: {
-            response: {
-              status: 200,
-              contentType: "application/json",
-              body: Buffer.from(JSON.stringify({ path: join(root, "project") })).toString("base64"),
-            },
-          },
-        },
-      })
+    for (const name of ["Settings", "Tools", "Open project folder", "Current work"]) {
+      assert.equal(await app.getByRole("button", { name, exact: true }).count(), 0)
     }
-    return route.continue()
-  })
-  await viewer.getByRole("button", { name: "Open project folder", exact: true }).click()
-  await viewer.getByRole("button", { name: "File Viewer", exact: true }).waitFor()
-  await page.unroute("**/tool")
-  assert.equal((await snapshot()).runs.length, 0, "연결만으로 테스트를 실행하면 안 된다")
-  await viewer.getByRole("button", { name: "File Viewer", exact: true }).click()
-  await viewer.getByRole("treeitem", { name: /README.md/ }).click()
-  await viewer.getByText("Full viewer source inspection.", { exact: false }).waitFor()
-  const connectedProject = (await (await fetch(`${runtimeOrigin}/api/projects`)).json())[0]
-  const renamed = await fetch(`${runtimeOrigin}/api/projects/${connectedProject.id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: "Renamed project" }),
-  })
-  assert.equal(renamed.ok, true, "외부 변경을 실제 API로 기록해야 한다")
-  await viewer
-    .getByRole("button", { name: "Renamed project", exact: true })
-    .waitFor({ timeout: 15000 })
-  assert.equal(
-    await app.locator("iframe").count(),
-    0,
-    "CSP가 차단하는 중첩 iframe을 사용하면 안 된다",
-  )
-  for (const width of [1280, 640, 390]) {
-    await page.setViewportSize({ width, height: 900 })
-    assert.deepEqual(
-      await app.locator("#root").evaluate((frame) => {
-        const rect = frame.getBoundingClientRect()
-        return [rect.x, rect.y, rect.width, rect.height]
-      }),
-      await app.locator("body").evaluate(() => [0, 0, innerWidth, innerHeight]),
-      "기존 메인 화면이 앱의 전체 영역을 사용해야 한다",
+    await captures(page, app, "empty")
+    await page.goto(`${origin}/?kind=unit&id=${id}`)
+    await app.getByRole("button", { name: "Approve execution", exact: true }).waitFor()
+    await app
+      .getByLabel("Requested execution")
+      .getByText("echo native-review", { exact: true })
+      .waitFor()
+    const context = await (
+      await fetch(`${runtimeOrigin}/api/review-context?kind=unit&id=${id}`)
+    ).json()
+    assert.equal(context.executionId, null, "기록 열기는 사람의 실행 승인이 아니다")
+    assert.equal(context.state, "pending")
+    await captures(page, app, "request")
+    await page.getByRole("button", { name: "Dark theme" }).click()
+    await app.locator('html[data-theme="dark"]').waitFor()
+    assert.equal(
+      await app.locator("html").evaluate((element) => element.classList.contains("dark")),
+      true,
+      "호스트 어두운 테마는 실제 뷰어 CSS에 적용되어야 한다",
     )
     assert.equal(
-      await viewer
-        .locator("body")
-        .evaluate(() => document.documentElement.scrollWidth > innerWidth),
-      false,
-      "뷰어는 전체·반폭·모바일에서 가로 넘침이 없어야 한다",
+      await app.locator("html").evaluate((element) => getComputedStyle(element).colorScheme),
+      "dark",
     )
-    if (width < 768) {
-      await viewer.getByRole("button", { name: "Toggle Sidebar", exact: true }).first().click()
-    }
-    await viewer.getByRole("button", { name: "Tests", exact: true }).click()
-    if (width < 768) {
-      await viewer.locator('[data-mobile="true"]').waitFor({ state: "hidden" })
-    }
-    await viewer.getByRole("tab", { name: "Unit", exact: true }).waitFor()
-    await viewer.getByRole("tab", { name: "Integration", exact: true }).click()
-    await viewer.getByRole("tab", { name: "Playwright", exact: true }).click()
-    if (width < 768) {
-      await viewer.getByRole("button", { name: "Toggle Sidebar", exact: true }).first().click()
-    }
-    await viewer.getByRole("button", { name: "Settings", exact: true }).click()
-    if (width < 768) {
-      await viewer.locator('[data-mobile="true"]').waitFor({ state: "hidden" })
-    }
-    await viewer.getByRole("heading", { name: "Settings", exact: true }).waitFor()
-    await page.screenshot({
-      path: new URL(`${width}-connected.png`, output).pathname,
-      fullPage: true,
-    })
+    await captures(page, app, "request-dark")
+    await app.getByRole("link", { name: "Execution history", exact: true }).click()
+    await app.getByRole("heading", { name: "Execution history", exact: true }).waitFor()
+    await page.reload()
+    await app.getByRole("button", { name: "Approve execution", exact: true }).waitFor()
+    await app.getByRole("button", { name: "Cancel request", exact: true }).click()
+    await app
+      .getByRole("button", { name: "Approve execution", exact: true })
+      .waitFor({ state: "hidden" })
+    const cancelled = await (
+      await fetch(`${runtimeOrigin}/api/review-context?kind=unit&id=${id}`)
+    ).json()
+    assert.equal(cancelled.state, "cancelled")
+    assert.equal(cancelled.executionId, null)
+    assert.equal(await app.locator("iframe").count(), 0)
+    assert.deepEqual(await app.locator("body").evaluate(() => window.cspViolations), [])
+    await stop(preview)
+    assert.equal(
+      (await fetch(`${runtimeOrigin}/api/health`)).ok,
+      true,
+      "외부 소유 런타임은 MCP 종료로 중지하면 안 된다",
+    )
   }
-  await page.emulateMedia({ colorScheme: "dark" })
-  await page.getByRole("button", { name: "Dark theme" }).click()
-  await app.locator('html[data-theme="dark"]').waitFor()
-  await page.screenshot({ path: new URL("390-dark.png", output).pathname, fullPage: true })
-  await page.route("**/tool", (route) => route.fulfill({ status: 503, body: "unavailable" }))
-  await app.getByText("Refresh failed · showing previous data", { exact: true }).waitFor()
-  await page.unroute("**/tool")
-  await app.getByRole("button", { name: "Open local viewer" }).click()
-  await page.waitForFunction(
-    (expected) => document.body.dataset.lastLink === expected,
-    runtimeOrigin,
-  )
-  await app.getByRole("button", { name: "Refresh", exact: true }).click()
-  await app.locator("#setup header").waitFor({ state: "hidden" })
-  assert.deepEqual(eventFailures, [], "실제 뷰어의 SSE 요청에 오류가 없어야 한다")
-  assert.deepEqual(pageErrors, [], "메인 화면 초기화와 탐색에 JavaScript 오류가 없어야 한다")
-  assert.deepEqual(
-    await app.locator("body").evaluate(() => window.cspViolations),
-    [],
-    "네트워크와 iframe 금지 CSP를 위반하면 안 된다",
-  )
-  const meta = await snapshotMeta()
-  const stopped = await fetch(origin + "/tool", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: "stop_redpact_server", arguments: { token: meta.controlToken } }),
-  })
-  assert.equal((await stopped.json()).isError ?? false, false, "MCP 중지 동작이 성공해야 한다")
-  await app.getByRole("heading", { name: "Redpact is ready", exact: true }).waitFor()
-  await assert.rejects(fetch(`${runtimeOrigin}/api/health`), "중지 후 실제 서버 포트가 닫혀야 한다")
-  await page.setViewportSize({ width: 640, height: 900 })
-  await page.screenshot({ path: new URL("640-stopped.png", output).pathname, fullPage: true })
-  await app.getByRole("button", { name: "Start Redpact", exact: true }).click()
-  await app.locator("body[data-running=true]").waitFor()
-  const restarted = await snapshot()
-  assert.notEqual(restarted.status.startedPid, startedPid, "새 프로세스로 다시 시작해야 한다")
-  assert.equal(restarted.projects.length, 1, "중지 후 다시 시작해도 실제 프로젝트가 남아야 한다")
-  const viewerResponse = await fetch(runtimeOrigin)
-  assert.equal(viewerResponse.status, 200, "뷰어도 플러그인 배포본에 포함되어야 한다")
-  assert.match(await viewerResponse.text(), /<html/, "포트가 실제 웹 뷰어를 제공해야 한다")
-  await stopPreview()
-  await assert.rejects(
-    fetch(`${runtimeOrigin}/api/health`),
-    "소유 MCP 종료 시 서버도 정리되어야 한다",
-  )
-  await startPreview()
-  await page.reload()
-  await app.locator("body[data-running=true]").waitFor()
-  assert.equal((await snapshot()).projects.length, 1, "MCP 재연결 후 저장된 프로젝트를 읽어야 한다")
+  assert.deepEqual(errors, [], "실제 App 초기화와 탐색에 JavaScript 오류가 없어야 한다")
   console.log(
-    `PASS ${manager} 공개 패키지 설치 · 기존 Redpact 없음 · 시작/중지/재시작 · 뷰어 · MCP 종료 정리 · 데이터 유지`,
+    `PASS ${installed ? `${manager} 공개 설치·소유 수명주기` : "현재 소스·정확한 검토·이력·취소·승인 경계·반응형 화면"}`,
   )
 } finally {
-  if (browser) {
-    await browser.close()
+  await client?.close()
+  await browser?.close()
+  for (const child of children.reverse()) {
+    await stop(child)
   }
-  await stopPreview()
+  await writeFile(new URL("runtime.log", output), logs)
   try {
-    await cp(join(root, "data/app-start.log"), new URL(`${manager}-runtime.log`, output))
-    await cp(join(root, "packages/install.log"), new URL(`${manager}-install.log`, output))
+    await cp(join(root, "packages/install.log"), new URL("install.log", output))
   } catch {}
   await rm(root, { recursive: true, force: true })
 }

@@ -48,46 +48,32 @@ after(async () => {
   await server.close()
   dom.window.close()
 })
-const { WorktreePanel } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-const { SidebarProvider } = await server.ssrLoadModule("/src/components/ui/sidebar.tsx")
-const { TooltipProvider } = await server.ssrLoadModule("/src/components/ui/tooltip.tsx")
 const { createApi } = await server.ssrLoadModule("/src/lib/api.ts")
-test("채팅 검토 셸은 기본 화면과 보조 Tools에서 Git 작업 UI를 제공하지 않는다", async () => {
+test("문맥 없는 뷰어는 프로젝트를 조회하지 않고 채팅의 실행 링크만 안내한다", async () => {
+  const { default: App } = await server.ssrLoadModule("/src/App.tsx")
+  const original = globalThis.fetch
   const calls = []
-  const api = createApi(async (url, init) => {
-    calls.push({ url, init })
+  globalThis.fetch = async (url) => {
+    calls.push(url)
     return Response.json([])
-  })
-  render(
-    createElement(
-      TooltipProvider,
-      null,
-      createElement(
-        SidebarProvider,
-        { defaultOpen: true },
-        createElement(WorktreePanel, {
-          api,
-          project: { id: "p", name: "Project", location: { kind: "git" } },
-          projectMenu: "Project",
-        }),
-      ),
-    ),
-  )
-  assert.ok(screen.getByRole("heading", { name: "Current work" }))
-  assert.equal(screen.queryByRole("button", { name: "Git Graph" }), null)
-  const tools = screen.getByRole("button", { name: "Tools" })
-  assert.equal(tools.getAttribute("aria-expanded"), "false")
-  fireEvent.click(tools)
-  assert.equal(tools.getAttribute("aria-expanded"), "true")
-  for (const label of ["Git Graph", "File Viewer", "Create worktree", "Attach worktree"]) {
-    assert.equal(screen.queryByRole("button", { name: label }), null)
   }
-  assert.equal(document.querySelector("web-git-graph"), null)
-  assert.equal(
-    calls.some(({ url }) => url.includes("/git/graph")),
-    false,
-  )
-  assert.ok(calls.every(({ init }) => init.method === "GET"))
+  try {
+    render(createElement(App))
+    await act(async () => {})
+    assert.ok(screen.queryByRole("heading", { name: "Open an execution from chat" }))
+    assert.deepEqual(calls, [])
+    for (const name of [
+      "Tools",
+      "Settings",
+      "Connect project",
+      "Manage projects",
+      "Current work",
+    ]) {
+      assert.equal(screen.queryByRole("button", { name }), null)
+    }
+  } finally {
+    globalThis.fetch = original
+  }
 })
 
 function captureEvents() {
@@ -113,47 +99,6 @@ const pendingPreview = {
   dockerfile: "Dockerfile",
   cwd: ".",
 }
-
-test("현재 작업은 실행 근거 알림으로 채팅 요청과 취소를 반영한다", async () => {
-  const events = captureEvents()
-  const { CurrentWork } = await server.ssrLoadModule("/src/components/execution-workspace.tsx")
-  let pending = []
-  const api = {
-    workspaceStatus: async () => ({
-      settings: { valid: true, issues: [] },
-      approval: { policy: "ask", pending, pendingCount: pending.length },
-      executions: { active: [], cleanup: [], recent: [] },
-    }),
-  }
-  try {
-    render(
-      createElement(CurrentWork, {
-        api,
-        worktree: { id: "w-live", projectRoot: "/worktree" },
-        loading: false,
-        onReview() {},
-      }),
-    )
-    await screen.findByText("No requests awaiting approval.")
-    const subscription = events.find(
-      (event) => new URL(event.url, "http://localhost").searchParams.get("scope") === "evidence",
-    )
-    assert.ok(subscription, "현재 작업은 실행과 검토 기록의 범위에 구독해야 한다")
-    assert.equal(
-      new URL(subscription.url, "http://localhost").searchParams.get("worktreeId"),
-      "w-live",
-    )
-    pending = [{ id: "pending-live", kind: "unit", state: "awaiting_approval" }]
-    await act(async () => subscription.onmessage())
-    await screen.findByRole("button", { name: "Review request" }, { timeout: 2500 })
-    pending = []
-    await act(async () => subscription.onmessage())
-    await screen.findByText("No requests awaiting approval.", {}, { timeout: 2500 })
-  } finally {
-    cleanup()
-    delete window.EventSource
-  }
-})
 
 test("실행 상세는 기록된 checkout의 근거 알림으로 외부 취소를 반영한다", async () => {
   const events = captureEvents()
@@ -241,5 +186,116 @@ test("checkout이 없는 과거 실행은 잘못된 범위 구독 없이 근거�
   } finally {
     cleanup()
     delete window.EventSource
+  }
+})
+
+test("이력은 URL의 checkout만 읽고 실행 링크는 기록 ID를 유지한다", async () => {
+  const { default: App } = await server.ssrLoadModule("/src/App.tsx")
+  const calls = []
+  window.history.replaceState(null, "", "/?page=history&worktree=explicit-checkout")
+  try {
+    render(
+      createElement(App, {
+        api: {
+          executionLogs: async (id) => {
+            calls.push(id)
+            return {
+              items: [
+                {
+                  id: "retained",
+                  kind: "unit",
+                  intent: "Recorded command",
+                  state: "finished",
+                  outcome: "passed",
+                  createdAt: "2026-01-01T00:00:00Z",
+                },
+              ],
+              nextCursor: null,
+            }
+          },
+        },
+      }),
+    )
+    const link = await screen.findByRole("link", { name: "Review", exact: true })
+    assert.equal(link.getAttribute("href"), "?page=review&kind=unit&id=retained")
+    assert.deepEqual(calls, ["explicit-checkout"])
+    assert.equal(screen.queryByRole("combobox"), null)
+  } finally {
+    cleanup()
+    window.history.replaceState(null, "", "/")
+  }
+})
+
+test("잘못된 검토 링크는 네트워크 호출 없이 진단하고 다른 실행으로 대체하지 않는다", async () => {
+  const { default: App } = await server.ssrLoadModule("/src/App.tsx")
+  window.history.replaceState(null, "", "/?page=review&kind=unknown&id=recorded")
+  try {
+    render(
+      createElement(App, {
+        api: new Proxy(
+          {},
+          {
+            get() {
+              throw new Error("잘못된 링크는 조회하면 안 된다")
+            },
+          },
+        ),
+      }),
+    )
+    assert.equal(screen.getByRole("alert").textContent, "Invalid execution link.")
+    assert.ok(screen.getByRole("heading", { name: "Open an execution from chat" }))
+  } finally {
+    cleanup()
+    window.history.replaceState(null, "", "/")
+  }
+})
+
+test("뷰어 안의 기록 링크는 문서를 다시 열지 않고 정확한 실행으로 이동한다", async () => {
+  const { default: App } = await server.ssrLoadModule("/src/App.tsx")
+  window.history.replaceState(null, "", "/?page=history&worktree=w1")
+  try {
+    render(
+      createElement(App, {
+        api: {
+          executionLogs: async () => ({
+            items: [
+              {
+                id: "inline-run",
+                kind: "unit",
+                intent: "Inline command",
+                state: "finished",
+                outcome: "passed",
+                createdAt: "2026-01-01T00:00:00Z",
+              },
+            ],
+            nextCursor: null,
+          }),
+          reviewContext: async (_kind, id) => ({
+            id,
+            executionId: id,
+            kind: "unit",
+            intent: "Inline command",
+            worktreeId: "w1",
+            path: "/recorded",
+            state: "finished",
+            outcome: "passed",
+            cleanup: { state: "removed", issues: [] },
+            failures: [],
+            failureCount: 0,
+            approval: null,
+          }),
+          unitRun: async () => ({ stdout: "Exact inline output", stderr: "", state: "finished" }),
+        },
+      }),
+    )
+    fireEvent.click(await screen.findByRole("link", { name: "Review", exact: true }))
+    assert.equal(window.location.search, "?page=review&kind=unit&id=inline-run")
+    await screen.findByText("Exact inline output")
+    fireEvent.click(screen.getByRole("link", { name: "Execution history", exact: true }))
+    await screen.findByRole("heading", { name: "Execution history", exact: true })
+    assert.equal(window.location.search, "?page=history&worktree=w1")
+  } finally {
+    cleanup()
+    window.history.replaceState(null, "", "/")
   }
 })

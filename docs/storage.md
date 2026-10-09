@@ -10,7 +10,7 @@ description: Record identity, artifact ownership and file persistence rules.
 Current checkout files and Git own live code. Project settings files own future
 configuration. Runtime records own accepted inputs and observed execution history.
 Captured settings explain a past run; they are never a second editable configuration
-registry. [Settings ownership](settings-reference.md) defines the authored files.
+registry. [Settings ownership](configuration.md) defines the authored files.
 
 One data directory is one local instance with stable identity and one writer.
 Use JSON records and ordinary artifact files, not a generic database abstraction.
@@ -20,10 +20,10 @@ are errors, not permission to reset data. Any reset must be an explicit action.
 
 ## Records
 
-Project records retain the display name and optional `disconnectedAt` timestamp
-alongside immutable identity/location. Disconnection never cascades into evidence,
-secret, worktree or source-file deletion. Reconnection clears that timestamp on the
-same record; see [project management](git.md).
+Project records retain immutable identity/location and historical display or
+`disconnectedAt` fields. Read-only discovery never reactivates an old connection.
+Explicit binding of the same existing checkout can clear its old disconnection
+without changing identity. Removed project/Git operations do not erase evidence.
 
 | Record | Meaning |
 | --- | --- |
@@ -33,14 +33,14 @@ same record; see [project management](git.md).
 | Submission | Immutable exact test/helper source, digest, parsed intent and runner identity |
 | Integration run | Submission, accepted target/settings/Git, execution state and results |
 | Environment | Fixed services/dependency kinds, source identity, owned resources and lifecycle |
-| Work start | Durable managed-checkout creation input and planned outputs |
+| Work start | Retained historical checkout-creation evidence; no new creation API |
 | Review | Captured MCP policy, approvals, captured configuration, revision and eventual run linkage |
 | Unit run | Captured command/runtime identity, output, terminal and cleanup state |
 | Playwright run | Target/scenario results and recorded browser artifacts |
-| Merge attempt | Inspected source/target identities, progress and recovery outcome |
+| Merge attempt | Retained historical merge evidence; no new merge API |
 
 A work item can receive multiple submissions; a submission can have multiple runs.
-Each new managed execution gets its own environment. Manual environments have no
+Each new managed execution gets its own environment. Historical manual environments have no
 run IDs and are not execution evidence. IDs and copied target bindings must agree,
 but there are no database foreign keys or cross-file transactions.
 

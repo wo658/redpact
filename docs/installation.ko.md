@@ -41,11 +41,11 @@ docker compose exec redpact node -p "JSON.parse(require('node:fs').readFileSync(
 
 기본 컨테이너에는 연결된 프로젝트가 없으며 호스트 저장소나 Docker 소켓을
 마운트하지 않습니다. 실제 프로젝트를 탐색하려면 Compose 오버라이드에서 체크아웃을
-명시적으로 바인드 마운트하고 뷰어에서 **컨테이너 내부 경로**로 연결하세요.
+명시적으로 바인드 마운트하고 설정·MCP 요청에 **컨테이너 내부 경로**를 사용하세요.
 참조하는 워크트리와 Git 공통 디렉터리도 기록된 경로로 접근할 수 있어야 하며,
 컨테이너의 `node` 사용자에게 필요한 권한이 있어야 합니다.
-이 기본 구성은 뷰어/API를 호스팅하지만 관리형 테스트 실행, GitHub CLI 인증,
-관리형 워크트리 생성 준비까지 보장하지는 않습니다. 관리형 테스트에는 추가 Docker
+이 기본 구성은 뷰어/API를 호스팅하지만 관리형 테스트 실행이나 호스트 Git 작업의
+준비까지 보장하지는 않습니다. 관리형 테스트에는 추가 Docker
 접근 권한과 일관된 호스트/컨테이너 바인드 경로가 필요합니다. 전체 로컬 개발
 실행기는 아래의 호스트 설치 런타임을 사용하세요.
 
@@ -64,7 +64,7 @@ docker compose exec redpact node -p "JSON.parse(require('node:fs').readFileSync(
 | Claude Code 플러그인 | MCP 연결과 스킬 | Claude Code, 동일한 실행 중 인스턴스 |
 
 관리형 실행에는 Docker와 Compose가 추가로 필요합니다. Git 기능은 네이티브 Git을
-사용하며 관리형 워크트리 생성에는 유지보수되는 Git 2.50+가 필요합니다. 설치와 MCP
+소스 식별에 사용합니다. 설치와 MCP
 연결 성공이 Docker 준비 상태나 클라이언트의 MCP Apps 지원을 증명하지는 않습니다.
 [npm 설치 매트릭스](development.md)는 Windows x64의 Node 24와 26을 검사합니다.
 Windows/Linux ARM, 다른 Linux 배포판과 Universal macOS 설치기는 미검증입니다.
@@ -289,9 +289,7 @@ Cursor 설치와 MCP Apps 렌더링은 아직 검증하지 않았습니다.
 
 Gemini CLI는 이 마켓플레이스 카탈로그 대신 `gemini-extension.json`이 포함된 GitHub
 확장을 사용합니다. 이 저장소는 현재 Gemini 확장 패키지를 제공하지 않습니다.
-다른 MCP 지원 클라이언트는 아래 방식으로 직접 연결할 수 있습니다. Redpact 앱의
-플러그인 업데이트 기능은 현재 Codex와 Claude Code만 지원하며, 다른 클라이언트의
-플러그인은 해당 클라이언트에서 관리합니다.
+다른 MCP 지원 클라이언트는 아래 방식으로 직접 연결할 수 있습니다. 플러그인 업데이트는 각 호스트가 관리합니다.
 
 플러그인은 `http://127.0.0.1:54321/mcp`를 사용합니다. 다른 인스턴스를 쓰려면
 플러그인이 자동으로 따라간다고 가정하지 말고 실제 포트로 HTTP MCP를 직접 연결하세요.
@@ -300,64 +298,6 @@ Gemini CLI는 이 마켓플레이스 카탈로그 대신 `gemini-extension.json`
 실행 승인 카드는 호환되는 MCP Apps 호스트가 필요합니다. 플러그인 설치만으로 카드
 지원을 증명할 수 없으며, 승인 UI가 없다고 승인을 우회해서는 안 됩니다.
 [인터페이스 계약](interfaces.md)을 참고하세요.
-
-## 로컬 Sidebar App 실험
-
-[Sidebar Lab](../examples/sidebar-app/README.md)은 데스크톱 호스트가 로컬 MCP Apps의
-전역 사이드바 진입점을 표시하는지 확인하는 독립 플러그인입니다. 메모리 카운터를
-가진 로컬 STDIO MCP 프로세스로 실행하며 Redpact 서비스, Docker, 프로젝트 파일,
-클라우드 백엔드를 사용하지 않습니다. Node 24+, pnpm, 로컬 플러그인을 지원하는
-Codex 데스크톱 호스트가 필요합니다. 호스트의 일반 모델 연결은 유지되므로
-오프라인 모델이라는 뜻은 아닙니다.
-
-저장소 루트에서 실행합니다.
-
-```sh
-cd examples/sidebar-app
-pnpm install --frozen-lockfile
-pnpm build
-codex plugin marketplace add "$PWD/dist/marketplace"
-codex plugin add sidebar-lab@sidebar-lab-local
-```
-
-진행 중인 작업을 저장한 후 데스크톱 앱을 재시작합니다. 호스트 사이드바에
-Sidebar Lab이 나타나면 엽니다. 나타나지 않으면 에이전트에게 `open_sidebar_lab`
-호출을 요청해 인라인 MCP Apps를 별도로 확인합니다. 도구나 인라인 카드가 동작해도
-전역 사이드바 지원을 증명하지는 않습니다. 예시는
-`openai/ui.entrypoints: [{ type: "global" }]`을 선언하며, 실제 노출은 호스트의
-로컬 플러그인 진입점 지원에 따라 달라집니다.
-
-Increment, Refresh, Reset은 UI 브리지를 통해 로컬 MCP 서버를 호출합니다.
-화면에 프로세스 ID와 시작 시간을 표시합니다. 같은 프로세스에 연결된 화면을 다시
-열면 상태가 유지되지만 프로세스를 재시작하면 초기화됩니다. 호스트 연결마다 서로
-다른 프로세스가 생길 수 있습니다. 이 예시에는 설치나 Docker 시작·중지 기능이 없습니다.
-
-빌드는 서버와 UI를 `dist/marketplace`에 번들링합니다. 생성된 MCP 설정은 빌드한
-컴퓨터의 Node와 서버 절대 경로를 사용하므로 빌드 디렉터리를 유지해야 합니다.
-경로를 옮기거나 소스를 수정하면 다시 빌드하고 설치합니다. 이 실험은 다른 컴퓨터로
-이동 가능한 배포 아카이브가 아닙니다. 플러그인 설치는 Node를 설치하지 않습니다.
-제거 명령은 `codex plugin remove sidebar-lab@sidebar-lab-local`입니다.
-
-로컬 검증 명령입니다.
-
-```sh
-pnpm typecheck
-pnpm test
-pnpm exec playwright install chromium
-pnpm preview
-# examples/sidebar-app 디렉터리의 다른 터미널에서:
-pnpm test:browser
-```
-
-`http://127.0.0.1:4319`의 브라우저 검증 호스트는 MCP Apps AppBridge로 실제 번들 UI를
-열고 실제 번들 STDIO 서버를 호출합니다. 카운터 조작, 화면 새로고침, 오류 복구,
-다크 모드, 데스크톱·모바일 레이아웃을 확인합니다. 스크린샷은 `dist/evidence/`에
-저장합니다. 이 호스트는 ChatGPT가 아니므로 사이드바 노출, 호스트 승인 동작,
-설치 호환성을 증명하지 않습니다. 해당 항목은 데스크톱 앱에서 별도로 확인합니다.
-Ctrl+C로 미리보기를 종료하면 소유한 MCP 프로세스도 종료됩니다.
-
-공식 [Extensions](https://developers.openai.com/plugins/build/extensions) 및
-[플러그인 패키징](https://developers.openai.com/plugins/build/plugins) 가이드를 참고하세요.
 
 ## 로컬 Redpact App Page 실험
 
@@ -389,7 +329,7 @@ npm 배포본 및 고정 버전 pnpm CLI를 플러그인에 포함합니다. 이
 
 작업을 저장하고 Codex를 재시작한 뒤 Global Apps에서 **Redpact App**을 찾습니다.
 `open_redpact_app`은 `global`과 `thread` 진입점을 선언합니다. 실제 노출은 호스트에서
-확인해야 하며 브라우저 검증 호스트나 Sidebar Lab만으로 증명할 수 없습니다.
+확인해야 하며 브라우저 검증 호스트만으로 증명할 수 없습니다.
 
 플러그인 관리 런타임이 없으면 **Install Redpact**와 **npm / pnpm** 선택기가 나타납니다.
 명시적으로 눌러야 설치하며 페이지 열기나 새로고침은 설치를 시작하지 않습니다.
@@ -429,7 +369,7 @@ App 패키지는 일반 플러그인과 같은 `redpact`, `redpact-init` 스킬�
 
 `http://127.0.0.1:54322/mcp`에 별도 `redpact-verification` HTTP MCP 연결도 등록합니다.
 런타임의 모델 도구를 직접 노출해 승인 카드와 capability 경계를 유지하며 App 전용 뷰어
-브리지는 비공개로 유지합니다. 검증 계약은 [MCP 인터페이스](interfaces.ko.md)를 참고하세요.
+브리지는 비공개로 유지합니다. 검증 계약은 [MCP 인터페이스](interfaces.md)를 참고하세요.
 번들 설치기는 여전히 이전 도구 구성을 가진 공개 0.8.0을 다운로드합니다. 확장된 검증 도구는
 이 소스로 빌드한 런타임이나 이를 포함하는 후속 릴리스가 필요합니다.
 런타임 시작·업데이트 후 도구 목록이 오래되었거나 시작 시 연결하지 못했다면 호스트의 MCP
@@ -442,12 +382,12 @@ App 패키지는 일반 플러그인과 같은 `redpact`, `redpact-init` 스킬�
 App 설치기가 업데이트를 관리한다고 알리며 페이지 뒤에서 독립 npm 자체 업데이트를
 수행하지 않습니다.
 
-미설치 또는 미실행 상태에서는 해당 설치·시작 화면을 표시합니다. 런타임이 정상적으로
-실행되면 공유 검토 뷰어의 현재 작업, 실행 이력, 선택한 실행 근거를 표시합니다. 프로젝트와
-체크아웃으로 대상을 지정하며 고급 테스트 목록, 설정과 수동 Container도 사용할 수 있습니다.
-일반 파일 탐색, Git Graph, Git 변경 작업, 독립적인 작업 공간 탭은 제외합니다.
-뷰어의 반응형 탐색, 테마와 언어 설정은 유지합니다.
-플러그인 진입점 아이콘과 브랜드 표시는 Redpact favicon 이미지를 사용합니다.
+설치·시작 전에는 해당 설정 화면을 표시합니다. 정상 런타임은 정확한 기록 검토와
+워크트리별 이력을 표시합니다. 기록이 없으면 채팅에서 실행을 열도록 안내합니다.
+`open_redpact_app`은 `kind`와 UUID `id` 쌍을 받아 그 기록을 직접 열며 실행 요청이나
+승인을 하지 않습니다. App은 UI 메타데이터의 로컬 정규 검토 경로만 허용합니다.
+상태 조회는 선택을 유지하며 복구용 **Open local viewer**도 같은 기록을 엽니다.
+프로젝트 관리·설정 편집기·수동 Container·Git 제어는 없습니다.
 
 App 리소스에 기존 React 뷰어와 스타일·폰트·아이콘을 직접 포함합니다. 중첩 iframe,
 브라우저 HTTP 연결 또는 루프백 CSP 예외를 요구하지 않습니다. Codex는 리소스에
@@ -476,22 +416,18 @@ MCP 연결 종료 시 모든 구독을 닫습니다. 외부 화면은 5초마다
 관리 패키지 경로와 런타임 데이터를 보존합니다. 별도 전역 Redpact를 제거하거나 데스크톱
 앱을 휴지통으로 옮겨도 런타임 데이터는 그대로 남습니다.
 
-검증하려면 Playwright Chromium(`pnpm exec playwright install chromium`) 설치 후
-`pnpm typecheck`, `pnpm test`와 두 가지 실제 패키지 설치 테스트를 실행합니다.
+검증에는 Playwright Chromium(`pnpm exec playwright install chromium`)을 설치하고
+`pnpm typecheck`, `pnpm test`를 실행합니다. 현재 서버·뷰어와 이 보조 앱을 빌드한 뒤
+`pnpm test:browser`로 실제 MCP 브리지를 통한 소스 빌드 런타임을 확인합니다. 빈 상태,
+정확한 요청 열기, 이력, 반응형 레이아웃과 승인 경계를 검증합니다. 공개 패키지 설치는
+별도 검사입니다. `REDPACT_TEST_RUNTIME=installed REDPACT_TEST_MANAGER=npm pnpm test:browser`
+(매니저는 `pnpm`도 가능)는 설치와 소유 수명주기를 검증하며 현재 소스 뷰어의 동작을
+증명하지 않습니다. 설치기는 여전히 공개 0.8.0을 고정합니다.
 
-```sh
-REDPACT_TEST_MANAGER=npm pnpm test:redpact:browser
-REDPACT_TEST_MANAGER=pnpm pnpm test:redpact:browser
-```
-
-각 테스트는 부트스트랩만 임시 경로에 복사하고 자식 프로세스 PATH에서 시스템
-Node·Redpact·pnpm을 제외한 뒤 실제 레지스트리 설치, 시작·중지·재시작, 뷰어,
-프로젝트 유지, MCP 종료와 반응형 화면을 확인합니다. 폴더 선택 응답만 명시적인
-픽스처로 대체하며 프로젝트 연결·파일 조회·API·탐색·수명주기는 실제 설치 런타임을
-사용합니다. Redpact에 테스트 증거를 제출하거나 실제 Codex 렌더링을 증명하는 검사는 아닙니다.
-캡처와 설치 로그는 `dist/redpact-evidence/npm/` 및 `dist/redpact-evidence/pnpm/`에
-저장합니다. `pnpm preview:redpact`는 `http://127.0.0.1:4320`에서 수동 검증 호스트를
-엽니다. 두 검증 호스트 모두 Global Apps 노출이나 호스트 승인 동작을 증명하지 않습니다.
+산출물과 로그는 `dist/redpact-evidence/`에 둡니다. `pnpm preview`는
+`http://127.0.0.1:4320`에서 로컬 검증 호스트를 시작합니다. 어느 검사도 실제 Codex의
+Global Apps 탐색·호스트 렌더링·사람의 코드 수락을 증명하지 않습니다. 프로젝트의
+관리형 인수 검증은 이 보조 앱 검사와 별개입니다.
 
 설정 화면은 현재 상태에 맞는 주요 동작 하나를 표시합니다. 설치 전에는 **Install Redpact**,
 설치 중에는 **Installing…**, 설치 후 중지 상태에서는 **Start Redpact**를 표시합니다.
@@ -505,51 +441,14 @@ Node·Redpact·pnpm을 제외한 뒤 실제 레지스트리 설치, 시작·중�
 
 ## 에이전트 플러그인 업데이트
 
-플러그인은 호스트 에이전트에서 관리합니다. 검토 뷰어에는 에이전트 플러그인 패널이
-없습니다. 기존 플러그인 업데이트 HTTP workflow는 Codex·Claude Code 설치를 검사할 수
-있으며 아래 내용은 뷰어 경로가 아닌 해당 API의 규칙입니다. 실행 파일 자동 탐지가 실패하면 인스턴스 설정의 **Codex CLI 경로** 또는
-**Claude Code CLI 경로**에 인수 없는 절대 실행 파일 경로를 입력하고 저장하세요.
-빈 경로는 PATH와 일반적인 로컬 설치 디렉터리를 사용합니다. CLI는 브라우저 사용자가
-아닌 Redpact 서버 호스트의 OS 사용자로 실행됩니다. 다른 에이전트는 아직 지원하지 않습니다.
-
-명시적인 플러그인 업데이트 확인 요청은 각 에이전트의 설치 목록과 마켓플레이스 JSON을 읽습니다.
-개인·로컬 마켓플레이스를 포함해 설치된 `redpact@<marketplace>`를 따르며, 공식
-마켓플레이스로 변경하지 않습니다. 활성화된 사용자 범위 설치 한 개가 필요합니다.
-비활성 플러그인, 다른 설치 범위와 다중 설치는 해당 에이전트에서 관리해야 합니다.
-CLI 없음, 불완전한 출력, 알 수 없는 버전, 갱신 실패는 명시적인 오류로 표시합니다.
-
-원격 마켓플레이스는 에이전트 CLI로 해당 마켓플레이스만 갱신합니다.
-Codex Git 마켓플레이스는 `plugin marketplace upgrade <marketplace>`, Claude Code
-원격 마켓플레이스는 `plugin marketplace update <marketplace>`를 사용합니다.
-로컬 마켓플레이스는 직접 읽습니다. 마켓플레이스 카탈로그에서 플러그인 디렉터리를
-찾고 에이전트별 매니페스트에서 배포 버전을 읽습니다. Git 마켓플레이스 안의 항목을
-포함해 Codex의 로컬 경로 항목과 Claude Code의 상대 디렉터리 항목을 지원합니다.
-별도의 원격 플러그인 저장소를 가리키는 항목은 아직 지원하지 않으며 에이전트에서 관리해야 합니다.
-
-앱의 GitHub Release 버전이나 앱·플러그인 호환성은 비교하지 않습니다.
-더 높은 안정 SemVer일 때만 업데이트 가능 상태를 반환합니다. 빌드 메타데이터만 다른 경우는
-새 버전으로 보지 않습니다. 다만 Codex 재설치 형식인 `X.Y.Z+codex.YYYYMMDDhhmmss`는
-예외로, 기본 버전이 같고 시간표시가 더 최신이면 업데이트를 제공합니다. 이미 더 높은
-버전이 설치되어 있으면 내리지 않습니다.
-배포자는 변경을 배포할 때 플러그인 매니페스트 버전을 올려야 합니다.
-확인은 수동이며 일반 상태 폴링은 CLI를 실행하지 않고 마지막 메모리 결과만 읽습니다.
-Redpact를 다시 시작하면 확인 결과가 초기화됩니다.
-
-명시적 설치 요청은 에이전트와 확인한 버전을 지정합니다. Redpact는 저장된
-CLI 경로, 설치 버전, 마켓플레이스 출처와 배포 버전을 다시 확인합니다.
-Codex는 `plugin add redpact@<marketplace> --json`, Claude Code는
-`plugin update redpact@<marketplace> --scope user`로 설치합니다. 마켓플레이스 이름은
-검증된 설치 식별자에서 가져오며 셸 명령을 입력받지 않습니다. 각 CLI 명령의 제한
-시간은 2분이며 한 인스턴스에서는 확인과 설치가 동시에 실행되지 않습니다.
-
-요청한 설치 버전을 다시 읽어 확인해야 성공입니다. 이후 새 에이전트 세션을 시작하세요.
-디스크 설치만으로 기존 대화가 갱신되지는 않으며 Redpact 자체는 재시작하지 않습니다.
-CLI의 대화형 승인 필요, 설치 실패, 후보 버전 변경은 오류로 표시하며 다시 확인해야 합니다.
-자동 롤백은 제공하지 않습니다. 다른 클라이언트에서 같은 플러그인을 동시에 업데이트하지 마세요.
+플러그인 설치·업데이트는 호스트 에이전트의 플러그인 도구로 관리합니다. Redpact는
+설치 목록을 검사하거나 호스트 CLI로 플러그인을 바꾸는 API를 제공하지 않습니다.
+플러그인 연결·스킬과 Redpact 런타임은 별개이므로 플러그인 업데이트만으로 실행기나
+런타임 데이터가 바뀌지 않습니다. 연결을 바꾼 뒤 호스트의 MCP 카탈로그를 새로고침하세요.
 
 ## 사전 준비
 
-서버와 웹 뷰어를 실행하려면 Node.js 24 이상과 pnpm이 필요합니다. 관리형 테스트 실행에는 Compose를 포함한 Docker도 필요합니다. 단위 테스트 명령은 프로젝트에 설정된 Dockerfile을 사용해 Docker에서 실행하고, 관리형 통합 테스트는 Compose 애플리케이션 서비스를 준비합니다. Git 기능은 네이티브 Git을 사용합니다. 관리형 워크트리 생성에는 유지보수되는 Git 2.50 이상을 사용하세요.
+서버와 웹 뷰어를 실행하려면 Node.js 24 이상과 pnpm이 필요합니다. 관리형 테스트 실행에는 Compose를 포함한 Docker도 필요합니다. 단위 테스트 명령은 프로젝트에 설정된 Dockerfile을 사용해 Docker에서 실행하고, 관리형 통합 테스트는 Compose 애플리케이션 서비스를 준비합니다. Git 기능은 네이티브 Git을 사용합니다. 워크트리 생성과 Git 변경은 호스트가 담당합니다.
 
 Redpact 소스 체크아웃에서 다음 명령을 실행하세요.
 
@@ -594,7 +493,7 @@ curl --fail http://127.0.0.1:54318/api/health
 
 `docker version`에는 클라이언트뿐 아니라 서버 정보도 나와야 합니다. Docker 데몬에 연결하지 못한다면 관리형 실행 전에 Docker를 시작하세요. Redpact 서버가 요청을 받을 준비가 되면 health 요청이 성공해야 합니다. 이 확인만으로 애플리케이션 이미지 빌드나 서비스 준비 상태까지 검증되는 것은 아닙니다.
 
-다음으로 Vite 뷰어를 열어 애플리케이션 디렉터리를 연결하고, 마지막으로 에이전트에서 `configure describe`를 호출하세요. health는 성공하지만 에이전트가 연결하지 못한다면 프로젝트 테스트 설정 대신 MCP 주소와 클라이언트 연결을 확인하세요.
+다음으로 에이전트에서 실제 애플리케이션 디렉터리로 `configure describe`를 호출하세요. 뷰어는 채팅에서 반환된 실행 기록을 엽니다. health는 성공하지만 에이전트가 연결하지 못한다면 프로젝트 테스트 설정 대신 MCP 주소와 클라이언트 연결을 확인하세요.
 
 ## 같은 인스턴스의 주소 사용하기
 
@@ -617,7 +516,7 @@ curl --fail http://127.0.0.1:54318/api/health
 http://127.0.0.1:54318/mcp
 ```
 
-설정 문법은 클라이언트마다 다릅니다. 클라이언트의 HTTP MCP 연결 기능을 사용하세요. Redpact는 이 흐름을 위한 stdio 브리지를 제공하지 않습니다. 모델에 제공하는 설정·실행·증거 도구는 [MCP 인터페이스](interfaces.ko.md)를 참고하세요.
+설정 문법은 클라이언트마다 다릅니다. 클라이언트의 HTTP MCP 연결 기능을 사용하세요. Redpact는 이 흐름을 위한 stdio 브리지를 제공하지 않습니다. 모델에 제공하는 설정·실행·증거 도구는 [MCP 인터페이스](interfaces.md)를 참고하세요.
 
 경로를 바꾼 뒤 에이전트에게 다음 인자로 `configure`를 호출하도록 요청하세요.
 
@@ -646,7 +545,7 @@ pnpm desktop:update
 
 데스크톱 앱은 별도 인스턴스를 사용합니다. 처음 실행할 때의 MCP 주소는 `http://127.0.0.1:54321/mcp`입니다. 포트를 변경했다면 저장된 인스턴스 포트를 사용하세요. 창을 닫아도 서버는 유지되지만 Redpact를 종료하면 서버도 종료됩니다. 개발 서버의 기록이 데스크톱에 자동으로 표시되지는 않습니다.
 
-[첫 프로젝트 설정](first-project.md)으로 이어가거나 [문제 해결](troubleshooting.md)을 참고하세요.
+[첫 프로젝트 설정](configuration.md)으로 이어가거나 [문제 해결](troubleshooting.md)을 참고하세요.
 
 ## 런타임 업데이트
 

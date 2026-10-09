@@ -27,14 +27,14 @@ test("preference files reject duplicate keys, unknown fields and oversized input
     expect(await readFile(join(path, ".redpact/tracking.json"), "utf8")).toBe(source)
   }
 })
-test("preference writes and recovery reject symlinks without changing their targets", async () => {
+test("preference reads reject symlinks without changing their targets", async () => {
   const path = await root()
   const outside = await root()
   const value = { mainBranch: null, hideMerged: false }
   const file = join(outside, ".redpact/tracking.json")
   await writeFile(file, JSON.stringify(value))
   await symlink(file, join(path, ".redpact/tracking.json"))
-  await expect(preferenceFiles.saveTracking(path, value)).rejects.toThrow()
+  await expect(preferenceFiles.tracking(path, value)).rejects.toThrow()
   await rm(join(path, ".redpact"), { recursive: true })
   await symlink(join(outside, ".redpact"), join(path, ".redpact"))
   await expect(

@@ -34,6 +34,23 @@ bridge.onopenlink = async ({ url }) => {
   document.body.dataset.lastLink = url
   return {}
 }
+bridge.oninitialized = () => {
+  const query = new URLSearchParams(window.location.search)
+  const kind = query.get("kind")
+  const id = query.get("id")
+  if (kind && id) {
+    void (async () => {
+      const arguments_ = { kind, id }
+      await bridge.sendToolInput({ arguments: arguments_ })
+      const response = await fetch("/tool", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "open_redpact_app", arguments: arguments_ }),
+      })
+      await bridge.sendToolResult(await response.json())
+    })()
+  }
+}
 await bridge.connect(new PostMessageTransport(iframe.contentWindow, iframe.contentWindow))
 iframe.src = "/app.html"
 document.querySelector("#theme")?.addEventListener("click", () => {

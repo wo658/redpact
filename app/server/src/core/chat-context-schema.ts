@@ -1,8 +1,6 @@
 import { z } from "zod"
-import { executionKind, verificationPath } from "./verification-schema.js"
 
-export const workspaceStatusInput = z.strictObject({ path: verificationPath })
-export const reviewContextInput = z.strictObject({ kind: executionKind, id: z.uuid() })
+export const executionKind = z.enum(["integration", "unit", "playwright"])
 const freshness = z.strictObject({ state: z.literal("unknown"), reason: z.string() })
 const summary = z.strictObject({
   id: z.string(),
@@ -67,15 +65,6 @@ export const workspaceStatusSchema = z.strictObject({
   }),
   freshness,
   humanAcceptance: z.literal("not_recorded"),
-  nextActions: z
-    .array(
-      z.strictObject({
-        action: z.string(),
-        tool: z.string(),
-        arguments: z.record(z.string(), z.unknown()),
-      }),
-    )
-    .max(20),
 })
 const approvalPreview = z.strictObject({
   settingsDigest: z.string(),

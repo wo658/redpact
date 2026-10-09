@@ -15,11 +15,11 @@ freshness and human acceptance.
 [Documentation](https://redpact.dev/en/docs/) · [Downloads](https://github.com/wo658/redpact/releases) · [Report an issue](https://github.com/wo658/redpact/issues)
 
 1. [Install and connect](docs/installation.md) the runtime and agent plugin.
-2. [Configure your actual project](docs/first-project.md).
+2. [Configure your actual project](docs/configuration.md).
 3. Ask the agent to write a failing test, implement the behavior and request managed
    checks through MCP. Use subagents for independent work when useful.
-4. Open **Current work**, **Execution history** or the returned execution review
-   link to inspect the evidence and make any required decision.
+4. Open the exact execution review link returned in chat. Inspect the captured
+   inputs, evidence and worktree-bound history, then make any required decision.
 
 The host agent handles files, worktrees and Git. Redpact focuses on execution,
 approval and evidence; the review viewer has no generic file browser, Git Graph,
@@ -30,8 +30,7 @@ Git mutation toolbar or independent task tabs.
 > and record desktop and mobile screens. Return the actual execution references
 > and remaining review gaps.
 
-Start with the [review walkthrough](docs/review-workflow.md), [first managed
-execution](docs/first-run.md), [results](docs/results.md) and [MCP contracts](docs/interfaces.md).
+Start with the [review walkthrough](docs/review-workflow.md), [results](docs/results.md) and [MCP contracts](docs/interfaces.md).
 The App Page package includes the development/setup skills and connects its viewer
 and model tools to one runtime; its installation and host limitations are documented
 in the [installation guide](docs/installation.md).
@@ -60,11 +59,11 @@ Redpact는 Unit·Integration·Playwright 관리형 검증을 실행하고 입력
 [문서](https://redpact.dev/ko/docs/) · [다운로드](https://github.com/wo658/redpact/releases) · [이슈 제보](https://github.com/wo658/redpact/issues)
 
 1. 런타임과 에이전트 플러그인을 [설치·연결](docs/installation.ko.md)합니다.
-2. [실제 프로젝트를 설정](docs/first-project.ko.md)합니다.
+2. [실제 프로젝트를 설정](docs/configuration.ko.md)합니다.
 3. 에이전트에게 실패하는 테스트를 먼저 확인하고 구현한 뒤 MCP로 관리형 검증을
    요청하게 합니다. 독립적인 작업은 필요에 따라 하위 에이전트가 나눠 맡습니다.
-4. **현재 작업**, **실행 이력** 또는 반환된 실행 검토 링크에서 근거를 확인하고
-   필요한 결정을 내립니다.
+4. 채팅에서 반환된 정확한 실행 검토 링크를 엽니다. 캡처된 입력·근거·워크트리별
+   이력을 확인하고 필요한 결정을 내립니다.
 
 호스트 에이전트가 파일·워크트리·Git 작업을 맡습니다. Redpact는 실행·승인·근거에
 집중하며 일반 파일 탐색기, Git Graph, Git 변경 툴바나 독립 작업 탭을 두지 않습니다.
@@ -73,7 +72,7 @@ Redpact는 Unit·Integration·Playwright 관리형 검증을 실행하고 입력
 > 입력 거부, 실제 브라우저 조작을 검증하고 데스크톱·모바일 화면을 기록해.
 > 실제 실행 참조와 검토가 남은 부분을 알려줘.
 
-[검토 절차](docs/review-workflow.ko.md), [첫 관리형 실행](docs/first-run.ko.md),
+[검토 절차](docs/review-workflow.ko.md),
 [결과](docs/results.ko.md), [MCP 계약](docs/interfaces.ko.md)을 참고하세요.
 App Page 패키지는 개발·설정 스킬을 포함하고 뷰어와 모델 도구를 같은 런타임으로
 연결합니다. 설치와 호스트 제약은 [설치 안내](docs/installation.ko.md)에 설명합니다.

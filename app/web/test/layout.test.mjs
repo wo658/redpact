@@ -30,26 +30,6 @@ test("sidebar separator reserves its horizontal margins instead of overflowing t
   assert.equal(separator.classList.contains("data-horizontal:w-full"), false)
 })
 
-test("Git review omits polling and HEAD diagnostics from the viewer", async () => {
-  const { WorktreeReview } = await server.ssrLoadModule("/src/components/worktree-review.tsx")
-  const html = renderToStaticMarkup(createElement(WorktreeReview, { api: {}, worktreeId: "w1" }))
-  assert.doesNotMatch(html, /Updates every 5 seconds|HEAD not available/)
-  assert.doesNotMatch(html, /Refresh changes/)
-})
-
-test("test observations keep polling diagnostics out of the default view", async () => {
-  const { TestObservation } = await server.ssrLoadModule("/src/components/test-observation.tsx")
-  const { Tabs } = await server.ssrLoadModule("/src/components/ui/coss-tabs.tsx")
-  const html = renderToStaticMarkup(
-    createElement(
-      Tabs,
-      { defaultValue: "tests" },
-      createElement(TestObservation, { api: {}, worktreeId: "w1" }),
-    ),
-  )
-  assert.doesNotMatch(html, /Updates every 3 seconds/)
-})
-
 test("live Vitest overview keeps source paths and declaration metadata in Detail", async () => {
   const { TestEvidence } = await server.ssrLoadModule("/src/components/test-observation.tsx")
   const doc = new JSDOM(
@@ -89,14 +69,6 @@ test("live Vitest overview keeps source paths and declaration metadata in Detail
       (button) => button.textContent === "Executed source",
     ),
   )
-})
-
-test("review and language navigation keep their existing inline controls", async () => {
-  const { readFile } = await import("node:fs/promises")
-  for (const name of ["test-observation", "worktree-review", "language-selector"]) {
-    const source = await readFile(new URL(`../src/components/${name}.tsx`, import.meta.url), "utf8")
-    assert.doesNotMatch(source, /DropdownMenu|SearchPicker|SelectTrigger/, name)
-  }
 })
 
 test("scenario overview keeps recorded steps visible without inventing results for declarations", async () => {
@@ -158,17 +130,4 @@ test("scenario overview keeps recorded steps visible without inventing results f
   assert.doesNotMatch(observed.body.textContent, /17 ms/)
   assert.equal(observed.querySelector("table"), null)
   assert.equal(observed.querySelector('[aria-label="Observed test results"] [aria-expanded]'), null)
-})
-
-test("리뷰 탭은 내용 크기와 무관하게 남은 고정 영역을 채운다", async () => {
-  const { WorktreeReview } = await server.ssrLoadModule("/src/components/worktree-review.tsx")
-  const doc = new JSDOM(
-    renderToStaticMarkup(createElement(WorktreeReview, { api: {}, worktreeId: "w1" })),
-  ).window.document
-  const panels = doc.querySelectorAll('[data-slot="tabs-content"]')
-  assert.ok(panels.length >= 5)
-  for (const panel of panels) {
-    assert.ok(panel.classList.contains("h-0"), "내용의 기본 높이가 탭 영역을 늘리지 않아야 한다")
-    assert.ok(panel.classList.contains("min-w-0"), "긴 소스가 탭 너비를 늘리지 않아야 한다")
-  }
 })

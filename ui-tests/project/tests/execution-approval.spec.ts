@@ -158,9 +158,7 @@ for (const width of [1280, 390]) {
   })
 }
 
-test("채팅에서 만든 요청과 취소는 현재 작업과 실행 상세에 새로고침 없이 반영된다", async ({
-  page,
-}) => {
+test("채팅에서 취소한 요청은 실행 상세에 새로고침 없이 반영된다", async ({ page }) => {
   await page.addInitScript(() => {
     const NativeEvents = window.EventSource
     const opened = new Set<string>()
@@ -178,7 +176,6 @@ test("채팅에서 만든 요청과 취소는 현재 작업과 실행 상세에 
     }
   })
   const review = await openExecutionReviewViewer(page)
-  let nextId: string | undefined
   async function waitForEvidence() {
     await expect
       .poll(() =>
@@ -196,41 +193,11 @@ test("채팅에서 만든 요청과 취소는 현재 작업과 실행 상세에 
       .toBe(true)
   }
   try {
-    await test.step("현재 작업의 근거 구독이 열린 뒤 채팅 취소가 목록에서 사라진다", async () => {
-      await page.goto(
-        `/?project=${review.context.projectId}&page=current&worktree=${review.context.worktreeId}`,
-      )
-      await expect(page.getByText(review.id, { exact: true })).toBeVisible()
-      await waitForEvidence()
-      await review.rpc("tools/call", {
-        name: "cancel_execution",
-        arguments: { kind: "unit", id: review.id },
-      })
-      await expect(page.getByText("No requests awaiting approval.", { exact: true })).toBeVisible()
-    })
-    await test.step("같은 checkout의 새 채팅 요청이 목록에 나타나고 정확한 상세로 열린다", async () => {
-      const result = await review.rpc("tools/call", {
-        name: "run_unit_tests",
-        arguments: { path: review.root },
-      })
-      expect(result.isError).not.toBe(true)
-      nextId = result.structuredContent.reviewId
-      expect(nextId).toBeTruthy()
-      if (typeof nextId !== "string") {
-        throw new Error("MCP did not return the pending review identity")
-      }
-      await expect(page.getByText(nextId, { exact: true })).toBeVisible()
-      await page.getByRole("button", { name: "Review request", exact: true }).click()
-      await expect(
-        page.getByRole("button", { name: "Approve execution", exact: true }),
-      ).toBeEnabled()
-      expect(new URL(page.url()).searchParams.get("id")).toBe(nextId)
-      await waitForEvidence()
-    })
+    await waitForEvidence()
     await test.step("상세를 보는 동안 채팅에서 취소하면 승인 제어가 사라진다", async () => {
       await review.rpc("tools/call", {
         name: "cancel_execution",
-        arguments: { kind: "unit", id: nextId },
+        arguments: { kind: "unit", id: review.id },
       })
       await expect(page.getByText("cancelled", { exact: true })).toBeVisible()
       await expect(
@@ -238,12 +205,6 @@ test("채팅에서 만든 요청과 취소는 현재 작업과 실행 상세에 
       ).toHaveCount(0)
     })
   } finally {
-    if (nextId) {
-      await review.rpc("tools/call", {
-        name: "cancel_execution",
-        arguments: { kind: "unit", id: nextId },
-      })
-    }
     await review.restore()
   }
 })

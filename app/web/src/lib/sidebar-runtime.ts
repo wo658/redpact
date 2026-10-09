@@ -157,6 +157,16 @@ export async function initialize(
     if (result.isError) {
       throw new Error(JSON.stringify(result.content))
     }
+    const reviewPath = result._meta?.reviewPath
+    if (
+      typeof reviewPath === "string" &&
+      /^\/\?page=review&kind=(unit|integration|playwright)&id=[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        reviewPath,
+      )
+    ) {
+      window.history.replaceState(null, "", reviewPath)
+      window.dispatchEvent(new PopStateEvent("popstate"))
+    }
     if (typeof result._meta?.controlToken === "string") {
       token = result._meta.controlToken
     }
@@ -205,9 +215,13 @@ export async function initialize(
   element("stop").addEventListener("click", () => void invoke("stop_redpact_server", { token }))
   element("viewer").addEventListener("click", () => {
     if (page) {
-      void app.openLink({ url: page.status.origin }).catch((failure) => {
-        error.textContent = String(failure)
-      })
+      void app
+        .openLink({
+          url: `${page.status.origin}${window.location.pathname}${window.location.search}`,
+        })
+        .catch((failure) => {
+          error.textContent = String(failure)
+        })
     }
   })
   app.ontoolresult = (result) => {
@@ -217,10 +231,15 @@ export async function initialize(
       error.textContent = String(failure)
     }
   }
+  function applyHostTheme(theme: "light" | "dark") {
+    document.documentElement.dataset.theme = theme
+    document.documentElement.classList.toggle("dark", theme === "dark")
+    document.documentElement.style.colorScheme = theme
+    setup.dataset.theme = theme
+  }
   app.onhostcontextchanged = (context) => {
     if (context.theme) {
-      document.documentElement.dataset.theme = context.theme
-      setup.dataset.theme = context.theme
+      applyHostTheme(context.theme)
     }
   }
   window.addEventListener("pagehide", () => {
@@ -230,8 +249,7 @@ export async function initialize(
   try {
     await app.connect()
     ready = true
-    document.documentElement.dataset.theme = app.getHostContext()?.theme ?? "light"
-    setup.dataset.theme = document.documentElement.dataset.theme
+    applyHostTheme(app.getHostContext()?.theme ?? "light")
     await refresh()
   } catch (failure) {
     error.textContent = `Host connection failed: ${String(failure)}`

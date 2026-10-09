@@ -1,4 +1,4 @@
-import type { ReviewContext, WorkspaceStatus } from "./types/chat-context.js"
+import type { ReviewContext } from "./types/chat-context.js"
 import type { Submission } from "./types/contracts.js"
 import type { CaptureRun } from "./types/playwright.js"
 import type { RunQueries } from "./types/services.js"
@@ -227,48 +227,4 @@ export function playwrightReviewContext(run: CaptureRun): ReviewContext {
     })
   }
   return context
-}
-export function workspaceNextActions(
-  status: Omit<WorkspaceStatus, "nextActions">,
-): WorkspaceStatus["nextActions"] {
-  const actions: WorkspaceStatus["nextActions"] = []
-  if (!status.settings.valid) {
-    actions.push({
-      action: "repair_configuration",
-      tool: "configure",
-      arguments: { action: "describe", path: status.projectRoot },
-    })
-  }
-  for (const request of status.approval.pending) {
-    actions.push({
-      action: "review_approval",
-      tool: request.kind === "integration" ? "get_run" : "get_execution",
-      arguments:
-        request.kind === "integration"
-          ? { id: request.id }
-          : { kind: request.kind, id: request.id },
-    })
-  }
-  for (const run of status.executions.active) {
-    actions.push({
-      action: "inspect_execution",
-      tool: "get_review_context",
-      arguments: { kind: run.kind, id: run.id },
-    })
-  }
-  for (const run of status.executions.cleanup) {
-    actions.push({
-      action: "inspect_cleanup",
-      tool: "get_review_context",
-      arguments: { kind: run.kind, id: run.id },
-    })
-  }
-  if (status.settings.valid && !actions.length) {
-    actions.push({
-      action: "choose_verification",
-      tool: "configure",
-      arguments: { action: "inspect", path: status.projectRoot },
-    })
-  }
-  return actions.slice(0, 20)
 }

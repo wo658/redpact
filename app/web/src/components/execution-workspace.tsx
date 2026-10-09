@@ -8,21 +8,18 @@ import type {
   ReviewContext,
   TestRun,
   TestSubmission,
-  WorkspaceStatus,
-  Worktree,
+  UnitRun,
 } from "@/lib/api"
 import { useRefreshRequest } from "@/lib/use-refresh-request"
-import { worktreeName } from "@/lib/worktree-name"
-import { CopyHandoff } from "./copy-handoff"
-import { ExecutionLog, ExecutionRow } from "./execution-log"
-import { EmptyState, Loading, Notice } from "./feedback"
+import { navigateReviewLink } from "@/lib/workspace-history"
+import { ExecutionProgress } from "./execution-progress"
+import { Loading, Notice } from "./feedback"
 import { LiveUpdates, useLiveRevision } from "./live-updates"
-import { PlaywrightSource } from "./project-playwright"
-import { SearchPicker } from "./search-picker"
 import { TestEvidence } from "./test-observation"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
+import { UnifiedDiff } from "./unified-diff"
 import { ViewerImage, ViewerLink } from "./viewer-asset"
 
 const executionLabels = {
@@ -31,225 +28,6 @@ const executionLabels = {
   playwright: "Playwright",
 } as const
 
-type ReviewAction = (kind: ExecutionSummary["kind"], id: string) => void
-type WorkspaceProps = { api: Api; worktree?: Worktree; loading: boolean; onReview: ReviewAction }
-
-export function CheckoutSelector({
-  worktrees,
-  selectedId,
-  onSelect,
-}: {
-  worktrees: Worktree[]
-  selectedId: string
-  onSelect: (id: string) => void
-}) {
-  const { t } = useTranslation()
-  return (
-    <div className="w-full max-w-sm">
-      <SearchPicker
-        label={t("Checkout")}
-        value={selectedId}
-        options={worktrees.map((worktree) => ({
-          value: worktree.id,
-          label: worktreeName(worktree),
-        }))}
-        onValueChange={onSelect}
-        disabled={!worktrees.length}
-        searchable
-      />
-    </div>
-  )
-}
-
-export function CurrentWork(props: WorkspaceProps) {
-  const { t } = useTranslation()
-  return (
-    <section className="mx-auto flex w-full min-w-0 content-width-768 flex-col gap-6">
-      <header>
-        <h1 className="text-2xl font-semibold">{t("Current work")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t("Ask in chat. Review the evidence here.")}
-        </p>
-      </header>
-      {props.loading && <Loading>{t("Loading worktrees…")}</Loading>}
-      {!props.loading && !props.worktree && <EmptyState>{t("No worktrees found.")}</EmptyState>}
-      {props.worktree && (
-        <LiveUpdates worktreeId={props.worktree.id} scope="evidence">
-          <CurrentCheckout key={props.worktree.id} {...props} worktree={props.worktree} />
-        </LiveUpdates>
-      )}
-    </section>
-  )
-}
-function CurrentCheckout({ api, worktree, onReview }: WorkspaceProps & { worktree: Worktree }) {
-  const { t } = useTranslation()
-  const [status, setStatus] = useState<WorkspaceStatus>()
-  const [error, setError] = useState("")
-  const revision = useLiveRevision()
-  const refresh = useCallback(
-    async (signal: AbortSignal) => {
-      try {
-        const result = await api.workspaceStatus(worktree.projectRoot, signal)
-        if (!signal.aborted) {
-          setStatus(result)
-          setError("")
-        }
-      } catch (cause) {
-        if (!signal.aborted) {
-          setError(String(cause))
-        }
-      }
-    },
-    [api, worktree.projectRoot],
-  )
-  useRefreshRequest(refresh, revision)
-  return (
-    <>
-      <EvidenceBoundary />
-      {error && (
-        <Notice error>{t("{{error}} · Displayed evidence may be outdated.", { error })}</Notice>
-      )}
-      {!status && !error && <Loading>{t("Loading current work…")}</Loading>}
-      {status && (
-        <>
-          <section className="flex flex-wrap gap-2" aria-label={t("Execution prerequisites")}>
-            <Badge variant="outline">
-              {t(status.settings.valid ? "Settings valid" : "Settings need attention")}
-            </Badge>
-            <Badge variant="outline">{t("Readiness not checked")}</Badge>
-            <Badge variant="outline">
-              {t("Approval: {{policy}}", { policy: t(status.approval.policy) })}
-            </Badge>
-          </section>
-          {status.settings.issues.map((issue, index) => (
-            <Notice error key={index}>
-              {issue.path}: {issue.message}
-            </Notice>
-          ))}
-          <section className="flex flex-col gap-2">
-            <h2 className="text-base font-semibold">
-              {t("Awaiting approval")} · {status.approval.pendingCount}
-            </h2>
-            {status.approval.pending.length ? (
-              <ul className="divide-y">
-                {status.approval.pending.map((request) => (
-                  <li
-                    key={request.id}
-                    className="flex min-w-0 items-center justify-between gap-3 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p>
-                        {t(executionLabels[request.kind])} · {t(request.state)}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">{request.id}</p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onReview(request.kind, request.id)}
-                    >
-                      {t("Review request")}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">{t("No requests awaiting approval.")}</p>
-            )}
-          </section>
-          <ExecutionGroup
-            title={t("In progress")}
-            api={api}
-            rows={status.executions.active}
-            onReview={onReview}
-            empty={t("No executions in progress.")}
-          />
-          <ExecutionGroup
-            title={t("Cleanup needs attention")}
-            api={api}
-            rows={status.executions.cleanup}
-            onReview={onReview}
-            empty={t("No cleanup issues.")}
-          />
-          <ExecutionGroup
-            title={t("Recent evidence")}
-            api={api}
-            rows={status.executions.recent.slice(0, 5)}
-            onReview={onReview}
-            empty={t("No executions yet")}
-          />
-        </>
-      )}
-      <CopyHandoff
-        showContext={false}
-        context={{
-          title: t("Continue in chat"),
-          summary: t(
-            "Inspect this checkout, implement with tests first, and submit verification through Redpact.",
-          ),
-          fields: [
-            ["Checkout", worktree.projectRoot],
-            ["Worktree", worktree.id],
-          ],
-        }}
-      >
-        <p className="text-sm text-muted-foreground">
-          {t(
-            "Ask your agent to diagnose settings, run tests, inspect failures, or retry cleanup. Copy the checkout context to keep the target explicit.",
-          )}
-        </p>
-      </CopyHandoff>
-    </>
-  )
-}
-function ExecutionGroup({
-  title,
-  api,
-  rows,
-  onReview,
-  empty,
-}: {
-  title: string
-  api: Api
-  rows: ExecutionSummary[]
-  onReview: ReviewAction
-  empty: string
-}) {
-  return (
-    <section className="flex min-w-0 flex-col gap-2">
-      <h2 className="text-base font-semibold">{title}</h2>
-      {rows.length ? (
-        <ul className="min-w-0 divide-y">
-          {rows.map((run) => (
-            <ExecutionRow key={`${run.kind}:${run.id}`} api={api} run={run} onReview={onReview} />
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-muted-foreground">{empty}</p>
-      )}
-    </section>
-  )
-}
-export function ExecutionHistory({ api, worktree, loading, onReview }: WorkspaceProps) {
-  const { t } = useTranslation()
-  return (
-    <section className="mx-auto flex w-full min-w-0 content-width-768 flex-col gap-5">
-      <header>
-        <h1 className="text-2xl font-semibold">{t("Execution history")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t("Recorded executions stay tied to their submitted checkout and source.")}
-        </p>
-      </header>
-      {loading && <Loading>{t("Loading worktrees…")}</Loading>}
-      {!loading && !worktree && <EmptyState>{t("No worktrees found.")}</EmptyState>}
-      {worktree && (
-        <LiveUpdates worktreeId={worktree.id} scope="evidence">
-          <ExecutionLog key={worktree.id} api={api} worktreeId={worktree.id} onReview={onReview} />
-        </LiveUpdates>
-      )}
-    </section>
-  )
-}
 function EvidenceBoundary() {
   const { t } = useTranslation()
   return (
@@ -269,11 +47,9 @@ function EvidenceBoundary() {
 export function ExecutionReview({
   api,
   execution,
-  onHistory,
 }: {
   api: Api
   execution: { kind: ExecutionSummary["kind"]; id: string }
-  onHistory: () => void
 }) {
   const { t } = useTranslation()
   const [context, setContext] = useState<ReviewContext>()
@@ -303,11 +79,15 @@ export function ExecutionReview({
     >
       <ExecutionReviewRefresh refresh={refresh} actionRevision={actionRevision} />
       <section className="mx-auto flex w-full min-w-0 content-width-768 flex-col gap-5">
-        <div>
-          <Button variant="ghost" size="sm" onClick={onHistory}>
+        {context?.worktreeId && (
+          <a
+            onClick={navigateReviewLink}
+            className="text-sm underline underline-offset-4"
+            href={`?page=history&worktree=${encodeURIComponent(context.worktreeId)}`}
+          >
             {t("Execution history")}
-          </Button>
-        </div>
+          </a>
+        )}
         <header>
           <p className="text-sm text-muted-foreground">{t("Execution review")}</p>
           <h1 className="mt-1 break-words text-2xl font-semibold">
@@ -361,25 +141,6 @@ export function ExecutionReview({
               onChange={() => setActionRevision((value) => value + 1)}
             />
             {context.executionId && <RecordedEvidence api={api} context={context} />}
-            <CopyHandoff
-              showContext={false}
-              context={{
-                title: t("Continue in chat"),
-                summary: t(
-                  "Inspect this recorded execution and its evidence before changing code or requesting another run.",
-                ),
-                fields: [
-                  ["Kind", context.kind],
-                  ["Execution", context.id],
-                  ["Checkout", context.path ?? ""],
-                  ["Review", context.reviewPath],
-                ],
-              }}
-            >
-              <p className="text-sm text-muted-foreground">
-                {t("Copy this execution context to ask your agent about failures or cleanup.")}
-              </p>
-            </CopyHandoff>
           </>
         )}
       </section>
@@ -399,7 +160,8 @@ function ExecutionReviewRefresh({
 
 function RecordedEvidence({ api, context }: { api: Api; context: ReviewContext }) {
   const { t } = useTranslation()
-  const [logs, setLogs] = useState("")
+  const [logs, setLogs] = useState({ stdout: "", stderr: "" })
+  const [unit, setUnit] = useState<UnitRun>()
   const [submission, setSubmission] = useState<TestSubmission>()
   const [run, setRun] = useState<TestRun>()
   const [capture, setCapture] = useState<CaptureRun>()
@@ -413,7 +175,10 @@ function RecordedEvidence({ api, context }: { api: Api; context: ReviewContext }
       }
       try {
         if (context.kind === "integration") {
-          const result = await api.run(id, signal)
+          const [result, output] = await Promise.all([api.run(id, signal), api.runLogs(id, signal)])
+          if (!signal.aborted) {
+            setLogs({ stdout: output.stdout?.text ?? "", stderr: output.stderr?.text ?? "" })
+          }
           if (result.submissionId) {
             const value = await api.submission(result.submissionId, signal)
             if (!signal.aborted) {
@@ -433,7 +198,8 @@ function RecordedEvidence({ api, context }: { api: Api; context: ReviewContext }
         if (context.kind === "unit") {
           const result = await api.unitRun(id, signal)
           if (!signal.aborted) {
-            setLogs([result.stdout, result.stderr].filter(Boolean).join("\n"))
+            setUnit(result)
+            setLogs({ stdout: result.stdout, stderr: result.stderr })
           }
         }
         if (!signal.aborted) {
@@ -453,11 +219,22 @@ function RecordedEvidence({ api, context }: { api: Api; context: ReviewContext }
       <h2 className="text-base font-semibold">{t("Recorded evidence")}</h2>
       {error && <Notice error>{error}</Notice>}
       {submission && <TestEvidence submission={submission} run={run ?? null} />}
-      {context.kind === "unit" && (
-        <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words text-code">
-          {logs || t("No output recorded.")}
-        </pre>
+      {unit && <ExecutionProgress kind="unit" run={unit} />}
+      {unit && (
+        <p className="text-sm">{t("Exit code: {{code}}", { code: unit.exitCode ?? "—" })}</p>
       )}
+      {(["stdout", "stderr"] as const).map((stream) =>
+        logs[stream] ? (
+          <section key={stream} aria-label={stream} className="min-w-0">
+            <h3 className="text-sm font-medium">{stream}</h3>
+            <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words text-code">
+              {logs[stream]}
+            </pre>
+          </section>
+        ) : null,
+      )}
+      {unit && !logs.stdout && !logs.stderr && <p>{t("No output recorded.")}</p>}
+      {capture && <ExecutionProgress kind="playwright" run={capture} />}
       {capture &&
         (["after", "before"] as const)
           .filter((side) => capture[side].cases.length > 0)
@@ -466,9 +243,20 @@ function RecordedEvidence({ api, context }: { api: Api; context: ReviewContext }
               <h3 className="text-sm font-medium">{t(side === "after" ? "After" : "Before")}</h3>
               {capture[side as "after" | "before"].cases.map((item) => (
                 <div key={item.id} className="flex min-w-0 flex-col gap-2">
-                  <p>
+                  <h3 className="break-words text-sm font-medium">
                     {item.title} · {t(item.status)}
-                  </p>
+                  </h3>
+                  {item.errors.map((error, index) => (
+                    <Notice key={index} error>
+                      {error}
+                    </Notice>
+                  ))}
+                  {item.steps.map((step, index) => (
+                    <p key={index} className="break-words text-sm">
+                      {step.title}
+                      {step.error ? ` · ${step.error}` : ""}
+                    </p>
+                  ))}
                   <Collapsible>
                     <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
                       {t("Executed source")}: {item.file}
@@ -675,4 +463,35 @@ function ApprovalPreviewContent({
       )}
     </section>
   )
+}
+
+function PlaywrightSource({ api, runId, path }: { api: Api; runId: string; path: string }) {
+  const { t } = useTranslation()
+  const [source, setSource] = useState<string | null>(null)
+  const [error, setError] = useState("")
+  const refresh = useCallback(
+    async (signal: AbortSignal) => {
+      setSource(null)
+      setError("")
+      try {
+        const value = await api.captureSource(runId, path, signal)
+        if (!signal.aborted) {
+          setSource(value)
+        }
+      } catch (cause) {
+        if (!signal.aborted) {
+          setError(String(cause))
+        }
+      }
+    },
+    [api, runId, path],
+  )
+  useRefreshRequest(refresh, useLiveRevision())
+  if (error) {
+    return <Notice error>{error}</Notice>
+  }
+  if (source === null) {
+    return <Loading>{t("Loading recorded source…")}</Loading>
+  }
+  return <UnifiedDiff source={{ path, content: source }} />
 }

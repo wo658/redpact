@@ -2,7 +2,6 @@ import "./sidebar-csp"
 import { createRoot } from "react-dom/client"
 import App from "../App"
 import { initialize } from "../lib/sidebar-runtime"
-import { ThemeProvider } from "../lib/theme"
 import { setViewerTransport, type ViewerEvents } from "../lib/viewer-transport"
 import "../index.css"
 
@@ -77,10 +76,6 @@ void initialize((call) => {
     throw new Error("Viewer root unavailable")
   }
   const root = createRoot(element)
-  root.render(
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>,
-  )
+  root.render(<App />)
   return () => root.unmount()
 })

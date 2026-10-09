@@ -9,8 +9,8 @@ Redpact connects agent-led development in chat to managed execution and human re
 The host agent owns worktree isolation, test-first implementation, authored files and
 Git operations. Redpact connects those checkouts, captures submitted test intent and
 source, executes tests, and presents observed evidence. The review viewer focuses on
-current work, execution history and a specific run; it does not duplicate the host's
-file browser, Git Graph or workspace-tab manager.
+an exact execution and its worktree-bound history. The host owns project management,
+settings edits, file browsing, Git and task switching.
 Test success, configuration validity, application freshness and human acceptance
 are different facts. A result never implies the others.
 
@@ -84,8 +84,7 @@ between record files.
 - Runtime storage uses JSON and artifact files with one writer per instance. Ordered Umzug startup
   migrations upgrade supported runtime layouts; see [storage](storage.md). There is
   no SQLite/Drizzle runtime.
-- Native Git owns status and exclude semantics for all index formats, patches and
-  mutations. Repository discovery and supported blob reads retain isomorphic-git.
+- Native Git owns read-only status, exclude semantics and source comparisons for all index formats. Repository discovery and supported blob reads retain isomorphic-git.
 - Parcel file observation drives scoped invalidations; observation never runs tests.
 - ts-morph extracts static test intent from isolated submitted-file symbols without
   loading TypeScript standard-library declarations. Vitest records actual integration results.
@@ -97,7 +96,6 @@ between record files.
 - MCP Apps implement request approval. Their capabilities
   rely on the client keeping App-only metadata out of model context; this does not
   establish code-review acceptance or isolation from trusted local processes.
-- GitHub publication reuses native Git and authenticated `gh`; GitHub owns PR identity.
 
 Standalone npm installs use a CLI parent to stop the owned server before delegating package replacement to its detected npm/pnpm owner. Native desktop keeps Tauri ownership. Update status remains available through the retained HTTP or native commands; the focused viewer has no update panel. SemVer comparison uses the existing node-semver implementation. See [runtime updates](installation.md) for installation limits and restart behavior.
 
@@ -106,7 +104,7 @@ Standalone npm installs use a CLI parent to stop the owned server before delegat
 Live Git checkout discovery and immutable execution identities are separate. A
 missing checkout can keep historical results while becoming unavailable for new
 execution. Shared fixed configuration is described in
-[settings ownership](settings-reference.md), not copied into worktree identity.
+[settings ownership](configuration.md), not copied into worktree identity.
 
 Use [execution](execution.md), [storage](storage.md), [interfaces](interfaces.md),
 [Git operations](git.md) and [frontend conventions](frontend.md) for their contracts.

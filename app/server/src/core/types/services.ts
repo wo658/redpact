@@ -11,15 +11,14 @@ import type {
   Worktree,
 } from "./contracts.js"
 import type { Environment } from "./environment.js"
-import type { BranchReview, GitDiff, GitService } from "./git.js"
+import type { GitService } from "./git.js"
 import type { ExecutionSummary, RunLogs } from "./run-logs.js"
 import type { SettingsService, TestSelection } from "./settings.js"
-import type { StartWorkInput, WorkStart } from "./start-work.js"
 import type { TestConnections } from "./test-connections.js"
 
-// Identity publication shares the admission gate with execution and managed creation.
+// Existing-checkout identity publication shares the admission gate with execution.
 export type WorktreeAdmission = {
-  ensure(projectId: string, path: string, managed?: { id: string }): Promise<Worktree>
+  ensure(projectId: string, path: string): Promise<Worktree>
 }
 export type WorktreeService = {
   exclusive<T>(operation: (admission: WorktreeAdmission) => Promise<T> | T): Promise<T>
@@ -33,27 +32,10 @@ export type WorktreeService = {
   observed(path: string): Promise<ObservedBinding | null>
   listProjects(includeDisconnected?: boolean): Promise<ProjectRecord[]>
   projectDetails(): Promise<(ProjectRecord & { projectRoot: string | null; available: boolean })[]>
-  renameProject(id: string, name: string): Promise<ProjectRecord>
-  disconnectProject(id: string): Promise<ProjectRecord>
-  reconnectProject(id: string): Promise<ProjectRecord>
   checkoutPaths(projectId: string): Promise<string[]>
   listWorktrees(projectId: string): Promise<Worktree[]>
-  connect(path: string, name?: string, reconnect?: boolean): Promise<ProjectRecord>
+  connect(path: string): Promise<ProjectRecord>
   ensure(projectId: string, path: string): Promise<Worktree>
-}
-export type WorkStarts = {
-  get(id: string): WorkStart
-  start(input: StartWorkInput): Promise<{
-    requestId: string
-    workItemId: string
-    worktreeId: string
-    projectId: string
-    checkoutRoot: string
-    projectRoot: string
-    revision: string
-    configure: { tool: string; arguments: { action: string; worktreeId: string } }
-    nextSteps: string[]
-  }>
 }
 export type SubmissionsService = {
   latest(worktreeId: string): Submission | undefined
@@ -170,8 +152,4 @@ export type ProjectSettingsService = {
   root(id: string): Promise<string>
   tracking(id: string): Promise<ProjectTracking>
   read(id: string): Promise<{ projectRoot: string; tracking: ProjectTracking }>
-  branches(id: string): Promise<string[]>
-  branchReviews(id: string): Promise<BranchReview[]>
-  branchDiff(id: string, branch: string): Promise<GitDiff>
-  update(id: string, input: ProjectTracking): Promise<ProjectRecord>
 }

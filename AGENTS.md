@@ -2,7 +2,7 @@
 
 ## Read first
 
-Read `docs/architecture.md`, `docs/settings-reference.md`, and `docs/development.md`.
+Read `docs/architecture.md`, `docs/configuration.md`, and `docs/development.md`.
 The website content in `docs/` is the sole maintained product and implementation
 reference. Read the relevant feature page before changing its behavior.
 
@@ -41,8 +41,7 @@ For every UI or screen change, review the relevant Playwright tests and verify t
 
 Use TypeScript and Hono in `app/server`, with interfaces/workflows/core/adapters boundaries following Functional Core, Imperative Shell. HTTP, MCP and internal application triggers share use cases in `src/workflows`, including single-feature queries. Keep handlers close to Hono routes; transport may reuse pure schemas and formatters but must not implement use cases through adapters. Workflows own I/O, lifecycle sequencing, concurrency, recovery and cleanup; simple reads may directly return adapter results without a forwarding Core function. Core owns pure policies, calculations and schemas, receives data rather than effectful service capabilities, and must not import workflows, adapters or interfaces. Supply time and random identifiers from the Shell. Adapters must not import workflows or interfaces. Wire concrete dependencies in `main.ts`. Avoid controller classes, DI containers, generic storage engines and speculative wrappers; reuse adopted OSS and Node standard primitives.
 
-The accepted settings contract is defined in `docs/configuration.md` and
-`docs/settings-reference.md` (one shared fixed execution configuration): one `.redpact/settings.json`, fixed root `services`, dependency-keyed definitions with `kind`, optional `services` and target-specific `env`, and explicit common runner `tests.env`. The agent writes files directly after MCP `configure describe`, then calls `configure validate`; no CLI registration is needed. Implement only this contract, with no project-settings format selector, alternate-format readers, imports or compatibility migration. The executable, HTTP/MCP schema and examples implement this contract. HTTP/MCP and execution must share validation. Preserve omitted environment defaults, apply explicit overrides/unsets and reject dependency variable collisions. A validation pass does not establish readiness or approval.
+The accepted settings contract is defined in `docs/configuration.md` (one shared fixed execution configuration): one `.redpact/settings.json`, fixed root `services`, dependency-keyed definitions with `kind`, optional `services` and target-specific `env`, and explicit common runner `tests.env`. The agent writes files directly after MCP `configure describe`, then calls `configure validate`; no CLI registration is needed. Implement only this contract, with no project-settings format selector, alternate-format readers, imports or compatibility migration. The executable, HTTP/MCP schema and examples implement this contract. HTTP/MCP and execution must share validation. Preserve omitted environment defaults, apply explicit overrides/unsets and reject dependency variable collisions. A validation pass does not establish readiness or approval.
 
 Use file-based runtime storage as described in `docs/storage.md`. Ordinary readers support the current runtime format. Persisted runtime changes require explicit ordered Umzug startup migrations with original backups, validation and interruption/retry coverage. Preserve historical evidence and never silently reset data. Authored project settings remain the single fixed contract above. Do not reintroduce SQLite/Drizzle for normal runtime storage without a new requirement and decision.
 
@@ -52,7 +51,14 @@ Write tests before implementation and observe a real assertion failure. Do not t
 
 The retired Hurl implementation and skill were removed. Use the current server tests and Git history for historical context.
 
-Read-only Git inspection, existing-worktree routing, and managed worktree creation are implemented. Creation uses a separate native Git adapter with durable retry/recovery records. Test execution provisions temporary Compose environments. Project Container separately owns manual inspection environments; execution cannot reuse them. MCP Apps request approval are implemented; they do not establish human acceptance of code changes. Preserve their capability and client trust boundaries. Container declarations may validate but must not silently run without their requested environment.
+Read-only Git inspection and existing-checkout routing support source identity.
+The host agent owns worktree creation, Git mutations, authored settings and publication.
+Test execution provisions temporary Compose environments; general cleanup preserves
+historical evidence and handles resources retained by older versions. MCP Apps and
+explicit viewer review actions request human execution approval; they do not establish
+human acceptance of code changes. Preserve their capability and client trust boundaries.
+Container declarations may validate but must not silently run without their requested
+environment.
 
 ## Self-E2E through Redpact
 
