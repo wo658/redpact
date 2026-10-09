@@ -57,12 +57,7 @@ export function ProjectTests({
                 value="unit"
                 className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden"
               >
-                <LiveUpdates
-                  key={selected.id}
-                  projectId={projectId}
-                  worktreeId={selected.id}
-                  scope="unit"
-                >
+                <LiveUpdates key={selected.id} worktreeId={selected.id} scope="unit">
                   <UnitTests
                     key={selected.id}
                     api={api}
@@ -76,12 +71,7 @@ export function ProjectTests({
                 value="integration"
                 className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden"
               >
-                <LiveUpdates
-                  key={selected.id}
-                  projectId={projectId}
-                  worktreeId={selected.id}
-                  scope="tests"
-                >
+                <LiveUpdates key={selected.id} worktreeId={selected.id} scope="tests">
                   <TestObservation
                     projectId={projectId}
                     key={selected.id}

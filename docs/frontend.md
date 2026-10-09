@@ -203,7 +203,9 @@ views do not register React nodes through effects or build another page toolbar.
 Native file events are coalesced into scoped server invalidations. Expensive refresh
 work is bounded per target; unchanged projects are not rescanned on unrelated events.
 Watchers are disposed with their scope and recover explicitly from resource failures.
-The viewer subscribes to scoped SSE and refreshes the affected query. Opening a page
+The viewer subscribes to scoped SSE and refreshes the affected query. Project Tests
+uses the primary worktree scope for Unit and Integration, without also sending a project
+scope in the same subscription. Opening a page
 or observing changes never starts tests. Manual Container additionally polls its
 state/input identity while open.
 
