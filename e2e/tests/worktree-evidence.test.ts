@@ -110,6 +110,24 @@ test("MCP가 선택한 워크트리를 확인하고 테스트 결과 카드를 �
     const tools = await rpc<{
       tools: { name: string; _meta?: { ui?: { resourceUri: string } } }[]
     }>("tools/list", {})
+    expect(tools.tools.map((tool) => tool.name)).toEqual(
+      expect.arrayContaining([
+        "run_unit_tests",
+        "run_playwright",
+        "list_executions",
+        "get_execution",
+        "cancel_execution",
+      ]),
+    )
+    const history = await rpc<{ structuredContent: { worktreeId: string; items: unknown[] } }>(
+      "tools/call",
+      {
+        name: "list_executions",
+        arguments: { path: checkout },
+      },
+    )
+    expect(history.structuredContent.worktreeId).toBe(worktreeId)
+    expect(Array.isArray(history.structuredContent.items)).toBe(true)
     const uri = tools.tools.find((tool) => tool.name === "get_run")?._meta?.ui?.resourceUri
     expect(uri).toBe("ui://redpact/tests.html")
     const resource = await rpc<{ contents: { mimeType: string; text: string }[] }>(

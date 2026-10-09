@@ -25,10 +25,11 @@ Unit에는 호스트 명령 fallback이 없습니다. Dockerfile은 소스와 �
 [테스트 작성](tests.md)을 참고하세요.
 
 세 항목은 서로 다른 실행 계약입니다. MCP `run_tests`는 Integration 제출만 실행합니다.
-Unit 실행은 Unit 탭에서 시작해 설정된 전체 명령을 실행하며, 종료 상태를 Integration 케이스
-결과로 취급하지 않습니다. Playwright 실행은 Playwright UI/API에서 선언된 기능 또는 캡처
+Unit 실행은 Unit 탭 또는 `run_unit_tests`에서 시작해 설정된 전체 명령을 실행하며, 종료 상태를 Integration 케이스
+결과로 취급하지 않습니다. Playwright 실행은 Playwright UI/API 또는 `run_playwright`에서 선언된 기능 또는 캡처
 target을 선택해 시작합니다. 스크린샷, UI Review 산출물, 실행 기록과 정리는 MCP 제출이 아닌
-해당 Playwright 실행에 남습니다.
+해당 Playwright 실행에 남습니다. 승인 제한, 기록된 증거 조회와 취소는
+[MCP 인터페이스](interfaces.ko.md)를 참고하세요.
 
 뷰어는 세 실행 유형의 결과 화면에 같은 형식의 진행 상태를 표시합니다. 현재 준비·실행·정리·
 완료 단계와 경과 시간을 보여 주며, 실행 중인 Unit과 Integration은 실행 버튼 옆에도

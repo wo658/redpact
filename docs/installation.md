@@ -424,7 +424,7 @@ Add a Streamable HTTP MCP connection in your agent client using:
 http://127.0.0.1:54318/mcp
 ```
 
-Client configuration syntax varies. Use its HTTP MCP connection facility; Redpact does not supply a stdio bridge for this workflow. The model-facing tools are `configure`, `run_tests`, and `get_run`.
+Client configuration syntax varies. Use its HTTP MCP connection facility; Redpact does not supply a stdio bridge for this workflow. See [MCP interfaces](interfaces.md) for the model-facing configuration, execution and evidence tools.
 
 Ask the agent to call `configure`, replacing the path:
 

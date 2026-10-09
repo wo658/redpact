@@ -27,11 +27,12 @@ contents must remain distinguishable in the viewer. [Test authoring](tests.md)
 describes supported source collection and assertions.
 
 The three entries are separate execution contracts. MCP `run_tests` admits only
-Integration submissions. Unit runs start from the Unit tab and execute the complete
+Integration submissions. Unit runs start from the Unit tab or `run_unit_tests` and execute the complete
 configured command; their exit status is not an Integration case result. Playwright
 runs start by selecting a declared functional or capture target in the Playwright
-UI/API. Their screenshots, UI-review artifacts, execution record and cleanup stay
-with that Playwright run rather than an MCP submission.
+UI/API or `run_playwright`. Their screenshots, UI-review artifacts, execution record and cleanup stay
+with that Playwright run rather than an MCP submission. See [MCP interfaces](interfaces.md)
+for approval limits, recorded evidence lookup and cancellation.
 
 The viewer presents a common progress strip for all three run types in their
 result views. It shows the current preparation, execution, cleanup or finished

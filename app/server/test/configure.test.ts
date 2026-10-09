@@ -159,7 +159,7 @@ test("unit-only configuration guidance requires its runtime container without in
   )
   const result = (await configure("validate")).structuredContent
   expect(result.validation.valid).toBe(true)
-  expect(result.nextSteps.join(" ")).toContain("Unit Test")
+  expect(result.nextSteps.join(" ")).toContain("run_unit_tests")
   expect(result.nextSteps.join(" ")).toContain("run_tests is only for managed integration")
   const description = (await configure("describe")).structuredContent
   expect(description.nextSteps.join(" ")).toContain("For managed integration")

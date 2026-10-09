@@ -3,50 +3,25 @@ import { createMcpHonoApp } from "@modelcontextprotocol/hono"
 import { McpServer, WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/server"
 import { z } from "zod"
 import { problem } from "../../core/problems.js"
-import { publicSettings } from "../../core/settings.js"
+import type { publicSettings } from "../../core/settings.js"
 import { projectPath } from "../../core/settings-schema.js"
-import type { SettingsResult } from "../../core/types/settings.js"
 import { configure, configureInput } from "../../workflows/configure.js"
 import type { Services } from "../../workflows/services.js"
 import { idInput } from "../schemas.js"
 import { environmentResource, registerApps, reviewResult, testsResource, uiMeta } from "./apps.js"
+import { invoke, output, readOnly } from "./result.js"
+import { registerVerificationTools } from "./verification.js"
 
 const pathInput = z
   .string()
   .min(1)
   .max(4096)
   .refine(isAbsolute, "Use an absolute project directory")
-const readOnly = {
-  readOnlyHint: true,
-  destructiveHint: false,
-  idempotentHint: true,
-  openWorldHint: false,
-}
-const output = (value: object) => ({
-  content: [{ type: "text" as const, text: JSON.stringify(value) }],
-  structuredContent: value as Record<string, unknown>,
-})
-async function invoke(operation: () => unknown) {
-  try {
-    const value = await operation()
-    return output(value as object)
-  } catch (error) {
-    return {
-      ...output({
-        error: error instanceof Error ? error.message : "Operation failed",
-        ...(error instanceof Error && "code" in error ? { code: error.code } : {}),
-        ...(error instanceof Error && "validation" in error
-          ? { validation: publicSettings(error.validation as SettingsResult) }
-          : {}),
-      }),
-      isError: true,
-    }
-  }
-}
 export function mcpRoutes(services: Services) {
   return createMcpHonoApp().all("/", async (c) => {
     const server = new McpServer({ name: "redpact", version: "0.1.0" })
     registerApps(server, services.reviews)
+    registerVerificationTools(server, services)
     server.registerTool(
       "configure",
       {

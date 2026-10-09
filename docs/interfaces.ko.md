@@ -23,12 +23,34 @@ HTTP와 MCP는 같은 애플리케이션 workflow로 진입하고 실행·설정
 | `configure` | 절대 실행 `path`의 `describe`, `inspect`, `validate`. 스키마, 루트, 진단과 선택적 계획 반환 |
 | `run_tests` | 절대 `path`, 선택적 정확한 `tests` 경로. Integration 제출·실행 |
 | `get_run` | 반환된 실행 또는 검토 `id`로 상태, 결과와 환경 정리 조회 |
+| `run_unit_tests` | 기존 체크아웃의 절대 `path`로 설정된 전체 Unit 명령 실행 |
+| `run_playwright` | 기존 체크아웃의 절대 `path`, 필수 선언된 `target`, 선택적 `viewport` |
+| `list_executions` | 체크아웃의 절대 `path`, 선택적 반환 커서 `before`로 세 실행 유형의 보존된 이력 조회 |
+| `get_execution` | `kind`, `id`와 `detail`로 결과, 제한된 로그, 캡처된 테스트 소스 또는 기록된 PNG 조회 |
+| `cancel_execution` | `kind`, `id`로 해당 실행의 기존 수명주기에 따라 취소 |
 
 실행은 공유된 고정 프로젝트 설정에서 도출하며 `selection` 입력은 거부합니다.
 Configure는 설정 저장, 컨테이너 시작, 테스트 승인을 하지 않습니다.
-Describe 후 파일을 작성하고 같은 체크아웃을 validate하세요. Unit과 Playwright는 뷰어나
-HTTP에서 실행합니다. Unit은 설정된 명령을 실행하고, Playwright는 기능 또는 캡처 target을
-선택해 UI Review 증거를 보존합니다. MCP에는 취소·정리가 없으며 사용자가 뷰어에서 조기 종료와 재시도를 관리합니다.
+Describe 후 호스트 에이전트로 파일을 작성하고 같은 체크아웃을 validate하세요.
+파일 편집과 native Git 작업은 호스트 에이전트가 담당합니다. 이 도구들은 Git 워크트리를
+생성하거나 임의 셸 명령을 받거나 독립적인 컨테이너 관리를 제공하지 않습니다.
+실행 workflow가 자신의 임시 환경을 준비하고 정리합니다.
+
+`list_executions`로 같은 체크아웃의 증거를 찾고 `get_execution`에
+`kind: integration | unit | playwright`와 ID를 전달합니다. 관찰되지 않은 체크아웃은
+프로젝트 등록 없이 빈 이력을 반환합니다. `detail: source`에는 `sourcePath`가 필요하며
+현재 파일이 아닌 기록된 Integration 또는 Playwright 테스트 코드를 읽습니다.
+Unit은 전체 명령 출력을 보존합니다. `detail: image`에는 Playwright `artifactId`가
+필요하고 `side: before | after`(기본 `after`)를 받으며 최대 8 MiB의 PNG 이미지 콘텐츠를
+반환합니다. 더 큰 이미지, 동영상과 trace는 뷰어를 사용하세요.
+과거 증거의 통과는 현재 코드의 최신성이나 사람의 수락을 입증하지 않습니다.
+
+`run_tests`는 기존 Integration 승인 흐름을 유지합니다. Unit과 Playwright의 MCP 시작은
+현재 Auto 정책이 필요합니다. Ask에서는 등록·실행 전에 실패하며 뷰어에서 명시적으로
+시작해야 합니다. 정책 변경이나 승인 권한은 없습니다. `cancel_execution`은 승인 없이
+대기 중인 Integration 검토 ID도 취소할 수 있습니다. 취소 후 결과를 조회해 테스트 결과와
+정리 실패를 구분하세요. Unit과 Playwright의 기존 정리 재시도 동작은 유지됩니다.
+`get_execution`의 result는 Integration 검토 ID를 지원하며 로그·소스에는 실제 실행 ID를 사용합니다.
 
 시작 기본값이나 기존 `worktreeId`로 대상을 찾을 수 있지만 작성 시 명시적 경로를
 권장합니다. 발견은 선언된 루트와 native Git 등록을 관찰할 뿐 워크트리를 만들거나

@@ -24,14 +24,35 @@ normal preconditions even when called outside the viewer. See [architecture](arc
 | `configure` | `describe`, `inspect` or `validate` for an absolute execution `path`; returns schema, roots, diagnostics and optional plan |
 | `run_tests` | Absolute `path`, optional exact `tests` paths; submits and executes Integration |
 | `get_run` | Returned execution or review `id`; reads state, results and environment cleanup |
+| `run_unit_tests` | Absolute existing checkout `path`; runs the complete configured Unit command |
+| `run_playwright` | Absolute existing checkout `path`, required declared `target`, optional `viewport` |
+| `list_executions` | Absolute checkout `path`, optional returned `before` cursor; retained history across all three execution types |
+| `get_execution` | `kind` and `id`; `detail` selects result, bounded log, captured test source or recorded PNG |
+| `cancel_execution` | `kind` and `id`; cancels the identified execution through its existing lifecycle |
 
 Execution derives from the shared fixed project settings; `selection` is rejected.
 Configure does not save configuration, start containers or approve tests.
-Call describe, edit the authored files, then validate the same checkout. Use the
-viewer or HTTP for Unit and Playwright: Unit executes its configured command,
-while Playwright selects a functional or capture target and retains its UI-review evidence.
-MCP does not expose cancellation/cleanup;
-users manage early termination and retry through the viewer.
+Call describe, edit authored files with the host agent, then validate the same checkout.
+The host agent owns file editing and native Git operations. These tools do not create
+Git worktrees, accept arbitrary shell commands or expose independent container management.
+Execution workflows prepare and clean up their own temporary environments.
+
+Use `list_executions` to find evidence for the same checkout, then `get_execution`
+with `kind: integration | unit | playwright` and its ID. Unobserved checkouts return
+empty history without registering a project. `detail: source` requires `sourcePath`
+and reads recorded Integration or Playwright test code, never the current file.
+Unit retains whole-command output instead. `detail: image` requires a Playwright
+`artifactId` and accepts `side: before | after` (default `after`); it returns PNG
+image content up to 8 MiB. Use the viewer for larger images, video and traces.
+Passing historical evidence does not establish current-code freshness or human acceptance.
+
+`run_tests` retains its Integration approval flow. Unit and Playwright MCP starts
+currently require Auto policy; under Ask they fail before registration or execution
+and require an explicit viewer action. They cannot change policy or grant approval.
+`cancel_execution` also accepts pending Integration review IDs without approving them.
+Read result state after cancellation to distinguish test outcome from cleanup failure;
+Unit and Playwright retain their existing cleanup retry behavior. Integration review
+IDs work with `get_execution` result; use the eventual run ID for logs and source.
 
 The configured startup default or an existing `worktreeId` can resolve a binding;
 prefer an explicit path when authoring. Discovery observes declared roots and native

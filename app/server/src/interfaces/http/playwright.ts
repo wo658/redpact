@@ -2,8 +2,7 @@ import { zValidator } from "@hono/zod-validator"
 import { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
-import { captureRunSchema } from "../../core/playwright-schema.js"
-import { name } from "../../core/settings-schema.js"
+import { captureInputSchema, captureRunSchema } from "../../core/playwright-schema.js"
 import type {
   CaptureService,
   CaptureWorkflow,
@@ -11,15 +10,6 @@ import type {
 } from "../../core/types/playwright.js"
 import { jsonResponse, localErrors } from "./docs/metadata.js"
 
-const captureInputSchema = z.strictObject({
-  target: name.optional(),
-  viewport: z
-    .strictObject({
-      width: z.number().int().min(320).max(3840),
-      height: z.number().int().min(240).max(2160),
-    })
-    .optional(),
-})
 export function playwrightRoutes(
   captures: CaptureService,
   workflow: CaptureWorkflow,

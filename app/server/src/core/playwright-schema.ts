@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { settingsSchema, testSelectionSchema } from "./settings-schema.js"
+import { name, settingsSchema, testSelectionSchema } from "./settings-schema.js"
 import { resourceLimitSchema } from "./test-resource-schema.js"
 export const captureArtifactSchema = z.strictObject({
   id: z.string().uuid(),
@@ -79,4 +79,14 @@ export const captureRunSchema = z.strictObject({
   cleanupError: z.string().optional(),
   before: side,
   after: side,
+})
+
+export const captureInputSchema = z.strictObject({
+  target: name.optional(),
+  viewport: z
+    .strictObject({
+      width: z.number().int().min(320).max(3840),
+      height: z.number().int().min(240).max(2160),
+    })
+    .optional(),
 })
