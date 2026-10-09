@@ -1,5 +1,5 @@
 import { App } from "@modelcontextprotocol/ext-apps"
-import type { RuntimeState } from "./model.js"
+import type { RuntimeState } from "./sidebar-runtime-model.js"
 
 type Page = { status: RuntimeState; error: string }
 

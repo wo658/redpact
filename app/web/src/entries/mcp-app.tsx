@@ -1,7 +1,7 @@
 import { App } from "@modelcontextprotocol/ext-apps"
 import { useCallback, useEffect, useState } from "react"
 import { createRoot } from "react-dom/client"
-import { EnvironmentCard, TestCard } from "@/components/mcp/cards"
+import { EnvironmentCard, EvidenceCard, ExecutionCard, TestCard } from "@/components/mcp/cards"
 import { type CardActions, type Snapshot, snapshotSchema } from "@/components/mcp/model"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -20,6 +20,7 @@ function McpView() {
       return
     }
     setData(parsed.data)
+    setError("")
   }, [])
   useEffect(() => {
     app.ontoolresult = receive
@@ -83,6 +84,19 @@ function McpView() {
         )
       }
     },
+    approveExecution: () => {
+      if (data?.executionReview && data.token) {
+        void call(
+          "execution_review_action",
+          {
+            id: data.executionReview.id,
+            revision: data.executionReview.revision,
+            token: data.token,
+          },
+          true,
+        )
+      }
+    },
     changePolicy: (policy) => {
       if (data?.token) {
         void call("set_approval_policy", { token: data.token, policy }, false)
@@ -97,14 +111,19 @@ function McpView() {
         </Alert>
       )}
       {!data && !error && <Skeleton className="h-32 w-full" />}
-      {data && data.kind !== "tests" && (
+      {data && data.kind !== "tests" && data.kind !== "execution" && data.kind !== "evidence" && (
         <EnvironmentCard
           key={`${data.review?.id ?? data.path}-${data.review?.revision ?? 0}`}
           data={data}
           actions={actions}
         />
       )}
-      {data && data.kind !== "environment" && <TestCard data={data} actions={actions} />}
+      {data &&
+        data.kind !== "environment" &&
+        data.kind !== "execution" &&
+        data.kind !== "evidence" && <TestCard data={data} actions={actions} />}
+      {data?.kind === "execution" && <ExecutionCard data={data} actions={actions} />}
+      {data?.kind === "evidence" && <EvidenceCard data={data} />}
     </main>
   )
 }

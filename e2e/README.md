@@ -24,19 +24,23 @@ no installed browser or Playwright test runtime.
    checkout through that same instance's `/api/projects`, tracking, and worktrees
    endpoints.
 5. Call `configure validate` with the checkout path. The discovered bundle must include
-   `target.ts` and `worktree-evidence.test.ts`.
+   `target.ts`, `worktree-evidence.test.ts`, and `chat-context.test.ts`.
 6. Call `run_tests` with that same path and
-   `tests: ["worktree-evidence.test.ts"]`. Honor any Ask approval. Use a fresh
+   `tests: ["worktree-evidence.test.ts", "chat-context.test.ts"]`. Honor any Ask approval. Use a fresh
    environment after application changes. Read `get_run` until terminal.
 7. Verify `run.target.projectRoot` is the requested checkout. On the connected
    server, `/api/submissions?worktreeId=<run.target.worktreeId>` must contain
    `run.submissionId`, and `/api/runs?submissionId=<run.submissionId>` must contain
-   the run. This is the data the selected worktree's Tests view reads. Report run and
-   environment IDs, actual case results, and that server's origin.
+   the run. Select that same checkout in the connected viewer and verify the run in
+   Execution history; Current work also shows its recent evidence and any pending
+   approval, active execution, or cleanup issue. Open the execution's review and
+   confirm its recorded submission. Report run and environment IDs, actual case
+   results, and that server's origin.
 
 Do not copy run records between projects or servers. A local `pnpm test` result
 alone does not create a Redpact submission. "No test submissions" means this selected
-worktree has no recorded bundle; it does not classify tests as unit or E2E.
+worktree has no recorded bundle in the retained Tools → Tests view; it does not
+classify tests as unit or E2E.
 
 ## Environment and extension
 
@@ -72,8 +76,8 @@ the Playwright app service and loopback port. Its target patterns are relative t
 `project/tests/**/!(product-demo).spec.ts` for functional scenarios. The separate
 `demo` target selects `project/tests/product-demo.spec.ts`. All three targets use
 project scope.
-Use the advertised capture HTTP action
-on the connected instance; these sources are separate from `run_tests`.
+Use `run_playwright` with the absolute checkout and declared `captures` target on
+the connected instance; these sources are separate from `run_tests`.
 
 Native adapter verification is available after building this checkout's app image:
 
@@ -97,6 +101,27 @@ value types, and removal of credential APIs/tools through the actual application
 
 `dependency-topology.test.ts` verifies fixed dependency definitions, application-service
 relationships, and revision-preserving rejection of unsupported kinds through HTTP and MCP.
+
+`chat-context.test.ts` verifies that checkout status reads do not register a project,
+then explicitly connects a disposable project and records a Unit attempt. The target
+has no Docker socket, so this attempt must record an execution error rather than a
+claimed assertion failure. HTTP and MCP must return matching review context, the same
+checkout/execution identity, bounded evidence references, and unknown freshness with
+human acceptance unrecorded.
+
+`ui-tests/project/tests/chat-review.spec.ts` exercises Current work, Execution history,
+the checkout selector, and collapsed Tools at desktop and mobile widths.
+`execution-approval.spec.ts` renders the actual MCP Unit approval card, verifies its
+captured command and input identity, rejects approval after the checkout changes, and
+removes the approval control after chat cancellation. It also opens the MCP-returned
+execution review link in the connected viewer at desktop and mobile widths, checks
+captured command/input digests and reload identity, rejects changed inputs, and confirms
+viewer cancellation through MCP and a second reload. A separate case waits for the actual
+scoped EventSource to open before creating and cancelling requests in chat, then checks
+Current work and execution detail without reloading. The corresponding
+`ui-tests/project/captures/chat-review.spec.ts` and `execution-approval.spec.ts` record
+reviewable screenshots of both navigation and pending approval details. These request and rejection scenarios do not establish a
+successful nested Unit execution or human acceptance of code changes.
 
 `ui-tests/project/tests/capture-viewport.spec.ts` seeds isolated capture records, verifies
 their public API readback, and checks the real Mobile toggle from the separate

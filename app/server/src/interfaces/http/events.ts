@@ -12,7 +12,7 @@ export function eventRoutes(services: Services) {
       summary: "Observe local viewer invalidations",
       tags: ["Events"],
       description:
-        "Scoped local invalidations: projectId observes worktrees; worktreeId observes checkout sources. scope=preview combines source and shared settings changes with Playwright capture records and environments. scope=tests combines sources with integration evidence. Viewing never executes project code.",
+        "Scoped local invalidations: projectId observes worktrees; worktreeId observes checkout sources. scope=evidence requires worktreeId and observes its recorded approval requests, submissions, executions and environments plus shared project settings. scope=preview combines source and shared settings changes with Playwright capture records and environments. scope=tests combines sources with integration evidence. Viewing never executes project code.",
       responses: {
         200: {
           description: "Server-sent invalidations",

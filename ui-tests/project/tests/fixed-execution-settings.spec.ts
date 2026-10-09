@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test"
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 test("프로젝트 통합 테스트 화면에는 실행 선택 폼이 없다", async ({ page, request }) => {
   const created = await request.post("/api/projects", {
     data: { path: "/app", name: "Fixed configuration" },

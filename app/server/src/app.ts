@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception"
 import { secureHeaders } from "hono/secure-headers"
 import { describeRoute } from "hono-openapi"
 import { approvalPolicyRoutes } from "./interfaces/http/approval-policy.js"
+import { chatContextRoutes } from "./interfaces/http/chat-context.js"
 import { directoryPickerRoutes } from "./interfaces/http/directory-picker.js"
 import {
   conflict,
@@ -95,6 +96,7 @@ export function createApp(services: Services, options: { uiDirectory?: string } 
     if (
       [
         "environment_conflict",
+        "configuration_error",
         "environment_error",
         "project_mismatch",
         "worktree_unavailable",
@@ -149,6 +151,7 @@ export function createApp(services: Services, options: { uiDirectory?: string } 
       playwrightRoutes(services.captures, services.captureWorkflow, services.playwrightCatalog),
     )
   }
+  app.route("/api", chatContextRoutes(services))
   app.route("/api", directoryPickerRoutes(services.directoryPicker))
   if (services.integrationTests) {
     app.route("/api", integrationTestRoutes(services.integrationTests, services.runWorktreeTests))

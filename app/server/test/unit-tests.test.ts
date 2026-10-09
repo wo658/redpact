@@ -233,3 +233,15 @@ test("project inspection requests the full catalog without a Git comparison or e
   expect(execute).not.toHaveBeenCalled()
   await service.close()
 })
+
+test("검토한 단위 명령이 바뀌면 실행 등록 전 승인을 거부한다", async () => {
+  const { deps, execute, config } = fixture()
+  const service = createUnitTests(deps)
+  const approved = structuredClone(config)
+  config.command = "changed-command"
+  await expect(
+    service.start("wt", { settings: approved, inputDigest: "reviewed" }),
+  ).rejects.toMatchObject({ code: "configuration_error" })
+  expect(execute).not.toHaveBeenCalled()
+  await service.close()
+})

@@ -10,7 +10,7 @@ const services = {
       if (id !== "own") {
         throw new Error("Unknown worktree")
       }
-      return { projectId: "p" }
+      return { projectId: "p", projectRoot: "/checkout" }
     },
     resolve: async () => ({
       worktree: { id: "own", projectId: "p", checkoutRoot: "/checkout", projectRoot: "/checkout" },
@@ -43,4 +43,55 @@ test("미리보기 이벤트는 캡처 기록 밖의 소스와 환경 변경을 
   expect(scope.accepts("/runtime/environments/environment.json")).toBe(true)
   expect(scope.accepts("/checkout/src/screen.tsx")).toBe(true)
   expect(scope.accepts("/primary/.redpact/settings.json")).toBe(true)
+})
+
+test("근거 구독은 같은 워크트리의 승인 요청 생성·변경만 전달한다", async () => {
+  const scope = await eventScope(
+    {
+      ...services,
+      reviews: {
+        get: (id: string) => ({ submission: { worktreeId: id === "own" ? "own" : "other" } }),
+      },
+      executionReviews: {
+        get: (id: string) => ({ review: { worktreeId: id === "own" ? "own" : "other" } }),
+      },
+    } as never,
+    { worktreeId: "own", scope: "evidence" },
+  )
+  for (const directory of ["reviews", "execution-reviews"]) {
+    expect(scope.accepts(`/runtime/${directory}/own.json`)).toBe(true)
+    expect(scope.roots).toContainEqual({ path: `/runtime/${directory}`, kind: "records" })
+    expect(scope.accepts(`/runtime/${directory}/other.json`)).toBe(false)
+    expect(scope.accepts(`/runtime/${directory}/own.json/extra`)).toBe(false)
+    expect(scope.accepts(`/runtime/${directory}/own.json.temporary`)).toBe(false)
+    expect(scope.accepts(`/outside/${directory}/own.json`)).toBe(false)
+  }
+})
+
+test("근거 구독은 체크아웃 설정 사본 대신 공유 설정 변경을 전달한다", async () => {
+  const scope = await eventScope(
+    { ...services, projectSettings: { root: async () => "/primary" } } as never,
+    { worktreeId: "own", scope: "evidence" },
+  )
+  expect(scope.accepts("/primary/.redpact/settings.json")).toBe(true)
+  expect(scope.roots).toContainEqual({ path: "/primary/.redpact", kind: "checkout" })
+  expect(scope.accepts("/checkout/.redpact/settings.json")).toBe(false)
+  expect(scope.accepts("/primary/.redpact/unrelated.json")).toBe(false)
+})
+
+test("공유 설정 루트가 사라져도 보존된 실행 근거의 구독을 유지한다", async () => {
+  const scope = await eventScope(
+    {
+      ...services,
+      projectSettings: {
+        root: async () => {
+          throw Object.assign(new Error("Primary directory unavailable"), {
+            code: "worktree_unavailable",
+          })
+        },
+      },
+    } as never,
+    { worktreeId: "own", scope: "evidence" },
+  )
+  expect(scope.accepts("/runtime/playwright-runs/capture.json")).toBe(true)
 })

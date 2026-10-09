@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test"
 import { openScreenshotGallery } from "../screenshot-gallery"
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 test("드롭다운 없이 썸네일로 캡처를 선택하고 키보드로 전환한다", async ({ page }) => {
   test.setTimeout(60000)
   await openScreenshotGallery(page)

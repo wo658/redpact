@@ -134,3 +134,28 @@ test("Auto awaits shared project settings resolution before run admission", asyn
   })
   expect(f.start).toHaveBeenCalledTimes(1)
 })
+
+test("Integration 실행 후 저장 중단은 불확실한 시작을 보존하고 재시작해도 재실행하지 않는다", async () => {
+  const f = fixture("ask")
+  const reviews = createReviewTests(f.deps)
+  const { review } = await reviews.start({ path: "/project" })
+  const token = reviews.capability(review.id)
+  await reviews.approve({ id: review.id, token, revision: 0, subject: "environment" })
+  const save = f.store.save
+  f.store.save = (record) => {
+    if (record.state === "started") {
+      throw new Error("disk interruption")
+    }
+    save(record)
+  }
+  await expect(
+    reviews.approve({ id: review.id, token, revision: 1, subject: "tests" }),
+  ).rejects.toThrow("disk interruption")
+  expect(f.store.list()[0].state).toBe("starting")
+  const recovered = createReviewTests(f.deps)
+  expect(recovered.get(review.id)?.review.state).toBe("interrupted")
+  await expect(
+    recovered.approve({ id: review.id, token, revision: 2, subject: "tests" }),
+  ).rejects.toMatchObject({ code: "invalid_input" })
+  expect(f.start).toHaveBeenCalledOnce()
+})

@@ -161,7 +161,12 @@ test("unit-only configuration guidance requires its runtime container without in
   expect(result.validation.valid).toBe(true)
   expect(result.nextSteps.join(" ")).toContain("run_unit_tests")
   expect(result.nextSteps.join(" ")).toContain("run_tests is only for managed integration")
+  expect(result.nextSteps.join(" ")).toContain("human approval")
+  expect(result.nextSteps.join(" ")).toContain("MCP App or connected viewer")
   const description = (await configure("describe")).structuredContent
   expect(description.nextSteps.join(" ")).toContain("For managed integration")
   expect(description.specification.workflow.join(" ")).toContain("Preserve existing")
+  for (const tool of ["run_unit_tests", "run_playwright", "get_execution"]) {
+    expect(description.specification.workflow.join(" ")).toContain(tool)
+  }
 })

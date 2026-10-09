@@ -8,6 +8,7 @@ import pino from "pino"
 import { observeProjectFiles } from "./adapters/changes/projects.js"
 import { createChangeWatcher } from "./adapters/changes/watch.js"
 import { createNativeDirectoryPicker } from "./adapters/desktop/directory-picker.js"
+import { projectFile, snapshotInputs } from "./adapters/environment/inputs.js"
 import { createComposeAdapter } from "./adapters/environment/testcontainers.js"
 import { createUnitContainer } from "./adapters/environment/unit-container.js"
 import { readCommitDiff } from "./adapters/git/commit-diff.js"
@@ -34,6 +35,7 @@ import { preferenceFiles } from "./adapters/settings/preferences.js"
 import { createLocalFiles } from "./adapters/sources/local.js"
 import { catalogPaths, createUnitTestFiles } from "./adapters/sources/unit-tests.js"
 import { createCaptureStore } from "./adapters/storage/captures.js"
+import { createExecutionReviewStore } from "./adapters/storage/execution-reviews.js"
 import { openStore } from "./adapters/storage/files.js"
 import { loadInstance } from "./adapters/storage/instance.js"
 import { createMergeStore } from "./adapters/storage/merges.js"
@@ -54,6 +56,7 @@ import { createCaptureWorkflow } from "./workflows/capture-ui.js"
 import { createDirectoryPicker } from "./workflows/directory-picker.js"
 import { createEnvironments } from "./workflows/environments.js"
 import { createExecuteTests } from "./workflows/execute-tests.js"
+import { createExecutionReviews } from "./workflows/execution-reviews.js"
 import { createGitService } from "./workflows/git.js"
 import { createIntegrationTests } from "./workflows/integration-tests.js"
 import { createMergeService } from "./workflows/merge.js"
@@ -315,6 +318,15 @@ const command = new Command()
         command: createUnitContainer(directory, instance.id, readTestResources),
         store: unitStore,
       })
+      const executionReviews = createExecutionReviews({
+        store: createExecutionReviewStore(directory),
+        worktrees,
+        units: unitTests,
+        captures,
+        playwright: captureWorkflow,
+        environments,
+        sourceDigest: async (root, directory) => snapshotInputs(await projectFile(root, directory)),
+      })
       const pullRequests = createPullRequests({
         worktrees,
         git: createGitMutations(),
@@ -419,6 +431,7 @@ const command = new Command()
         projectFiles: createProjectFiles({ projects: projectSettings, read: readProjectEntry }),
         projectGraph,
         reviews,
+        executionReviews,
         observation,
         localFiles,
         runFiles,
@@ -530,6 +543,7 @@ const command = new Command()
         server.close()
         await pullRequests.close()
         await merges.close()
+        await executionReviews.close()
         await unitTests.close()
         await reviews.close()
         await captureWorkflow?.close()

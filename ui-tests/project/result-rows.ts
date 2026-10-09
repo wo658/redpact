@@ -12,6 +12,7 @@ export function registerResultRowTests(capture = false) {
   })
   for (const width of [1280, 390]) {
     test(`결과 행 데스크톱과 모바일 ${width}`, async ({ page }, testInfo) => {
+      await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
       await page.setViewportSize({ width, height: 900 })
       const project = await test.step("격리된 앱에 프로젝트와 워크트리를 연결한다", async () => {
         const connected = await http<{ id: string }>("/api/projects", "POST", { path: "/app" })

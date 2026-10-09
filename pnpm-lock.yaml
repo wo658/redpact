@@ -8,7 +8,6 @@ overrides:
   ajv@>=8 <9: 8.20.0
 
 patchedDependencies:
-  '@web-git-graph/web@1.0.7': 3578102ba4041f26f509fb564868cf8b215726417fd0f93131caaeaeb8d1d04f
   testcontainers@12.1.0: 863ed391e7531236d525043d514dc70fbe1709302e4bdf3555fa56cd44ed2c68
 
 importers:
@@ -146,9 +145,6 @@ importers:
       '@web-git-graph/protocol':
         specifier: 1.0.7
         version: 1.0.7
-      '@web-git-graph/web':
-        specifier: 1.0.7
-        version: 1.0.7(patch_hash=3578102ba4041f26f509fb564868cf8b215726417fd0f93131caaeaeb8d1d04f)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1772,9 +1768,6 @@ packages:
 
   '@web-git-graph/protocol@1.0.7':
     resolution: {integrity: sha512-S5BDIFdvXCkScasz+P+7SAUNqas+RC96oEiuv+X49KQAaYpVBvXrBjLlxUSGMPDIgFm1jkPXOkmbIBErGv/lwA==}
-
-  '@web-git-graph/web@1.0.7':
-    resolution: {integrity: sha512-U2dqw4HsHNZAIVyMzB+E0PPinvyg/Q4GoSUk5uNnmD4fSlxn/2Gaqp816Bbddsm4wHHBsefXp7phOYjyJ3MioA==}
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -5997,10 +5990,6 @@ snapshots:
       tinyrainbow: 3.1.1
 
   '@web-git-graph/protocol@1.0.7': {}
-
-  '@web-git-graph/web@1.0.7(patch_hash=3578102ba4041f26f509fb564868cf8b215726417fd0f93131caaeaeb8d1d04f)':
-    dependencies:
-      '@web-git-graph/protocol': 1.0.7
 
   abort-controller@3.0.0:
     dependencies:

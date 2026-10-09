@@ -422,7 +422,7 @@ function ConfigurationForm({
                       </>
                     )}
                     {t(
-                      "Leave empty for automatic detection. Save changes before checking the connection.",
+                      "Leave empty for automatic detection. Saved paths apply to subsequent operations.",
                     )}
                   </FieldDescription>
                 )}

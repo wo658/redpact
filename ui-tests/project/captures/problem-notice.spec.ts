@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test"
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 test("설정 검증 오류의 공통 Notice Handoff shell을 검토한다", async ({ page, request }, info) => {
   const response = await request.post("/api/projects", {
     data: { path: "/app", name: "Problem notice capture fixture" },

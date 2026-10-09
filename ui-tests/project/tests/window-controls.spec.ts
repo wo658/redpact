@@ -2,6 +2,10 @@ import { expect, test } from "@playwright/test"
 import { openApp } from "../app"
 
 // 실제 앱의 Tauri IPC 경계만 대체한다. OS 창 동작 검증과 구분한다.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 test("Windows 창 버튼은 IPC를 호출하고 외부 최대화와 실패 후 재시도를 반영한다", async ({
   page,
 }) => {

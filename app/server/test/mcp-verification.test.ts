@@ -18,6 +18,11 @@ function fixture() {
   }
   const services = {
     worktrees: {
+      observed: vi.fn(async (path: string) =>
+        path === "/repo/feature"
+          ? { projectId: "project", worktreeId, checkoutRoot: path, disconnected: false }
+          : null,
+      ),
       connect: vi.fn(async () => ({ id: "project" })),
       ensure: vi.fn(async () => ({ id: worktreeId })),
       listProjects: vi.fn(async () => [{ id: "project" }]),
@@ -50,6 +55,26 @@ function fixture() {
       })),
     },
     executeTests: { cancel: vi.fn(() => ({ id, state: "cancelled" })) },
+    executionReviews: {
+      request: vi.fn(async () => ({
+        review: {
+          id,
+          kind: "unit",
+          state: "pending",
+          policy: "ask",
+          revision: 0,
+          path: "/repo/feature",
+          worktreeId,
+          createdAt: "now",
+          settingsDigest: "settings",
+          inputDigest: "input",
+          specification: { command: "pnpm test", dockerfile: "Dockerfile", cwd: "." },
+        },
+      })),
+      capability: vi.fn(() => "capability-secret"),
+      get: vi.fn(() => undefined),
+      list: vi.fn(() => []),
+    },
     reviews: {
       policy: vi.fn(() => "auto"),
       get: vi.fn(() => undefined),
@@ -81,6 +106,7 @@ test("Unit과 Playwright는 요청한 기존 체크아웃의 동일 실행 워�
   const { call, services, worktreeId } = fixture()
   const unit = await call("run_unit_tests", { path: "/repo/feature" })
   expect(unit.isError).not.toBe(true)
+  expect(unit._meta?.redpact).toMatchObject({ kind: "execution", execution: { kind: "unit" } })
   expect(services.worktrees.ensure).toHaveBeenCalledWith("project", "/repo/feature")
   expect(services.unitTests.start).toHaveBeenCalledWith(worktreeId)
   const viewport = { width: 390, height: 844 }
@@ -90,6 +116,10 @@ test("Unit과 Playwright는 요청한 기존 체크아웃의 동일 실행 워�
     viewport,
   })
   expect(playwright.isError).not.toBe(true)
+  expect(playwright._meta?.redpact).toMatchObject({
+    kind: "execution",
+    execution: { kind: "playwright" },
+  })
   expect(services.captureWorkflow.start).toHaveBeenCalledWith(
     worktreeId,
     undefined,
@@ -109,20 +139,14 @@ test("Unit과 Playwright는 요청한 기존 체크아웃의 동일 실행 워�
     ).isError,
   ).toBe(true)
 })
-test("Ask 정책에서는 새 실행이나 등록 없이 모델의 우회 실행을 거부한다", async () => {
-  const { call, services } = fixture()
+test("Ask 정책에서 실행 대신 검토 카드를 반환하고 UI 전용 승인을 기다린다", async () => {
+  const { call, services, id } = fixture()
   services.reviews.policy.mockReturnValue("ask")
-  for (const name of ["run_unit_tests", "run_playwright"]) {
-    expect(
-      (
-        await call(name, {
-          path: "/repo/feature",
-          ...(name === "run_playwright" ? { target: "functional" } : {}),
-        })
-      ).isError,
-    ).toBe(true)
-  }
-  expect(services.worktrees.connect).not.toHaveBeenCalled()
+  const result = await call("run_unit_tests", { path: "/repo/feature" })
+  expect(result.isError).not.toBe(true)
+  expect(result.structuredContent).toMatchObject({ kind: "unit", state: "awaiting_approval", id })
+  expect(JSON.stringify(result.structuredContent)).not.toContain("capability-secret")
+  expect(result._meta.redpact.token).toBe("capability-secret")
   expect(services.unitTests.start).not.toHaveBeenCalled()
   expect(services.captureWorkflow.start).not.toHaveBeenCalled()
 })
@@ -131,6 +155,8 @@ test("이력 조회는 등록이나 실행을 하지 않고 체크아웃과 페�
   const listed = await call("list_executions", { path: "/repo/feature", before: "cursor" })
   expect(listed.structuredContent).toMatchObject({ worktreeId, nextCursor: "next" })
   expect(services.runs.listForWorktree).toHaveBeenCalledWith(worktreeId, "cursor")
+  expect(services.worktrees.listProjects).not.toHaveBeenCalled()
+  expect(services.worktrees.listWorktrees).not.toHaveBeenCalled()
   expect((await call("list_executions", { path: "/unobserved" })).structuredContent.items).toEqual(
     [],
   )
@@ -147,6 +173,10 @@ test("실패 로그와 기록 당시 소스·이미지를 모델에 제공한다
     id,
     detail: "source",
     sourcePath: "case.test.ts",
+  })
+  expect(source._meta?.redpact).toMatchObject({
+    kind: "evidence",
+    evidence: { kind: "integration", detail: "source" },
   })
   expect(source.structuredContent).toMatchObject({
     source: "captured Integration source",
@@ -197,3 +227,21 @@ test("취소는 지정한 실행 종류의 기존 취소 동작만 호출한다"
   expect(services.executeTests.cancel).toHaveBeenCalledWith(id)
   expect(services.worktrees.connect).not.toHaveBeenCalled()
 })
+
+test.each([
+  { cleanupError: undefined, expected: "unknown" },
+  { cleanupError: "Environment removal failed", expected: "failed" },
+])(
+  "Playwright 종료만으로 정리 성공을 표시하지 않는다: $expected",
+  async ({ cleanupError, expected }) => {
+    const { call, services, id } = fixture()
+    Object.assign(services.captures.get(), {
+      state: "finished",
+      outcome: "error",
+      error: "Environment preparation failed",
+      cleanupError,
+    })
+    const result = await call("get_execution", { kind: "playwright", id })
+    expect(result._meta.redpact.execution.cleanup).toBe(expected)
+  },
+)

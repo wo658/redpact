@@ -154,3 +154,70 @@ test("execution snapshots display their captured fixed kind", () => {
   assert.doesNotMatch(html, /Remote connection/)
   assert.equal((html.match(/Per-environment/g) ?? []).length, 1)
 })
+
+test("Unit 승인 카드는 캡처한 명령과 입력을 표시하고 명시적인 승인만 제공한다", async () => {
+  const snapshot = {
+    kind: "execution",
+    token: "private-ui-token",
+    executionReview: {
+      id: "review",
+      kind: "unit",
+      state: "pending",
+      revision: 0,
+      path: "/actual/worktree",
+      settingsDigest: "settings",
+      inputDigest: "source",
+      specification: { command: "pnpm test", dockerfile: "Dockerfile", cwd: "." },
+    },
+  }
+  assert.equal(snapshotSchema.safeParse(snapshot).success, true)
+  const { ExecutionCard } = await server.ssrLoadModule("/src/components/mcp/cards.tsx")
+  const html = renderToStaticMarkup(
+    createElement(ExecutionCard, {
+      data: snapshotSchema.parse(snapshot),
+      actions: { ...actions, approveExecution() {} },
+    }),
+  )
+  assert.match(html, /pnpm test/)
+  assert.match(html, /Approve execution/)
+  assert.match(html, /Inputs/)
+  assert.doesNotMatch(html, /private-ui-token|set_approval_policy/)
+})
+
+test("자동 실행 카드는 승인 버튼 없이 관찰된 결과와 정리 상태를 표시한다", async () => {
+  const data = snapshotSchema.parse({
+    kind: "execution",
+    execution: {
+      id: "run",
+      kind: "unit",
+      state: "finished",
+      outcome: "command_failed",
+      cleanup: "removed",
+      path: "/project",
+      specification: { command: "pnpm test", cwd: ".", dockerfile: "Dockerfile" },
+    },
+  })
+  const { ExecutionCard } = await server.ssrLoadModule("/src/components/mcp/cards.tsx")
+  const html = renderToStaticMarkup(createElement(ExecutionCard, { data, actions }))
+  assert.match(html, /command_failed/)
+  assert.match(html, /Cleanup: removed/)
+  assert.doesNotMatch(html, /Approve execution/)
+})
+
+test("기록된 소스 카드는 승인 UI 대신 요청한 증거를 표시한다", async () => {
+  const data = snapshotSchema.parse({
+    kind: "evidence",
+    evidence: {
+      kind: "integration",
+      id: "run",
+      detail: "source",
+      sourcePath: "case.test.ts",
+      text: "expect(actual).toBe(expected)",
+    },
+  })
+  const { EvidenceCard } = await server.ssrLoadModule("/src/components/mcp/cards.tsx")
+  const html = renderToStaticMarkup(createElement(EvidenceCard, { data }))
+  assert.match(html, /case.test.ts/)
+  assert.match(html, /expect\(actual\)/)
+  assert.doesNotMatch(html, /Approve|unsupported Redpact snapshot/)
+})

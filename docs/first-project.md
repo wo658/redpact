@@ -9,9 +9,9 @@ Start with a running [Redpact instance and MCP connection](installation.md). Cho
 
 ## Connect the directory
 
-Use the viewer's project connection form with your application's absolute path, or start the server with `--project /absolute/path/to/your-project`. Connected Git projects discover existing worktrees automatically; discovery does not create branches or run tests.
+Ask the agent to configure the actual repository, or use the viewer's project connection form. Starting the server with `--project /absolute/path/to/your-project` also supplies a default checkout. Connected Git projects discover existing worktrees automatically; discovery does not create branches or run tests.
 
-An agent can address an absolute checkout path directly through MCP. No separate MCP registration or submission operation is required before `run_tests`.
+An agent can address an absolute checkout path directly through MCP. `get_workspace_status` inspects existing bindings and diagnostics without registering or executing the project. No separate MCP registration or submission operation is required before a run request.
 
 ## Ask the agent to inspect the application
 
@@ -21,7 +21,7 @@ Use a request such as:
 
 The agent should determine which Compose services run the application, which dependencies it uses, and which connection values the tests need. Missing Docker or Compose files must be authored from actual application behavior. Declaring a mock dependency does not create an implementation of that mock.
 
-For unit-only setup, request the unit Dockerfile and command instead. MCP `run_tests` runs managed Vitest integration tests; unit commands and Playwright targets use separate execution controls. See [test types and authoring](tests.md).
+For unit-only setup, request the unit Dockerfile and command instead. MCP `run_tests` runs managed Vitest integration tests; use `run_unit_tests` for the whole configured Unit command and `run_playwright` for a declared browser target. See [test types and authoring](tests.md).
 
 ## Define one fixed execution configuration
 

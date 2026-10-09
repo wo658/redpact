@@ -1,6 +1,7 @@
 import type { ChangeWatcher } from "../core/types/changes.js"
 import type { Run } from "../core/types/contracts.js"
 import type { DirectoryPicker } from "../core/types/directory-picker.js"
+import type { ExecutionReviews } from "../core/types/execution-reviews.js"
 import type { GitService } from "../core/types/git.js"
 import type { ProjectGraph } from "../core/types/git-graph.js"
 import type { IntegrationTestsService } from "../core/types/integration-tests.js"
@@ -33,6 +34,7 @@ import type { UnitTestsService } from "../core/types/unit-tests.js"
 import type { Updates } from "../core/types/updates.js"
 
 export type Services = {
+  executionReviews?: ExecutionReviews
   pluginUpdates?: PluginUpdates
   updates?: Updates
   reviewContent?: ReviewContentService

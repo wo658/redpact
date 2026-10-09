@@ -21,7 +21,6 @@
     "@modelcontextprotocol/sdk": "1.29.0",
     "@tailwindcss/vite": "^4.3.3",
     "@web-git-graph/protocol": "1.0.7",
-    "@web-git-graph/web": "1.0.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "i18next": "26.4.2",

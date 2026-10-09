@@ -66,7 +66,7 @@ If startup fails, diagnose the environment before changing assertions. An assert
 
 ## Find the same execution in the viewer
 
-Select the Order Desk project and the checkout used in the request. Inspect Integration results and Log, comparing the recorded submission/run identity with the tool response. Missing records often indicate a different server instance or checkout.
+Ask the agent for `get_review_context` with `kind: "integration"` and the returned identity. Follow its review path on the same viewer origin, or select the Order Desk project and checkout in **Execution history**. Compare the recorded submission/run identity with the tool response. Missing records often indicate a different server instance or checkout.
 
 Open recorded source to see what was submitted. Later working-file edits do not update that snapshot. A pass describes the scenario that ran; it does not verify untested behavior or cover later edits. See [reading results](results.md).
 
@@ -109,7 +109,7 @@ Submit a new request after fixing the relevant inputs. Use `get_run` only to rea
 
 Each run prepares a temporary environment and removes its resources after execution. Recorded sources, results, and logs remain. Cleanup status is separate from the test verdict: a passing test can still require attention if resource removal fails.
 
-Every test execution gets its own environment; standalone test-environment preparation and reuse are unavailable. For manual inspection, Project Container explicitly starts a separate environment that cannot supply test runs. Independently managed services use shared-local or remote kinds. Users cancel runs or retry cleanup through web controls; MCP does not expose separate lifecycle tools.
+Every test execution gets its own environment; standalone test-environment preparation and reuse are unavailable. For manual inspection, Project Container explicitly starts a separate environment that cannot supply test runs. Independently managed services use shared-local or remote kinds. Use `cancel_execution` for an identified request/run and its supported cleanup retry. The viewer retains environment controls; MCP does not expose arbitrary container management.
 
 ## Move to your application
 

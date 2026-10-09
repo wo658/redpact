@@ -12,7 +12,8 @@ test("두 테스트 목록은 변경된 파일과 실제 소스를 실행 없이
     const git=(...args)=>execFileSync('git',['-C',root,'-c','core.hooksPath=/dev/null',...args]);
     git('init','-qb','main'); git('config','user.name','Test'); git('config','user.email','test@example.com');
     mkdirSync(root+'/.redpact'); mkdirSync(root+'/acceptance');
-    writeFileSync(root+'/.redpact/settings.json',JSON.stringify({tests:{directory:'acceptance'},unitTests:{command:'node --version',patterns:['*.test.ts']}}));
+    writeFileSync(root+'/unit.Dockerfile','FROM node:24-alpine\\nWORKDIR /workspace\\nCOPY . .\\n');
+    writeFileSync(root+'/.redpact/settings.json',JSON.stringify({tests:{directory:'acceptance'},unitTests:{dockerfile:'unit.Dockerfile',command:'node --version',patterns:['*.test.ts']}}));
     writeFileSync(root+'/.redpact/tracking.json',JSON.stringify({mainBranch:'main',hideMerged:false}));
     writeFileSync(root+'/unit.test.ts','old unit'); writeFileSync(root+'/acceptance/api.test.ts','old integration');
     writeFileSync(root+'/acceptance/unchanged.test.ts','unchanged');
@@ -34,7 +35,7 @@ test("두 테스트 목록은 변경된 파일과 실제 소스를 실행 없이
       directory: string
       catalog: { files: { path: string; source: string }[]; diagnostics: string[] }
     }>(`/api/worktrees/${worktreeId}/integration-tests`)
-    expect(result.status).toBe(200)
+    expect(result.status, JSON.stringify(result.body)).toBe(200)
     expect(result.body.directory).toBe("acceptance")
     expect(result.body.catalog.diagnostics).toEqual([])
     expect(result.body.catalog.files).toEqual([

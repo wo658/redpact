@@ -64,6 +64,21 @@ export async function eventScope(
     const worktree = worktrees.getWorktree(query.worktreeId)
     const selectionFile = join(worktree.projectRoot, ".redpact/selection.json")
     roots.push({ path: join(worktree.projectRoot, ".redpact"), kind: "checkout" })
+    let settingsRoot: string | undefined = worktree.projectRoot
+    if (services.projectSettings) {
+      try {
+        settingsRoot = await services.projectSettings.root(worktree.projectId)
+      } catch (error) {
+        if ((error as { code?: string }).code !== "worktree_unavailable") {
+          throw error
+        }
+        settingsRoot = undefined
+      }
+    }
+    if (settingsRoot && settingsRoot !== worktree.projectRoot) {
+      roots.push({ path: join(settingsRoot, ".redpact"), kind: "checkout" })
+    }
+    const settingsFile = settingsRoot && join(settingsRoot, ".redpact/settings.json")
     const data = runtime()
     for (const directory of [
       "submissions",
@@ -71,6 +86,8 @@ export async function eventScope(
       "environments",
       "unit-runs",
       "playwright-runs",
+      "reviews",
+      "execution-reviews",
     ]) {
       roots.push({ path: join(data, directory), kind: "records" })
     }
@@ -79,8 +96,20 @@ export async function eventScope(
       accepts(path: string) {
         const [kind, file, state] = relative(data, path).split(/[\\/]/)
         try {
-          if (path === selectionFile) {
+          if (path === selectionFile || path === settingsFile) {
             return true
+          }
+          if (kind === "reviews" && file?.endsWith(".json") && !state) {
+            return (
+              services.reviews?.get(basename(file, ".json"))?.submission.worktreeId ===
+              query.worktreeId
+            )
+          }
+          if (kind === "execution-reviews" && file?.endsWith(".json") && !state) {
+            return (
+              services.executionReviews?.get(basename(file, ".json"))?.review.worktreeId ===
+              query.worktreeId
+            )
           }
           if (kind === "submissions" && file?.endsWith(".json")) {
             return services.submissions.get(basename(file, ".json")).worktreeId === query.worktreeId

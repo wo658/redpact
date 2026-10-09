@@ -10,63 +10,95 @@ export function createRunQueries(
   readLogs?: RunLogReader,
   sources: ExecutionSources = { units: () => [], captures: () => [] },
 ): RunQueries {
-  return {
-    listForWorktree(worktreeId: string, before?: string) {
-      if (!store.getWorktree(worktreeId)) {
-        problem("not_found", "Worktree not found")
-      }
-      const submissions = new Map(
-        store
-          .listSubmissions()
-          .filter((item) => item.worktreeId === worktreeId)
-          .map((item) => [item.id, item]),
-      )
-      const integration: ExecutionSummary[] = store
-        .listRuns()
-        .filter((run) => submissions.has(run.submissionId))
-        .map((run) => {
-          const submission =
-            submissions.get(run.submissionId) ?? problem("not_found", "Submission not found")
-          const work =
-            store.getWorkItem(submission.workItemId) ?? problem("not_found", "Work item not found")
-          return {
-            id: run.id,
-            kind: "integration",
-            submissionId: run.submissionId,
-            intent: work.intent,
-            state: run.state,
-            outcome: run.result?.outcome ?? null,
-            createdAt: run.createdAt,
-            finishedAt: run.finishedAt,
-          }
-        })
-      const units: ExecutionSummary[] = sources
-        .units()
-        .filter((run) => run.worktreeId === worktreeId)
-        .map((run) => ({
+  function allForWorktree(worktreeId: string) {
+    if (!store.getWorktree(worktreeId)) {
+      problem("not_found", "Worktree not found")
+    }
+    const submissions = new Map(
+      store
+        .listSubmissions()
+        .filter((item) => item.worktreeId === worktreeId)
+        .map((item) => [item.id, item]),
+    )
+    const integration: ExecutionSummary[] = store
+      .listRuns()
+      .filter((run) => submissions.has(run.submissionId))
+      .map((run) => {
+        const submission =
+          submissions.get(run.submissionId) ?? problem("not_found", "Submission not found")
+        const work =
+          store.getWorkItem(submission.workItemId) ?? problem("not_found", "Work item not found")
+        return {
           id: run.id,
-          kind: "unit",
-          intent: run.settings.command,
+          kind: "integration",
+          submissionId: run.submissionId,
+          intent: work.intent,
           state: run.state,
-          outcome: run.outcome,
+          outcome: run.result?.outcome ?? null,
           createdAt: run.createdAt,
           finishedAt: run.finishedAt,
-        }))
-      const captures: ExecutionSummary[] = sources
-        .captures()
-        .filter((run) => run.worktreeId === worktreeId)
-        .map((run) => ({
-          id: run.id,
-          kind: "playwright",
-          intent: run.target,
-          state: run.state,
-          outcome: run.outcome ?? null,
-          createdAt: run.createdAt,
-          finishedAt: run.finishedAt ?? null,
-        }))
-      const all = [...integration, ...units, ...captures].sort(
-        (a, b) => b.createdAt.localeCompare(a.createdAt) || key(b).localeCompare(key(a)),
-      )
+        }
+      })
+    const units: ExecutionSummary[] = sources
+      .units()
+      .filter((run) => run.worktreeId === worktreeId)
+      .map((run) => ({
+        id: run.id,
+        kind: "unit",
+        intent: run.settings.command,
+        state: run.state,
+        outcome: run.outcome,
+        createdAt: run.createdAt,
+        finishedAt: run.finishedAt,
+      }))
+    const captures: ExecutionSummary[] = sources
+      .captures()
+      .filter((run) => run.worktreeId === worktreeId)
+      .map((run) => ({
+        id: run.id,
+        kind: "playwright",
+        intent: run.target,
+        state: run.state,
+        outcome: run.outcome ?? null,
+        createdAt: run.createdAt,
+        finishedAt: run.finishedAt ?? null,
+      }))
+    const all = [...integration, ...units, ...captures].sort(
+      (a, b) => b.createdAt.localeCompare(a.createdAt) || key(b).localeCompare(key(a)),
+    )
+    return all
+  }
+  return {
+    attentionForWorktree(worktreeId: string) {
+      const all = allForWorktree(worktreeId)
+      const active = all.filter((run) => run.state !== "finished")
+      const cleanupIds = new Set<string>()
+      for (const run of sources.units()) {
+        if (run.worktreeId === worktreeId && run.cleanup.state === "failed") {
+          cleanupIds.add(`unit:${run.id}`)
+        }
+      }
+      for (const run of sources.captures()) {
+        if (run.worktreeId === worktreeId && run.cleanupError) {
+          cleanupIds.add(`playwright:${run.id}`)
+        }
+      }
+      for (const run of store.listRuns()) {
+        const environment = run.environmentId ? store.getEnvironment(run.environmentId) : undefined
+        if (environment?.state === "stop_failed") {
+          cleanupIds.add(`integration:${run.id}`)
+        }
+      }
+      const cleanup = all.filter((run) => cleanupIds.has(key(run)))
+      return {
+        active: active.slice(0, 20),
+        cleanup: cleanup.slice(0, 20),
+        activeCount: active.length,
+        cleanupCount: cleanup.length,
+      }
+    },
+    listForWorktree(worktreeId: string, before?: string) {
+      const all = allForWorktree(worktreeId)
       const index = before ? all.findIndex((item) => key(item) === before) : -1
       if (before && index < 0) {
         problem("invalid_input", "Invalid run cursor")

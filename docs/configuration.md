@@ -121,7 +121,7 @@ The old selection and overlay files do not affect the plan. See
 
 ## Instance settings
 
-Global Settings controls the instance separately. `configure describe` reports that settings file's location. Instance `projects` lists absolute directories to observe. `server.port` applies after restart. Optional `github.cliPath` selects an absolute GitHub CLI executable.
+**Settings → Instance configuration** controls the instance separately. `configure describe` reports that settings file's location. Instance `projects` lists absolute directories to observe. `server.port` applies after restart. Optional `github.cliPath` selects an absolute GitHub CLI executable.
 
 Per-execution limits belong in that instance file:
 

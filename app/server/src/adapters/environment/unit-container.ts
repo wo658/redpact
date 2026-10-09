@@ -42,6 +42,7 @@ export function createUnitContainer(
     return container
   }
   return {
+    fingerprint: (root) => snapshotInputs(root),
     async execute(run, signal, observe) {
       try {
         signal.throwIfAborted()
@@ -49,6 +50,9 @@ export function createUnitContainer(
         const stage = source(run)
         await mkdir(stage, { recursive: true, mode: 0o700 })
         const inputDigest = await snapshotInputs(run.projectRoot, stage)
+        if (run.inputDigest && inputDigest !== run.inputDigest) {
+          throw new Error("Unit sources changed during review; request a new execution")
+        }
         await readProjectFile(stage, run.settings.dockerfile)
         observe({ inputDigest })
         signal.throwIfAborted()

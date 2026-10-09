@@ -32,7 +32,7 @@ configured command; their exit status is not an Integration case result. Playwri
 runs start by selecting a declared functional or capture target in the Playwright
 UI/API or `run_playwright`. Their screenshots, UI-review artifacts, execution record and cleanup stay
 with that Playwright run rather than an MCP submission. See [MCP interfaces](interfaces.md)
-for approval limits, recorded evidence lookup and cancellation.
+for approval, recorded evidence lookup and cancellation.
 
 The viewer presents a common progress strip for all three run types in their
 result views. It shows the current preparation, execution, cleanup or finished
@@ -48,6 +48,28 @@ and cleanup results remain on the selected run.
 For agent-mediated verification, direct Docker/Compose, Vitest or Playwright CLI
 commands are local diagnostics, not Redpact execution evidence. Start each selected
 path through its entry above so the connected worktree retains its result and cleanup.
+
+## Approval and accepted inputs
+
+MCP execution under Ask creates a durable review before starting project code. Unit
+records the complete configured command and a digest of the inputs its container will
+copy. Playwright records the target, purpose, effective viewport, settings digest,
+application fingerprint and test-directory digest. Requests retain their captured policy
+when future defaults change. The same reviewed request can be approved in the chat
+App or connected review screen; see [request approval](interfaces.md).
+
+Approval revalidates the recorded specification and digests. Changed settings or sources
+require a new request. Unit verifies the actual copied inputs before connecting to Docker
+or building the image. Playwright verifies the captured test directory at admission and
+the approved application fingerprint before recording its environment; the adapter checks
+its copied inputs again before provisioning. A failure is recorded without silently
+substituting newer inputs. A pending review is not an executed test, a recorded TDD red,
+or human acceptance of the implementation.
+
+Fingerprints cover the inputs described below, not every possible external effect.
+Mutable image tags, external build contexts, host mounts, file-backed resources and
+remote services retain their existing Compose boundaries. Approval does not turn those
+inputs into immutable snapshots or prove runtime readiness.
 
 ## Temporary lifecycle
 

@@ -1,13 +1,43 @@
 ---
 name: redpact
-description: Develop through local Redpact with integration-first acceptance and actual application Playwright functional tests for frontend work. User-visible UI changes also produce human-reviewable Playwright captures; focused unit tests support both. Use auto for verified local merge and current for the existing checkout; feature work otherwise uses an isolated worktree. Initial project setup belongs to redpact-init. Use when the user invokes Redpact; ordinary repository work alone does not require this workflow.
+description: Develop through chat with Redpact-managed verification, test-first implementation and isolated worktrees. Inspect checkout status, request Unit, Integration or Playwright execution through MCP, and return recorded evidence for human review. Use auto for verified local merge and current for the existing checkout. Initial project setup belongs to redpact-init. Use when the user invokes Redpact; ordinary repository work alone does not require this workflow.
 ---
 
 # Redpact
 
-Develop the requested application and provide evidence a human can review. Resolve
-the target from the request and repository; keep the connected Redpact service
-independent from that application. Honor explicit scope and execution restrictions.
+Develop the requested application from the conversation and provide recorded evidence
+a human can review. Use the actual checkout throughout. The host agent owns files,
+TDD and Git; Redpact owns managed execution, evidence and request approval. Its viewer
+is for reviewing results and resolving decisions, not a required sequence of manual
+navigation before every operation. Honor explicit scope and execution restrictions.
+
+## Start and continue from chat
+
+Read repository instructions, inspect the actual checkout and reuse this task's
+worktree or create isolation through the host's Git tools. Call `get_workspace_status`
+with its absolute path to inspect configuration diagnostics, pending approvals and
+recorded execution state. A status read does not register or execute the project;
+use `configure describe/inspect/validate` when setup needs attention.
+
+Choose evidence from the requested behavior, write a regression, observe its intended
+assertion fail, implement, then rerun. Use subagents for independent work when available;
+give each an explicit file boundary and the same checkout/evidence identity. The parent
+integrates their changes and verifies the final tree. Delegation is not verification.
+
+Use the MCP entries below for requests and follow their returned identities. Ask policy
+requires the user's action in an MCP App or the connected viewer. If the client cannot
+render Apps, call `get_review_context` with the returned kind and request ID and provide
+its review path on the connected viewer origin for the user to review and approve.
+Never invoke an App-only approval tool, submit the viewer's approval request on the
+user's behalf, copy a capability into model context, or change policy to proceed.
+Polling and text replies do not approve execution. If neither approval interface is
+accessible, retain the pending request and explain that remaining blocker.
+
+Use `get_review_context` for a compact result, failure and evidence references, then
+`get_execution` for the required recorded log, source or image. Return the provided
+review path on the same connected viewer origin; do not infer a new server or claim
+the result is fresh when freshness is unknown. Use `list_executions` for older attempts
+and `cancel_execution` for a specific request/run and its supported cleanup retry.
 
 ## Managed execution boundary
 
@@ -21,8 +51,8 @@ be reported as local-only.
 | Test type | Required connected entry point | Evidence owner |
 | --- | --- | --- |
 | Integration | MCP `run_tests`, then `get_run` | Integration submission and run |
-| Playwright functional or capture | Redpact Playwright UI/API with a declared target | Playwright run, UI Review artifacts and cleanup |
-| Unit | Redpact Unit UI/API with the configured whole command | Unit run, output and cleanup |
+| Playwright functional or capture | MCP `run_playwright` with a declared target, then `get_execution` | Playwright run, recorded artifacts and cleanup |
+| Unit | MCP `run_unit_tests`, then `get_execution` | Whole configured command, output and cleanup |
 
 MCP `run_tests` is Integration-only: never use it for Unit or Playwright files.
 Likewise, do not describe a direct Docker run as a Redpact run or recreate its
@@ -33,11 +63,14 @@ unavailable, finish independent work and report the connected-evidence gap.
 
 In Codex, use `$redpact` and `$redpact-init`. In Claude Code, use
 `/redpact:redpact` and `/redpact:redpact-init`; the same task modes apply.
-The plugin connects to an already running Redpact instance on port 54321.
-It does not install or start the runtime. Start the terminal runtime with
-`redpact serve --port 54321`, or launch the desktop app.
-MCP Apps approval cards require a compatible host; do not
-bypass an unavailable approval UI or silently change the approval policy.
+Use the plugin's configured MCP endpoint and the same instance for the viewer.
+The regular plugin defaults to port 54321 and does not install or start the runtime;
+start `redpact serve --port 54321` or launch the desktop app. The App Page package
+bundles these same skills with its verification connection on port 54322 and manages
+runtime startup separately. Never switch instances just because a default is familiar.
+MCP Apps approval cards require a compatible host; the connected viewer provides the
+same explicit human approval flow when Apps are unavailable. Use the returned review
+path and preserve the requested instance and approval policy.
 
 | Request | Completion scope |
 | --- | --- |
@@ -51,10 +84,11 @@ It does not reduce verification requirements or imply human review approval.
 Follow [Worktree and checkout lifecycle](references/worktree.md) for scope limits,
 merge target selection and completion.
 
-Ordinary feature worktrees reuse the fixed verified project configuration and reuse project Docker/Compose
-and runtime definitions unchanged. Feature work does not authorize infrastructure
-edits, even to fix a failing environment. Resolve gaps with the user as project-level
-setup in the intended base-branch checkout; see the dependency guide before any such change.
+Ordinary feature worktrees reuse the shared project configuration. Resolve required
+setup within the user's authorized task, reading the dependency guide before changing
+Docker/Compose or shared settings. Preserve unrelated values and explain effects on
+future executions. Ask only for missing provider choices, credentials or scope that
+cannot be inferred; do not introduce another approval for routine authorized repairs.
 
 ## Select the next guide
 

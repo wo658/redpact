@@ -5,6 +5,11 @@ description: Checkout discovery, comparisons, creation, local merge and GitHub p
 
 # Projects and Git
 
+The host agent owns file changes, worktree creation, commits, PRs and merges in the
+chat-led workflow. The viewer retains read-only change review; its former File Viewer,
+Git Graph and Git mutation toolbar are removed. The HTTP workflows below remain
+available under their existing explicit preconditions.
+
 ## Identity and discovery
 
 A project is a repository plus its project-relative subdirectory, or a connected
@@ -31,13 +36,13 @@ the folder, Git/directory kind and folder availability. **Connect project** uses
 native folder picker and lets you set a display name. Connecting the same canonical
 project reuses its identity; an existing display name is preserved.
 
-**Rename** changes only the instance's display name, including open project tabs.
+**Rename** changes only the instance's display name, including the selected project label.
 Project settings still owns execution configuration. Folder moves, repository creation,
 cloning and permanent history deletion are not project-management operations.
 
 **Disconnect** requires confirmation and keeps source files, settings, worktrees,
 credentials and execution history. It removes the project from the switcher, closes
-its workspace tabs and stops automatic observation and new execution. The last
+its active review destination and stops automatic observation and new execution. The last
 disconnection returns to startup, where management remains available. The stored
 disconnected state survives restart; observed-root configuration cannot implicitly
 reconnect it. Finish active Unit/Integration/Playwright and Git operations, resolve
@@ -72,15 +77,15 @@ line numbers and statistics.
 Image comparisons follow the shared [file preview contract](frontend.md#file-content-previews),
 including explicit commit revisions, rename paths and distinct staged/unstaged bytes.
 
-## Git Graph and Fetch
+## Git graph and fetch APIs
 
-Git Graph shows bounded commit history with branch filtering, remote visibility,
-loaded-commit search and selected-commit file diffs. Opening and browsing are read-only.
+The Git graph API returns bounded commit history and selected-commit file diffs.
+Graph queries are read-only; the review viewer does not mount a Git Graph screen.
 Fetch explicitly updates remote-tracking branches with destination refspecs for
 configured remotes. It never merges, pushes, prunes, fetches tags or changes local
 branches/index/files. Requests serialize per common Git directory and report missing
 remotes, busy state and partial failure. Refresh history after success or failure.
-Pull and Push are not available in this toolbar.
+These operations do not provide Pull or Push.
 
 ## Managed worktree creation
 
@@ -97,7 +102,7 @@ never claims unobserved outputs. Use a retained project-owned worktree directory
 
 ## Local commit and merge
 
-The worktree toolbar inspects uncommitted changes before Commit or Discard. Commit
+The Git HTTP workflow inspects uncommitted changes before Commit or Discard. Commit
 includes the inspected staged, unstaged and untracked changes. Discard requires
 explicit confirmation and can delete listed untracked files. Freshness checks reject
 changes since inspection; neither action automatically merges afterward.
@@ -122,15 +127,18 @@ in [settings ownership](settings-reference.md); there is no dependency-overlay p
 
 ## GitHub pull requests
 
-PR opens a form showing source, origin and GitHub's default base branch. Opening
-never pushes. Publication requires a clean named non-default branch and supported
-same-repository github.com origin. The app reuses authenticated `gh` and Git
-credentials; it does not store tokens or bundle another authentication system.
-Global Settings can set an absolute `github.cliPath` and check the connection.
+The retained `GET /api/worktrees/:id/pull-request` workflow inspects the source,
+origin and GitHub's default base branch without pushing. Publication through
+`POST /api/worktrees/:id/pull-request` requires a clean named non-default branch and
+supported same-repository github.com origin. It reuses authenticated `gh` and Git
+credentials; Redpact does not store tokens or bundle another authentication system.
+Instance configuration can set an absolute `github.cliPath`; the retained
+`GET /api/instance/github` route checks that executable and authenticated account.
+The review viewer has no PR form or GitHub connection panel.
 
-Publish pushes the inspected SHA to the same origin branch without force or tags,
-then creates a PR. Existing open same-head/base PRs are reused. Push to PR updates
-the branch without replacing its title/body. Source, revision and destination are
+An explicit publication request pushes the inspected SHA to the same origin branch
+without force or tags, then creates a PR. Existing open same-head/base PRs are reused;
+updating their branch does not replace the title/body. Source, revision and destination are
 rechecked; a successful push followed by uncertain creation is reported distinctly,
 and retry checks for the existing PR first.
 

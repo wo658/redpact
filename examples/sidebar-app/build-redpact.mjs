@@ -6,6 +6,7 @@ import { build as buildViewer } from "../../app/web/node_modules/vite/dist/node/
 
 const root = new URL("./", import.meta.url)
 const target = new URL("dist/redpact-marketplace/plugins/redpact-app/", root)
+const runtimePort = 54322
 await mkdir(new URL("dist/", target), { recursive: true })
 const viewerBuild = await buildViewer({
   root: fileURLToPath(new URL("../../app/web/", root)),
@@ -57,6 +58,19 @@ await cp(new URL("../../app/web/licenses/", root), new URL("dist/licenses/", tar
   recursive: true,
 })
 await mkdir(new URL(".codex-plugin/", target), { recursive: true })
+await rm(new URL("skills/", target), { recursive: true, force: true })
+await cp(new URL("../../plugins/redpact/skills/", root), new URL("skills/", target), {
+  recursive: true,
+})
+for (const name of ["redpact", "redpact-init"]) {
+  const metadata = new URL(`skills/${name}/agents/openai.yaml`, target)
+  await writeFile(
+    metadata,
+    (await readFile(metadata, "utf8"))
+      .replace('value: "redpact"', 'value: "redpact-verification"')
+      .replace("http://127.0.0.1:54321/mcp", `http://127.0.0.1:${runtimePort}/mcp`),
+  )
+}
 const favicon = await readFile(new URL("../../app/web/public/favicon.svg", root))
 const template = (await readFile(new URL("src/redpact/app.html", root), "utf8")).replaceAll(
   "APP_FAVICON",
@@ -97,7 +111,7 @@ await writeFile(
   new URL("dist/config.json", target),
   JSON.stringify(
     {
-      port: 54322,
+      port: runtimePort,
       runtimeVersion: "0.8.0",
     },
     null,
@@ -113,7 +127,7 @@ await writeFile(
       $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
       name: "redpact-app",
       version: "0.5.1",
-      description: "Install and run the complete Redpact viewer inside the App Page.",
+      description: "Develop through chat and review managed execution evidence in the App Page.",
       author: { name: "Redpact contributors" },
       extensions: {
         "com.openai": {
@@ -121,7 +135,7 @@ await writeFile(
             displayName: "Redpact App",
             composerIcon: "./assets/icon.png",
             logo: "./assets/icon.png",
-            shortDescription: "Start, stop and review in your local workspace.",
+            shortDescription: "Develop in chat. Review recorded evidence.",
             developerName: "Redpact contributors",
             category: "Developer Tools",
             defaultPrompt: ["Open the Redpact App Page."],
@@ -141,7 +155,7 @@ await writeFile(
     {
       $schema: "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
       mcpServers: {
-        "redpact-verification": { type: "http", url: "http://127.0.0.1:54322/mcp" },
+        "redpact-verification": { type: "http", url: `http://127.0.0.1:${runtimePort}/mcp` },
         "redpact-app": {
           type: "stdio",
           command: "./bin/node",

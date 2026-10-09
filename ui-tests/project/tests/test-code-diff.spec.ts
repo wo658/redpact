@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test"
 import { http, node } from "../target"
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 test("테스트 코드는 전체 코드 전환 없이 변경 구간만 보여준다", async ({ page }) => {
   test.setTimeout(60000)
   const step = test.step

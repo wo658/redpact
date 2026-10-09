@@ -52,7 +52,7 @@ but there are no database foreign keys or cross-file transactions.
 ├── .migrations/backups/<migration>/      # original bytes of changed records
 ├── instance.json, settings.json
 ├── projects/, worktrees/, work-items/, submissions/
-├── work-starts/, reviews/, unit-runs/, merges/
+├── work-starts/, reviews/, execution-reviews/, unit-runs/, merges/
 ├── runs/<id>/
 │   ├── state.json
 │   ├── source/, report.json, vitest.config.mjs
@@ -132,6 +132,20 @@ removes its capture container while retaining its shared runner image. Worktree 
 build images are removed with their environments; Docker build caches and explicitly
 named project images are not pruned. No general automatic evidence archival/deletion policy is implied;
 manual deletion of a referenced record can break its dependants.
+
+Unit and Playwright Ask requests use the additive `execution-reviews/<id>.json`
+record family at `version: 1`. Each record retains its specification, settings/input
+digests, captured policy, revision, UI capability and eventual execution linkage.
+Existing Integration `reviews/` and execution records keep their formats and original
+bytes; this additional family does not transform old records. Future format changes
+must follow the ordered migration rules above. Unknown versions or corrupt reviews
+block startup instead of being reset.
+
+Pending Unit/Playwright reviews remain actionable after restart. A `starting` review
+interrupted during admission becomes `interrupted` and is never replayed. Failure to
+save the final review linkage after a run starts also preserves uncertain admission;
+inspect execution history before requesting again. Cancellation retains reviews and
+evidence. Approval state and execution verdict remain separate.
 
 ## Environment values and evidence
 

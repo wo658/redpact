@@ -95,7 +95,7 @@ test("first visit puts project connection in the main content, not the sidebar",
   assert.doesNotMatch(html, /Create worktree/)
 })
 
-test("connected projects open the first project without a selection page", async () => {
+test("연결된 프로젝트는 프로젝트·체크아웃 선택과 현재 작업 화면으로 열린다", async () => {
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const html = renderToStaticMarkup(
     createElement(ProjectManager, {
@@ -106,13 +106,21 @@ test("connected projects open the first project without a selection page", async
   assert.doesNotMatch(html, /Select a project/)
   assert.match(html, /aria-haspopup="menu"/)
   const doc = new JSDOM(html).window.document
-  assert.equal(doc.querySelectorAll('[role="combobox"]').length, 0)
+  assert.ok(doc.querySelector('input[role="combobox"][aria-label="Checkout"]'))
+  assert.ok(
+    [...doc.querySelectorAll('button[aria-haspopup="menu"]')].some((node) =>
+      node.textContent.includes("My project"),
+    ),
+  )
+  assert.match(doc.body.textContent, /Current work/)
+  assert.match(doc.body.textContent, /Execution history/)
+  assert.equal(doc.querySelector('[role="tablist"][aria-label="Open workspaces"]'), null)
   assert.ok(!doc.querySelector('[role="radiogroup"][aria-label="Language"]'))
   assert.doesNotMatch(html, /Projects \(/)
   assert.doesNotMatch(html, /<form|Create worktree|Attach worktree/)
 })
 
-test("worktree navigation lives below the sole project control in the sidebar", async () => {
+test("보조 Tools가 선택되면 프로젝트 아래에 기존 워크트리 탐색을 표시한다", async () => {
   const { WorktreeSidebar } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const html = renderToStaticMarkup(
     withSidebar(
@@ -125,6 +133,7 @@ test("worktree navigation lives below the sole project control in the sidebar", 
           },
         ],
         selectedId: "tree-one",
+        toolsActive: true,
         pending: false,
         loading: false,
         onSelect() {},

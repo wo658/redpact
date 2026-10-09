@@ -274,3 +274,22 @@ test("수동 확인 환경은 테스트 실행 ID 없이 준비하고 중복 실
   await stop.cleanupTemporary()
   expect(service.get(environment.id).state).toBe("stopped")
 })
+
+test("승인 이후 입력 변경은 환경 등록과 컨테이너 준비 전에 거부한다", async () => {
+  let preparations = 0
+  adapter.prepare = async () => {
+    preparations++
+  }
+  await expect(
+    service.prepare(
+      worktreeId,
+      randomUUID(),
+      settingsDigest,
+      selection,
+      randomUUID(),
+      "reviewed-input",
+    ),
+  ).rejects.toMatchObject({ code: "configuration_error" })
+  expect(preparations).toBe(0)
+  expect(service.list(worktreeId)).toEqual([])
+})

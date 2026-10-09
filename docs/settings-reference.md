@@ -34,6 +34,11 @@ rule. Compose owns service-name syntax; dependency and Playwright target identif
 retain their settings schema. See [execution](execution.md#compose-and-source-capture)
 for the distinction between settings validation and Compose runtime behavior.
 
+Unit and Playwright Ask requests retain the displayed specification and settings/input
+digests. Approval rejects changed inputs and requires a new request; edits never silently
+replace a pending request's reviewed inputs. Existing requests also retain their captured
+policy. See [request approval](interfaces.md) and [input scope](execution.md).
+
 Saving or validating settings never starts code or grants execution approval.
 Every execution owns fresh resources; sharing settings never reuses another run's
 containers, networks or credentials snapshot.
@@ -58,8 +63,8 @@ language explicit without claiming that every application follows browser locale
 
 Tracking stores `mainBranch`, `hideMerged` and optional `showBranches`. Sidebar
 Worktrees controls visibility; Project settings controls the main branch. Browser
-preferences such as theme, language, word wrap and hidden project menus are display
-choices, not repository configuration. Blocked browser storage retains session use.
+preferences such as theme, language, word wrap and the expanded Tools section are
+display choices, not repository configuration. Blocked browser storage retains session use.
 
 Port changes require restart. GitHub CLI and resource preferences affect subsequent
 operations. Accepted runs, pending review inputs and existing environments keep

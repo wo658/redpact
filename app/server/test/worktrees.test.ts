@@ -1644,3 +1644,20 @@ test("project execution has no independent defaults API", async () => {
     readFile(join(repository, ".redpact/integration-defaults.json")),
   ).rejects.toMatchObject({ code: "ENOENT" })
 })
+
+test("상태용 체크아웃 조회는 프로젝트 등록과 설정 생성을 하지 않는다", async () => {
+  expect(services.worktrees.observed).toBeTypeOf("function")
+  const projects = storage.store.listProjects()
+  const records = storage.store.listWorktrees()
+  expect(await services.worktrees.observed(linked)).toBeNull()
+  expect(storage.store.listProjects()).toEqual(projects)
+  expect(storage.store.listWorktrees()).toEqual(records)
+  const project = await services.worktrees.connect(repository)
+  const checkout = await services.worktrees.ensure(project.id, linked)
+  expect(await services.worktrees.observed(linked)).toEqual({
+    projectId: project.id,
+    worktreeId: checkout.id,
+    checkoutRoot: checkout.checkoutRoot,
+    disconnected: false,
+  })
+})

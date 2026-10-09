@@ -1,6 +1,65 @@
 import type { en } from "./en"
 
 export const ko = {
+  Review: "검토",
+  "Requested execution": "실행 요청 내용",
+  "Request details are unavailable. Refresh before approving.":
+    "요청 내용을 불러오지 못했습니다. 승인 전에 새로고침하세요.",
+  Command: "명령",
+  "Working directory": "작업 디렉터리",
+  Dockerfile: "Dockerfile",
+  Target: "대상",
+  Purpose: "목적",
+  Viewport: "화면 크기",
+  "Settings digest": "설정 digest",
+  "Input digest": "입력 digest",
+  "Source digest": "소스 digest",
+  "Submitted test files": "제출한 테스트 파일",
+  Cleanup: "정리",
+  "Current work": "현재 작업",
+  "Execution review": "실행 검토",
+  "Review workspace": "검토 작업공간",
+  Tools: "도구",
+  Checkout: "checkout",
+  "Ask in chat. Review the evidence here.": "채팅에서 요청하고 여기에서 근거를 검토하세요.",
+  "Loading current work…": "현재 작업을 불러오는 중…",
+  "Execution prerequisites": "실행 전제 조건",
+  "Settings valid": "설정 유효",
+  "Settings need attention": "설정 확인 필요",
+  "Approval: {{policy}}": "승인: {{policy}}",
+  "Awaiting approval": "승인 대기",
+  "Review request": "요청 검토",
+  "No requests awaiting approval.": "승인 대기 중인 요청이 없습니다.",
+  "In progress": "진행 중",
+  "No executions in progress.": "진행 중인 실행이 없습니다.",
+  "Cleanup needs attention": "정리 확인 필요",
+  "No cleanup issues.": "정리 문제가 없습니다.",
+  "Recent evidence": "최근 근거",
+  "Continue in chat": "채팅에서 계속",
+  "Inspect this checkout, implement with tests first, and submit verification through Redpact.":
+    "이 checkout을 확인하고 테스트부터 작성하여 구현한 다음 Redpact로 검증을 제출하세요.",
+  "Ask your agent to diagnose settings, run tests, inspect failures, or retry cleanup. Copy the checkout context to keep the target explicit.":
+    "에이전트에게 설정 진단, 테스트 실행, 실패 확인, 정리 재시도를 요청하세요. checkout 맥락을 복사하여 대상을 명확히 전달하세요.",
+  "Recorded executions stay tied to their submitted checkout and source.":
+    "실행 기록은 제출 당시 checkout과 소스에 연결된 상태로 보존됩니다.",
+  "Evidence boundaries": "근거의 범위",
+  "A passing result describes the recorded execution. Current code freshness is not established.":
+    "통과 결과는 기록된 실행을 설명합니다. 현재 코드와의 일치 여부는 확인되지 않았습니다.",
+  "Human acceptance is not recorded.": "사람의 수락은 기록되지 않았습니다.",
+  "Showing {{shown}} of {{total}} failures. Open recorded evidence for details.":
+    "실패 {{total}}건 중 {{shown}}건을 표시합니다. 자세한 내용은 기록된 근거를 확인하세요.",
+  "Inspect this recorded execution and its evidence before changing code or requesting another run.":
+    "코드를 변경하거나 다시 실행하기 전에 이 실행 기록과 근거를 확인하세요.",
+  "Copy this execution context to ask your agent about failures or cleanup.":
+    "실행 맥락을 복사하여 에이전트에게 실패 또는 정리 문제를 질문하세요.",
+  "Recorded evidence": "기록된 근거",
+  "No output recorded.": "기록된 출력이 없습니다.",
+  "Approve execution": "실행 승인",
+  "Approve environment": "환경 승인",
+  "Approve tests": "테스트 승인",
+  "Cancel request": "요청 취소",
+  "Execution approval allows running code. It does not accept code changes.":
+    "실행 승인은 코드 실행을 허용합니다. 코드 변경 수락을 의미하지 않습니다.",
   "Agent plugins": "에이전트 플러그인",
   "Redpact plugins": "Redpact 플러그인",
   "Codex CLI path": "Codex CLI 경로",
@@ -266,8 +325,8 @@ export const ko = {
   "Make Redpact feel right for you.": "Redpact를 나에게 맞게 설정하세요.",
   "Choose your display language.": "화면에 표시할 언어를 선택하세요.",
   "Publish pull requests with your GitHub CLI account.": "GitHub CLI 계정으로 PR을 게시합니다.",
-  "Leave empty for automatic detection. Save changes before checking the connection.":
-    "비워 두면 자동으로 찾습니다. 변경 사항을 저장한 후 연결을 확인하세요.",
+  "Leave empty for automatic detection. Saved paths apply to subsequent operations.":
+    "비워 두면 자동으로 찾습니다. 저장한 경로는 이후 작업에 적용됩니다.",
 
   Save: "저장",
   "Loading…": "불러오는 중…",
@@ -733,6 +792,7 @@ export const ko = {
   Mode: "Mode",
   "No recorded dependency selection.": "기록된 dependency 선택이 없습니다.",
   Dependencies: "Dependencies",
+  Services: "서비스",
   "Dependency settings": "dependency 설정",
   "Browse dependency modes from a worktree's settings file.":
     "worktree 설정 파일에 선언된 dependency mode를 확인하세요.",

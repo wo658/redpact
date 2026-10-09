@@ -1,23 +1,18 @@
 import { expect, test } from "@playwright/test"
-import {
-  assertWrapped,
-  openNavigation,
-  openWrapDiff,
-  openWrapSource,
-  prepareWrapProject,
-} from "../word-wrap"
+import { assertWrapped, openNavigation, openWrapDiff, prepareWrapProject } from "../word-wrap"
 
-test("diff와 파일 뷰어가 앱 본문을 채우고 파일 탐색과 줄바꿈을 유지한다", async ({
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
+test("diff와 테스트 뷰어가 앱 본문을 채우고 파일 탐색과 줄바꿈을 유지한다", async ({
   page,
   request,
 }) => {
   const restore = await prepareWrapProject(page, request)
   try {
     await openWrapDiff(page)
-    for (const view of ["diff", "source", "tests"]) {
-      if (view === "source") {
-        await openWrapSource(page)
-      }
+    for (const view of ["diff", "tests"]) {
       if (view === "tests") {
         await openNavigation(page, "Tests")
         await page.getByRole("tab", { name: "Integration", exact: true }).click()

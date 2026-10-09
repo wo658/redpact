@@ -1,12 +1,16 @@
 import { expect, test } from "@playwright/test"
 import { node } from "../target"
 
-// 격리된 테스트 앱에서 새 탭의 Web Crypto API를 사용한다.
+// 격리된 테스트 앱에서 실제 브라우저 API를 사용한다.
 test.use({
   channel: "chromium",
   launchOptions: {
     args: ["--unsafely-treat-insecure-origin-as-secure=http://app.redpact.test:54320"],
   },
+})
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
 })
 
 test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지한다", async ({ page }) => {
@@ -40,16 +44,7 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
       localStorage.setItem("redpact:project", id)
     }, project.id)
     await page.goto("/")
-    const workspaceTabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
-    await expect(workspaceTabs.getByRole("tab")).toHaveCount(1)
     if ((page.viewportSize()?.width ?? 1920) < 768) {
-      await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).first().click()
-    }
-    await page.getByRole("button", { name: "Settings", exact: true }).click()
-    await page.keyboard.press("Escape")
-    await page.getByRole("button", { name: "New tab", exact: true }).click()
-    if ((page.viewportSize()?.width ?? 1920) < 768) {
-      await expect(page.getByRole("dialog")).toHaveCount(0)
       await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).first().click()
     }
     const worktree = page
@@ -60,28 +55,8 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
     expect(worktreeName, "워크트리 이름이 접근성 레이블로 제공되어야 한다").toBeTruthy()
     await worktree.click()
     await page.keyboard.press("Escape")
-    await expect(
-      workspaceTabs.getByRole("tab", {
-        name: `${project.name} / Worktrees`,
-        exact: true,
-      }),
-    ).toBeVisible()
     await page.setViewportSize({ width: 1440, height: 900 })
     await expect(page.getByRole("button", { name: "Toggle Sidebar", exact: true })).toBeVisible()
-    const projectTab = workspaceTabs.getByRole("tab").first()
-    const worktreeTab = workspaceTabs.getByRole("tab", {
-      name: `${project.name} / Worktrees`,
-      exact: true,
-    })
-    const projectTabWidth = await projectTab.evaluate(
-      (element) => element.parentElement?.clientWidth,
-    )
-    const worktreeTabWidth = await worktreeTab.evaluate(
-      (element) => element.parentElement?.clientWidth,
-    )
-    expect(projectTabWidth, "헤더 작업 탭은 레이블 길이와 관계없이 같은 폭을 쓴다").toBe(
-      worktreeTabWidth,
-    )
     const toolbar = page.locator('[data-slot="review-toolbar"]')
     for (const width of [1440, 850, 390]) {
       await test.step(`${width}px에서 탭 전환과 Mobile 토글을 확인한다`, async () => {
@@ -132,18 +107,6 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
         )
       })
     }
-    const closingLabel = await workspaceTabs
-      .getByRole("tab", { selected: true })
-      .getAttribute("aria-label")
-    await workspaceTabs.getByRole("button", { name: `Close ${closingLabel}`, exact: true }).click()
-    await expect(
-      workspaceTabs.getByRole("tab", {
-        name: `${project.name} / Worktrees`,
-        exact: true,
-      }),
-    ).toHaveCount(0)
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await expect(worktree).toBeVisible()
   } finally {
     await node(
       `

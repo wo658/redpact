@@ -8,6 +8,10 @@ test.use({
   },
 })
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 test("설정 검증 오류도 공통 Handoff shell로 복사한다", async ({ page, request }) => {
   const response = await request.post("/api/projects", {
     data: { path: "/app", name: "Problem notice fixture" },

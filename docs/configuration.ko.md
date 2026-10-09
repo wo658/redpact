@@ -55,7 +55,7 @@ isolated는 서비스가 필요합니다. mock은 구현된 앱 동작, 관리 �
 
 Compose는 실행 정의이며, 설정 검증이 제한된 Compose 부분집합을 강제하지 않습니다.
 소유권·런타임 입력 캡처·네이티브 시작 오류 처리는
-[Compose와 소스 캡처](execution.md#compose-and-source-capture)를 참고하세요.
+[Compose와 소스 캡처](execution.md#compose와-소스-캡처)를 참고하세요.
 
 ## 환경변수와 연결
 
@@ -118,7 +118,7 @@ Playwright는 앱 `service`, `port`, 이름 있는 `targets`가 필요하며 pur
 
 ## 인스턴스 설정
 
-Global Settings는 인스턴스를 별도로 제어합니다. `configure describe`는 해당 설정 파일의 위치를 알려줍니다. 인스턴스의 `projects`에는 관찰할 절대 디렉터리를 나열합니다. `server.port`는 다시 시작한 뒤 적용됩니다. 선택적인 `github.cliPath`는 GitHub CLI 실행 파일의 절대 경로를 지정합니다.
+**설정 → 인스턴스 설정**은 인스턴스를 별도로 제어합니다. `configure describe`는 해당 설정 파일의 위치를 알려줍니다. 인스턴스의 `projects`에는 관찰할 절대 디렉터리를 나열합니다. `server.port`는 다시 시작한 뒤 적용됩니다. 선택적인 `github.cliPath`는 GitHub CLI 실행 파일의 절대 경로를 지정합니다.
 
 실행별 제한은 인스턴스 파일에 둡니다.
 

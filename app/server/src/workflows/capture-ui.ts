@@ -86,6 +86,7 @@ export function createCaptureWorkflow(deps: {
       settings.digest,
       run.selection,
       run.id,
+      run.appDigest,
     )
     observe({ environmentId: env.id })
     while (deps.environments.get(env.id).state === "preparing") {
@@ -189,6 +190,7 @@ export function createCaptureWorkflow(deps: {
       _selection?: TestSelection,
       viewport?: { width: number; height: number },
       targetName?: string,
+      approved?: { settingsDigest: string; inputDigest: string; sourceDigest: string },
     ) {
       const run = await deps.worktrees.exclusive(async () => {
         if (closing) {
@@ -212,6 +214,12 @@ export function createCaptureWorkflow(deps: {
             "Configure playwright in the shared project settings before execution",
           )
         }
+        if (approved && approved.settingsDigest !== result.digest) {
+          problem(
+            "configuration_error",
+            "Playwright settings changed during review; request a new execution",
+          )
+        }
         const names = Object.keys(settings.targets)
         const selectedTarget = targetName ?? (names.length === 1 ? names[0] : undefined)
         const targetSettings = selectedTarget ? settings.targets[selectedTarget] : undefined
@@ -224,11 +232,24 @@ export function createCaptureWorkflow(deps: {
         const git = await target.git.inspect()
         const id = randomUUID()
         const appDigest = await deps.environments.fingerprint(worktreeId, selected, result.digest)
+        if (approved && approved.inputDigest !== appDigest) {
+          problem(
+            "configuration_error",
+            "Application inputs changed during review; request a new execution",
+          )
+        }
         const sourceDigest = await deps.runner.captureSources(
           id,
           target.worktree.projectRoot,
           settings,
         )
+        if (approved && approved.sourceDigest !== sourceDigest) {
+          await deps.runner.removeInputs(id)
+          problem(
+            "configuration_error",
+            "Playwright sources changed during review; request a new execution",
+          )
+        }
         const value: CaptureRun = {
           version: 1,
           target: selectedTarget,

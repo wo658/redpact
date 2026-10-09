@@ -24,6 +24,7 @@ export type ReviewView = {
 }
 export type ReviewTests = {
   start(input: ReviewInput): Promise<ReviewView>
+  list(): ReviewView[]
   get(id: string): ReviewView | undefined
   approve(input: {
     id: string

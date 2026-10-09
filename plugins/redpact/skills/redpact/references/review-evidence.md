@@ -15,6 +15,10 @@ additional request may authorize those actions separately.
 Map requested behavior to available evidence and identify missing, failed, blocked,
 or possibly outdated checks. Compare captured identity with current source where
 available; unit command records and captured application views cannot prove source freshness.
+Start with `get_workspace_status` for the exact checkout and `list_executions` for
+older attempts. Use `get_review_context` for one execution's bounded failures,
+evidence references and relative review path. Resolve that path against the connected
+viewer origin; retrieve recorded source/log/image with `get_execution` as needed.
 Use the evidence already present and identify unavailable data. Review is a human
 handoff, not a new persisted approval state or a promise of fresh verification.
 
@@ -49,9 +53,13 @@ Keep these claims distinct:
 Briefly explain omitted evidence when its relevance is not obvious. A capability
 gap may leave registration or review incomplete even when local checks pass.
 
-Use advertised presentation capabilities when they materially help review. Configure
-inspect/validate provides configuration previews; run_tests/get_run cards are
-snapshots, so request fresh results for changed state. These cards do not imply
-Playwright support or human approval. Do not invoke execution just to obtain a
-card. If presentation is unavailable, provide textual observed evidence and the
-specific gap; a normal web preview is not an MCP App.
+Use advertised presentation capabilities when they materially help review. Request
+and approval cards are snapshots, so request fresh results for changed state.
+Unit, Integration and Playwright approval authorize only the captured execution;
+they do not establish human acceptance of code. Keep capabilities in App-only metadata.
+Do not invoke execution just to obtain a card. If MCP Apps are unavailable, use
+`get_review_context` with the pending request's kind and ID and link its returned review
+path on the same connected viewer origin. The user can inspect the captured request and
+explicitly approve there; do not submit the viewer's approval request on their behalf.
+Neither a text reply nor opening the page records approval. If the viewer is also
+unavailable, preserve the pending request and provide observed evidence with that gap.

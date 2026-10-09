@@ -23,7 +23,7 @@ test("프로젝트 공용 단위 컨테이너 설정을 사용하고 Docker 부�
     const git = (...args) => execFileSync('git', ['-C', primary, '-c', 'core.hooksPath=/dev/null', ...args]);
     git('init', '-b', 'main'); git('config', 'user.name', 'Unit E2E'); git('config', 'user.email', 'unit@redpact.invalid');
     mkdirSync(primary + '/.redpact');
-    const unitTests = {dockerfile:'unit.Dockerfile', command:'printf host-fallback > marker.txt', cwd:'.', patterns:['**/*.test.ts']};
+    const unitTests = {dockerfile:'unit.Dockerfile', command:'printf host-fallback > marker.txt', cwd:'.', patterns:['unit/*.test.ts']};
     writeFileSync(primary + '/unit.Dockerfile', 'FROM alpine:3.21\\nWORKDIR /workspace\\nCOPY . .\\n');
     writeFileSync(primary + '/.redpact/settings.json', JSON.stringify({unitTests}));
     git('add', '.'); git('commit', '-m', 'Unit fixture'); git('worktree', 'add', '-b', 'feature', checkout);
@@ -45,7 +45,7 @@ test("프로젝트 공용 단위 컨테이너 설정을 사용하고 Docker 부�
     const inspected = await http<{ settings: Run["settings"] }>(
       `/api/worktrees/${worktree.body.id}/unit-tests`,
     )
-    expect(inspected.status).toBe(200)
+    expect(inspected.status, JSON.stringify(inspected.body)).toBe(200)
     // 실행 정의는 primary에서 읽고 소스만 선택된 WT에서 가져온다.
     expect(inspected.body.settings).toMatchObject({
       dockerfile: "unit.Dockerfile",

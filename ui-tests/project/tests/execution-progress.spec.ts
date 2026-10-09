@@ -3,6 +3,10 @@ import { expect, test } from "@playwright/test"
 import { http, node } from "../target"
 
 /** 저장된 Unit·Integration 실행이 실제 프로젝트 테스트 화면에서 같은 진행 상태 형식을 사용한다. */
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 test("Unit과 Integration 실행 기록에서 진행 상태와 오류를 함께 확인한다", async ({ page }) => {
   const project = await test.step("격리된 앱에 프로젝트와 워크트리를 연결한다", async () => {
     const connected = await http<{ id: string }>("/api/projects", "POST", { path: "/app" })

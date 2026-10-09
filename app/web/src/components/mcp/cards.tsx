@@ -297,3 +297,131 @@ export function TestCard({ data, actions }: { data: Snapshot; actions: CardActio
     </Card>
   )
 }
+
+export function ExecutionCard({ data, actions }: { data: Snapshot; actions: CardActions }) {
+  const review = data.executionReview
+  const detail = data.execution ?? review
+  if (!detail) {
+    return null
+  }
+  const specification = detail.specification ?? {}
+  const pending = review?.state === "pending"
+  return (
+    <Card size="sm" aria-label="Execution review" className="w-full min-w-0 content-width-768">
+      <CardHeader>
+        <CardTitle>{detail.kind === "unit" ? "Unit command" : "Playwright target"}</CardTitle>
+        <CardDescription className="break-all">{detail.path}</CardDescription>
+        <CardAction>
+          <Badge variant="outline">
+            {data.execution?.outcome ??
+              data.run?.state ??
+              (pending ? "Awaiting approval" : detail.state)}
+          </Badge>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="flex min-w-0 flex-col gap-3">
+        {specification.command && (
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium">Complete command</p>
+            <pre className="whitespace-pre-wrap break-all font-mono text-code">
+              {specification.command}
+            </pre>
+            <p className="break-all text-sm text-muted-foreground">
+              Dockerfile: {specification.dockerfile} · Directory: {specification.cwd}
+            </p>
+          </div>
+        )}
+        {specification.target && (
+          <div className="flex flex-col gap-1">
+            <p className="break-all text-sm">
+              Target: {specification.target} · {specification.purpose}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Viewport: {specification.viewport?.width} × {specification.viewport?.height}
+            </p>
+          </div>
+        )}
+        <details className="min-w-0 text-sm text-muted-foreground">
+          <summary>Inputs</summary>
+          <dl className="mt-2 flex flex-col gap-1 break-all font-mono text-code">
+            {detail.settingsDigest && (
+              <>
+                <dt>Settings</dt>
+                <dd>{detail.settingsDigest}</dd>
+              </>
+            )}
+            {detail.inputDigest && (
+              <>
+                <dt>Application</dt>
+                <dd>{detail.inputDigest}</dd>
+              </>
+            )}
+            {detail.sourceDigest && (
+              <>
+                <dt>Test source</dt>
+                <dd>{detail.sourceDigest}</dd>
+              </>
+            )}
+          </dl>
+        </details>
+        <p className="text-sm text-muted-foreground">
+          {pending
+            ? "Approval applies to these inputs. Changed inputs require a new request."
+            : "Observed execution snapshot."}{" "}
+          Execution results do not establish human acceptance of code changes.
+        </p>
+        {data.execution?.cleanup && (
+          <p className="text-sm text-muted-foreground">Cleanup: {data.execution.cleanup}</p>
+        )}
+        {detail.error && (
+          <Alert>
+            <AlertDescription>{detail.error}</AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+      <CardFooter className="flex-wrap justify-between gap-2">
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          {pending ? "Waiting for approval" : "Snapshot at tool response"}
+        </p>
+        {pending && (
+          <Button
+            size="sm"
+            disabled={actions.busy || !data.token}
+            onClick={() => actions.approveExecution?.()}
+          >
+            Approve execution
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  )
+}
+
+export function EvidenceCard({ data }: { data: Snapshot }) {
+  const evidence = data.evidence
+  if (!evidence) {
+    return null
+  }
+  return (
+    <Card size="sm" aria-label="Recorded evidence">
+      <CardHeader>
+        <CardTitle>Recorded {evidence.detail}</CardTitle>
+        <CardDescription className="break-all">
+          {evidence.kind} · {evidence.id}
+          {evidence.sourcePath ? ` · ${evidence.sourcePath}` : ""}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="min-w-0">
+        {evidence.text ? (
+          <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-all font-mono text-code">
+            {evidence.text}
+          </pre>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Recorded evidence is attached to this conversation.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

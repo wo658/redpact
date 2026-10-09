@@ -4,6 +4,10 @@ async function holdForDemo(milliseconds = 1800) {
   await new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 test("Redpact 데모: 변경사항과 실행 근거를 한 작업공간에서 검토한다", async ({ page, request }) => {
   await page.addInitScript(() => {
     localStorage.setItem("redpact:language", "ko")

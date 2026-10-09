@@ -12,22 +12,25 @@ async function capture(page: Page, info: TestInfo, name: string, component: Loca
 }
 
 /** 실제 앱의 상태를 준비하고 헤더와 탐색 영역을 포함한 페이지를 보관한다. */
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토한다", async ({ page, request }, info) => {
   await test.step("실제 앱 소스를 연결하고 한국어 작업공간을 연다", async () => {
     const response = await request.post("/api/projects", {
       data: { path: "/app", name: "Redpact" },
     })
     expect(response.ok()).toBeTruthy()
-    await page.addInitScript(() => {
+    const project = await response.json()
+    await page.addInitScript((id) => {
+      localStorage.setItem("redpact:project", id)
       localStorage.setItem("redpact:language", "ko")
       localStorage.setItem("redpact:theme", "light")
-    })
+    }, project.id)
     await page.goto("/")
     await expect(page.getByRole("button", { name: "Settings", exact: true })).toBeVisible()
   })
-  const workspaceTabs = page.getByRole("tablist", { name: "열린 작업공간", exact: true })
-  await expect(workspaceTabs.getByRole("tab", { name: /^Redpact \/ / })).toBeVisible()
-  await capture(page, info, "작업공간 / 헤더 / 프로젝트 탭", workspaceTabs)
   const navigation = page.getByRole("navigation", { name: "Worktrees", exact: true })
   await expect(navigation.getByRole("button").first()).toBeVisible()
   await capture(page, info, "작업공간 / 탐색 / 작업공간 탐색", navigation)
@@ -35,9 +38,6 @@ test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토�
   const worktreeName = await worktree.getAttribute("aria-label")
   expect(worktreeName, "워크트리 이름이 접근성 레이블로 제공되어야 한다").toBeTruthy()
   await worktree.click()
-  await expect(
-    workspaceTabs.getByRole("tab", { name: `Redpact / Worktrees`, exact: true }),
-  ).toBeVisible()
   await expect(page.getByText("아직 리뷰할 내용이 없습니다.", { exact: true })).toBeVisible()
   const emptyReview = page.getByText("아직 리뷰할 내용이 없습니다.", { exact: true })
   await expect(emptyReview).toBeVisible()
@@ -45,17 +45,12 @@ test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토�
     await expect(page.getByRole("tab", { name, exact: true })).toHaveCount(0)
   }
   await capture(page, info, "워크트리 / 리뷰 / 내용 없는 탭 숨김", emptyReview)
-  await capture(page, info, "작업공간 / 헤더 / 워크트리 탭", workspaceTabs)
   await page
     .getByRole("button", { name: /Redpact/ })
     .first()
     .click()
   await capture(page, info, "작업공간 / 탐색 / 프로젝트 메뉴", page.getByRole("menu"))
   await page.keyboard.press("Escape")
-  await page.setViewportSize({ width: 390, height: 844 })
-  await capture(page, info, "작업공간 / 헤더 / 워크트리 탭 모바일", workspaceTabs)
-  await page.setViewportSize({ width: 1920, height: 1080 })
-
   await page.getByRole("button", { name: "Settings", exact: true }).click()
   await expect(page.getByRole("heading", { name: "Settings", exact: true, level: 1 })).toBeVisible()
   const settingsRow = (name: string) =>
@@ -80,11 +75,6 @@ test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토�
     configuration.getByRole("textbox", { name: "테스트 디렉터리", exact: true }),
   ).toBeVisible()
   await capture(page, info, "프로젝트 설정 / 실행 구성 / 프로젝트 실행 설정", configuration)
-  await page.getByRole("button", { name: "Git Graph", exact: true }).click()
-  const graph = page.locator("web-git-graph")
-  await expect(graph).toHaveAttribute("aria-busy", "false")
-  await expect(graph.getByText("Captured E2E application", { exact: true })).toBeVisible()
-  await capture(page, info, "Git Graph / 페이지 / 커밋 기록", graph)
   await page.getByRole("button", { name: "Dependencies", exact: true }).click()
   await expect(
     page.getByRole("region", { name: "프로젝트 Dependencies", exact: true }),

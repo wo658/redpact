@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test"
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 for (const width of [1920, 390]) {
   test(`${width}px 의존성 개요에서 고정 종류와 연결 근거를 읽고 실제 설정 편집으로 이동한다`, async ({
     page,
