@@ -73,15 +73,9 @@ export function createReviewTests(deps: {
       problem("closing", "Server is shutting down")
     }
     save({ ...record, state: "starting" })
+    let run: Awaited<ReturnType<ExecuteTests["start"]>>
     try {
-      const run = await deps.execute.start(
-        record.submissionId,
-        record.selection,
-        record.settingsDigest,
-      )
-      const started = { ...record, state: "started" as const, runId: run.id }
-      save(started)
-      return view(started)
+      run = await deps.execute.start(record.submissionId, record.selection, record.settingsDigest)
     } catch (error) {
       save({
         ...record,
@@ -90,6 +84,10 @@ export function createReviewTests(deps: {
       })
       throw error
     }
+    // A persistence failure after admission must retain the uncertain starting state.
+    const started = { ...record, state: "started" as const, runId: run.id }
+    save(started)
+    return view(started)
   }
   async function exclusive(id: string, operation: () => Promise<ReviewView>): Promise<ReviewView> {
     const previous = active.get(id)
@@ -146,6 +144,9 @@ export function createReviewTests(deps: {
         return view(record)
       }
       return exclusive(record.id, () => execute(record))
+    },
+    list() {
+      return [...records.values()].map(view)
     },
     get(id) {
       const record = find(id)

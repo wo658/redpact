@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test"
 import { openNavigation, prepareWrapProject } from "../word-wrap"
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 test("전역 설정에서 자동 줄바꿈 스위치를 확인한다", async ({ page, request }, info) => {
   const restore = await prepareWrapProject(page, request)
   try {

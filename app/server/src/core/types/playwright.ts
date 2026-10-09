@@ -114,6 +114,7 @@ export type CaptureWorkflow = {
     selection?: TestSelection,
     viewport?: { width: number; height: number },
     target?: string,
+    approved?: { settingsDigest: string; inputDigest: string; sourceDigest: string },
   ): Promise<CaptureRun>
   cancel(id: string): Promise<CaptureRun>
   recover(): Promise<void>

@@ -45,6 +45,23 @@ export function sampleApi() {
     environments: async () => [],
     worktreeDependencies: async () => ({ valid: true, services: [], dependencies: {}, issues: [] }),
     worktreeSelection: async () => ({ selection: null }),
+    workspaceStatus: async () => ({
+      projectRoot: worktree.projectRoot,
+      rulesRoot: worktree.projectRoot,
+      settings: { valid: true, file: ".redpact/settings.json", issues: [], issueCount: 0 },
+      readiness: "not_checked",
+      approval: { policy: "ask", pending: [], pendingCount: 0 },
+      executions: {
+        recent: [],
+        active: [],
+        cleanup: [],
+        nextCursor: null,
+        activeCount: 0,
+        cleanupCount: 0,
+      },
+      freshness: { state: "unknown", reason: "Not checked" },
+      humanAcceptance: "not_recorded",
+    }),
     executionLogs: async () => ({ items: [], nextCursor: null }),
   }
 }

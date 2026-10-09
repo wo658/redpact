@@ -1,11 +1,9 @@
 import { expect, test } from "@playwright/test"
-import {
-  assertWrapped,
-  openNavigation,
-  openWrapDiff,
-  openWrapSource,
-  prepareWrapProject,
-} from "../word-wrap"
+import { assertWrapped, openNavigation, openWrapDiff, prepareWrapProject } from "../word-wrap"
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
 
 test("긴 diff를 줄바꿈하고 원문과 줄 번호를 보존하며 선택을 기억한다", async ({
   page,
@@ -60,12 +58,6 @@ test("긴 diff를 줄바꿈하고 원문과 줄 번호를 보존하며 선택을
       await openWrapDiff(page)
       await assertWrapped(page)
     })
-    await test.step("파일 보기에도 같은 줄바꿈 선택과 원문을 적용한다", async () => {
-      await openWrapSource(page)
-      await assertWrapped(page)
-      await expect(page.locator(".diff-code-insert, .diff-code-delete")).toHaveCount(0)
-      await expect(page.locator(".diff-code .token").first()).toBeVisible()
-    })
   } finally {
     await restore()
   }
@@ -92,7 +84,7 @@ test("저장소 쓰기가 차단되어도 줄바꿈 선택을 화면 전환 동�
     await openNavigation(page, "Settings")
     await expect(toggle).toHaveAttribute("aria-checked", "false")
     await toggle.click()
-    await openWrapSource(page, false)
+    await openWrapDiff(page, false)
     await assertWrapped(page)
     await openNavigation(page, "Settings")
     await expect(toggle).toHaveAttribute("aria-checked", "true")

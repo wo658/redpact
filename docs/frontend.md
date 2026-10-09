@@ -22,8 +22,7 @@ for lifecycle, access boundaries, size limits and host verification requirements
 
 Use the adopted shadcn Base UI Nova primitives, `render` composition and Base UI event
 contracts. The allowed shadcnblocks extension is the Linear theme; do not add unrelated
-registries or reintroduce Radix primitives. Retain specialized Git tree/diff/syntax,
-Kibo list and licensed ReUI timeline integrations for their existing roles.
+registries or reintroduce Radix primitives. Retain the shared Git tree/diff/syntax and Kibo list primitives used by evidence review.
 
 `src/components/ui` is vendored. Feature work composes it; shared design changes may
 adapt density/geometry there once, preserving licenses and behavior. Do not override
@@ -54,7 +53,7 @@ gradients and per-row boxes. Preserve action inversion and semantic error colors
 
 ## File and folder icons
 
-File Viewer, changed-file trees and source/diff headers use bundled Material Icon
+Changed-file trees and source/diff headers use bundled Material Icon
 Theme SVG assets with the React icon pack. Exact file names take precedence over
 extensions; compound extensions such as `d.ts` take precedence over `ts`. Unknown
 files and folders use the theme defaults. Folder icons follow their name and open
@@ -69,8 +68,7 @@ inference or user-configurable icon associations. Action icons continue to use L
 
 ## File content previews
 
-File Viewer, worktree review, committed branch and Git Graph comparisons, and the
-uncommitted changes dialog share image presentation. PNG, JPEG, SVG, GIF, WebP,
+Read-only worktree and branch comparisons share image presentation. PNG, JPEG, SVG, GIF, WebP,
 AVIF, BMP and ICO files open as images on a transparency checkerboard. Browser
 image decoding determines format support; corrupt or unsupported bytes show an
 explicit decode error. Each image is limited to 5 MiB; ordinary UTF-8 source
@@ -91,68 +89,34 @@ preview never executes project code.
 
 ## Layout and reading width
 
-The app header owns open-workspace tabs and native drag space outside the rounded content
-frame. Workspace tabs show `Project / Sidebar page`, including `Project / Worktrees` for
-worktree or branch review. Worktree names, branch paths and nested sections are intentionally
-omitted. The same label appears in the tooltip and accessible name, including the close action.
-Sidebar navigation and browser history update the location; nested detail selections remain
-in their page toolbar. Tabs are at most 256px wide and shrink to the available strip width.
-The project uses at most 40% of the label, leaving the remaining width for the sidebar page;
-both truncate independently. Tabs use left-aligned icons, a subtle outline. The selected tab uses the theme’s accent background and a stronger
-primary-colored border in both light and dark themes; keyboard focus remains a separate ring. The adjacent plus button opens the current page location in a fresh tab and remains reachable
-when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The
-browser desktop and native macOS/Windows provide a sidebar toggle; compact mobile screens retain
-the sidebar trigger. In browser and mobile layouts, the open sidebar places this control
-beside the project selector, immediately before project display options. When closed,
-a reopening control sits below the workspace header.
+The viewer has one active project/checkout destination. There is no app-owned
+workspace tab strip, new-tab action or hidden React Activity workspace. The host
+conversation owns task switching. Project selection, checkout selection and page
+navigation use browser history and restore the current URL destination on reload.
+Execution review links carry the exact kind and ID; files and nested review tabs do
+not add history entries. See [navigation](ux-navigation.md).
 
-On native macOS and Windows, the sidebar toggle and Back/Forward buttons stay in
-one 48px titlebar header. macOS reserves the left side for system traffic lights;
-Windows puts navigation on the left and custom minimize, maximize/restore and close
-buttons on the right, replacing the system titlebar and hiding the native menu bar.
-Window buttons remain available during connection loading and failure. Close keeps
-the existing hide-window behavior; the native Quit shortcut remains separate.
-Empty header areas drag the native window and double-click toggles maximization.
-The Windows maximize button reflects resize/focus changes. It does not implement
-the Windows 11 Snap Layouts hover menu; native dragging, resizing, shortcuts and
-window snapping require Windows verification in addition to Chromium layout tests. Collapsing
-the sidebar does not move these controls. Workspace tabs occupy the app area to the
-right of the expanded sidebar; when collapsed, they start after the native navigation
-controls. Narrow native windows place the tab strip below the titlebar so both remain
-reachable. The sidebar project row does not duplicate the native toggle; mobile sheets
-retain their own close toggle. Browser desktops use browser Back/Forward controls.
+Current work and Execution history are the primary destinations. Tools is collapsed
+by default, remembers explicit display choices and opens for a direct advanced page.
+Generic file browsing, Git Graph, Git mutation controls, promotional shortcuts and
+agent-plugin update panels are omitted. Retain configuration, manual environment
+recovery and read-only worktree comparisons where they support verification.
 
-Worktree display options appear while hovering anywhere in the Worktrees section,
-including its remaining space above the footer. Keyboard focus, an open options menu
-and non-hover input keep the control available.
-
-Project/worktree tab activation and sidebar page selection use the browser session history.
-Native Back/Forward call the same History API as browser navigation, across workspace tabs.
-Repeated selection adds no duplicate entry; navigating after Back discards forward entries.
-History restores the destination page and reopens a closed destination tab while its project
-is connected. Reload restores the current destination, but not drafts or other tabs. File
-selection, review subtabs and scroll changes do not add history entries. The native buttons
-remain available because the History API does not expose complete traversal availability;
-at a history boundary traversal has no effect.
-The sidebar remains on the canvas. Preserve desktop
-gutters, collapsed state, full-width mobile content and native toolbar positioning.
-Workspace IDs are independent of project/worktree IDs. Each tab records its page and target;
-sidebar navigation updates the active tab, and labels reflect its current location. Creating a
-new tab copies that location with a fresh ID. Project/worktree changes retain the active tab ID
-and create a history destination even when its page name is unchanged. See
-[UX navigation](ux-navigation.md) for new-tab and close behavior.
-Open workspace tabs retain their React state and DOM through React Activity. Hidden tabs
-release effect subscriptions; activating a tab restarts reads without discarding its view state.
-Sidebar providers belong to each workspace tab. This retention is session-only and ends when
-the tab closes; it does not persist drafts across reloads.
+Native macOS and Windows keep their 48px window header, drag regions, sidebar toggle
+and History API Back/Forward controls. Windows window controls remain available during
+loading and connection errors; close hides the window while Quit is separate. The
+Windows Snap Layouts hover menu is not implemented; native shell interaction needs
+platform verification beyond Chromium. Browser desktop uses its browser history.
+Mobile navigation closes the sidebar after a destination is chosen and keeps the
+reopen control reachable. Desktop gutters and mobile full-width evidence remain.
 
 The app owns viewport height; evidence and lists scroll in their own panels.
-Flex/grid boundaries need `min-w-0` and, for nested scrolling, `min-h-0`.
+Flex/grid boundaries need `min-w-0` and nested scrolling needs `min-h-0`.
 
 Use exactly the shared `640`, `768` and `wide` content-width policies from index.css:
-settings use 640, prose/evidence rows use 768, and specialized file/diff/graph layouts
+settings use 640, prose/evidence rows use 768, and specialized source/diff layouts
 use available width. They are responsive maxima, not fixed user preferences.
-Settings gutters stay outside the reading column. File Viewer, worktree/branch diffs
+Settings gutters stay outside the reading column. Worktree/branch diffs
 and test file browsers fill the content frame without an inset card, outer padding
 or a second rounded border. Page toolbars and file headers use bottom separators;
 file navigation uses the divider between panels. Keep padding within reading/result
@@ -169,8 +133,8 @@ When recovery needs help outside Redpact, the owning view uses `CopyHandoff` wit
 specific title, summary and structured context. Include identifiers, observed state,
 selection and retained-resource references needed to continue work. Keep diagnostic
 file contents behind their local access boundary: copy their retained locations rather
-than automatically sending logs or secrets to a client. Merge and environment recovery
-share this shell without being forced into the same recovery instructions.
+than automatically sending logs or secrets to a client. Execution and environment recovery
+share this shell while retaining the instructions specific to each problem.
 The shell standardizes the heading, Copy action, selectable text, clipboard-failure
 fallback and optional labelled details disclosure. Do not label it generically as an
 agent handoff or force unrelated recovery content into a common text template.
@@ -182,8 +146,7 @@ copy text appears only if clipboard access fails. Views with durable identifiers
 selection or retained resources still provide their own specific `CopyHandoff`
 context rather than relying on this fallback.
 
-Only the active workspace mounts the project selector, so hidden tabs cannot retain
-its portaled menu.
+The project selector belongs to the single active destination; dispose its menu and subscriptions when the project disconnects.
 
 ## One review toolbar
 
@@ -211,7 +174,11 @@ views do not register React nodes through effects or build another page toolbar.
 Native file events are coalesced into scoped server invalidations. Expensive refresh
 work is bounded per target; unchanged projects are not rescanned on unrelated events.
 Watchers are disposed with their scope and recover explicitly from resource failures.
-The viewer subscribes to scoped SSE and refreshes the affected query. Project Tests
+The viewer subscribes to scoped SSE and refreshes the affected query. Current work
+uses its checkout evidence scope, including shared settings and pending requests. Execution
+review subscribes after resolving its recorded worktree identity, so chat cancellation
+updates the same request. Historical records without a worktree remain readable without
+subscribing to an unrelated checkout. Project Tests
 uses the primary worktree scope for Unit and Integration, without also sending a project
 scope in the same subscription. Opening a page
 or observing changes never starts tests. Manual Container additionally polls its

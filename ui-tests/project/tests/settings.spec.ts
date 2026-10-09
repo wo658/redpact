@@ -27,9 +27,15 @@ async function expectSwitchColors(toggle: Locator, checked: boolean) {
     .toBe(true)
 }
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 test("선택한 테마는 새로고침 후에도 유지된다", async ({ page, request }) => {
   const response = await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })
   expect(response.ok()).toBeTruthy()
+  const project = await response.json()
+  await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
   await openApp(page)
   await page.getByRole("button", { name: "Settings", exact: true }).click()
   await expect(
@@ -64,6 +70,8 @@ test("선택한 테마는 새로고침 후에도 유지된다", async ({ page, r
 test("dependency 도움말은 필요할 때 열고 닫을 수 있다", async ({ page, request }) => {
   const response = await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })
   expect(response.ok()).toBeTruthy()
+  const project = await response.json()
+  await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
   await openApp(page)
   await page.getByRole("button", { name: "Dependencies", exact: true }).click()
   const dialog = page.getByRole("dialog", { name: "고정 의존성과 환경변수", exact: true })

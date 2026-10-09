@@ -304,7 +304,7 @@ The plugin uses `http://127.0.0.1:54321/mcp`. To use a different instance, confi
 a direct HTTP MCP connection to its actual port instead of assuming the plugin
 follows it. Other clients may use that connection, but are not claimed as tested
 plugin integrations. Ask the agent to call `configure describe` to verify tools.
-Approval and credential cards require a compatible MCP Apps host. Plugin installation
+Execution approval cards require a compatible MCP Apps host. Plugin installation
 alone does not prove card support; an unavailable approval UI must not be bypassed.
 See [the interface contract](interfaces.md).
 
@@ -435,6 +435,11 @@ active work in its owned runtime, while preserving stored evidence. An external
 server on the port can be read but cannot be stopped by another plugin session.
 An unrecognized listener blocks startup. Lifecycle changes are serialized.
 
+The App package includes the same `redpact` and `redpact-init` skills as the regular
+plugin, with their MCP dependency bound to this App instance. The build copies the
+maintained skill sources into the portable `skills/` directory and adjusts only
+connection metadata; there is no second maintained skill set.
+
 The plugin also registers a separate `redpact-verification` HTTP MCP connection to
 `http://127.0.0.1:54322/mcp`, the same runtime and evidence store used by the sidebar.
 It exposes the runtime's model tools directly, preserving its approval cards and
@@ -454,9 +459,11 @@ that the App installer owns updates; the companion does not run an independent
 npm self-update behind the page.
 
 Before installation or startup, the page displays the corresponding setup screen. Once
-the runtime is healthy, it displays the existing full Redpact viewer: project/worktree
-navigation, files, diffs, tests, environments and settings. The viewer retains its own
-responsive sidebar, theme and language preferences. The plugin's entrypoint icon and
+the runtime is healthy, it displays the shared review viewer: Current work, Execution
+history and selected execution evidence. Project and checkout identify the target;
+advanced test catalogs, configuration and manual Container remain available. Generic
+file browsing, Git Graph, Git mutation actions and an independent workspace-tab strip
+are omitted. The viewer retains responsive navigation, theme and language preferences. The plugin's entrypoint icon and
 branding use the Redpact favicon artwork.
 
 The App resource bundles the existing React viewer, styles, fonts and icons directly.
@@ -520,14 +527,16 @@ The installation and stopped screens share a centered logo, short state heading 
 
 ## Agent plugin updates
 
-Settings → Agent plugins checks installed Redpact plugins in Codex and Claude Code.
+Manage plugins through the host agent. The review viewer has no Agent plugins panel.
+The retained plugin-update HTTP workflow can inspect installed Codex and Claude Code
+plugins; the following rules describe that API, not a viewer navigation path.
 Set **Codex CLI path** or **Claude Code CLI path** in instance settings when automatic
 executable detection fails; use an absolute executable path without arguments and
 save before checking. Empty paths use PATH and common local installation directories.
 The CLI runs as the Redpact server's OS user on its host, not as the browser user.
 Other agents are not yet supported.
 
-**Check plugin updates** reads each agent's installed-plugin and marketplace JSON.
+An explicit plugin-update check reads each agent's installed-plugin and marketplace JSON.
 It follows the installed `redpact@<marketplace>` identity, including personal and
 local marketplaces; it does not switch the plugin to the official marketplace.
 One enabled user installation is required. Disabled plugins, other scopes and
@@ -544,14 +553,14 @@ Git marketplaces. Entries pointing to a separate remote plugin repository are no
 yet supported and must be managed in the agent.
 
 The comparison does not use the app's GitHub Release version or judge app/plugin
-compatibility. Only a strictly greater stable SemVer shows **Update**; build metadata
+compatibility. Only a strictly greater stable SemVer reports an available update; build metadata
 alone does not indicate a newer release. The supported Codex reinstall convention
 `X.Y.Z+codex.YYYYMMDDhhmmss` is an exception: for the same base version, a later
 timestamp offers an update. Newer installed versions are never downgraded. Publishers must increment the plugin manifest version when distributing
 changes. Checks are manual; normal status polling reads the last in-memory result
 without running CLI commands. Restarting Redpact clears that result.
 
-**Update** opens a confirmation for the displayed agent/version. Redpact rechecks
+An explicit install request names the agent and discovered version. Redpact rechecks
 the saved CLI path, installed version, marketplace identity and available version.
 Codex installs with `plugin add redpact@<marketplace> --json`; Claude Code uses
 `plugin update redpact@<marketplace> --scope user`. The marketplace name comes from
@@ -667,34 +676,35 @@ Continue with [your first project](first-project.md), or see [troubleshooting](t
 
 ## Runtime updates
 
-Windows/macOS desktop apps and npm-installed browser viewers show **Update** in the
-sidebar only when a newer version is available. Manual **Check for updates** lives in
-Settings → Updates. Desktop installation uses the [signed native updater](desktop.md).
+The focused review viewer has no Update shortcut or Updates settings panel. Manage
+the installed package through its original installation method. The existing npm
+update HTTP workflow and [signed native updater](desktop.md) remain backend
+capabilities; reading status never installs a release.
 
 The npm runtime queries the public `@wo658/redpact` registry dist-tags at startup and every
-six hours; browser polling reads the server cache. Stable installations follow
+six hours; HTTP status reads return the server cache. Stable installations follow
 `latest`; prerelease installations consider `beta` and `latest` and never downgrade.
 Checks have a ten-second deadline. Registry absence, invalid metadata and network
 failure are errors, not proof that the installed version is current. Source checkouts
 and desktop-owned servers do not start npm checks.
 
 For recognized global npm/pnpm installations and direct local npm/pnpm dependencies,
-`redpact serve` keeps a CLI parent process outside the replaceable server. Clicking
-**Update** opens confirmation; **Install and restart** requests the displayed version.
+`redpact serve` keeps a CLI parent process outside the replaceable server. An explicit
+HTTP install request must name the discovered version.
 New requests pause while admitted requests finish. Active tests, environment operations
 and other tracked work defer installation and restore service. Only after the owned
 server stops does the parent run the original package manager against the explicit
 version with lifecycle scripts disabled. Local updates modify the owning project's
 package manifest and lockfile, preserving development-dependency classification.
 The parent verifies the installed package version and restarts with the same options
-and listening port; the browser reloads after observing that version.
+and listening port; clients reconnect after the runtime restarts.
 
 An installation under a custom global prefix can still start when that prefix is
 not the package manager's active global root; a missing project manifest there does
 not block startup. Automatic updates require the original owner to be recognized.
 
 `npx` caches, unrecognized installation owners, source launches and direct `main.js`
-launches do not receive automatic installation authority. The dialog explains manual
+launches do not receive automatic installation authority. Unsupported installation requests report manual
 recovery instead of guessing a global install. For `npx`, stop the old process and
 run `npx @wo658/redpact@latest serve` with the original options; prerelease users choose their
 intended explicit version/channel. Other installations use their original manager.

@@ -9,10 +9,20 @@ test.use({
   },
 })
 
-test("macOS 신호등 옆에서 사이드바를 닫고 다시 연다", async ({ page, request }) => {
-  expect(
-    (await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })).ok(),
-  ).toBeTruthy()
+test.beforeEach(async ({ page, request }) => {
+  const response = await request.post("/api/projects", {
+    data: { path: process.env.REDPACT_TEST_PROJECT_ROOT ?? "/app", name: "Redpact" },
+  })
+  expect(response.ok()).toBeTruthy()
+  const project = await response.json()
+  expect(project.location.kind, "표시 옵션은 실제 Git 프로젝트에서 검증한다").toBe("git")
+  await page.addInitScript((id) => {
+    localStorage.setItem("redpact:project", id)
+    localStorage.setItem("redpact:tools-open", "true")
+  }, project.id)
+})
+
+test("macOS 신호등 옆에서 사이드바를 닫고 다시 연다", async ({ page }) => {
   await page.addInitScript(() => {
     const observer = new MutationObserver(() => {
       if (document.documentElement) {
@@ -32,25 +42,15 @@ test("macOS 신호등 옆에서 사이드바를 닫고 다시 연다", async ({ 
     "button",
     { name: "Toggle Sidebar", exact: true },
   )
-  await test.step("탐색 버튼은 사이드바 헤더에 두고 탭은 앱 영역에 둔다", async () => {
+  await test.step("탐색 버튼은 네이티브 헤더나 모바일 사이드바에서 접근할 수 있다", async () => {
     await expect(toggle).toBeVisible()
-    const options = sidebarHeader.getByRole("button", { name: "Project menu options", exact: true })
-    const left = await toggle.boundingBox()
-    const right = await options.boundingBox()
-    if (mobile) {
-      expect(left && right && left.x + left.width <= right.x).toBeTruthy()
-    } else {
-      const sidebar = await page.locator('[data-slot="sidebar-container"]').boundingBox()
-      const forward = await page
-        .getByRole("button", { name: "Go forward", exact: true })
-        .boundingBox()
-      const tabs = await page.getByRole("tablist", { name: "Open workspaces" }).boundingBox()
-      expect(left?.x).toBeGreaterThanOrEqual(88)
-      expect((left?.y ?? 100) + (left?.height ?? 0)).toBeLessThanOrEqual(48)
-      expect((forward?.x ?? 9999) + (forward?.width ?? 0)).toBeLessThanOrEqual(sidebar?.width ?? 0)
-      expect(tabs?.x).toBeGreaterThanOrEqual(sidebar?.width ?? 0)
+    if (!mobile) {
+      const bounds = await toggle.boundingBox()
+      expect(bounds?.x).toBeGreaterThanOrEqual(88)
+      expect((bounds?.y ?? 100) + (bounds?.height ?? 0)).toBeLessThanOrEqual(48)
+      await expect(page.getByRole("button", { name: "Go forward", exact: true })).toBeVisible()
     }
-    await expect(page.locator('.app-header [data-slot="sidebar-trigger"]')).toHaveCount(0)
+    await expect(page.getByRole("tablist", { name: "Open workspaces" })).toHaveCount(0)
   })
   await test.step("닫은 뒤에도 다시 열어 탐색할 수 있다", async () => {
     await toggle.click()
@@ -68,10 +68,7 @@ test("macOS 신호등 옆에서 사이드바를 닫고 다시 연다", async ({ 
   })
 })
 
-test("Worktrees 전체 영역에서 표시 옵션을 드러내고 메뉴를 유지한다", async ({ page, request }) => {
-  expect(
-    (await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })).ok(),
-  ).toBeTruthy()
+test("Worktrees 전체 영역에서 표시 옵션을 드러내고 메뉴를 유지한다", async ({ page }) => {
   await openApp(page, "en")
   if ((page.viewportSize()?.width ?? 1920) < 768) {
     await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
@@ -79,13 +76,13 @@ test("Worktrees 전체 영역에서 표시 옵션을 드러내고 메뉴를 유�
   const options = page.getByRole("button", { name: "Worktree display options", exact: true })
   const section = page.locator('[data-slot="sidebar-group"]').filter({ has: options })
   await expect(options).toBeEnabled()
-  await page.getByRole("button", { name: "Project menu options", exact: true }).hover()
+  await page.getByRole("button", { name: "Current work", exact: true }).hover()
   await expect(options).toHaveCSS("opacity", "0")
   const bounds = await section.boundingBox()
   if (!bounds) {
     throw new Error("Worktrees 영역의 크기를 읽을 수 없다")
   }
-  expect(bounds.height, "목록 아래 빈 공간까지 Worktrees 영역에 포함한다").toBeGreaterThan(300)
+  expect(bounds.height, "목록 아래 빈 공간까지 Worktrees 영역에 포함한다").toBeGreaterThan(100)
   await section.hover({ position: { x: 12, y: bounds.height - 12 } })
   await expect(options).toHaveCSS("opacity", "1")
   await options.click()

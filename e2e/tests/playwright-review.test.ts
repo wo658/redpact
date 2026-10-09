@@ -19,9 +19,27 @@ test("스토리보드 API는 사라지고 Playwright 실행 설정이 공개된�
       name: "configure",
       arguments: { action: "describe", path: "/app" },
     })
-    const text = JSON.stringify(result)
-    expect(text).toContain("playwright")
-    expect(text).toContain("playwright-runs")
+    expect(result.isError).not.toBe(true)
+    expect(result.structuredContent).toMatchObject({
+      specification: {
+        schema: {
+          properties: {
+            playwright: {
+              type: "object",
+              properties: { directory: { type: "string" }, targets: { type: "object" } },
+            },
+          },
+        },
+      },
+    })
+    const listed = await rpc<{ tools: { name: string; inputSchema: unknown }[] }>("tools/list", {})
+    expect(listed.tools.find((tool) => tool.name === "run_playwright")?.inputSchema).toMatchObject({
+      type: "object",
+      properties: { path: { type: "string" }, target: { type: "string" } },
+    })
+    expect(listed.tools.find((tool) => tool.name === "get_execution")?.inputSchema).toMatchObject({
+      properties: { kind: { enum: ["integration", "unit", "playwright"] } },
+    })
   })
   await step("잘못된 화면 크기는 앱 실행 전에 거부한다", async () => {
     const response = await http("/api/worktrees/invalid/playwright/run", "POST", {

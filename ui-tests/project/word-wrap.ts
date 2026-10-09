@@ -22,6 +22,7 @@ export async function prepareWrapProject(page: Page, request: APIRequestContext)
   })
   expect(saved.ok()).toBeTruthy()
   await page.addInitScript((id) => {
+    localStorage.setItem("redpact:tools-open", "true")
     localStorage.setItem("redpact:project", id)
     localStorage.setItem("redpact:language", "en")
   }, project.id)
@@ -34,8 +35,10 @@ export async function prepareWrapProject(page: Page, request: APIRequestContext)
   }
 }
 
-export async function openWrapDiff(page: Page) {
-  await page.goto("/")
+export async function openWrapDiff(page: Page, reload = true) {
+  if (reload) {
+    await page.goto("/")
+  }
   const navigation = page.getByRole("navigation", { name: "Worktrees", exact: true })
   if ((page.viewportSize()?.width ?? 1920) < 768) {
     await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
@@ -55,16 +58,6 @@ export async function openNavigation(page: Page, name: string) {
   }
   await button.click()
   await page.keyboard.press("Escape")
-}
-
-export async function openWrapSource(page: Page, reload = true) {
-  if (reload) {
-    await page.goto("/")
-  }
-  await openNavigation(page, "File Viewer")
-  await page.getByRole("treeitem", { name: ".redpact", exact: true }).click()
-  await page.getByRole("treeitem", { name: "settings.json", exact: true }).click()
-  await expect(page.locator(".diff-source .diff-code").filter({ hasText: "END_URL" })).toBeVisible()
 }
 
 export async function assertWrapped(page: Page) {

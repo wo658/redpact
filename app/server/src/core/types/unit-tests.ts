@@ -22,6 +22,7 @@ export type UnitCommandResult = Pick<
   "outcome" | "exitCode" | "stdout" | "stderr" | "truncated" | "error" | "resourceLimit"
 >
 export type UnitCommand = {
+  fingerprint?(root: string): Promise<string>
   execute(
     run: UnitRun,
     signal: AbortSignal,
@@ -38,7 +39,11 @@ export type UnitTestsService = {
     worktreeId: string,
     scope?: "changed" | "all",
   ): Promise<{ settings: UnitTestSettings | null; catalog: UnitCatalog; runs: UnitRun[] }>
-  start(worktreeId: string): Promise<UnitRun>
+  preview(worktreeId: string): Promise<{ settings: UnitTestSettings; inputDigest: string }>
+  start(
+    worktreeId: string,
+    approved?: { settings: UnitTestSettings; inputDigest: string },
+  ): Promise<UnitRun>
   get(id: string): UnitRun
   cancel(id: string): Promise<UnitRun>
   close(): Promise<void>

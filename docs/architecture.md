@@ -5,8 +5,12 @@ description: Current component boundaries and the reasons behind them.
 
 # Architecture
 
-Redpact is a local development review tool. It connects project checkouts, captures
-submitted test intent and source, executes tests, and presents observed evidence.
+Redpact connects agent-led development in chat to managed execution and human review.
+The host agent owns worktree isolation, test-first implementation, authored files and
+Git operations. Redpact connects those checkouts, captures submitted test intent and
+source, executes tests, and presents observed evidence. The review viewer focuses on
+current work, execution history and a specific run; it does not duplicate the host's
+file browser, Git Graph or workspace-tab manager.
 Test success, configuration validity, application freshness and human acceptance
 are different facts. A result never implies the others.
 
@@ -95,7 +99,7 @@ between record files.
   establish code-review acceptance or isolation from trusted local processes.
 - GitHub publication reuses native Git and authenticated `gh`; GitHub owns PR identity.
 
-Standalone npm installs use a CLI parent to stop the owned server before delegating package replacement to its detected npm/pnpm owner. Native desktop keeps Tauri ownership. Both expose update availability to the viewer; SemVer comparison uses the existing node-semver implementation. See [runtime updates](installation.md) for installation limits and restart behavior.
+Standalone npm installs use a CLI parent to stop the owned server before delegating package replacement to its detected npm/pnpm owner. Native desktop keeps Tauri ownership. Update status remains available through the retained HTTP or native commands; the focused viewer has no update panel. SemVer comparison uses the existing node-semver implementation. See [runtime updates](installation.md) for installation limits and restart behavior.
 
 ## Scope and evidence
 

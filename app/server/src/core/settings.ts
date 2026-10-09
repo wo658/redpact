@@ -39,7 +39,7 @@ export function describeSettings() {
       "Declare root services and one fixed definition for each dependency. Compose provisions managed services and mocks. shared-local and remote dependencies declare existing connections and never provision containers.",
       "Declare only the variables needed by Integration and Playwright in tests.env. Both runners receive these values; application environment values are not inherited. Store direct key-value strings in the shared JSON settings. Direct nonempty values are masked in execution text; settings and captured source remain plaintext. Secret and endpoint bindings are unsupported; use literal strings.",
       "Call configure validate with the execution path. Validation creates a plan but never runs containers, establishes readiness or grants approval.",
-      "run_tests executes Integration. Unit and Playwright use their dedicated UI/API. Each run owns fresh resources and cleanup.",
+      "Request Integration through run_tests, Unit through run_unit_tests, and browser verification through run_playwright with a declared target. Read get_execution for recorded evidence. Ask requests require explicit human approval in an MCP App or connected viewer. Each run owns fresh resources and cleanup.",
     ],
     limits: [
       "Strict JSON; no mode catalogs, worktree overlays, execution selections, compatibility readers or automatic migrations.",

@@ -3,6 +3,10 @@ import { expect, test } from "@playwright/test"
 import { http, node } from "../target"
 
 /** 저장된 캡처별 크기를 공개 API로 읽고 실제 앱의 Mobile 필터를 조작한다. */
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 test("같은 실행의 모바일과 데스크톱 캡처를 실제 크기로 분리한다", async ({ page }) => {
   test.setTimeout(60000)
   const step = test.step

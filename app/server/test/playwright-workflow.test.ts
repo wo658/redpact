@@ -328,3 +328,19 @@ test("고정 설정이 없으면 이전 실행 선택으로 대체하지 않고 
   expect(inspection.runs.map((record) => record.id)).toEqual([run.id])
   await workflow.close()
 })
+
+test("검토한 Playwright 테스트 소스가 달라지면 캡처를 정리하고 환경을 시작하지 않는다", async () => {
+  const f = fixture()
+  const workflow = createCaptureWorkflow(f.deps as never)
+  await expect(
+    workflow.start("w", undefined, undefined, "captures", {
+      settingsDigest: "settings",
+      inputDigest: "input-w",
+      sourceDigest: "reviewed-old-source",
+    }),
+  ).rejects.toMatchObject({ code: "configuration_error" })
+  expect(f.events).toContain("remove-inputs")
+  expect(f.events.some((event) => event.startsWith("prepare-"))).toBe(false)
+  expect(f.captures.all()).toEqual([])
+  await workflow.close()
+})

@@ -159,15 +159,11 @@ test("short segments have a minimum width while labels stay centered", async () 
   assert.match(tabs, /segmentedControlItemSizeClassNames\[resolvedSize\]/)
 })
 
-test("workspace header stays outside the framed main content", async () => {
+test("검토 셸은 작업공간 탭 없이 네이티브 탐색을 본문 바깥에 유지한다", async () => {
   const source = await readFile(new URL("src/components/project-manager.tsx", root), "utf8")
-  const headerStart = source.indexOf('className="app-header ')
-  const headerEnd = source.indexOf("</header>", headerStart)
+  const navigationStart = source.indexOf('className="native-sidebar-toolbar ')
   const insetStart = source.indexOf("<SidebarInset")
-  assert.ok(
-    headerStart >= 0 && headerEnd < insetStart,
-    "The title and sidebar controls must precede the main frame",
-  )
-  assert.doesNotMatch(source.slice(headerStart, headerEnd), /<SidebarTrigger/)
+  assert.ok(navigationStart >= 0 && navigationStart < insetStart)
+  assert.doesNotMatch(source, /app-header|Open workspaces|New tab/)
   assert.match(source.slice(insetStart), /md:rounded-xl md:ring-1 md:ring-border/)
 })

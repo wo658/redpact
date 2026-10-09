@@ -73,7 +73,7 @@ For unit execution, the Dockerfile must copy sources into `/workspace`, install 
 
 ## A run exceeds time or memory limits
 
-Read the recorded reason. Per-test timeouts differ from Global Settings execution limits, defaulting to 2048 MiB and 600 seconds. Check loops, watch commands, excessive workers, and memory growth before increasing the budget for a legitimate workload.
+Read the recorded reason. Per-test timeouts differ from execution limits in **Settings → Instance configuration**, defaulting to 2048 MiB and 600 seconds. Check loops, watch commands, excessive workers, and memory growth before increasing the budget for a legitimate workload.
 
 When present, `resourceLimit` records the applied threshold, detection source, and termination confirmation. Forced termination may prevent final case reports or screenshots. OOM text alone does not prove an externally detected violation. See [resource limits](execution.md) for coverage and platform requirements.
 

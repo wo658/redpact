@@ -5,7 +5,7 @@ description: Inspect execution evidence, current and historical captures, logs a
 
 # Results and screenshots
 
-Select the project and worktree you asked Redpact to execute. Check the execution identity and recorded time before interpreting results. Current files can change after a run; saved results describe the inputs accepted for that execution.
+Open the execution review link returned in chat, or select the project and checkout in **Current work** or **Execution history**. Check the execution identity and recorded time before interpreting results. Current files can change after a run; saved results describe the inputs accepted for that execution.
 
 If you have no evidence yet, follow [your first run](first-run.md). For execution paths, see [writing and running tests](tests.md).
 
@@ -13,14 +13,16 @@ If you have no evidence yet, follow [your first run](first-run.md). For executio
 
 | View | What to inspect |
 |---|---|
-| Project **Tests** | Current Unit and Integration files in the primary checkout, plus execution results |
+| **Current work** | Pending approvals, active executions and unresolved resource problems |
+| **Execution history** | Recorded attempts for the selected checkout, with links to each execution review |
+| **Tools → Tests** | Current Unit and Integration files in the primary checkout, plus execution results |
 | Worktree **Unit Test** | Matching changed sources and command results |
 | Worktree Integration review | Submitted cases, recorded source and execution evidence |
 | Worktree **Playwright** | Capture-purpose files with recorded PNG checkpoints for the selected Desktop/Mobile size |
-| Project **Tests → Playwright → Screenshots** | Current named captures from project targets and recorded worktree targets |
-| Project **Tests → Playwright → Tests** | Maintained functional files, including unexecuted sources |
-| Project **Tests → Playwright → Runs** | Retained executions across worktrees and both scopes |
-| Worktree **Log** | Unit, Integration and Playwright summaries with copyable diagnostics |
+| **Tools → Tests → Playwright → Screenshots** | Current named captures from project targets and recorded worktree targets |
+| **Tools → Tests → Playwright → Tests** | Maintained functional files, including unexecuted sources |
+| **Tools → Tests → Playwright → Runs** | Retained executions across worktrees and both scopes |
+| **Execution history** and worktree **Log** | Unit, Integration and Playwright summaries with copyable diagnostics |
 
 Opening a page or selecting source is read-only. Execution starts through an explicit run action. A file listed under Tests is not evidence that it passed.
 
@@ -44,7 +46,7 @@ into one small line. Test verdicts remain distinct from progress and cleanup err
 
 For **Unit**, inspect the command, exit code, stdout/stderr and cleanup state. Results describe the whole command rather than individual cases. Selecting a source does not mean only that file ran. The source viewer reads current files, not an archived unit source snapshot.
 
-For **Integration**, inspect captured source, case verdicts and observed steps. Confirm meaningful assertions were reached. A skipped case or failure before the test body may have no observed steps. An unfinished step is not a pass. Agents retrieve integration evidence through `get_run`.
+For **Integration**, inspect captured source, case verdicts and observed steps. Confirm meaningful assertions were reached. A skipped case or failure before the test body may have no observed steps. An unfinished step is not a pass. Agents retrieve Integration evidence through `get_run` or `get_execution`, and use `get_review_context` for concise failures and evidence references.
 
 For **Playwright**, inspect target, scope, purpose, scenario and step results, and attachments. Functional success means the executed assertions passed. Capture success means the scenario completed; the image still needs human inspection for visual judgments.
 
@@ -60,7 +62,7 @@ See [troubleshooting](troubleshooting.md) for next steps.
 
 ## Browse current screenshots
 
-Open **Tests → Playwright → Screenshots** and select a capture source file from the file list. Its **Screenshots** tab has a **Checkpoint** selector showing each full capture name, target and scenario title. Names such as `Settings / Appearance / Dark theme` remain a single label; the slashes do not create page or feature groups. Use **Test Code** to inspect the selected file. Maintained files show current source; recorded-only files show source from the selected capture.
+Open **Tools → Tests → Playwright → Screenshots** and select a capture source file from the file list. Its **Screenshots** tab has a **Checkpoint** selector showing each full capture name, target and scenario title. Names such as `Settings / Appearance / Dark theme` remain a single label; the slashes do not create page or feature groups. Use **Test Code** to inspect the selected file. Maintained files show current source; recorded-only files show source from the selected capture.
 
 The gallery uses the latest successful completed execution **per capture target**. Until a target succeeds, it falls back to that target's latest completed execution. A newer successful run replaces its entire name set, removing obsolete scenarios and old capture names from the current list. Failed retries do not displace a successful set.
 
@@ -70,7 +72,7 @@ Worktree-scope captures enter this gallery with their recorded scenario source, 
 
 ## Open a historical capture
 
-Choose **Tests → Playwright → Runs**, select an execution and open its screenshots or diagnostic attachments. Runs preserves original names, captured scenario sources, steps and results. It includes both scopes and evidence from removed checkouts.
+Choose **Tools → Tests → Playwright → Runs**, select an execution and open its screenshots or diagnostic attachments. Runs preserves original names, captured scenario sources, steps and results. It includes both scopes and evidence from removed checkouts.
 
 Use Runs to find an image renamed, removed or replaced in the gallery. Follow its source link to read the captured scenario rather than assuming today's file generated it. Removing worktree draft code preserves these recorded sources and images.
 
@@ -78,7 +80,7 @@ Screenshots are static evidence, not a live preview. Fit and original-size contr
 
 ## Inspect logs and share diagnostics
 
-Open worktree **Log**. Rows show test kind, intent, status and creation time. Use **Older executions** to page through history and **Newest executions** to return. The copy action retrieves recorded diagnostic text for that execution.
+Open **Execution history** for the selected checkout, or the worktree **Log** under read-only change review. Rows show test kind, intent, status and creation time. Use **Older executions** to page through history and **Newest executions** to return. The copy action retrieves recorded diagnostic text for that execution.
 
 Unit logs include bounded command output. Integration logs include retained run diagnostics. Playwright logs include recorded cases, steps and errors; they are not a complete raw browser-console transcript.
 
@@ -112,7 +114,7 @@ For a visual issue, name the capture and describe the visible problem. For a set
 
 ## Understand resource and source retention
 
-Every execution owns temporary resources and cleans them up after completion, failure or cancellation. Manual preparation and environment reuse are not supported. A cleanup failure can leave resources behind. Retry Unit container cleanup in its execution details; use the environment controls for managed application resources. Use viewer cancellation and environment controls when needed; model-facing MCP tools do not provide cancellation or environment-stop operations.
+Every execution owns temporary resources and cleans them up after completion, failure or cancellation. Standalone test-environment preparation and reuse are not supported. Use the separate Project Container for manual inspection. A cleanup failure can leave resources behind. Retry Unit container cleanup in its execution details; use the environment controls for managed application resources. Use `cancel_execution` for the identified request/run or viewer cancellation and environment controls. MCP cancellation cannot stop an arbitrary environment or alter a recorded verdict.
 
 **Clean up worktree code** removes recorded Playwright task drafts only after its checks pass. Historical evidence remains. Unit runtime input copies are removed during cleanup while command evidence remains. Integration submissions retain their captured test bundle.
 

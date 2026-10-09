@@ -10,7 +10,7 @@ const server = await createServer({
   appType: "custom",
 })
 after(() => server.close())
-test("프로젝트 사이드바에 Container 메뉴를 표시한다", async () => {
+test("Container 도구가 선택되면 보조 Tools를 펼쳐 현재 메뉴를 표시한다", async () => {
   const { WorktreeSidebar } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const { SidebarProvider } = await server.ssrLoadModule("/src/components/ui/sidebar.tsx")
   const doc = new JSDOM(
@@ -28,6 +28,7 @@ test("프로젝트 사이드바에 Container 메뉴를 표시한다", async () =
           onDependencies() {},
           onTestContainer() {},
           testContainerActive: true,
+          toolsActive: true,
         }),
       ),
     ),
@@ -35,6 +36,8 @@ test("프로젝트 사이드바에 Container 메뉴를 표시한다", async () =
   const button = [...doc.querySelectorAll("button")].find(
     (node) => node.textContent === "Container",
   )
+  const tools = [...doc.querySelectorAll("button")].find((node) => node.textContent === "Tools")
+  assert.equal(tools?.getAttribute("aria-expanded"), "true")
   assert.ok(button)
   assert.equal(button.getAttribute("aria-current"), "page")
 })

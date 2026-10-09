@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { after, afterEach, test } from "node:test"
+import { after, afterEach, beforeEach, test } from "node:test"
 import { JSDOM } from "jsdom"
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
@@ -53,9 +53,14 @@ const server = await createServer({
 })
 const { LanguageSelector } = await server.ssrLoadModule("/src/components/language-selector.tsx")
 const { i18n } = await server.ssrLoadModule("/src/locales/index.ts")
+// Existing tool-specific scenarios start with the user's Tools preference expanded.
+// The current-work scenario below explicitly verifies the fresh collapsed default.
+beforeEach(() => {
+  localStorage.setItem("redpact:tools-open", "true")
+})
 afterEach(() => {
   cleanup()
-  window.history.replaceState(null, "")
+  window.history.replaceState(null, "", "/")
   localStorage.removeItem("redpact:project")
   for (const key of Object.keys(localStorage)) {
     if (key.startsWith("redpact:project-navigation:")) {
@@ -481,7 +486,7 @@ test("마지막 프로젝트를 연결 해제한 뒤에도 관리 화면에서 �
   await user.click(await within(dialog).findByRole("button", { name: "Reconnect", exact: true }))
   await user.click(within(dialog).getByRole("tab", { name: "Connected", exact: true }))
   await user.click(await within(dialog).findByRole("button", { name: "Open", exact: true }))
-  assert.ok(await screen.findByRole("tab", { name: "Only project / Worktrees", exact: true }))
+  assert.ok(await screen.findByRole("heading", { name: "Current work", exact: true }))
   assert.equal(project.disconnectedAt, undefined)
 })
 
@@ -592,92 +597,6 @@ test("웹 데스크톱은 사이드바를 접고 펼친 뒤 프로젝트 설정�
   assert.equal(screen.queryByLabelText("Work intent"), null)
 })
 
-test("웹 헤더는 열린 작업공간 탭을 제공하고 페이지 선택은 현재 화면으로 전환한다", async () => {
-  await i18n.changeLanguage("en")
-  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-  const project = { id: "p1", name: "Actual project", location: { kind: "git" } }
-  const api = {
-    worktrees: async () => [],
-    projects: async () => [project],
-    getBranches: async () => ["main"],
-    getTracking: async () => ({ tracking: { mainBranch: null, hideMerged: false }, branches: [] }),
-  }
-  const user = userEvent.setup({ document })
-  const view = render(createElement(ProjectManager, { api, initialProjects: [project] }))
-  assert.equal(screen.queryByRole("button", { name: "Go back" }), null)
-  assert.equal(screen.queryByRole("button", { name: "Go forward" }), null)
-  await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
-  assert.ok(screen.getByRole("heading", { name: "Settings", level: 1 }))
-  assert.ok(screen.getByRole("tab", { name: "Actual project / Settings", exact: true }))
-  await user.click(screen.getByRole("button", { name: "Project settings", exact: true }))
-  assert.ok(await screen.findByRole("combobox", { name: "Main branch" }))
-  await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
-  assert.equal(view.container.querySelector('[data-slot="sidebar"]').dataset.state, "collapsed")
-  assert.ok(screen.getByRole("button", { name: "Toggle Sidebar" }))
-})
-
-test("워크트리 탭은 Merge와 같은 본문 줄에 표시되고 키보드 전환과 화면 왕복을 지원한다", async () => {
-  await i18n.changeLanguage("en")
-  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-  const { sampleApi } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  const { project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  const user = userEvent.setup({ document })
-  const view = render(
-    createElement(ProjectManager, {
-      api: {
-        ...sampleApi(),
-        gitDiff: async () => ({
-          available: true,
-          patch:
-            "diff --git a/readme.txt b/readme.txt\n--- a/readme.txt\n+++ b/readme.txt\n@@ -1 +1 @@\n-old\n+new\n",
-          omitted: [],
-        }),
-        executionLogs: async () => {
-          throw new Error("History unavailable")
-        },
-        environments: async () => {
-          throw new Error("Environment unavailable")
-        },
-      },
-      initialProjects: [project],
-    }),
-  )
-  const diff = await screen.findByRole("tab", { name: "Diff", exact: true })
-  const header = view.container.querySelector(".app-header")
-  assert.equal(header.contains(diff), false, "제목 헤더에는 리뷰 탭이 없어야 한다")
-  const toolbar = diff.closest('[data-slot="review-toolbar"]')
-  assert.ok(toolbar, "리뷰 탭은 본문 도구 모음에 있어야 한다")
-  assert.ok(
-    toolbar.contains(screen.getByRole("button", { name: "Merge", exact: true })),
-    "탭과 Merge는 같은 도구 모음에 있어야 한다",
-  )
-  for (const action of toolbar.querySelectorAll('[data-slot="button"]')) {
-    assert.ok(action.classList.contains("rounded-full"), "리뷰 액션은 탭과 같은 둥근 형태여야 한다")
-    assert.ok(action.classList.contains("h-7"), "리뷰 액션은 탭과 같은 높이여야 한다")
-    assert.ok(action.classList.contains("text-xs"), "리뷰 액션은 작은 글자 크기를 사용해야 한다")
-  }
-  assert.equal(screen.getAllByRole("tablist").length, 2)
-  assert.deepEqual(
-    Array.from(toolbar.querySelectorAll('[role="tab"]'), (tab) => tab.textContent),
-    ["Diff", "Playwright", "Unit Test", "Integration Test", "Log", "Environment"],
-  )
-  const log = screen.getByRole("tab", { name: "Log", exact: true })
-  await user.click(log)
-  assert.equal(log.getAttribute("aria-selected"), "true")
-  assert.ok(await screen.findByRole("tabpanel", { name: "Log", exact: true }))
-  await user.keyboard("{ArrowRight}")
-  await waitFor(() =>
-    assert.equal(
-      screen.getByRole("tab", { name: "Environment", exact: true }).getAttribute("aria-selected"),
-      "true",
-    ),
-  )
-  await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
-  assert.ok(toolbar.contains(screen.getByRole("tab", { name: "Diff", exact: true })))
-  await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
-  assert.ok(header.querySelector('[role="tablist"]'))
-})
-
 test("실행 결과에서 저장된 소스를 열고 돌아올 수 있다", async () => {
   const { TestEvidence } = await server.ssrLoadModule("/src/components/test-observation.tsx")
   const user = userEvent.setup({ document })
@@ -722,46 +641,6 @@ test("실행 결과에서 저장된 소스를 열고 돌아올 수 있다", asyn
   await user.click(screen.getByRole("tab", { name: "Execution results" }))
   assert.ok(screen.getByRole("heading", { name: "accepts order" }))
   assert.ok(screen.getByText(/expected 422, received 201/))
-})
-
-test("사이드바 이동은 현재 탭을 바꾸고 명시적으로 연 탭만 닫는다", async () => {
-  await i18n.changeLanguage("en")
-  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  const user = userEvent.setup({ document })
-  render(
-    createElement(ProjectManager, {
-      api: {
-        ...sampleApi(),
-        worktrees: async (projectId) => [
-          {
-            id: "second-worktree",
-            projectId,
-            checkoutRoot: "/second/feature",
-            branch: "feature/second",
-          },
-        ],
-      },
-      initialProjects: [project],
-    }),
-  )
-  const tabs = () => within(screen.getByRole("tablist", { name: "Open workspaces" }))
-  await screen.findByRole("button", { name: "feature/second", exact: true })
-  const location = tabs().getByRole("tab", {
-    name: "Redpact example / Worktrees",
-    exact: true,
-  })
-  assert.equal(location.title, "Redpact example / Worktrees")
-  assert.match(location.textContent, /Worktrees$/)
-  await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
-  assert.equal(tabs().getAllByRole("tab").length, 2)
-  await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
-  await user.click(screen.getByRole("button", { name: "feature/second", exact: true }))
-  await waitFor(() => assert.equal(tabs().getAllByRole("tab").length, 2))
-  assert.equal(tabs().getAllByRole("tab")[1].getAttribute("aria-selected"), "true")
-  await user.click(tabs().getAllByRole("button", { name: /Close / })[1])
-  assert.equal(tabs().getAllByRole("tab").length, 1)
-  assert.ok(screen.getByRole("button", { name: "feature/second", exact: true }))
 })
 
 test("global settings remain available without a worktree", async () => {
@@ -936,6 +815,7 @@ test("dependency navigation preserves the worktree review selection and hides de
   render(createElement(ProjectManager, { api, initialProjects: [project] }))
   await user.click(screen.getByRole("button", { name: project.name, exact: true }))
   await user.click(await screen.findByRole("menuitemradio", { name: project.name }))
+  await user.click(await screen.findByRole("button", { name: "local", exact: true }))
   await screen.findAllByText("readme.txt")
   await user.click(screen.getByRole("button", { name: "Dependencies", exact: true }))
   await userEvent
@@ -1312,6 +1192,7 @@ test("project tracking settings save main branch and merged filtering and refres
   render(createElement(ProjectManager, { api, initialProjects: [project] }))
   await user.click(screen.getByRole("button", { name: project.name, exact: true }))
   await user.click(await screen.findByRole("menuitemradio", { name: project.name }))
+  await user.click(await screen.findByRole("button", { name: "local", exact: true }))
   await screen.findByText("No changes in this comparison.")
   await user.click(screen.getByRole("button", { name: "Project settings", exact: true }))
   await user.click(await screen.findByRole("combobox", { name: "Main branch" }))
@@ -1459,9 +1340,12 @@ test("project invalidations retain the active review tab during background list 
   )
   await user.click(screen.getByRole("button", { name: project.name, exact: true }))
   await user.click(await screen.findByRole("menuitemradio", { name: project.name }))
+  await user.click(await screen.findByRole("button", { name: "local", exact: true }))
   await screen.findByRole("tab", { name: "Integration Test" })
   await user.click(screen.getByRole("tab", { name: "Integration Test" }))
-  const checkout = events.find((e) => e.url.includes("worktreeId=") && !e.url.includes("scope="))
+  const checkout = events.find(
+    (e) => !e.closed && e.url.includes("worktreeId=") && !e.url.includes("scope="),
+  )
   assert.ok(!checkout.closed, "hidden Diff keeps observing whether new changes appear")
   const evidence = events.find((e) => e.url.includes("scope=tests") && !e.closed)
   assert.ok(evidence, "Test must subscribe to its source and evidence scope")
@@ -1493,7 +1377,9 @@ test("project invalidations retain the active review tab during background list 
   assert.equal(evidenceReads, 2, "project invalidations must not reread test evidence")
   await user.click(screen.getByRole("tab", { name: "Diff" }))
   assert.equal(evidence.closed, true)
-  const resumed = events.find((e) => e.url.includes("worktreeId=") && !e.url.includes("scope="))
+  const resumed = events.find(
+    (e) => !e.closed && e.url.includes("worktreeId=") && !e.url.includes("scope="),
+  )
   assert.equal(resumed.closed, undefined)
   await act(async () => resumed.onmessage())
   await act(async () => {
@@ -1651,6 +1537,7 @@ test("execution selections follow worktree navigation independently of footer Se
   render(createElement(ProjectManager, { api, initialProjects: [project] }))
   await user.click(screen.getByRole("button", { name: project.name, exact: true }))
   await user.click(await screen.findByRole("menuitemradio", { name: project.name }))
+  await user.click(await screen.findByRole("button", { name: "local", exact: true }))
   await screen.findByText("No changes in this comparison.")
   assert.equal(Boolean(screen.queryByRole("tab", { name: "Settings", exact: true })), false)
   assert.ok(screen.getByRole("button", { name: "Dependencies", exact: true }))
@@ -2230,6 +2117,31 @@ test("settings page exposes authored project and instance controls", async () =>
   assert.equal(screen.queryByRole("textbox", { name: "Log level" }), null)
   assert.equal(screen.queryByRole("textbox", { name: "Compose files" }), null)
 })
+
+for (const [language, label, guidance] of [
+  [
+    "en",
+    "GitHub CLI path",
+    "Leave empty for automatic detection. Saved paths apply to subsequent operations.",
+  ],
+  ["ko", "GitHub CLI 경로", "비워 두면 자동으로 찾습니다. 저장한 경로는 이후 작업에 적용됩니다."],
+]) {
+  test(`CLI 경로 안내는 삭제된 연결 확인 버튼을 가리키지 않는다 (${language})`, async () => {
+    await i18n.changeLanguage(language)
+    const { AuthoredSettings } = await server.ssrLoadModule("/src/components/authored-settings.tsx")
+    const api = {
+      instanceSettings: async () => ({
+        file: "/data/settings.json",
+        source: "{}",
+        revision: "instance",
+        issues: [],
+      }),
+    }
+    render(createElement(AuthoredSettings, { api }))
+    await screen.findByRole("textbox", { name: label })
+    assert.equal(screen.queryAllByText(guidance, { exact: false }).length, 3)
+  })
+}
 
 test("authored settings save changed fields without materializing defaults and retain conflict drafts", async () => {
   await i18n.changeLanguage("en")
@@ -3118,75 +3030,6 @@ test("컨테이너 정리 실패는 성공한 테스트 결과를 유지하며 �
   assert.equal(screen.getByText("Exit code: 0").textContent, "Exit code: 0")
 })
 
-test("미커밋 화면은 버릴 파일을 확인받고 정리 후 자동 머지하지 않는다", async () => {
-  const { WorktreeMerge } = await server.ssrLoadModule("/src/components/worktree-merge.tsx")
-  await i18n.changeLanguage("en")
-  const user = userEvent.setup({ document })
-  const empty = { available: true, patch: "", omitted: [] }
-  let discarded = 0
-  let merged = 0
-  const source = {
-    root: "/repo/feature",
-    branch: "feature",
-    head: "a",
-    revision: "snapshot",
-    dirty: true,
-    blockedReason: null,
-    files: [{ path: "new.txt", staged: false, unstaged: false, untracked: true }],
-    staged: empty,
-    unstaged: empty,
-  }
-  const inspection = {
-    source,
-    target: {
-      ...source,
-      root: "/repo",
-      branch: "main",
-      revision: "target",
-      dirty: false,
-      files: [],
-    },
-    targetBranch: "main",
-    blockedReason: "Commit or discard all uncommitted changes before merging",
-    records: [],
-  }
-  const api = {
-    mergeInspection: async () => inspection,
-    discardChanges: async (_id, revision) => {
-      assert.equal(revision, "snapshot")
-      discarded++
-      inspection.source = { ...source, dirty: false, files: [], revision: "clean" }
-      inspection.blockedReason = null
-      return inspection.source
-    },
-    mergeWorktree: async () => {
-      merged++
-    },
-  }
-  render(
-    createElement(WorktreeMerge, {
-      api,
-      worktreeId: "feature",
-      onBack() {},
-      onMerge: async () => {
-        merged++
-      },
-    }),
-  )
-  await screen.findByText("new.txt")
-  assert.equal(screen.getByRole("button", { name: "Merge into main" }).disabled, true)
-  await user.click(screen.getByRole("button", { name: "Discard changes" }))
-  assert.equal(discarded, 0)
-  const dialog = screen.getByRole("alertdialog")
-  assert.match(dialog.textContent, /new.txt/)
-  await user.click(screen.getByRole("button", { name: "Discard all listed changes" }))
-  await waitFor(() => assert.equal(discarded, 1))
-  await waitFor(() =>
-    assert.equal(screen.getByRole("button", { name: "Merge into main" }).disabled, false),
-  )
-  assert.equal(merged, 0)
-})
-
 test("복사 요청 shell은 화면별 내용을 유지하고 선택 가능한 본문을 남긴다", async () => {
   const { CopyHandoff } = await server.ssrLoadModule("/src/components/copy-handoff.tsx")
   await i18n.changeLanguage("en")
@@ -3233,102 +3076,6 @@ test("오류 알림은 즉시 복사 가능한 Handoff 컨텍스트를 제공한
     Object.defineProperty(navigator, "clipboard", clipboard)
   }
 })
-
-for (const outcome of ["merged", "conflict", "dirty", "target-dirty", "error"]) {
-  test(`머지 버튼은 ${outcome} 결과에 맞게 바로 실행하거나 문제 모달을 연다`, async () => {
-    const { WorktreeReview } = await server.ssrLoadModule("/src/components/worktree-review.tsx")
-    await i18n.changeLanguage("en")
-    const user = userEvent.setup({ document })
-    const empty = {
-      available: true,
-      patch:
-        "diff --git a/readme.txt b/readme.txt\n--- a/readme.txt\n+++ b/readme.txt\n@@ -1 +1 @@\n-old\n+new\n",
-      omitted: [],
-    }
-    const source = {
-      root: "/feature",
-      branch: "feature",
-      revision: "source",
-      files: [],
-      dirty: outcome === "dirty",
-      blockedReason: null,
-      staged: empty,
-      unstaged: empty,
-    }
-    const record = {
-      id: "result",
-      state: outcome,
-      sourceHead: "abc",
-      targetHead: "def",
-      sourceBranch: "feature",
-      targetBranch: "main",
-      createdAt: "2026-09-10T00:00:00Z",
-      conflicts: [],
-      output: "",
-      resolutionRequest: "Resolve this conflict",
-    }
-    let merged = 0
-    render(
-      createElement(WorktreeReview, {
-        worktreeId: "feature",
-        api: {
-          gitDiff: async () => ({
-            available: true,
-            patch:
-              "diff --git a/readme.txt b/readme.txt\n--- a/readme.txt\n+++ b/readme.txt\n@@ -1 +1 @@\n-old\n+new\n",
-            omitted: [],
-          }),
-          mergeInspection: async () => ({
-            source,
-            target: { ...source, dirty: outcome === "target-dirty", revision: "target" },
-            targetBranch: "main",
-            blockedReason:
-              {
-                dirty: "Commit or discard all uncommitted changes before merging",
-                "target-dirty":
-                  "The target worktree has uncommitted changes; organize them there first",
-              }[outcome] ?? null,
-            records: merged && outcome !== "error" ? [record] : [],
-          }),
-          mergeWorktree: async () => {
-            merged++
-            if (outcome === "error") {
-              throw new Error("Connection failed")
-            }
-            return record
-          },
-        },
-      }),
-    )
-    if (source.dirty) {
-      await screen.findByRole("button", { name: /Uncommitted/ })
-    } else {
-      await waitFor(() => assert.equal(screen.queryByRole("button", { name: /Uncommitted/ }), null))
-    }
-    assert.equal(screen.queryByRole("dialog"), null)
-    await user.click(screen.getByRole("button", { name: "Merge", exact: true }))
-    if (outcome === "merged") {
-      await waitFor(() => assert.equal(merged, 1))
-      assert.equal(screen.queryByRole("dialog"), null)
-      assert.ok(screen.getByRole("tab", { name: "Diff" }))
-    } else {
-      const dialog = await screen.findByRole("dialog", { name: "Worktree merge" })
-      assert.equal(merged, outcome === "dirty" || outcome === "target-dirty" ? 0 : 1)
-      assert.match(
-        dialog.textContent,
-        {
-          dirty: /Commit or discard/,
-          "target-dirty": /target worktree/,
-          error: /Connection failed/,
-          conflict: /Resolve merge issue/,
-        }[outcome],
-      )
-      await user.click(screen.getByRole("button", { name: "Close", exact: true }))
-      await waitFor(() => assert.ok(screen.queryByRole("dialog") === null, "Dialog should close"))
-      assert.ok(screen.getByRole("tab", { name: "Diff" }))
-    }
-  })
-}
 
 test("복구 handoff는 상태와 보존된 진단을 복사 가능한 하나의 맥락으로 만든다", async () => {
   const { formatHandoffContext } = await server.ssrLoadModule("/src/components/copy-handoff.tsx")
@@ -3745,108 +3492,6 @@ test("프로젝트 Playwright는 워크트리 캡처와 기능 검증 파일을 
   assert.equal(screen.queryByRole("treeitem", { name: "panel.capture.ts", exact: true }), null)
   await user.click(screen.getByRole("treeitem", { name: "save.spec.ts", exact: true }))
   assert.ok(await screen.findByText(sourceLine("test('설정을 저장한다', async () => {})")))
-})
-
-test("PR 버튼은 읽기 전용 준비 후 명시적으로 발행하고 결과 링크를 보여준다", async () => {
-  await i18n.changeLanguage("en")
-  const { WorktreeMergeActions } = await server.ssrLoadModule("/src/components/worktree-merge.tsx")
-  const { sampleApi } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  const calls = []
-  const inspection = {
-    repository: "owner/repo",
-    baseBranch: "main",
-    branch: "feature/ui",
-    head: "a".repeat(40),
-    revision: "revision-1",
-    pushUrl: "git@github.com:owner/repo.git",
-    title: "Improve UI",
-    existing: null,
-  }
-  const api = {
-    ...sampleApi(),
-    pullRequestInspection: async () => inspection,
-    publishPullRequest: async (id, input) => {
-      calls.push({ id, input })
-      return { number: 4, url: "https://github.com/owner/repo/pull/4" }
-    },
-  }
-  const user = userEvent.setup({ document })
-  render(createElement(WorktreeMergeActions, { api, worktreeId: "w1" }))
-  await user.click(screen.getByRole("button", { name: "PR", exact: true }))
-  const title = await screen.findByLabelText("PR title")
-  assert.equal(title.value, "Improve UI")
-  assert.equal(calls.length, 0, "PR 창을 여는 것만으로는 원격에 발행하지 않는다")
-  await user.type(screen.getByLabelText("PR description"), "Reviewed changes")
-  await user.click(screen.getByRole("button", { name: "Publish PR", exact: true }))
-  await screen.findByDisplayValue("https://github.com/owner/repo/pull/4")
-  assert.equal(calls.length, 1)
-  assert.equal(calls[0].input.body, "Reviewed changes")
-  assert.equal(calls[0].input.head, inspection.head)
-  assert.equal(calls[0].input.existing, undefined)
-})
-
-test("PR 준비 실패는 안내하고 발행 버튼을 제공하지 않는다", async () => {
-  await i18n.changeLanguage("en")
-  const { WorktreeMergeActions } = await server.ssrLoadModule("/src/components/worktree-merge.tsx")
-  const { sampleApi } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  const user = userEvent.setup({ document })
-  render(
-    createElement(WorktreeMergeActions, {
-      api: {
-        ...sampleApi(),
-        pullRequestInspection: async () => {
-          throw new Error("Commit all changes before publishing a PR")
-        },
-      },
-      worktreeId: "w1",
-    }),
-  )
-  await user.click(screen.getByRole("button", { name: "PR", exact: true }))
-  assert.ok(await screen.findByText("Commit all changes before publishing a PR"))
-  assert.equal(screen.queryByRole("button", { name: "Publish PR", exact: true }), null)
-})
-
-test("전역 설정에서 gh 경로를 저장하고 명시적으로 연결 계정을 확인한다", async () => {
-  await i18n.changeLanguage("en")
-  const { GlobalSettings } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-  const { sampleApi } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  let source = JSON.stringify({ server: { port: 54321 }, projects: ["/work"], approval: "auto" })
-  let checked = 0
-  const snapshot = () => ({ file: "/instance/settings.json", source, revision: source, issues: [] })
-  const api = {
-    ...sampleApi(),
-    instanceSettings: async () => snapshot(),
-    saveInstanceSettings: async (input) => {
-      source = input.source
-      return snapshot()
-    },
-    githubConnection: async () => {
-      checked += 1
-      return { login: "owner", cliPath: "/custom/gh" }
-    },
-  }
-  const user = userEvent.setup({ document })
-  const previous = globalThis.FormData
-  globalThis.FormData = dom.window.FormData
-  try {
-    render(createElement(GlobalSettings, { api }))
-    const path = await screen.findByLabelText("GitHub CLI path")
-    assert.equal(checked, 0, "설정을 여는 것만으로는 GitHub에 연결하지 않는다")
-    await user.type(path, "/custom/gh")
-    await user.click(screen.getByRole("button", { name: "Save settings" }))
-    await screen.findByText("Settings saved.")
-    assert.deepEqual(JSON.parse(source), {
-      server: { port: 54321 },
-      projects: ["/work"],
-      approval: "auto",
-      github: { cliPath: "/custom/gh" },
-    })
-    await user.click(screen.getByRole("button", { name: "Check GitHub connection" }))
-    assert.ok(await screen.findByText("Connected as owner"))
-    assert.equal(checked, 1)
-  } finally {
-    globalThis.FormData = previous
-  }
 })
 
 test("빈 테스트 목록은 탐색 칸 없이 표시하고 파일이 생기면 탐색을 복원한다", async () => {
@@ -5123,134 +4768,6 @@ test("워크트리 캡처는 기본 FHD 16:9 해상도로 실행한다", async (
   await screen.findByText("Stopped after recording request")
 })
 
-test("프로젝트 사이드바에서 File Viewer가 Git Graph 위에 열린다", async () => {
-  await i18n.changeLanguage("en")
-  const { WorktreeSidebar } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-  const { SidebarProvider } = await server.ssrLoadModule("/src/components/ui/sidebar.tsx")
-  let opened = false
-  render(
-    createElement(
-      SidebarProvider,
-      {},
-      createElement(WorktreeSidebar, {
-        projectMenu: "Project",
-        worktrees: [],
-        selectedId: "",
-        pending: false,
-        loading: false,
-        onSelect() {},
-        onDependencies() {},
-        onFiles() {
-          opened = true
-        },
-        onGitGraph() {},
-      }),
-    ),
-  )
-  const button = screen.getByRole("button", { name: "File Viewer" })
-  assert.ok(
-    button.compareDocumentPosition(screen.getByRole("button", { name: "Git Graph" })) &
-      Node.DOCUMENT_POSITION_FOLLOWING,
-  )
-  await userEvent.setup().click(button)
-  assert.equal(opened, true)
-})
-
-test("File Viewer에서 Diff 트리를 펼치고 원문과 파일 아이콘을 확인한다", async () => {
-  await i18n.changeLanguage("en")
-  const { ProjectFileViewer } = await server.ssrLoadModule(
-    "/src/components/project-file-viewer.tsx",
-  )
-  const api = {
-    projectFile: async (_id, path) => {
-      if (path === "src/hello.ts") {
-        return { kind: "text", path, content: "<script>original</script>\n" }
-      }
-      return {
-        kind: "directory",
-        path,
-        entries: path ? [{ name: "hello.ts", kind: "file" }] : [{ name: "src", kind: "directory" }],
-      }
-    },
-  }
-  render(createElement(ProjectFileViewer, { api, projectId: "project" }))
-  const user = userEvent.setup()
-  await user.click(await screen.findByRole("treeitem", { name: "src" }))
-  await user.click(await screen.findByRole("treeitem", { name: "hello.ts" }))
-  await waitFor(() =>
-    assert.equal(document.querySelector(".diff-code")?.textContent, "<script>original</script>"),
-  )
-  assert.equal(document.querySelector(".diff script"), null)
-  assert.ok(screen.queryByText("1 file") === null)
-  assert.ok(document.querySelector(".diff-gutter"))
-  assert.equal(document.querySelector(".diff-code-insert, .diff-code-delete"), null)
-  assert.ok(
-    screen
-      .getByRole("treeitem", { name: "hello.ts" })
-      .querySelector('img[src$="/material-icons/typescript.svg"]'),
-  )
-  await user.click(screen.getByRole("treeitem", { name: "src" }))
-  assert.equal(screen.queryByRole("treeitem", { name: "hello.ts" }), null)
-  assert.ok(document.querySelector(".diff-code"))
-})
-
-test("File Viewer에서 같은 파일을 다시 눌러도 원문을 유지하고 오류를 재시도한다", async () => {
-  await i18n.changeLanguage("en")
-  const { ProjectFileViewer } = await server.ssrLoadModule(
-    "/src/components/project-file-viewer.tsx",
-  )
-  let failed = true
-  const reads = []
-  const api = {
-    projectFile: async (_id, path) => {
-      reads.push(path)
-      if (!path) {
-        return {
-          kind: "directory",
-          path,
-          entries: [
-            { name: "empty", kind: "directory" },
-            { name: "readme.md", kind: "file" },
-            { name: "image.png", kind: "file" },
-          ],
-        }
-      }
-      if (path === "empty") {
-        return { kind: "directory", path, entries: [] }
-      }
-      if (path === "image.png") {
-        return { kind: "binary", path }
-      }
-      if (failed) {
-        throw new Error("File temporarily unavailable")
-      }
-      return { kind: "text", path, content: "original" }
-    },
-  }
-  render(createElement(ProjectFileViewer, { api, projectId: "project" }))
-  const user = userEvent.setup()
-  const file = await screen.findByRole("treeitem", { name: "readme.md" })
-  assert.deepEqual(reads, [""])
-  await user.click(file)
-  assert.ok(await screen.findByText("File temporarily unavailable"))
-  failed = false
-  await user.click(screen.getByRole("button", { name: "Retry" }))
-  await waitFor(() => assert.equal(document.querySelector(".diff-code")?.textContent, "original"))
-  await user.click(file)
-  assert.equal(document.querySelector(".diff-code")?.textContent, "original")
-  const folder = screen.getByRole("treeitem", { name: "empty" })
-  await user.keyboard("{Home}")
-  await waitFor(() => assert.ok(document.activeElement === folder))
-  await user.keyboard("{ArrowRight}")
-  await waitFor(() => assert.ok(reads.includes("empty")))
-  assert.equal(folder.getAttribute("aria-expanded"), "true")
-  const image = screen.getByRole("treeitem", { name: "image.png" })
-  assert.ok(image.querySelector('img[src$="/material-icons/image.svg"]'))
-  await user.click(image)
-  assert.ok(await screen.findByText("Binary or non-UTF-8 file. Preview unavailable."))
-  assert.equal(document.querySelector(".diff-code"), null)
-})
-
 for (const surface of [
   "unit",
   "integration",
@@ -6034,129 +5551,6 @@ test("Tests의 Playwright 선택은 해당 자료만 조회하고 공통 실행 
   )
 })
 
-test("프로젝트 선택 옆 메뉴에서 항목을 숨겨도 현재 Container와 worktree 접근을 유지한다", async () => {
-  await i18n.changeLanguage("en")
-  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  const actions = []
-  render(
-    createElement(ProjectManager, {
-      initialProjects: [project],
-      api: {
-        ...sampleApi(),
-        testContainer: async () => ({
-          target: { branch: "local" },
-          environment: null,
-          composeFiles: [],
-        }),
-        testContainerAction: async (...args) => actions.push(args),
-      },
-    }),
-  )
-  const user = userEvent.setup({ document })
-  const options = screen.queryByRole("button", { name: "Project menu options" })
-  assert.ok(options, "프로젝트 선택 옆에 메뉴 표시 버튼이 있어야 한다")
-  const header = options.closest('[data-slot="sidebar-header"]')
-  assert.ok(within(header).getByRole("button", { name: project.name }))
-  assert.equal(screen.queryByRole("button", { name: "Playwright", exact: true }), null)
-  assert.equal(screen.queryByRole("button", { name: "Test Container", exact: true }), null)
-  await user.click(screen.getByRole("button", { name: "Container", exact: true }))
-  await screen.findByRole("button", { name: "Start", exact: true })
-  await user.click(options)
-  const popup = await screen.findByRole("menu")
-  assert.equal(within(popup).getAllByRole("menuitemcheckbox").length, 6)
-  for (const name of ["Container", "File Viewer", "Dependencies"]) {
-    await user.click(within(popup).getByRole("menuitemcheckbox", { name, exact: true }))
-    assert.equal(
-      within(popup)
-        .getByRole("menuitemcheckbox", { name, exact: true })
-        .getAttribute("aria-checked"),
-      "false",
-    )
-  }
-  await user.keyboard("{Escape}")
-  await waitFor(() => assert.equal(document.activeElement === options, true))
-  assert.equal(screen.queryByRole("button", { name: "Container", exact: true }), null)
-  assert.ok(screen.getByRole("region", { name: "Container", exact: true }))
-  assert.ok(screen.getByRole("button", { name: "Settings", exact: true }))
-  assert.ok(screen.getByRole("navigation", { name: "Worktrees" }))
-  assert.equal(options.getAttribute("aria-label"), "Project menu options (3 hidden)")
-  assert.deepEqual(actions, [], "표시 선택으로 컨테이너를 실행하거나 중단해서는 안 된다")
-  await user.click(options)
-  await user.click(await screen.findByRole("menuitem", { name: "Show all" }))
-  await user.keyboard("{Escape}")
-  assert.ok(screen.getByRole("button", { name: "Container", exact: true }))
-  assert.ok(screen.getByRole("button", { name: "File Viewer", exact: true }))
-})
-
-test("프로젝트 메뉴 표시 선택은 프로젝트 전환과 다시 열기 후에도 각각 유지된다", async () => {
-  await i18n.changeLanguage("en")
-  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  const second = {
-    ...project,
-    id: "second",
-    name: "Second project",
-    location: { kind: "directory", root: "/second" },
-  }
-  const props = { api: sampleApi(), initialProjects: [project, second] }
-  let view = render(createElement(ProjectManager, props))
-  const user = userEvent.setup({ document })
-  assert.ok(screen.queryByRole("button", { name: "Project menu options" }))
-  await user.click(screen.getByRole("button", { name: "Project menu options" }))
-  await user.click(await screen.findByRole("menuitemcheckbox", { name: "File Viewer" }))
-  await user.keyboard("{Escape}")
-  await user.click(screen.getByRole("button", { name: project.name }))
-  await user.click(await screen.findByRole("menuitemradio", { name: second.name }))
-  assert.ok(screen.getByRole("button", { name: "File Viewer" }))
-  await user.click(screen.getByRole("button", { name: "Project menu options" }))
-  assert.equal(screen.queryByRole("menuitemcheckbox", { name: "Git Graph" }), null)
-  await user.click(await screen.findByRole("menuitemcheckbox", { name: "Container" }))
-  await user.keyboard("{Escape}")
-  await user.click(screen.getByRole("button", { name: second.name }))
-  await user.click(await screen.findByRole("menuitemradio", { name: project.name }))
-  assert.equal(screen.queryByRole("button", { name: "File Viewer" }), null)
-  assert.ok(screen.getByRole("button", { name: "Container" }))
-  view.unmount()
-  view = render(createElement(ProjectManager, props))
-  assert.equal(screen.queryByRole("button", { name: "File Viewer" }), null)
-  assert.ok(screen.getByRole("button", { name: "Container" }))
-  view.unmount()
-})
-
-test("메뉴 표시 저장소가 잘못되거나 차단되어도 키보드로 전체 메뉴를 숨기고 복원한다", async () => {
-  await i18n.changeLanguage("en")
-  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  localStorage.setItem(`redpact:project-navigation:${project.id}`, "invalid json")
-  const storage = Object.getPrototypeOf(localStorage)
-  const setItem = storage.setItem
-  storage.setItem = () => {
-    throw new Error("Storage unavailable")
-  }
-  try {
-    render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
-    const user = userEvent.setup({ document })
-    const options = screen.queryByRole("button", { name: "Project menu options" })
-    assert.ok(options)
-    options.focus()
-    await user.keyboard("{Enter}")
-    for (const checkbox of await screen.findAllByRole("menuitemcheckbox")) {
-      await user.click(checkbox)
-    }
-    await user.keyboard("{Escape}")
-    assert.equal(screen.queryByRole("button", { name: "Tests", exact: true }), null)
-    assert.ok(screen.getByRole("button", { name: project.name }))
-    assert.ok(screen.getByRole("button", { name: "Settings", exact: true }))
-    await user.click(options)
-    await user.click(await screen.findByRole("menuitem", { name: "Show all" }))
-    await user.keyboard("{Escape}")
-    assert.ok(screen.getByRole("button", { name: "Tests", exact: true }))
-  } finally {
-    storage.setItem = setItem
-  }
-})
-
 test("Test Container는 화면 진입으로 실행하지 않고 사용자가 재실행과 종료를 선택한다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectTestContainer } = await server.ssrLoadModule(
@@ -6814,145 +6208,6 @@ test("커밋·브랜치 이미지 뷰어가 비교 리비전과 이름 변경 �
   assert.ok(document.querySelector(".diff-code-delete"))
 })
 
-test("새 버전이 있을 때 사이드바 하단에 Update를 표시하고 네이티브 설치를 요청한다", async () => {
-  await i18n.changeLanguage("en")
-  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  const calls = []
-  window.__TAURI__ = {
-    core: {
-      invoke: async (command) => {
-        calls.push(command)
-        return { version: "0.2.0", busy: false }
-      },
-    },
-  }
-  try {
-    render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
-    const update = await screen.findByRole("button", { name: "Update to 0.2.0" })
-    assert.ok(update.closest('[data-slot="sidebar-footer"]'))
-    await userEvent.click(update)
-    await waitFor(() => assert.ok(calls.includes("desktop_install_update")))
-  } finally {
-    delete window.__TAURI__
-  }
-})
-
-test("새 버전이 없으면 Update를 숨기고 설정 안에서만 수동 확인한다", async () => {
-  await i18n.changeLanguage("en")
-  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  const props = { api: sampleApi(), initialProjects: [project] }
-  const view = render(createElement(ProjectManager, props))
-  assert.equal(screen.queryByRole("button", { name: /Update/ }), null)
-  view.unmount()
-  let checked = false
-  window.__TAURI__ = {
-    core: {
-      invoke: async () => {
-        checked = true
-        return { version: null, busy: false }
-      },
-    },
-  }
-  try {
-    render(createElement(ProjectManager, props))
-    await waitFor(() => assert.equal(checked, true))
-    assert.equal(screen.queryByRole("button", { name: "Check for updates" }), null)
-    await userEvent.click(screen.getByRole("button", { name: "Settings", exact: true }))
-    assert.ok(screen.getByRole("button", { name: "Check for updates" }))
-  } finally {
-    delete window.__TAURI__
-  }
-})
-
-test("업데이트 작업 중에는 중복 설치 요청을 막는다", async () => {
-  await i18n.changeLanguage("en")
-  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  const calls = []
-  window.__TAURI__ = {
-    core: {
-      invoke: async (command) => {
-        calls.push(command)
-        return { version: "0.2.0", busy: true }
-      },
-    },
-  }
-  try {
-    render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
-    const update = await screen.findByRole("button", { name: "Update to 0.2.0" })
-    assert.equal(update.disabled, true)
-    await userEvent.click(update)
-    assert.deepEqual(calls, ["desktop_update_status"])
-  } finally {
-    delete window.__TAURI__
-  }
-})
-
-test("사이드바 하단 한 줄에 아이콘 설정과 GitHub·Star·업데이트 확인을 모은다", async () => {
-  await i18n.changeLanguage("en")
-  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  const calls = []
-  window.__TAURI__ = {
-    core: {
-      invoke: async (command) => {
-        calls.push(command)
-        return { version: null, busy: false }
-      },
-    },
-  }
-  try {
-    render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
-    const shortcuts = within(screen.getByRole("group", { name: "App shortcuts" }))
-    const settings = shortcuts.getByRole("button", { name: "Settings", exact: true })
-    assert.equal(settings.textContent, "")
-    const repository = shortcuts.getByRole("link", { name: "GitHub repository" })
-    const star = shortcuts.getByRole("link", { name: "Star on GitHub" })
-    assert.equal(repository.getAttribute("href"), "https://github.com/wo658/redpact")
-    assert.equal(star.getAttribute("href"), "https://github.com/wo658/redpact")
-    await userEvent.click(repository)
-    await userEvent.click(star)
-    assert.equal(calls.filter((command) => command === "desktop_open_repository").length, 2)
-    assert.equal(shortcuts.queryByRole("button", { name: "Check for updates" }), null)
-    await userEvent.click(settings)
-    await userEvent.click(screen.getByRole("button", { name: "Check for updates" }))
-    await waitFor(() => assert.ok(calls.includes("desktop_check_update")))
-    assert.equal(settings.getAttribute("aria-current"), "page")
-  } finally {
-    delete window.__TAURI__
-  }
-})
-
-test("브라우저 방문 기록으로 메뉴와 작업공간 탭을 복원하고 새 이동은 앞으로 기록을 지운다", async () => {
-  await i18n.changeLanguage("en")
-  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
-  const user = userEvent.setup({ document })
-  await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
-  const firstTab = window.history.state.redpactWorkspace.id
-  await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
-  assert.ok(screen.getByRole("heading", { name: "Settings", exact: true }))
-  const secondTab = window.history.state.redpactWorkspace.id
-  window.history.back()
-  await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, firstTab))
-  await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
-  window.history.forward()
-  await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, secondTab))
-  window.history.back()
-  await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, firstTab))
-  await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
-  await user.click(screen.getByRole("button", { name: "Project settings", exact: true }))
-  await screen.findByRole("combobox", { name: "Main branch" })
-  const state = window.history.state
-  window.history.forward()
-  await new Promise((resolve) => setTimeout(resolve, 30))
-  assert.deepEqual(window.history.state, state)
-  assert.ok(screen.getByRole("combobox", { name: "Main branch" }))
-})
-
 for (const platform of ["macos", "windows"]) {
   test(`${platform} 앞뒤 버튼은 브라우저 방문 기록을 직접 이동한다`, async () => {
     await i18n.changeLanguage("en")
@@ -6971,14 +6226,14 @@ for (const platform of ["macos", "windows"]) {
       assert.equal(back.closest(".app-header"), null)
       const user = userEvent.setup({ document })
       await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
-      const firstTab = window.history.state.redpactWorkspace.id
-      await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
-      const secondTab = window.history.state.redpactWorkspace.id
+      const firstPage = window.history.state.redpactWorkspace.view.page
+      await user.click(screen.getByRole("button", { name: "Project settings", exact: true }))
+      const secondPage = window.history.state.redpactWorkspace.view.page
       await user.click(screen.getByRole("button", { name: "Go back", exact: true }))
-      await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, firstTab))
+      await waitFor(() => assert.equal(window.history.state.redpactWorkspace.view.page, firstPage))
       await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
       await user.click(screen.getByRole("button", { name: "Go forward", exact: true }))
-      await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, secondTab))
+      await waitFor(() => assert.equal(window.history.state.redpactWorkspace.view.page, secondPage))
     } finally {
       delete document.documentElement.dataset.desktop
     }
@@ -7026,4 +6281,292 @@ test("Windows 창 버튼은 연결 중에도 작동하고 최대화 상태를 �
     delete window.__TAURI__
     delete document.documentElement.dataset.desktop
   }
+})
+
+test("첫 화면은 현재 작업과 검증 이력을 우선하고 고급 도구를 접는다", async () => {
+  localStorage.removeItem("redpact:tools-open")
+  await i18n.changeLanguage("en")
+  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
+  render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
+  const navigation = await screen.findByRole("navigation", { name: "Review workspace" })
+  assert.deepEqual(
+    within(navigation)
+      .getAllByRole("button")
+      .map((button) => button.textContent),
+    ["Current work", "Execution history"],
+  )
+  assert.ok(await screen.findByRole("heading", { name: "Current work", exact: true }))
+  assert.equal(screen.queryByRole("button", { name: "Container", exact: true }), null)
+  await userEvent.click(screen.getByRole("button", { name: "Tools", exact: true }))
+  assert.ok(screen.getByRole("button", { name: "Container", exact: true }))
+  assert.equal(screen.queryByRole("button", { name: "File Viewer", exact: true }), null)
+  assert.equal(screen.queryByRole("button", { name: "Git Graph", exact: true }), null)
+  assert.equal(screen.queryByRole("tablist", { name: "Open workspaces" }), null)
+  assert.ok(screen.getByRole("combobox", { name: "Checkout", exact: true }))
+  await userEvent.click(within(navigation).getByRole("button", { name: "Execution history" }))
+  assert.ok(await screen.findByRole("heading", { name: "Execution history", exact: true }))
+  assert.ok(await screen.findByText("No executions yet"))
+})
+
+test("채팅 검토 링크는 실행과 checkout을 복원하고 잘못된 종류를 거부한다", async () => {
+  const history = await server.ssrLoadModule("/src/lib/workspace-history.ts")
+  assert.equal(typeof history.readWorkspaceLocation, "function")
+  const review = history.readWorkspaceLocation(
+    "?project=p1&page=review&kind=integration&id=run%201&worktree=w1",
+  )
+  assert.deepEqual(review, {
+    projectId: "p1",
+    worktreeId: "w1",
+    view: {
+      page: "execution-review",
+      selectedId: "w1",
+      execution: { kind: "integration", id: "run 1" },
+    },
+  })
+  assert.equal(
+    history.readWorkspaceLocation("?project=p1&page=review&kind=unknown&id=r1"),
+    undefined,
+  )
+})
+
+for (const deletedProject of [false, true]) {
+  test(`프로젝트 ${deletedProject ? "삭제 후에도" : "연결 없이도"} 직접 검토 링크의 보존 실행을 연다`, async () => {
+    await i18n.changeLanguage("en")
+    const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+    const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
+    const href = `/?page=review&kind=unit&id=retained-run${deletedProject ? "&project=removed-project" : ""}`
+    window.history.replaceState(null, "", href)
+    const calls = []
+    render(
+      createElement(ProjectManager, {
+        initialProjects: deletedProject ? [project] : [],
+        api: {
+          ...sampleApi(),
+          worktrees: async () => {
+            throw new Error("보존 실행 검토는 다른 프로젝트의 checkout을 선택하면 안 된다")
+          },
+          reviewContext: async (kind, id) => {
+            calls.push([kind, id])
+            return {
+              kind,
+              id,
+              executionId: id,
+              intent: "Retained command",
+              projectId: null,
+              worktreeId: null,
+              path: "/removed/checkout",
+              state: "finished",
+              outcome: "command_succeeded",
+              cleanup: { state: "removed", issues: [] },
+              approval: null,
+              failures: [],
+              failureCount: 0,
+              evidence: [],
+              evidenceCount: 0,
+              reviewPath: href,
+              freshness: { state: "unknown", reason: "Not compared" },
+              humanAcceptance: "not_recorded",
+            }
+          },
+          unitRun: async (id) => {
+            assert.equal(id, "retained-run")
+            return { stdout: "Retained command output", stderr: "" }
+          },
+        },
+      }),
+    )
+    assert.ok(await screen.findByRole("heading", { name: "Retained command", exact: true }))
+    assert.ok(await screen.findByText("Retained command output", { exact: true }))
+    assert.ok(screen.getByText("/removed/checkout", { exact: true }))
+    assert.deepEqual(calls, [["unit", "retained-run"]])
+    assert.equal(window.location.pathname + window.location.search, href)
+    assert.equal(screen.queryByRole("heading", { name: "Current work", exact: true }), null)
+  })
+}
+
+test("실행 승인 전에 캡처된 명령과 입력 식별자를 보여주고 명시적인 클릭만 승인한다", async () => {
+  await i18n.changeLanguage("en")
+  const { ExecutionReview } = await server.ssrLoadModule("/src/components/execution-workspace.tsx")
+  const calls = []
+  const context = {
+    kind: "unit",
+    id: "request-one",
+    intent: "pnpm test",
+    executionId: null,
+    projectId: "p",
+    worktreeId: "w",
+    path: "/repo/feature",
+    state: "pending",
+    outcome: null,
+    createdAt: "2026-10-09T00:00:00Z",
+    finishedAt: null,
+    reviewPath: "/?page=review",
+    approval: {
+      state: "pending",
+      policy: "ask",
+      requestId: "request-one",
+      revision: 7,
+      preview: {
+        command: "pnpm test",
+        cwd: "app/server",
+        dockerfile: "tests/Dockerfile",
+        settingsDigest: "settings-digest",
+        inputDigest: "input-digest",
+      },
+    },
+    cleanup: { state: "not_started", issues: [] },
+    failures: [],
+    failureCount: 0,
+    evidence: [],
+    evidenceCount: 0,
+    freshness: { state: "unknown", reason: "Not compared" },
+    humanAcceptance: "not_recorded",
+  }
+  render(
+    createElement(ExecutionReview, {
+      api: {
+        reviewContext: async () => context,
+        approveExecutionReview: async (...args) => {
+          calls.push(args)
+        },
+      },
+      execution: { kind: "unit", id: "request-one" },
+      onHistory() {},
+    }),
+  )
+  assert.ok(await screen.findByRole("heading", { name: "Requested execution", exact: true }))
+  assert.ok(screen.getByText("tests/Dockerfile", { exact: true }))
+  assert.ok(screen.getByText("settings-digest", { exact: true }))
+  assert.equal(calls.length, 0)
+  await userEvent.click(screen.getByRole("button", { name: "Approve execution", exact: true }))
+  await waitFor(() => assert.deepEqual(calls, [["unit", "request-one", 7, undefined]]))
+})
+
+test("Integration 승인 전에 저장된 앱 서비스를 보여주고 환경 승인 클릭만 전달한다", async () => {
+  await i18n.changeLanguage("en")
+  const { ExecutionReview } = await server.ssrLoadModule("/src/components/execution-workspace.tsx")
+  const calls = []
+  const context = {
+    kind: "integration",
+    id: "request-one",
+    intent: "Integration tests",
+    executionId: null,
+    projectId: "p",
+    worktreeId: "w",
+    path: "/repo/feature",
+    state: "pending",
+    outcome: null,
+    createdAt: "2026-10-09T00:00:00Z",
+    finishedAt: null,
+    reviewPath: "/?page=review",
+    approval: {
+      state: "pending",
+      policy: "ask",
+      requestId: "request-one",
+      revision: 7,
+      preview: {
+        services: ["reviewed-app"],
+        serviceCount: 1,
+        dependencies: [],
+        dependencyCount: 0,
+        settingsDigest: "settings-digest",
+        sourceDigest: "source-digest",
+      },
+    },
+    cleanup: { state: "not_started", issues: [] },
+    failures: [],
+    failureCount: 0,
+    evidence: [],
+    evidenceCount: 0,
+    freshness: { state: "unknown", reason: "Not compared" },
+    humanAcceptance: "not_recorded",
+  }
+  render(
+    createElement(ExecutionReview, {
+      api: {
+        reviewContext: async () => context,
+        approveExecutionReview: async (...args) => {
+          calls.push(args)
+        },
+      },
+      execution: { kind: "integration", id: "request-one" },
+      onHistory() {},
+    }),
+  )
+  assert.ok(await screen.findByRole("heading", { name: "Requested execution", exact: true }))
+  assert.ok(screen.getByText("reviewed-app", { exact: true }))
+  assert.ok(screen.getByRole("heading", { name: "Services · 1", exact: true }))
+  assert.ok(screen.getByText("settings-digest", { exact: true }))
+  assert.equal(calls.length, 0)
+  await userEvent.click(screen.getByRole("button", { name: "Approve environment", exact: true }))
+  await waitFor(() => assert.deepEqual(calls, [["integration", "request-one", 7, "environment"]]))
+})
+
+test("실행 검토 링크를 새로 열어도 최신 실행으로 바꾸지 않고 기록된 소스를 조회한다", async () => {
+  await i18n.changeLanguage("en")
+  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
+  const calls = []
+  window.history.replaceState(
+    null,
+    "",
+    `/?project=${project.id}&page=review&kind=integration&id=old-run&worktree=example-worktree`,
+  )
+  render(
+    createElement(ProjectManager, {
+      initialProjects: [project],
+      api: {
+        ...sampleApi(),
+        reviewContext: async (kind, id) => {
+          calls.push([kind, id])
+          return {
+            kind,
+            id,
+            executionId: id,
+            intent: "Historical intent",
+            path: "/historical/checkout",
+            state: "finished",
+            outcome: "passed",
+            createdAt: "2026-10-01T00:00:00Z",
+            finishedAt: "2026-10-01T00:01:00Z",
+            reviewPath: "/",
+            approval: null,
+            cleanup: { state: "stopped", issues: [] },
+            failures: [],
+            failureCount: 0,
+            evidence: [],
+            evidenceCount: 0,
+            freshness: { state: "unknown", reason: "Not compared" },
+            humanAcceptance: "not_recorded",
+          }
+        },
+        run: async (id) => {
+          assert.equal(id, "old-run")
+          return {
+            id,
+            submissionId: "old-submission",
+            state: "finished",
+            limitations: [],
+            result: { outcome: "passed", cases: [], errors: [] },
+          }
+        },
+        submission: async (id) => {
+          assert.equal(id, "old-submission")
+          return {
+            id,
+            digest: "old-digest",
+            parsed: [],
+            files: [{ path: "old.test.ts", source: "// recorded source" }],
+          }
+        },
+      },
+    }),
+  )
+  assert.ok(await screen.findByRole("heading", { name: "Historical intent", exact: true }))
+  await userEvent.click(await screen.findByRole("tab", { name: "Executed source", exact: true }))
+  assert.ok(await screen.findByText("// recorded source"))
+  assert.deepEqual(calls, [["integration", "old-run"]])
+  assert.match(window.location.search, /id=old-run/)
+  assert.ok(screen.getByText("Human acceptance is not recorded.", { exact: true }))
 })

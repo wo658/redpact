@@ -21,6 +21,8 @@ normal preconditions even when called outside the viewer. See [architecture](arc
 
 | Tool | Contract |
 | --- | --- |
+| `get_workspace_status` | Absolute checkout `path`; read-only settings diagnostics, existing binding, pending approvals, active/recent executions and cleanup attention |
+| `get_review_context` | Execution `kind` and `id`; bounded failures, recorded evidence references, captured approval preview and relative viewer review path |
 | `configure` | `describe`, `inspect` or `validate` for an absolute execution `path`; returns schema, roots, diagnostics and optional plan |
 | `run_tests` | Absolute `path`, optional exact `tests` paths; submits and executes Integration |
 | `get_run` | Returned execution or review `id`; reads state, results and environment cleanup |
@@ -46,13 +48,18 @@ Unit retains whole-command output instead. `detail: image` requires a Playwright
 image content up to 8 MiB. Use the viewer for larger images, video and traces.
 Passing historical evidence does not establish current-code freshness or human acceptance.
 
-`run_tests` retains its Integration approval flow. Unit and Playwright MCP starts
-currently require Auto policy; under Ask they fail before registration or execution
-and require an explicit viewer action. They cannot change policy or grant approval.
-`cancel_execution` also accepts pending Integration review IDs without approving them.
+All three execution tools capture the instance approval policy when requested. Auto
+starts through the existing execution workflow. Ask returns an `awaiting_approval`
+review ID and an MCP App card without running project code. Integration retains its
+environment-then-tests approval; Unit and Playwright each approve one captured request.
+Models cannot grant approval or change policy. `get_execution` result accepts review
+IDs and refreshes Unit/Playwright cards. Pending reviews have no logs, source or images
+from an execution. After admission, Unit/Playwright review IDs resolve their recorded
+execution for evidence; Integration logs/source use the eventual run ID.
+
+`cancel_execution` accepts pending review IDs of all three kinds without approving them.
 Read result state after cancellation to distinguish test outcome from cleanup failure;
-Unit and Playwright retain their existing cleanup retry behavior. Integration review
-IDs work with `get_execution` result; use the eventual run ID for logs and source.
+Unit and Playwright retain their existing cleanup retry behavior.
 
 The configured startup default or an existing `worktreeId` can resolve a binding;
 prefer an explicit path when authoring. Discovery observes declared roots and native
@@ -64,29 +71,78 @@ remain diagnostics. [Execution](execution.md) describes runtime boundaries.
 The bundled resources are `ui://redpact/environment.html` and
 `ui://redpact/tests.html`. They present response snapshots; they do not continuously
 poll or subscribe. The Environment card lists each dependency’s fixed kind once,
-without execution-time dependency choices. Another `get_run` supplies a fresh snapshot. The persistent local
-viewer remains the place for execution history and resource controls.
+without execution-time dependency choices. `get_run` refreshes an Integration snapshot;
+`get_execution` refreshes Unit/Playwright reviews. The connected viewer presents
+execution history, detailed evidence and recovery controls.
 
-A new `run_tests` captures the immutable submission and instance `approval` policy:
+A new execution request captures the instance `approval` policy:
 
 - `auto` admits execution immediately.
-- `ask` returns an `awaiting_approval` review ID. Environment approval precedes test
-  bundle approval. No container or test process starts until both are accepted.
+- `ask` returns an `awaiting_approval` review ID. Integration requires environment
+  approval followed by test bundle approval. Unit presents its complete command,
+  Dockerfile, directory and input identity. Playwright presents its declared target,
+  purpose, viewport and application/test input identities. No container or test
+  process starts until the required explicit approval.
 
-Approval binds the captured submission, fixed execution plan, revision and settings digest.
-Admission and queued execution revalidate settings. Later file edits do not replace
-captured tests. This does not freeze every application input, prove sufficient tests,
-record a TDD red, or approve a Git merge.
+Integration approval binds the captured submission, fixed execution plan, revision and
+settings digest. Later file edits do not replace its captured tests. Unit and Playwright
+approval binds the captured specification and settings/input digests. Admission rereads
+the inputs and rejects changes instead of approving replacement inputs. Unit checks the
+copied source before container build; Playwright checks captured tests and passes the
+approved application identity through environment preparation. See [execution](execution.md)
+for external input and fingerprint limits. Approval does not prove sufficient tests,
+record a TDD red or establish human acceptance of code changes.
 
-App-only `review_action` and `set_approval_policy` are hidden from models
-by compliant clients. Unguessable capabilities are delivered in UI-only `_meta`.
-Revision checks reject stale actions; duplicate final approval returns the existing
-run. Changing the default policy affects future requests, never pending approvals.
-A host without Apps cannot silently replace Ask with textual approval or Auto.
+App-only `review_action`, `execution_review_action` and `set_approval_policy` are hidden
+from models by compliant clients. Unguessable capabilities are delivered in UI-only
+`_meta`, never model-visible content. Revision checks reject stale actions; duplicate
+final approval returns the existing run. Changing the default policy affects future
+requests, never pending approvals. A host without Apps can open the connected review
+screen for an explicit approval; it cannot substitute textual approval or silently
+change Ask to Auto. The viewer's explicit review actions use the same workflows and
+retain the trusted-local HTTP boundary below.
 
 The browser bundle uses the official Apps SDK; the server registers resources/tool
 metadata with its existing SDK. Cards contain their assets and use the host bridge
 rather than iframe HTTP. [Storage](storage.md) describes durable review recovery.
+
+## Conversation context
+
+`get_workspace_status` reads the named checkout without registering it or executing
+code. It returns the shared settings root and diagnostics, existing observed binding,
+pending approvals and bounded execution summaries. Active and unfinished cleanup
+records are queried independently of the recent history page. `nextActions` references
+available operations; they are guidance, not preapproval or proof of runtime readiness.
+
+`get_review_context` returns one execution or pending review with bounded failures,
+evidence references and a relative `reviewPath`. Resolve it against the same viewer
+origin; it contains no environment credentials or UI capabilities. Summaries return
+up to 20 failures/evidence references with counts; use `get_execution` for the retained
+detail. Freshness remains `unknown` until the relevant live inputs are actually compared,
+and human acceptance is `not_recorded`. Unit command failure is not automatically
+classified as an assertion failure.
+
+Integration approval previews show the captured application service selection,
+dependency kinds and submitted test files with scenario titles. Service names are
+limited to 50 with the full `serviceCount`; this preview uses the saved request,
+not current settings, and appears before the viewer's environment approval action.
+
+Playwright completion alone does not prove environment removal. Its card and review
+summary report cleanup as `unknown` without explicit cleanup evidence, or `failed`
+when a cleanup error was recorded.
+
+The viewer uses `GET /api/workspace-status?path=...` and
+`GET /api/review-context?kind=...&id=...` through the same workflows. Explicit viewer
+approval and cancellation use `/api/execution-reviews/:kind/:id/approve` and `/cancel`;
+approval checks the expected revision and the appropriate Integration subject.
+They keep the existing same-origin/local-host boundary. Model-facing tools never
+expose the viewer's approval operation. See [navigation](ux-navigation.md).
+
+The worktree's `scope=evidence` event subscription includes Integration and
+Unit/Playwright review records, retained execution evidence and shared project settings.
+Chat-created requests and approval or cancellation changes refresh the connected
+review screen without receiving other worktrees' records. This scope requires an
+explicit worktree ID; retained evidence remains observable if its checkout is unavailable.
 
 ## Local access boundary
 

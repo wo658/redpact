@@ -1,7 +1,7 @@
 import "./sidebar-csp"
 import { createRoot } from "react-dom/client"
-import { initialize } from "../../../../examples/sidebar-app/src/redpact/ui"
 import App from "../App"
+import { initialize } from "../lib/sidebar-runtime"
 import { ThemeProvider } from "../lib/theme"
 import { setViewerTransport, type ViewerEvents } from "../lib/viewer-transport"
 import "../index.css"

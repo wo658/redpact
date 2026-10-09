@@ -126,3 +126,82 @@ export function registerApps(server: McpServer, reviews?: ReviewTests) {
     },
   )
 }
+
+export function executionReviewResult(
+  view: import("../../core/types/execution-reviews.js").ExecutionReviewView,
+  service: import("../../core/types/execution-reviews.js").ExecutionReviews,
+) {
+  const { review, run } = view
+  const value = {
+    kind: review.kind,
+    id: run?.id ?? review.id,
+    state: run?.state ?? (review.state === "pending" ? "awaiting_approval" : review.state),
+    reviewId: review.id,
+    approval: review.policy,
+    review,
+    ...(run ? { run } : {}),
+  }
+  return {
+    content: [{ type: "text" as const, text: JSON.stringify(value) }],
+    structuredContent: value,
+    _meta: {
+      redpact: {
+        kind: "execution",
+        executionReview: review,
+        ...(run ? executionSnapshot(review.kind, run) : {}),
+        run,
+        token: service.capability(review.id),
+      },
+    },
+  }
+}
+
+export function executionSnapshot(
+  kind: "unit" | "playwright",
+  run:
+    | import("../../core/types/unit-tests.js").UnitRun
+    | import("../../core/types/playwright.js").CaptureRun,
+) {
+  if (kind === "unit") {
+    const unit = run as import("../../core/types/unit-tests.js").UnitRun
+    return {
+      kind: "execution",
+      execution: {
+        kind,
+        id: unit.id,
+        path: unit.projectRoot,
+        state: unit.state,
+        outcome: unit.outcome ?? undefined,
+        error: unit.error ?? undefined,
+        inputDigest: unit.inputDigest ?? undefined,
+        specification: unit.settings,
+        cleanup: unit.cleanup?.state,
+      },
+    }
+  }
+  const playwright = run as import("../../core/types/playwright.js").CaptureRun
+  let cleanup = "unknown"
+  if (playwright.cleanupError) {
+    cleanup = "failed"
+  }
+  return {
+    kind: "execution",
+    execution: {
+      kind,
+      id: playwright.id,
+      path: playwright.projectRoot,
+      state: playwright.state,
+      outcome: playwright.outcome,
+      error: playwright.error,
+      settingsDigest: playwright.settingsDigest,
+      inputDigest: playwright.appDigest,
+      sourceDigest: playwright.sourceDigest,
+      specification: {
+        target: playwright.target,
+        purpose: playwright.purpose,
+        viewport: playwright.settings?.viewport,
+      },
+      cleanup,
+    },
+  }
+}

@@ -1,52 +1,73 @@
 ---
-title: Review changes with Redpact
-description: Configure project dependencies and review worktree changes through execution evidence and application screens.
+title: Develop in chat, review with Redpact
+description: Ask an agent to develop with TDD in a worktree and inspect recorded execution evidence when a decision needs you.
 ---
 
-# Review changes with Redpact
+# Develop in chat, review with Redpact
 
-Redpact is a local development review tool for people working with coding agents. Define the project's runtime needs, run tests against the working checkout, and inspect code changes, test intent, observed results, and application screenshots together.
+Redpact connects a coding conversation to managed verification and human review.
+Ask the agent to implement a change in an isolated worktree, write a failing test,
+and record the checks against the actual application. Open Redpact when you need to
+approve execution, inspect a failure or judge the recorded screens and source.
 
-When an agent reports completion, you should be able to see what changed, whether the requested behavior was checked, and what the application looked like. This guide follows that process.
-
-## From project setup to change review
+## One conversation, shared evidence
 
 ```mermaid
-flowchart TD
-    P["Connect project"] --> D["Define app and dependencies"]
-    D --> W["Choose execution worktree"]
-    W --> E["Prepare environment and execute tests"]
-    E --> R["Review diff, intent, results and screens"]
-    R --> F["Request another change"]
-    F --> W
+flowchart LR
+    A["Ask for a change"] --> W["Agent: worktree and failing test"]
+    W --> I["Agent: implement and request verification"]
+    I --> X["Redpact: approval, execution and evidence"]
+    X --> R["Human: inspect evidence"]
+    R --> A
 ```
 
-The agent investigates the repository and writes configuration, code, and tests. Redpact performs the selected execution and records evidence. You judge whether that evidence adequately covers the request.
+The host agent edits code and settings and performs Git operations. Redpact runs
+Unit, Integration and Playwright checks, records what actually happened and links
+the conversation to the same evidence in its viewer. Subagents can divide the work;
+the coordinating agent still verifies their combined result in the intended checkout.
 
-## Two questions to understand first
+A local failing assertion supports the TDD cycle. A registered request, a parsed test
+or a failed environment setup does not prove that assertion ran. Keep the observed
+red and green evidence distinct from the user's acceptance of the change.
 
-**Which environment ran the code?** Shared settings define the app's database, cache, and external API options. All worktrees share one fixed dependency configuration; execution uses that checkout's files. Shared configuration does not imply shared runtime resources or data. Start with [Dependencies and worktrees](dependencies.md).
+## What belongs where
 
-**What supports the completion claim?** A diff shows code changes, tests show intended checks and their results, and captures show application states during execution. [Review your first change](review-workflow.md) connects these in one example.
+| Surface | Responsibility |
+| --- | --- |
+| Chat and MCP | Inspect checkout status, diagnose configuration, request and cancel execution, retrieve evidence and explain remaining work |
+| Redpact viewer | Current work, execution history, specific run evidence and resource problems |
+| Approval card | Human decision about the captured execution request |
+| Host agent and editor | Worktrees, file edits, diffs, commits, pull requests and merges |
 
-## Questions and evidence
+The default viewer is a review workspace. Generic file browsing, Git Graph and
+independent workspace tabs are not part of that interface. Advanced test catalogs,
+manual Container and configuration remain available when needed. See
+[viewer navigation](ux-navigation.md) for the exact destinations.
 
-| Question | Evidence to inspect |
-|---|---|
-| Which checkout contains the requested change? | Actual worktree and diff |
-| Which dependencies were used? | Configured services and dependency kinds, recorded environment information |
-| Were success and error behavior checked? | Test source, case intent and assertions |
-| How far did execution actually get? | Recorded case and step results, diagnostics |
-| What did the user see? | State-specific captures from the actual application |
-| Was the revised code executed again? | New execution identity and recorded source |
+## Ask for a verifiable change
 
-Passing tests establish that their assertions were satisfied. They do not automatically judge presentation or discover missing requirements. Current files can change after execution; read the recorded source when interpreting results.
+> Implement order quantity editing in an isolated worktree. First observe a test
+> fail for the requested behavior, then implement it. Use Redpact to run the relevant
+> checks against this checkout, capture the desktop and mobile user states, and
+> return the recorded evidence and anything that still needs my decision.
 
-## Start with your project
+The agent begins with checkout status and the shared configuration. Tests execute
+through the MCP entry matching their runtime; approval requests stay pending until
+a human uses the supported App controls or the connected execution review. Review links refer to the same local
+instance and execution. See [review your first change](review-workflow.md).
 
-1. [Install and connect](installation.md) the local server and agent.
-2. [Connect and configure your project](first-project.md) using the actual repository.
-3. [Run your first test](first-run.md) to create execution evidence.
-4. Use [Reading results](results.md) and [Writing verification](tests.md) to cover your own change.
+## Three independent facts
 
-Redpact is pre-release. This site describes the current local implementation. The documentation site itself does not connect to your projects.
+A passing result describes the assertions or command that ran. It does not establish
+that current files match those inputs, or that a person accepted the change. Redpact
+keeps execution outcome, source freshness and human acceptance separate. Unknown
+freshness remains unknown; neither the agent nor a status badge may invent approval.
+
+All worktrees share one fixed configuration, while each run owns fresh temporary
+resources. Read [dependencies and worktrees](dependencies.md) to understand which
+services are isolated and which external data remains shared.
+
+Start with [installation](installation.md), [project setup](first-project.md) and
+[your first execution](first-run.md). Use [results](results.md) to interpret evidence
+and [test authoring](tests.md) to extend coverage. Redpact is pre-release; this site
+describes the implementation and does not connect to local projects itself.

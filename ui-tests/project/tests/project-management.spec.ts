@@ -9,6 +9,10 @@ test.use({
   },
 })
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 for (const width of [1280, 390]) {
   test(`${width}px에서 프로젝트를 검색하고 이름 변경·연결 해제·재연결한다`, async ({
     page,

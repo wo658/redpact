@@ -259,8 +259,13 @@ test("통합 조회·취소 도구는 대기 중인 검토를 승인하거나 �
   const token = pending._meta.redpact.token
   const result = await call("get_execution", { kind: "integration", id })
   expect(result.isError).not.toBe(true)
-  expect(result.structuredContent.review.state).toBe("pending")
-  expect(JSON.stringify(result)).not.toContain(token)
+  expect(result.structuredContent).toMatchObject({
+    kind: "integration",
+    review: { state: "pending", id },
+  })
+  expect(JSON.stringify(result.structuredContent)).not.toContain(token)
+  expect(JSON.stringify(result.content)).not.toContain(token)
+  expect(result._meta.redpact.token).toBe(token)
   const cancelled = await call("cancel_execution", { kind: "integration", id })
   expect(cancelled.isError).not.toBe(true)
   expect(cancelled.structuredContent.review.state).toBe("cancelled")

@@ -1,4 +1,3 @@
-import { resolve } from "node:path"
 import type { z } from "zod"
 import { problem } from "../core/problems.js"
 import type { executionReadInput, playwrightExecutionInput } from "../core/verification-schema.js"
@@ -9,50 +8,69 @@ function worktrees(services: Services) {
   return services.worktrees ?? problem("worktree_unavailable", "Worktree service is unavailable")
 }
 async function executionCheckout(services: Services, path: string) {
-  if (services.reviews?.policy() === "ask") {
-    problem(
-      "invalid_input",
-      "Unit and Playwright MCP execution require Auto policy. Under Ask, start them explicitly in the viewer; MCP cannot grant or change approval.",
-    )
-  }
   const service = worktrees(services)
   const project = await service.connect(path)
   return service.ensure(project.id, path)
 }
 export async function runUnitVerification(services: Services, path: string) {
+  if (services.reviews?.policy() === "ask") {
+    const reviews =
+      services.executionReviews ??
+      problem("settings_unsupported", "Execution approval is unavailable")
+    return reviews.request({ kind: "unit", path })
+  }
   const units =
     services.unitTests ?? problem("settings_unsupported", "Unit execution is unavailable")
   const checkout = await executionCheckout(services, path)
-  return units.start(checkout.id)
+  return { kind: "unit" as const, run: await units.start(checkout.id) }
 }
 export async function runPlaywrightVerification(
   services: Services,
   input: z.infer<typeof playwrightExecutionInput>,
 ) {
+  if (services.reviews?.policy() === "ask") {
+    const reviews =
+      services.executionReviews ??
+      problem("settings_unsupported", "Execution approval is unavailable")
+    return reviews.request({ kind: "playwright", ...input })
+  }
   const captures =
     services.captureWorkflow ??
     problem("settings_unsupported", "Playwright execution is unavailable")
   const checkout = await executionCheckout(services, input.path)
-  return captures.start(checkout.id, undefined, input.viewport, input.target)
+  return {
+    kind: "playwright" as const,
+    run: await captures.start(checkout.id, undefined, input.viewport, input.target),
+  }
 }
 export async function listExecutions(services: Services, path: string, before?: string) {
-  const service = worktrees(services)
-  for (const project of await service.listProjects()) {
-    const checkout = (await service.listWorktrees(project.id)).find(
-      (item) => resolve(item.projectRoot) === resolve(path),
-    )
-    if (checkout) {
-      return {
-        path: checkout.projectRoot,
-        worktreeId: checkout.id,
-        ...services.runs.listForWorktree(checkout.id, before),
-      }
+  const checkout = await worktrees(services).observed(path)
+  if (checkout) {
+    return {
+      path,
+      worktreeId: checkout.worktreeId,
+      ...services.runs.listForWorktree(checkout.worktreeId, before),
     }
   }
   return { path, worktreeId: null, items: [], nextCursor: null }
 }
 export async function readExecution(services: Services, input: z.infer<typeof executionReadInput>) {
   const { kind, id, detail } = input
+  const executionReview = services.executionReviews?.get(id)
+  if (executionReview) {
+    if (executionReview.review.kind !== kind) {
+      problem("not_found", "Execution review kind does not match")
+    }
+    if (detail === "result") {
+      return { kind, ...executionReview }
+    }
+    if (!executionReview.run) {
+      problem("invalid_input", "Pending reviews have no execution evidence yet")
+    }
+    if (id !== executionReview.run.id) {
+      return readExecution(services, { ...input, id: executionReview.run.id })
+    }
+  }
   if (detail === "log") {
     return { kind, id, ...(await services.runs.copyLog(kind, id)) }
   }
@@ -94,6 +112,13 @@ export async function readExecution(services: Services, input: z.infer<typeof ex
   return { kind, run: services.runs.get(id) }
 }
 export async function cancelExecution(services: Services, kind: Kind, id: string) {
+  const review = services.executionReviews?.get(id)
+  if (review) {
+    if (review.review.kind !== kind) {
+      problem("not_found", "Execution review kind does not match")
+    }
+    return { kind, ...(await services.executionReviews!.cancel(id)) }
+  }
   if (kind === "unit") {
     return {
       kind,

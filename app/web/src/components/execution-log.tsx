@@ -9,7 +9,15 @@ import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { ButtonGroup } from "./ui/button-group"
 
-export function ExecutionLog({ api, worktreeId }: { api: Api; worktreeId: string }) {
+export function ExecutionLog({
+  api,
+  worktreeId,
+  onReview,
+}: {
+  api: Api
+  worktreeId: string
+  onReview?: (kind: ExecutionSummary["kind"], id: string) => void
+}) {
   const { t } = useTranslation()
   const [before, setBefore] = useState("")
   const [page, setPage] = useState<Page<ExecutionSummary> | null>(null)
@@ -51,7 +59,7 @@ export function ExecutionLog({ api, worktreeId }: { api: Api; worktreeId: string
       {page && page.items.length > 0 && (
         <ul aria-label={t("Execution")} className="min-w-0 divide-y">
           {page.items.map((run) => (
-            <ExecutionRow key={`${run.kind}:${run.id}`} api={api} run={run} />
+            <ExecutionRow key={`${run.kind}:${run.id}`} api={api} run={run} onReview={onReview} />
           ))}
         </ul>
       )}
@@ -71,7 +79,15 @@ export function ExecutionLog({ api, worktreeId }: { api: Api; worktreeId: string
   )
 }
 const labels = { unit: "Unit", integration: "Integration", playwright: "Playwright" } as const
-function ExecutionRow({ api, run }: { api: Api; run: ExecutionSummary }) {
+export function ExecutionRow({
+  api,
+  run,
+  onReview,
+}: {
+  api: Api
+  run: ExecutionSummary
+  onReview?: (kind: ExecutionSummary["kind"], id: string) => void
+}) {
   const { t, i18n } = useTranslation()
   const [pending, setPending] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -136,6 +152,11 @@ function ExecutionRow({ api, run }: { api: Api; run: ExecutionSummary }) {
         }
         actions={
           <>
+            {onReview && (
+              <Button variant="outline" size="sm" onClick={() => onReview(run.kind, run.id)}>
+                {t("Review")}
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon-xs"

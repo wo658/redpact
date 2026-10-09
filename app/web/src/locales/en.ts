@@ -1,4 +1,63 @@
 export const en = {
+  Review: "Review",
+  "Requested execution": "Requested execution",
+  "Request details are unavailable. Refresh before approving.":
+    "Request details are unavailable. Refresh before approving.",
+  Command: "Command",
+  "Working directory": "Working directory",
+  Dockerfile: "Dockerfile",
+  Target: "Target",
+  Purpose: "Purpose",
+  Viewport: "Viewport",
+  "Settings digest": "Settings digest",
+  "Input digest": "Input digest",
+  "Source digest": "Source digest",
+  "Submitted test files": "Submitted test files",
+  Cleanup: "Cleanup",
+  "Current work": "Current work",
+  "Execution review": "Execution review",
+  "Review workspace": "Review workspace",
+  Tools: "Tools",
+  Checkout: "Checkout",
+  "Ask in chat. Review the evidence here.": "Ask in chat. Review the evidence here.",
+  "Loading current work…": "Loading current work…",
+  "Execution prerequisites": "Execution prerequisites",
+  "Settings valid": "Settings valid",
+  "Settings need attention": "Settings need attention",
+  "Approval: {{policy}}": "Approval: {{policy}}",
+  "Awaiting approval": "Awaiting approval",
+  "Review request": "Review request",
+  "No requests awaiting approval.": "No requests awaiting approval.",
+  "In progress": "In progress",
+  "No executions in progress.": "No executions in progress.",
+  "Cleanup needs attention": "Cleanup needs attention",
+  "No cleanup issues.": "No cleanup issues.",
+  "Recent evidence": "Recent evidence",
+  "Continue in chat": "Continue in chat",
+  "Inspect this checkout, implement with tests first, and submit verification through Redpact.":
+    "Inspect this checkout, implement with tests first, and submit verification through Redpact.",
+  "Ask your agent to diagnose settings, run tests, inspect failures, or retry cleanup. Copy the checkout context to keep the target explicit.":
+    "Ask your agent to diagnose settings, run tests, inspect failures, or retry cleanup. Copy the checkout context to keep the target explicit.",
+  "Recorded executions stay tied to their submitted checkout and source.":
+    "Recorded executions stay tied to their submitted checkout and source.",
+  "Evidence boundaries": "Evidence boundaries",
+  "A passing result describes the recorded execution. Current code freshness is not established.":
+    "A passing result describes the recorded execution. Current code freshness is not established.",
+  "Human acceptance is not recorded.": "Human acceptance is not recorded.",
+  "Showing {{shown}} of {{total}} failures. Open recorded evidence for details.":
+    "Showing {{shown}} of {{total}} failures. Open recorded evidence for details.",
+  "Inspect this recorded execution and its evidence before changing code or requesting another run.":
+    "Inspect this recorded execution and its evidence before changing code or requesting another run.",
+  "Copy this execution context to ask your agent about failures or cleanup.":
+    "Copy this execution context to ask your agent about failures or cleanup.",
+  "Recorded evidence": "Recorded evidence",
+  "No output recorded.": "No output recorded.",
+  "Approve execution": "Approve execution",
+  "Approve environment": "Approve environment",
+  "Approve tests": "Approve tests",
+  "Cancel request": "Cancel request",
+  "Execution approval allows running code. It does not accept code changes.":
+    "Execution approval allows running code. It does not accept code changes.",
   "Agent plugins": "Agent plugins",
   "Redpact plugins": "Redpact plugins",
   "Codex CLI path": "Codex CLI path",
@@ -265,8 +324,8 @@ export const en = {
   "Choose your display language.": "Choose your display language.",
   "Publish pull requests with your GitHub CLI account.":
     "Publish pull requests with your GitHub CLI account.",
-  "Leave empty for automatic detection. Save changes before checking the connection.":
-    "Leave empty for automatic detection. Save changes before checking the connection.",
+  "Leave empty for automatic detection. Saved paths apply to subsequent operations.":
+    "Leave empty for automatic detection. Saved paths apply to subsequent operations.",
 
   Save: "Save",
   "Loading…": "Loading…",
@@ -734,6 +793,7 @@ export const en = {
   Mode: "Mode",
   "No recorded dependency selection.": "No recorded dependency selection.",
   Dependencies: "Dependencies",
+  Services: "Services",
   "Dependency settings": "Dependency settings",
   "Browse dependency modes from a worktree's settings file.":
     "Browse dependency modes from a worktree's settings file.",

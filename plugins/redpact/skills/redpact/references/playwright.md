@@ -94,9 +94,14 @@ For app service, dependency or connection changes, read [Project dependencies](d
 
 ## Execute and inspect
 
-Resolve the actual worktree on the connected instance. For authorized execution,
-POST /api/worktrees/:id/playwright/run with the target name (required when multiple targets exist). Optional viewport
-overrides apply to this execution. Read
+Resolve the actual worktree on the connected instance. Prefer MCP `run_playwright`
+with the absolute checkout path and declared target, then `get_execution` with
+`kind: "playwright"`. Under Ask, present the request for human approval; do not
+change policy or invoke an App-only approval action. If MCP Apps are unavailable,
+obtain its review path using `get_review_context` and direct the user to the same
+connected viewer for an explicit approval action, following
+[Review and handoff](review-evidence.md). Optional viewport overrides apply to this
+execution. Read
 GET /api/playwright-runs/:id until terminal, inspect case/step evidence and distinct
 cleanup errors. MCP run_tests remains Vitest integration execution and does not
 accept Playwright files. Do not substitute direct Docker or Playwright CLI execution:
@@ -113,7 +118,8 @@ for stored images, original-size inspection, source and trace links.
 Viewing artifacts never starts an application. Respect repository restrictions on
 additional interactive browser or screenshot inspection.
 
-Cancel/retry cleanup through POST /api/playwright-runs/:id/cancel. Cancellation is
+Cancel/retry cleanup through MCP `cancel_execution` with `kind: "playwright"`, or
+POST /api/playwright-runs/:id/cancel. Cancellation is
 separate from test verdicts. Preserve recorded evidence and unrelated environments.
 Report exactly which browser scenarios and rendered images were observed, source
 identity and image/browser/viewport conditions. Linux web captures do not prove

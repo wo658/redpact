@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { isDeepStrictEqual } from "node:util"
 import { problem } from "../core/problems.js"
 import type { GitService } from "../core/types/git.js"
 import type { ProjectSettingsService } from "../core/types/services.js"
@@ -145,7 +146,15 @@ export function createUnitTests(deps: {
         .slice(0, 50)
       return { settings, catalog, runs }
     },
-    async start(id) {
+    async preview(id) {
+      const { target, settings } = await configured(id)
+      if (!settings || !deps.command.fingerprint) {
+        problem("invalid_input", "Configure unitTests and input capture before execution")
+      }
+      await deps.files.directory(target.worktree.projectRoot, settings.cwd)
+      return { settings, inputDigest: await deps.command.fingerprint(target.worktree.projectRoot) }
+    },
+    async start(id, approved) {
       await recovery
       if (closing) {
         problem("closing", "Server is shutting down")
@@ -162,6 +171,12 @@ export function createUnitTests(deps: {
         if (!settings) {
           problem("invalid_input", "Configure unitTests in project settings first")
         }
+        if (approved && !isDeepStrictEqual(settings, approved.settings)) {
+          problem(
+            "configuration_error",
+            "Unit settings changed during review; request a new execution",
+          )
+        }
         await deps.files.directory(target.worktree.projectRoot, settings.cwd)
         if (closing) {
           problem("closing", "Server is shutting down")
@@ -176,7 +191,7 @@ export function createUnitTests(deps: {
           runtimeId: null,
           containerId: null,
           imageId: null,
-          inputDigest: null,
+          inputDigest: approved?.inputDigest ?? null,
           cleanup: { state: "pending", error: null },
           createdAt: new Date().toISOString(),
           finishedAt: null,

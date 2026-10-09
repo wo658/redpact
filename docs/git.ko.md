@@ -5,6 +5,10 @@ description: 체크아웃 발견, 비교, 생성, 로컬 머지와 GitHub 게시
 
 # 프로젝트와 Git
 
+채팅 중심 흐름에서 호스트 에이전트가 파일 변경, 워크트리 생성, 커밋, PR과 머지를
+담당합니다. 뷰어는 읽기 전용 변경 검토를 유지하며 File Viewer, Git Graph, Git 변경
+툴바는 제거했습니다. 아래 HTTP workflow는 기존의 명시적 사전 조건을 유지합니다.
+
 ## 식별과 발견
 
 프로젝트는 저장소와 그 안의 상대 프로젝트 경로, 또는 연결된 일반 디렉터리입니다.
@@ -29,12 +33,12 @@ description: 체크아웃 발견, 비교, 생성, 로컬 머지와 GitHub 게시
 native 폴더 선택기로 위치를 고르고 표시 이름을 지정합니다. 같은 canonical 프로젝트를
 다시 연결하면 기존 식별자를 사용하고 기존 표시 이름을 보존합니다.
 
-**이름 변경**은 인스턴스의 표시 이름과 열린 프로젝트 탭 이름만 바꿉니다.
+**이름 변경**은 인스턴스의 표시 이름과 선택한 프로젝트 레이블만 바꿉니다.
 실행 구성은 기존 프로젝트 설정에서 관리합니다. 폴더 이동, 저장소 생성, Clone,
 기록 영구 삭제는 프로젝트 관리 기능에 포함되지 않습니다.
 
 **연결 해제**는 확인을 거치며 소스 파일, 설정, 워크트리, 자격 증명과 실행 기록을
-보존합니다. 프로젝트 선택 목록에서 제외하고 해당 작업공간 탭을 닫으며 자동 관찰과
+보존합니다. 프로젝트 선택 목록에서 제외하고 해당 검토 목적지에서 나가며 자동 관찰과
 새 실행을 중단합니다. 마지막 프로젝트를 해제하면 관리 기능에 접근할 수 있는 시작
 화면으로 돌아갑니다. 해제 상태는 재시작 후에도 유지되며 관찰 루트 설정이 자동으로
 재연결하지 않습니다. 실행 중인 Unit/Integration/Playwright와 Git 작업을 마치고,
@@ -67,14 +71,14 @@ optional lock, fsmonitor를 비활성화하며 저장소 상대 경로를 검증
 이미지 비교는 [공통 파일 미리보기 규약](frontend.ko.md)을 따르며, 명시적인 커밋
 리비전과 이름 변경 경로를 사용하고 staged/unstaged 바이트를 구분합니다.
 
-## Git Graph와 Fetch
+## Git graph와 fetch API
 
-Git Graph는 제한된 커밋 목록, 브랜치 필터, 원격 표시, 로드된 커밋 검색과 선택한
-커밋의 파일 diff를 제공합니다. 열기와 탐색은 읽기 전용입니다. 명시적 Fetch는 설정된
+Git graph API는 제한된 커밋 목록과 선택한 커밋의 파일 diff를 제공합니다.
+Graph 조회는 읽기 전용이며 검토 뷰어에는 Git Graph 화면이 없습니다. 명시적 Fetch는 설정된
 원격의 destination refspec으로 remote-tracking branch를 갱신합니다. 머지·push·prune·
 tag fetch나 로컬 브랜치·index·파일 변경은 하지 않습니다. common Git 디렉터리별로
 직렬화하고 원격 누락, 사용 중 상태, 부분 실패를 보고합니다. 성공·실패 뒤 모두 목록을
-갱신합니다. 이 툴바에는 Pull과 Push가 없습니다.
+갱신합니다. 이 작업들은 Pull과 Push를 제공하지 않습니다.
 
 ## 관리되는 워크트리 생성
 
@@ -90,7 +94,7 @@ tag fetch나 로컬 브랜치·index·파일 변경은 하지 않습니다. comm
 
 ## 로컬 커밋과 머지
 
-툴바는 Commit·Discard 전에 미커밋 변경을 검사합니다. Commit은 검사한 staged,
+Git HTTP workflow는 Commit·Discard 전에 미커밋 변경을 검사합니다. Commit은 검사한 staged,
 unstaged, untracked 변경을 포함합니다. Discard에는 명시적 확인이 필요하며 목록의
 untracked 파일을 지울 수 있습니다. 검사 후 변경은 최신성 검사에서 거부하고 두 작업
 뒤 자동으로 머지하지 않습니다.
@@ -114,14 +118,17 @@ Merge는 설정한 메인 브랜치의 실제 체크아웃을 대상으로 합�
 
 ## GitHub pull request
 
-PR은 소스, origin, GitHub 기본 base 브랜치를 보여 주는 폼을 엽니다. 열기만으로
-push하지 않습니다. 게시에는 깨끗한 named non-default 브랜치와 지원되는 동일 저장소
-주소의 github.com origin이 필요합니다. 인증된 `gh`와 Git 자격 증명을 재사용하며
-토큰을 저장하거나 별도 인증 체계를 번들하지 않습니다. 전역 Settings에서 절대
-`github.cliPath`를 지정하고 연결을 확인할 수 있습니다.
+기존 `GET /api/worktrees/:id/pull-request` workflow는 push 없이 소스, origin,
+GitHub 기본 base 브랜치를 검사합니다. `POST /api/worktrees/:id/pull-request`를 통한
+게시에는 깨끗한 named non-default 브랜치와 지원되는 동일 저장소 주소의 github.com
+origin이 필요합니다. 인증된 `gh`와 Git 자격 증명을 재사용하며 Redpact는 토큰을 저장하거나
+별도 인증 체계를 번들하지 않습니다. 인스턴스 설정에서 절대 `github.cliPath`를 지정할 수
+있고, 기존 `GET /api/instance/github` 경로에서 실행 파일과 인증된 계정을 확인합니다.
+검토 뷰어에는 PR 폼이나 GitHub 연결 패널이 없습니다.
 
-Publish는 검사한 SHA를 같은 origin 브랜치로 force·tag 없이 push한 다음 PR을 만듭니다.
-같은 head/base의 열린 PR은 재사용합니다. Push to PR은 제목·본문을 바꾸지 않습니다.
+명시적인 게시 요청은 검사한 SHA를 같은 origin 브랜치로 force·tag 없이 push한 다음
+PR을 만듭니다. 같은 head/base의 열린 PR은 재사용하며 브랜치를 갱신해도 제목·본문을
+바꾸지 않습니다.
 소스, revision, 목적지를 다시 검사합니다. push 성공 후 PR 생성 여부가 불명확하면
 별도로 보고하고 재시도는 기존 PR을 먼저 찾습니다.
 

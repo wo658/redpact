@@ -22,9 +22,22 @@ Each dependency has one fixed definition; there are no selectable modes or recom
 The primary settings file supplies root services, dependency services and bindings.
 Compose prerequisites extend that service set. Binding a variable does not start its target.
 
+The declared relationships and environment bindings connect each consumer explicitly:
+
+```mermaid
+flowchart TD
+    S["One shared settings file"] --> A["Root application services"]
+    S --> D["Fixed dependency definitions"]
+    D -->|"Application environment bindings"| A
+    S -->|"tests.env"| R["Integration / Playwright runner"]
+    R -->|"Requests and assertions"| A
+```
+
+These declarations do not prove that a service is ready or that a test passed.
+
 ## Reading the overview
 
-Select a diagram node to read its name, application/dependency type, configured
+Open **Tools → Dependencies**, then select a diagram node to read its name, application/dependency type, configured
 kind and authored description. Compose services remain collapsed with a count.
 Used by and Uses show relationship counts and the other service's name and type;
 relationship descriptions stay visible. Code evidence expands separately to show

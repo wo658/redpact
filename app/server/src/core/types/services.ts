@@ -1,3 +1,4 @@
+import type { ObservedBinding } from "./chat-context.js"
 import type {
   ProjectRecord,
   ProjectTracking,
@@ -29,6 +30,7 @@ export type WorktreeService = {
   projectSettings(id: string): Promise<SettingsService>
   getProject(id: string): ProjectRecord
   getWorktree(id: string): Worktree
+  observed(path: string): Promise<ObservedBinding | null>
   listProjects(includeDisconnected?: boolean): Promise<ProjectRecord[]>
   projectDetails(): Promise<(ProjectRecord & { projectRoot: string | null; available: boolean })[]>
   renameProject(id: string, name: string): Promise<ProjectRecord>
@@ -93,6 +95,12 @@ export type RunService = {
   release(id: string): void
 }
 export type RunQueries = {
+  attentionForWorktree(worktreeId: string): {
+    active: ExecutionSummary[]
+    cleanup: ExecutionSummary[]
+    activeCount: number
+    cleanupCount: number
+  }
   copyLog(kind: ExecutionSummary["kind"], id: string): Promise<{ text: string }>
   listForWorktree(
     worktreeId: string,
@@ -123,6 +131,7 @@ export type EnvironmentService = {
     expectedSettingsDigest: string,
     selection: TestSelection,
     runId: string | null,
+    expectedInputDigest?: string,
   ): Promise<Environment>
   abortPreparations(): void
   reserve(

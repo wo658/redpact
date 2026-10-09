@@ -49,7 +49,7 @@ ID와 복사된 대상 연결은 일치해야 하지만 DB foreign key나 파일
 ├── .migrations/backups/<migration>/      # 변경한 레코드의 원본 바이트
 ├── instance.json, settings.json
 ├── projects/, worktrees/, work-items/, submissions/
-├── work-starts/, reviews/, unit-runs/, merges/
+├── work-starts/, reviews/, execution-reviews/, unit-runs/, merges/
 ├── runs/<id>/
 │   ├── state.json
 │   ├── source/, report.json, vitest.config.mjs
@@ -121,6 +121,18 @@ writer lock을 삭제하지 마세요.
 과거 결과는 남습니다. 임시 Compose 빌드 이미지는 환경과 함께 제거하지만 Docker 빌드 캐시와
 명시적으로 이름 붙인 프로젝트 이미지는 prune하지 않습니다. 일반 자동 증거 보관·삭제 정책을
 의미하지 않으며, 참조된 레코드를 수동 삭제하면 이를 사용하는 데이터가 깨질 수 있습니다.
+
+Unit과 Playwright의 Ask 요청은 추가된 `execution-reviews/<id>.json`에 `version: 1`로
+저장합니다. 실행 명세·설정 및 입력 digest·정책·revision·UI capability·최종 실행 연결을
+보존합니다. 기존 Integration `reviews/`와 실행 기록의 형식 및 원본 바이트는 바꾸지 않으므로
+이 추가 기록 종류에는 이전 기록 변환이 없습니다. 앞으로 이 형식을 바꾸면 위의 순서 있는
+마이그레이션 규칙을 따라야 합니다. 알 수 없는 버전이나 손상된 검토는 초기화하지 않고
+시작을 막습니다.
+
+대기 중 Unit/Playwright 검토는 재시작 후에도 승인할 수 있습니다. 실행 수락 도중 중단된
+`starting` 검토는 `interrupted`로 남고 재실행하지 않습니다. 실행 시작 후 검토의 최종 연결
+저장에 실패해도 불확실한 시작을 보존합니다. 재요청 전에 연결된 실행 이력을 확인하세요.
+검토 취소는 근거나 기록을 삭제하지 않으며 승인과 실행 verdict는 별개입니다.
 
 ## 환경변수 값과 증거
 

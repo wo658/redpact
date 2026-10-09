@@ -9,6 +9,10 @@ test.use({
   },
 })
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("redpact:tools-open", "true"))
+})
+
 for (const platform of [undefined, "macos", "windows"] as const) {
   const native = platform !== undefined
   for (const width of [1280, 800, 390]) {
@@ -20,6 +24,8 @@ for (const platform of [undefined, "macos", "windows"] as const) {
         data: { path: process.env.REDPACT_TEST_PROJECT_ROOT ?? "/app", name: "Redpact" },
       })
       expect(connected.ok()).toBeTruthy()
+      const project = await connected.json()
+      await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
       await page.setViewportSize({ width, height: 900 })
       // 네이티브 창 버튼 자체는 Chromium 캡처에 포함되지 않는다.
       if (native) {

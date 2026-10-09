@@ -55,7 +55,7 @@ Integration and frontend Playwright functional tests. Read the applicable
 criteria. Do not load unselected layers. Reuse existing Docker/Compose and dependency
 definitions unless the task requires a shared configuration change. If setup blocks execution, inspect
 [Dependencies](dependencies.md) and resolve setup within the authorized task scope.
-Do not repair infrastructure as an incidental part of feature work.
+Keep required setup repairs within the authorized task; preserve unrelated infrastructure and shared settings. Ask only for a missing material choice or authorization.
 Use this checkout's absolute application path for configure and execution, preserving
 any monorepo subdirectory. Shared rules can live at a different returned rulesRoot;
 edit shared infrastructure only when the task explicitly requires that project-wide change.
@@ -99,4 +99,4 @@ require a separate review ceremony. Preserve unrelated changes and honor explici
 user limits such as resolve-only or no-merge. If current changes prevent safe
 integration, report the specific blocker without discarding or committing them.
 
-Merge and cleanup are separate. Keep a worktree while execution or resource cleanup is unfinished. Remove it with `git worktree remove <absolute-path>` and delete its merged branch with `git branch -d <task-branch>` only when cleanup is requested or no execution or unresolved cleanup needs it. If an environment still uses the worktree, defer worktree removal and direct the user to the web Environment screen. Never force-delete dirty worktrees, stop unrelated environments, or delete runtime history.
+Merge and cleanup are separate. Keep a worktree while execution or resource cleanup is unfinished. Remove it with `git worktree remove <absolute-path>` and delete its merged branch with `git branch -d <task-branch>` only when cleanup is requested or no execution or unresolved cleanup needs it. If an environment still uses the worktree, defer worktree removal and include its recorded cleanup status and the relevant execution review link. Never force-delete dirty worktrees, stop unrelated environments, or delete runtime history.

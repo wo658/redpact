@@ -352,6 +352,24 @@ export function createWorktrees(deps: {
     settingsForPath,
     getProject,
     getWorktree,
+    async observed(path: string) {
+      const root = await directory(path)
+      for (const item of deps.store.listWorktrees()) {
+        if (item.projectRoot !== root) {
+          continue
+        }
+        const project = getProject(item.projectId)
+        if (await available(project, item)) {
+          return {
+            projectId: item.projectId,
+            worktreeId: item.id,
+            checkoutRoot: item.checkoutRoot,
+            disconnected: Boolean(project.disconnectedAt),
+          }
+        }
+      }
+      return null
+    },
     async projectDetails() {
       const projects = await service.listProjects(true)
       return Promise.all(

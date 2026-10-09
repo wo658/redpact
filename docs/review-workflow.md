@@ -1,67 +1,91 @@
 ---
-title: Review your first change
-description: Follow one feature from fixed execution configuration through code, test and screen review.
+title: Review an agent change from chat
+description: Follow worktree isolation, a real TDD cycle, managed execution and human evidence review in one conversation.
 ---
 
-# Review your first change
+# Review an agent change from chat
 
-This walkthrough uses an order quantity feature: changing quantity updates the total, while invalid quantity is rejected. The scenarios and screen states below are a review plan to implement in your own app, not previously observed results.
-
-Complete [Installation](installation.md) and [Project setup](first-project.md), then use the actual working checkout.
-
-## 1. Define the behavior to check
-
-Ask the agent to produce evidence alongside the implementation.
-
-> Use Redpact to verify order quantity changes. Valid quantities must update the total; invalid quantities must leave the existing order unchanged. Explain the fixed project execution configuration and test intent, and record actual API results. Also capture the initial, updated, and input-error states from the real app for screen review.
-
-| Requirement | Evidence |
-|---|---|
-| Save a valid quantity | Read back quantity and total after the update |
-| Reject invalid quantity | Error response and unchanged stored values |
-| Show the result to users | Updated total and error-state captures |
-
-## 2. Check the worktree and fixed execution configuration
-
-Confirm the checkout to execute. Inspect whether the database is prepared per execution, payments use a mock, or an external service is selected. With external services, check whether their data is shared with other work.
-
-See [Dependencies and worktrees](dependencies.md) for shared definitions and checkout-specific execution. Project **Tests** targets the primary checkout. Inspect feature-work evidence through that worktree's review surfaces and execution history.
-
-## 3. Read code changes and test intent
-
-Inspect how order handling changed in the diff. Read the assertions as well as test titles. A test titled “updates the total” that only checks a response status does not establish that requirement.
-
-Connect the integration source captured at request acceptance to the execution result. Editing files during review does not change the already captured submission.
-
-## 4. Inspect results and actual screens together
+Complete [installation](installation.md) and [project setup](first-project.md), then
+use the actual working checkout throughout. This example concerns order quantity:
+a valid change persists a new total; invalid input preserves the existing order.
+It describes a workflow to perform, not previously observed execution results.
 
 ```mermaid
 flowchart TD
-    Q["Requirement: change quantity"] --> D["Diff: inspect implementation"]
-    Q --> T["Tests: assert persistence and rejection"]
-    T --> R["Execution: case and step results"]
-    Q --> C["Captures: initial, updated and error states"]
-    D --> J["Judge whether the requirement is met"]
-    R --> J
-    C --> J
+    C["Chat: define the change"] --> T["Agent: worktree + observed TDD red → green"]
+    T --> M["MCP: request managed verification"]
+    M --> A["Ask: human approves captured inputs"]
+    M -->|"Auto policy"| E["Redpact: execution and recorded evidence"]
+    A --> E
+    E --> H["Human: inspect source, results and screens"]
+    H -->|"Request a revision"| C
 ```
 
-API tests check persistence, browser functional tests check user interactions, and captures support screen review. They answer different questions. Passing tests can still leave an unclear error message worth revising.
+## 1. State the behavior and evidence
 
-Worktree Playwright shows evidence associated with worktree drafts and changed maintained scenario files. This is source-file scope, not automatic pixel comparison or app-code impact analysis. See [Reading results](results.md).
+> Implement quantity editing in a worktree using TDD. Verify valid persistence and
+> invalid-input rejection through the application's public API, check the browser
+> interaction, and capture the initial, saved and error states on desktop and mobile.
+> Use Redpact and return the actual execution references.
 
-## 5. Revise and inspect a new execution
+The agent resolves or creates the worktree with host Git tools and reads
+`get_workspace_status` for that absolute checkout. It uses `configure` when shared
+settings need inspection or validation. Status inspection never starts tests.
+Independent subagents can own API, UI and documentation work with explicit file
+boundaries; their coordinator verifies the integrated checkout.
 
-Read failing assertions with their cause. Environment preparation failures require configuration or runtime fixes first. Unexpected application behavior calls for revising implementation or an incorrectly designed test while preserving the intended requirement.
+## 2. Observe the intended assertion fail
 
-```mermaid
-flowchart LR
-    A["Inspect recorded execution"] --> B["Identify missing behavior or unclear presentation"]
-    B --> C["Revise code and scenarios"]
-    C --> D["Request a new execution"]
-    D --> E["Inspect new source and results"]
-```
+Write the acceptance regression before implementation and run it. Record which
+assertion failed and why. A syntax error, unavailable container, missing dependency
+or collection failure is a setup problem, not functional red. Then implement the
+change without weakening the intended assertion and rerun it to green.
 
-Do not apply an earlier passing result to revised code. Check the new execution's checkout, recorded source and results before judging the work. Resource cleanup preserves recorded evidence.
+Local test commands support fast iteration. They do not create connected Redpact
+records. Use managed execution for the final evidence and identify local-only red
+or green observations honestly. [Test authoring](tests.md) owns runtime details.
 
-Continue with [Reading results and screens](results.md). Authoring details live in [Writing verification](tests.md).
+## 3. Request managed verification in the conversation
+
+| Evidence | MCP entry |
+| --- | --- |
+| Complete configured Unit command | `run_unit_tests` |
+| Public API and persistence scenarios | `run_tests` |
+| Actual browser interactions | `run_playwright` with a functional target |
+| Recorded application screens | `run_playwright` with a capture target |
+
+Each request uses the exact worktree path and shared fixed configuration. Unit,
+Integration and Playwright remain distinct runtimes and evidence contracts.
+Under Ask, a human approves through the supported App card or connected execution
+review. The agent may
+explain or cancel the request; it cannot approve it or change policy to continue.
+Approval is tied to the reviewed inputs and does not accept the resulting code.
+See [interfaces](interfaces.md) for admission and client requirements.
+
+## 4. Open the evidence that needs attention
+
+The agent reads progress and terminal state, uses `get_review_context` for bounded
+failure details and evidence references, and links the recorded execution in the same
+viewer instance. Use **Current work** for pending, active and problematic work,
+**Execution history** for previous attempts, and the selected execution's review for
+results, recorded source, logs and screenshots. Advanced catalogs remain useful for
+exploring checks but are not a prerequisite for requesting one.
+
+Read the assertions, not just their titles. A test named “updates the total” that
+only checks status 200 does not establish persistence. Compare case and step results
+with captured source. Unit records whole-command output, not invented per-case facts.
+Screenshots support human visual judgment; capture success alone is not approval.
+
+## 5. Request a revision without losing the original evidence
+
+> In this execution, the save succeeded but the value reverted after reload. Inspect
+> the recorded source and failed assertion, fix persistence, and run the same intended
+> check against this worktree again. Include both execution IDs and cleanup status.
+
+A new run captures new inputs. Old passing results do not become evidence for new
+code. Check execution outcome, current-source freshness and human acceptance
+separately. Resource cleanup retains the recorded evidence.
+
+The host agent handles commits, PRs and merges within the requested scope. Redpact's
+execution approval does not authorize those actions or replace code review. Continue
+with [reading results](results.md) to interpret each kind of evidence.

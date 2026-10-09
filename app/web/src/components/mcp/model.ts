@@ -35,8 +35,54 @@ const submission = z.object({
     }),
   ),
 })
+const executionSpecification = z.object({
+  command: z.string().optional(),
+  dockerfile: z.string().optional(),
+  cwd: z.string().optional(),
+  target: z.string().optional(),
+  purpose: z.string().optional(),
+  viewport: z.object({ width: z.number(), height: z.number() }).optional(),
+})
 export const snapshotSchema = z.object({
-  kind: z.enum(["environment", "review", "tests"]),
+  kind: z.enum(["environment", "review", "tests", "execution", "evidence"]),
+  execution: z
+    .object({
+      id: z.string(),
+      kind: z.enum(["unit", "playwright"]),
+      state: z.string(),
+      path: z.string().optional(),
+      outcome: z.string().optional(),
+      error: z.string().optional(),
+      cleanup: z.string().optional(),
+      settingsDigest: z.string().optional(),
+      inputDigest: z.string().optional(),
+      sourceDigest: z.string().optional(),
+      specification: executionSpecification.optional(),
+    })
+    .optional(),
+  evidence: z
+    .object({
+      kind: z.enum(["unit", "playwright", "integration"]),
+      id: z.string(),
+      detail: z.string(),
+      text: z.string().optional(),
+      sourcePath: z.string().optional(),
+    })
+    .optional(),
+  executionReview: z
+    .object({
+      id: z.string(),
+      kind: z.enum(["unit", "playwright"]),
+      revision: z.number(),
+      state: z.string(),
+      path: z.string(),
+      settingsDigest: z.string(),
+      inputDigest: z.string(),
+      sourceDigest: z.string().optional(),
+      error: z.string().optional(),
+      specification: executionSpecification,
+    })
+    .optional(),
   policy: policy.optional(),
   nextPolicy: policy.optional(),
   token: z.string().optional(),
@@ -64,7 +110,8 @@ export const snapshotSchema = z.object({
             }),
           ),
         })
-        .nullable(),
+        .nullable()
+        .optional(),
       environment: z.object({ state: z.string() }).optional(),
     })
     .optional(),
@@ -75,6 +122,7 @@ export type Selection = z.infer<typeof selection>
 export type CardActions = {
   busy: boolean
   approve(subject: "environment" | "tests"): void
+  approveExecution?(): void
   changePolicy(policy: Policy): void
 }
 

@@ -128,6 +128,7 @@ export function createEnvironments(deps: {
     expectedSettingsDigest: string,
     selection: TestSelection,
     runId: string | null,
+    expectedInputDigest?: string,
   ) {
     if (closing) {
       problem("closing", "Server is shutting down")
@@ -144,6 +145,7 @@ export function createEnvironments(deps: {
       if (
         (runId === null ? previous.lifecycle !== "manual" : !previous.runIds.includes(runId)) ||
         previous.settingsDigest !== expectedSettingsDigest ||
+        (expectedInputDigest !== undefined && previous.inputDigest !== expectedInputDigest) ||
         !isDeepStrictEqual(previous.selection, selection)
       ) {
         problem("environment_conflict", "Request ID has different selection or digest")
@@ -171,6 +173,9 @@ export function createEnvironments(deps: {
     )
     if (closing) {
       problem("closing", "Server is shutting down")
+    }
+    if (expectedInputDigest !== undefined && inputDigest !== expectedInputDigest) {
+      problem("configuration_error", "Application inputs changed after execution approval")
     }
     const id = randomUUID()
     const record: Environment = {
@@ -249,9 +254,23 @@ export function createEnvironments(deps: {
       deps.worktrees.getWorktree(worktreeId)
       return deps.store.listEnvironments().filter((env) => env.target.worktreeId === worktreeId)
     },
-    async prepare(worktreeId, requestId, expectedSettingsDigest, selection, runId) {
+    async prepare(
+      worktreeId,
+      requestId,
+      expectedSettingsDigest,
+      selection,
+      runId,
+      expectedInputDigest,
+    ) {
       return deps.worktrees.exclusive(() =>
-        prepare(worktreeId, requestId, expectedSettingsDigest, selection, runId),
+        prepare(
+          worktreeId,
+          requestId,
+          expectedSettingsDigest,
+          selection,
+          runId,
+          expectedInputDigest,
+        ),
       )
     },
     abortPreparations() {

@@ -311,11 +311,15 @@ export type ExecutionSummary = RunSummary & {
   intent: string
   outcome: string | null
 }
+export type { ReviewContext, WorkspaceStatus } from "../../../server/src/core/types/chat-context"
+
+import type { ReviewContext, WorkspaceStatus } from "../../../server/src/core/types/chat-context"
 export type RunLogs = {
   stdout: { text: string; truncated: boolean } | null
   stderr: { text: string; truncated: boolean } | null
 }
 export type TestRun = RunSummary & {
+  submissionId?: string
   environmentId?: string
   limitations: string[]
   result: null | {
@@ -639,6 +643,34 @@ export function createApi(fetcher: typeof fetch = viewerFetch) {
         undefined,
         signal,
       ),
+    workspaceStatus: (path: string, signal?: AbortSignal) =>
+      request<WorkspaceStatus>(
+        `/workspace-status?${new URLSearchParams({ path })}`,
+        undefined,
+        signal,
+      ),
+    reviewContext: (kind: ExecutionSummary["kind"], id: string, signal?: AbortSignal) =>
+      request<ReviewContext>(
+        `/review-context?${new URLSearchParams({ kind, id })}`,
+        undefined,
+        signal,
+      ),
+    approveExecutionReview: (
+      kind: ExecutionSummary["kind"],
+      id: string,
+      revision: number,
+      subject?: "environment" | "tests",
+    ) =>
+      request<unknown>(`/execution-reviews/${kind}/${encodeURIComponent(id)}/approve`, {
+        revision,
+        ...(subject ? { subject } : {}),
+      }),
+    cancelExecutionReview: (kind: ExecutionSummary["kind"], id: string) =>
+      request<unknown>(`/execution-reviews/${kind}/${encodeURIComponent(id)}/cancel`, {}),
+    unitRun: (id: string, signal?: AbortSignal) =>
+      request<UnitRun>(`/unit-runs/${encodeURIComponent(id)}`, undefined, signal),
+    captureRun: (id: string, signal?: AbortSignal) =>
+      request<CaptureRun>(`/playwright-runs/${encodeURIComponent(id)}`, undefined, signal),
     copyExecutionLog: (kind: ExecutionSummary["kind"], id: string, signal?: AbortSignal) =>
       request<{ text: string }>(
         `/runs/executions/${kind}/${encodeURIComponent(id)}/copy`,

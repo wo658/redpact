@@ -9,6 +9,7 @@ import { configure, configureInput } from "../../workflows/configure.js"
 import type { Services } from "../../workflows/services.js"
 import { idInput } from "../schemas.js"
 import { environmentResource, registerApps, reviewResult, testsResource, uiMeta } from "./apps.js"
+import { registerChatContextTools } from "./chat-context.js"
 import { invoke, output, readOnly } from "./result.js"
 import { registerVerificationTools } from "./verification.js"
 
@@ -22,6 +23,7 @@ export function mcpRoutes(services: Services) {
     const server = new McpServer({ name: "redpact", version: "0.1.0" })
     registerApps(server, services.reviews)
     registerVerificationTools(server, services)
+    registerChatContextTools(server, services)
     server.registerTool(
       "configure",
       {
@@ -79,7 +81,7 @@ export function mcpRoutes(services: Services) {
       "run_tests",
       {
         description:
-          "Run managed Integration tests from tests.directory in the project at path. This MCP tool never runs Unit commands or Playwright targets; use the Redpact viewer or HTTP execution routes for those separate runtimes. Snapshots Integration sources and returns a run ID while the server prepares the selected Compose environment and executes Vitest. Execution uses the fixed shared project configuration. Temporary environments are removed after execution, with logs and results preserved. No registration or submission calls are required.",
+          "Run managed Integration tests from tests.directory in the project at path. This MCP tool never runs Unit commands or Playwright targets; use run_unit_tests or run_playwright for those separate runtimes. Snapshots Integration sources and returns a run ID while the server prepares the selected Compose environment and executes Vitest. Execution uses the fixed shared project configuration. Temporary environments are removed after execution, with logs and results preserved. No registration or submission calls are required.",
         _meta: uiMeta(testsResource),
         inputSchema: z.strictObject({
           path: pathInput,
