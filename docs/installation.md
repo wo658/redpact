@@ -1,6 +1,6 @@
 ---
 title: Installation and agent connection
-description: Install Redpact from GitHub with Homebrew or the terminal and connect Codex or Claude Code.
+description: Start with the Redpact in-app workspace, or install and update the standalone runtime with npm or pnpm.
 ---
 
 # Installation and agent connection
@@ -8,6 +8,24 @@ description: Install Redpact from GitHub with Homebrew or the terminal and conne
 Redpact's public source and runtime downloads are hosted at
 [wo658/redpact](https://github.com/wo658/redpact). The runtime package installs the
 CLI and bundled browser viewer. It does not install the Tauri desktop application.
+
+<a id="start-in-the-app"></a>
+
+## Start in the app
+
+Redpact's primary experience is a full development workspace beside your GPT
+conversation. The current supported path is a local Codex Global App Page plugin
+for macOS Apple Silicon. This does not imply public ChatGPT app-directory
+availability or support in every host.
+
+1. Build and register the plugin using the [App Page setup](#local-redpact-app-page-experiment) below.
+2. Open **Redpact** in Codex.
+3. If the runtime is missing, click **Install Redpact**. Installation options let you choose npm or pnpm.
+4. Click **Start Redpact** and connect your project. An already running runtime opens the full app directly.
+
+Opening or reconnecting the page does not install or start the runtime. Node, npm
+and pnpm are bundled with the plugin. The global commands below install a separate
+browser/CLI runtime; they do not install the plugin or update its managed package.
 
 ## Host the web viewer with Docker Compose
 
@@ -53,6 +71,7 @@ development runner, use the host-installed runtime described below.
 
 | Path | What it installs | Requirements / limits |
 | --- | --- | --- |
+| Codex in-app workspace | Full App Page, development/setup skills and runtime installer | Currently a local build for macOS Apple Silicon |
 | macOS desktop download | Native app, server, viewer and Node | macOS 13.5+, Apple Silicon or Intel; signed updates, without notarization |
 | Windows desktop download | Native app, server, viewer and Node | Windows x64 EXE; signed updates, without publisher code signing |
 | Linux desktop preview | Native app, server, viewer and Node | Ubuntu 22.04 x64 DEB; manual updates |
@@ -211,32 +230,38 @@ Rerun the installer to install the release it currently selects. It refuses to r
 an unrelated executable. Remove `<prefix>/bin/redpact` and `<prefix>/share/redpact`
 to uninstall this route; do not remove your runtime data directory unless intended.
 
-## GitHub release package
+## Install or update with npm or pnpm
 
-Download and inspect the checksum from
-[the runtime release](https://github.com/wo658/redpact/releases/tag/runtime-v0.1.0),
-or install its package URL directly with either package manager:
+With Node.js 24+, use the command for your package manager. Run the same command
+to update an existing global installation to the latest public release.
 
 ```sh
-npm install --global --ignore-scripts https://github.com/wo658/redpact/releases/download/runtime-v0.1.0/redpact-0.1.0.tgz
+npm install --global @wo658/redpact@latest
 # Alternatively:
-pnpm add --global --ignore-scripts https://github.com/wo658/redpact/releases/download/runtime-v0.1.0/redpact-0.1.0.tgz
+pnpm add --global @wo658/redpact@latest
 redpact serve --port 54321
 ```
 
-Use a user-writable global package directory. The terminal installer above avoids
-global directory setup and validates the release checksum automatically.
-The public registry package is `@wo658/redpact`. Install or run it by package name:
+To run without a global installation:
 
 ```sh
-npm install --global @wo658/redpact
+npx @wo658/redpact@latest serve --port 54321
 # Alternatively:
-pnpm add --global @wo658/redpact
-npx @wo658/redpact@latest serve
+pnpm dlx @wo658/redpact@latest serve --port 54321
 ```
 
-The installed executable remains `redpact`. GitHub tarball installation does not require
-npm publishing credentials. Dependencies still come from npm.
+Finish active work and stop that runtime before updating, then start it again.
+Use a user-writable global directory. If pnpm has no global executable directory,
+run `pnpm setup` and reopen your terminal. The executable is named `redpact`.
+As verified on 2026-10-13, npm `latest` is `0.8.0`; it does not include unpublished
+changes on GitHub `main`.
+
+### GitHub release tarballs
+
+For a specific version, inspect its package and checksum in
+[Releases](https://github.com/wo658/redpact/releases). The old `runtime-v0.1.0` is a
+historical release, not the latest installation path. To use current source
+changes, follow the source-package build instructions above.
 
 ## Install an agent plugin
 
@@ -308,7 +333,9 @@ Execution approval cards require a compatible MCP Apps host. Plugin installation
 alone does not prove card support; an unavailable approval UI must not be bypassed.
 See [the interface contract](interfaces.md).
 
-## Local Redpact App Page experiment
+<a id="local-redpact-app-page-experiment"></a>
+
+## Local Redpact App Page setup
 
 [Redpact App](../examples/sidebar-app/README.md) is an independent local STDIO MCP
 App Page. Its macOS arm64 bootstrap bundles official Node 26.0.0, npm and pnpm 11.2.2,

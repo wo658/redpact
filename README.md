@@ -4,7 +4,16 @@
 
 <a id="english"></a>
 
-**Develop in chat. Review the evidence with Redpact.**
+**Redpact — your development workspace inside GPT.**
+
+Use Redpact as an in-app workspace beside your coding conversation. Open projects,
+worktrees, files, Git changes, tests and environments without leaving the app.
+The current implementation is a local **Codex Global App Page plugin**; it is not
+a listing in the public ChatGPT app directory. Browser and desktop remain available.
+
+Start with the [in-app setup](docs/installation.md#start-in-the-app): open Redpact,
+choose **Install Redpact** when the runtime is missing, then **Start Redpact**.
+The plugin bundles Node, npm and pnpm; managed tests additionally need Docker.
 
 Ask your coding agent to implement a change with TDD in an isolated worktree.
 Redpact runs managed Unit, Integration and Playwright verification and records the
@@ -14,7 +23,7 @@ freshness and human acceptance.
 
 [Documentation](https://redpact.dev/en/docs/) · [Downloads](https://github.com/wo658/redpact/releases) · [Report an issue](https://github.com/wo658/redpact/issues)
 
-1. [Install and connect](docs/installation.md) the runtime and agent plugin.
+1. [Open Redpact in the app](docs/installation.md#start-in-the-app) and install/start its local runtime.
 2. [Configure your actual project](docs/configuration.md).
 3. Ask the agent to write a failing test, implement the behavior and request managed
    checks through MCP. Use subagents for independent work when useful.
@@ -47,7 +56,15 @@ copyright; no separate CLA is required.
 
 <a id="한국어"></a>
 
-**채팅으로 개발하고, Redpact로 근거를 검토하세요.**
+**Redpact — GPT 안에서 사용하는 개발 작업공간.**
+
+코딩 대화 옆에서 Redpact 앱을 열고 프로젝트·워크트리·파일·Git 변경·테스트·환경을
+관리하세요. 현재 구현은 로컬 **Codex Global App Page 플러그인**이며, 공개 ChatGPT
+앱 디렉터리에 등록된 앱은 아닙니다. 브라우저와 데스크톱도 계속 사용할 수 있습니다.
+
+[앱에서 시작하기](docs/installation.ko.md#start-in-the-app): Redpact를 열고 런타임이
+없으면 **Install Redpact**, 설치 후에는 **Start Redpact**를 누르세요.
+플러그인은 Node·npm·pnpm을 포함하며, 관리형 테스트에는 Docker가 추가로 필요합니다.
 
 코딩 에이전트에게 격리된 워크트리에서 TDD로 변경을 구현하도록 요청하세요.
 Redpact는 Unit·Integration·Playwright 관리형 검증을 실행하고 입력, 결과, 소스와
@@ -56,7 +73,7 @@ Redpact는 Unit·Integration·Playwright 관리형 검증을 실행하고 입력
 
 [문서](https://redpact.dev/ko/docs/) · [다운로드](https://github.com/wo658/redpact/releases) · [이슈 제보](https://github.com/wo658/redpact/issues)
 
-1. 런타임과 에이전트 플러그인을 [설치·연결](docs/installation.ko.md)합니다.
+1. [앱에서 Redpact를 열고](docs/installation.ko.md#start-in-the-app) 로컬 런타임을 설치·시작합니다.
 2. [실제 프로젝트를 설정](docs/configuration.ko.md)합니다.
 3. 에이전트에게 실패하는 테스트를 먼저 확인하고 구현한 뒤 MCP로 관리형 검증을
    요청하게 합니다. 독립적인 작업은 필요에 따라 하위 에이전트가 나눠 맡습니다.

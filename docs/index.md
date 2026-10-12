@@ -5,6 +5,8 @@ description: Configure project dependencies and review worktree changes through 
 
 # Review changes with Redpact
 
+Start with the [Redpact in-app workspace](installation.md#start-in-the-app) beside your GPT conversation. The current distribution is a local Codex Global App Page plugin; browser and desktop are additional entry points. The full app provides project/worktree navigation and evidence, while inline chat cards handle execution approval and results.
+
 Redpact is a local development review tool for people working with coding agents. Define the project's runtime needs, run tests against the working checkout, and inspect code changes, test intent, observed results, and application screenshots together.
 
 When an agent reports completion, you should be able to see what changed, whether the requested behavior was checked, and what the application looked like. This guide follows that process.

@@ -1,6 +1,6 @@
 ---
 title: 설치와 에이전트 연결
-description: GitHub 기반 Homebrew·터미널 경로로 Redpact를 설치하고 Codex·Claude Code를 연결합니다.
+description: Redpact 인앱 작업공간으로 시작하거나 npm·pnpm으로 독립 런타임을 설치하고 업데이트합니다.
 ---
 
 # 설치와 에이전트 연결
@@ -8,6 +8,23 @@ description: GitHub 기반 Homebrew·터미널 경로로 Redpact를 설치하고
 Redpact의 공개 소스와 런타임 다운로드는
 [wo658/redpact](https://github.com/wo658/redpact)에서 제공합니다. 런타임 패키지는
 CLI와 브라우저 뷰어를 설치합니다. Tauri 데스크톱 앱은 설치하지 않습니다.
+
+<a id="start-in-the-app"></a>
+
+## 앱에서 시작하기
+
+Redpact의 주 사용 방식은 GPT 대화 옆의 전체 개발 작업공간입니다. 현재 지원 경로는
+macOS Apple Silicon용 로컬 Codex Global App Page 플러그인입니다. 공개 ChatGPT 앱
+디렉터리 배포나 다른 호스트 지원을 의미하지 않습니다.
+
+1. 아래 [App Page 구성 절차](#local-redpact-app-page-experiment)로 플러그인을 빌드·등록합니다.
+2. Codex에서 **Redpact**를 엽니다.
+3. 런타임이 없으면 **Install Redpact**를 누릅니다. 설치 옵션에서 npm 또는 pnpm을 선택할 수 있습니다.
+4. **Start Redpact**를 누르고 프로젝트를 연결합니다. 실행 중이면 전체 앱이 바로 열립니다.
+
+페이지를 열거나 다시 연결하는 것만으로 설치·시작하지 않습니다. Node·npm·pnpm은
+플러그인에 포함됩니다. 아래 전역 설치 명령은 별도 브라우저·CLI 런타임용이며,
+플러그인 관리 설치본을 업데이트하거나 플러그인을 설치하는 명령이 아닙니다.
 
 ## Docker Compose로 웹 뷰어 호스팅
 
@@ -53,6 +70,7 @@ docker compose exec redpact node -p "JSON.parse(require('node:fs').readFileSync(
 
 | 경로 | 설치 대상 | 요구 사항 / 제한 |
 | --- | --- | --- |
+| Codex 인앱 작업공간 | 전체 App Page, 개발·설정 스킬, 런타임 설치기 | 현재 macOS Apple Silicon용 로컬 빌드 |
 | macOS 데스크톱 다운로드 | 네이티브 앱, 서버, 뷰어, Node | macOS 13.5+, Apple Silicon 또는 Intel, 서명된 업데이트 제공, 공증 없음 |
 | Windows 데스크톱 다운로드 | 네이티브 앱, 서버, 뷰어, Node | Windows x64 EXE, 서명된 업데이트 제공, 게시자 코드 서명 없음 |
 | Linux 데스크톱 preview | 네이티브 앱, 서버, 뷰어, Node | Ubuntu 22.04 x64 DEB, 수동 업데이트 |
@@ -206,31 +224,36 @@ redpact serve --port 54321
 덮어쓰지 않습니다. 이 경로의 제거 대상은 `<prefix>/bin/redpact`와
 `<prefix>/share/redpact`이며, 의도하지 않았다면 런타임 데이터 디렉터리는 삭제하지 마세요.
 
-## GitHub 릴리스 패키지
+## npm 또는 pnpm으로 설치·업데이트
 
-[런타임 릴리스](https://github.com/wo658/redpact/releases/tag/runtime-v0.1.0)에서
-패키지와 체크섬을 확인하거나 다음 두 패키지 관리자 중 하나로 URL을 직접 설치하세요.
+Node.js 24 이상에서 다음 중 사용하는 패키지 관리자의 명령을 실행하세요.
+같은 명령으로 기존 전역 설치본을 최신 공개 버전으로 업데이트할 수 있습니다.
 
 ```sh
-npm install --global --ignore-scripts https://github.com/wo658/redpact/releases/download/runtime-v0.1.0/redpact-0.1.0.tgz
+npm install --global @wo658/redpact@latest
 # 또는:
-pnpm add --global --ignore-scripts https://github.com/wo658/redpact/releases/download/runtime-v0.1.0/redpact-0.1.0.tgz
+pnpm add --global @wo658/redpact@latest
 redpact serve --port 54321
 ```
 
-사용자에게 쓰기 권한이 있는 전역 패키지 디렉터리를 사용하세요. 앞의 터미널 설치기는
-전역 디렉터리 설정 없이 설치하며 릴리스 체크섬을 자동 검증합니다.
-공개 레지스트리 패키지는 `@wo658/redpact`입니다. 패키지 이름으로 설치하거나 실행하세요.
+전역 설치 없이 실행하려면 다음 중 하나를 사용하세요.
 
 ```sh
-npm install --global @wo658/redpact
+npx @wo658/redpact@latest serve --port 54321
 # 또는:
-pnpm add --global @wo658/redpact
-npx @wo658/redpact@latest serve
+pnpm dlx @wo658/redpact@latest serve --port 54321
 ```
 
-설치되는 실행 명령은 계속 `redpact`입니다. GitHub tarball 설치에는 npm 게시 자격증명이
-필요하지 않습니다. 의존성은 여전히 npm에서 받습니다.
+업데이트 전 진행 중인 작업을 마치고 해당 런타임을 종료한 뒤 다시 시작하세요.
+사용자에게 쓰기 권한이 있는 전역 디렉터리를 사용합니다. pnpm 전역 실행 경로가 없으면
+`pnpm setup` 후 터미널을 다시 여세요. 실행 명령은 `redpact`입니다.
+2026-10-13 확인 기준 npm `latest`는 `0.8.0`이며, GitHub `main`의 미발행 변경을 포함하지 않습니다.
+
+### GitHub 릴리스 tarball
+
+특정 버전이 필요하면 [릴리스](https://github.com/wo658/redpact/releases)에서 해당
+패키지와 체크섬을 확인하세요. 오래된 `runtime-v0.1.0`은 과거 릴리스이며 최신 설치 경로가 아닙니다.
+소스의 현재 변경이 필요하면 위의 소스 패키지 빌드 절차를 사용하세요.
 
 ## 에이전트 플러그인 설치
 
@@ -301,7 +324,9 @@ Gemini CLI는 이 마켓플레이스 카탈로그 대신 `gemini-extension.json`
 지원을 증명할 수 없으며, 승인 UI가 없다고 승인을 우회해서는 안 됩니다.
 [인터페이스 계약](interfaces.md)을 참고하세요.
 
-## 로컬 Redpact App Page 실험
+<a id="local-redpact-app-page-experiment"></a>
+
+## 로컬 Redpact App Page 설치
 
 [Redpact App](../examples/sidebar-app/README.md)은 독립적인 로컬 STDIO MCP App Page입니다.
 macOS arm64 부트스트랩에 공식 Node 26.0.0, npm, pnpm 11.2.2와 라이선스를 포함하지만
