@@ -7,19 +7,29 @@ import envPaths from "env-paths"
 import pino from "pino"
 import { observeProjectFiles } from "./adapters/changes/projects.js"
 import { createChangeWatcher } from "./adapters/changes/watch.js"
+import { createNativeDirectoryPicker } from "./adapters/desktop/directory-picker.js"
 import { projectFile, snapshotInputs } from "./adapters/environment/inputs.js"
 import { createComposeAdapter } from "./adapters/environment/testcontainers.js"
 import { createUnitContainer } from "./adapters/environment/unit-container.js"
+import { readCommitDiff } from "./adapters/git/commit-diff.js"
 import { discoverCheckouts } from "./adapters/git/discover.js"
+import { fetchRemotes } from "./adapters/git/fetch.js"
+import { readHistory } from "./adapters/git/history.js"
+import { readCommittedImage } from "./adapters/git/image.js"
 import { createGitAdapter } from "./adapters/git/isomorphic.js"
+import { createGitMutations } from "./adapters/git/mutations.js"
+import { createWorktreeAdapter } from "./adapters/git/worktrees.js"
+import { createGitHubPullRequests } from "./adapters/github/pull-requests.js"
 import { parseSource } from "./adapters/parser/source.js"
 import { createCaptureBaselineCleanup } from "./adapters/playwright/baseline.js"
 import { discoverPlaywright } from "./adapters/playwright/catalog.js"
 import { createCaptureRunner } from "./adapters/playwright/runner.js"
+import { createPluginClient } from "./adapters/plugins/client.js"
 import { createScheduler } from "./adapters/process/queue.js"
+import { readProjectEntry } from "./adapters/project-files.js"
 import { readProjectFile } from "./adapters/settings/bundle.js"
 import { createSettingsFiles } from "./adapters/settings/editor-files.js"
-import { createSettingsService } from "./adapters/settings/json.js"
+import { createSettingsService, readJsonSettings } from "./adapters/settings/json.js"
 import { preferenceFiles } from "./adapters/settings/preferences.js"
 import { createLocalFiles } from "./adapters/sources/local.js"
 import { catalogPaths, createUnitTestFiles } from "./adapters/sources/unit-tests.js"
@@ -27,6 +37,7 @@ import { createCaptureStore } from "./adapters/storage/captures.js"
 import { createExecutionReviewStore } from "./adapters/storage/execution-reviews.js"
 import { openStore } from "./adapters/storage/files.js"
 import { loadInstance } from "./adapters/storage/instance.js"
+import { createMergeStore } from "./adapters/storage/merges.js"
 import { createRuntimeMigrationFiles } from "./adapters/storage/migrations.js"
 import { createReviewStore } from "./adapters/storage/reviews.js"
 import { createRunLogReader } from "./adapters/storage/run-logs.js"
@@ -41,15 +52,21 @@ import { testResourceSchema } from "./core/test-resource-schema.js"
 import type { CaptureWorkflow } from "./core/types/playwright.js"
 import { createDesktopControl } from "./interfaces/desktop/control.js"
 import { createCaptureWorkflow } from "./workflows/capture-ui.js"
+import { createDirectoryPicker } from "./workflows/directory-picker.js"
 import { createEnvironments } from "./workflows/environments.js"
 import { createExecuteTests } from "./workflows/execute-tests.js"
 import { createExecutionReviews } from "./workflows/execution-reviews.js"
 import { createGitService } from "./workflows/git.js"
 import { createIntegrationTests } from "./workflows/integration-tests.js"
+import { createMergeService } from "./workflows/merge.js"
 import { createObserveProjects } from "./workflows/observe-projects.js"
 import { createCaptures } from "./workflows/playwright.js"
 import { createPlaywrightCatalog } from "./workflows/playwright-catalog.js"
+import { createPluginUpdates } from "./workflows/plugin-updates.js"
+import { createProjectFiles } from "./workflows/project-files.js"
+import { createProjectGraph } from "./workflows/project-graph.js"
 import { createProjectSettings } from "./workflows/project-settings.js"
+import { createPullRequests } from "./workflows/pull-requests.js"
 import { createReviewContent } from "./workflows/review-content.js"
 import { createReviewTests } from "./workflows/review-tests.js"
 import {
@@ -61,8 +78,10 @@ import { createRunQueries } from "./workflows/run-queries.js"
 import { createRuns } from "./workflows/runs.js"
 import { migrateRuntime } from "./workflows/runtime-migrations.js"
 import { createSettingsEditor } from "./workflows/settings-editor.js"
+import { createWorkStarts } from "./workflows/start-work.js"
 import { createStopEnvironment } from "./workflows/stop-environment.js"
 import { createSubmissions } from "./workflows/submissions.js"
+import { createTestContainer } from "./workflows/test-container.js"
 import { createUnitTests } from "./workflows/unit-tests.js"
 import { createUpdates } from "./workflows/updates.js"
 import { createWorktrees } from "./workflows/worktrees.js"
@@ -131,11 +150,36 @@ const command = new Command()
         preferences: preferenceFiles,
       })
       const worktrees = createWorktrees({
+        activity: (projectId) => {
+          const ids = storage.store
+            .listWorktrees()
+            .filter((item) => item.projectId === projectId)
+            .map((item) => item.id)
+          return (
+            unitTests.busy(ids) ||
+            merges.busy(ids) ||
+            pullRequests.busy(ids) ||
+            testContainer.busy(projectId) ||
+            projectGraph.busy(projectId) ||
+            captures
+              .all()
+              .some(
+                (run) =>
+                  run.projectId === projectId &&
+                  (run.state !== "finished" || Boolean(run.cleanupError)),
+              )
+          )
+        },
         projects: projectSettings,
         store: storage.store,
         git: gitAdapter,
         gitService: (path) => createGitService(path, gitAdapter),
         settings: createSettingsService,
+      })
+      const workStarts = createWorkStarts({
+        store: storage.store,
+        git: createWorktreeAdapter(),
+        worktrees,
       })
       const project = options.project
         ? await worktrees.connect(options.project).catch((error: unknown) => {
@@ -176,6 +220,14 @@ const command = new Command()
           await captureWorkflow.cancel(id)
           return true
         },
+      })
+      const testContainer = createTestContainer({
+        readFile: readProjectEntry,
+        worktrees,
+        projects: projectSettings,
+        environments,
+        stopEnvironment,
+        fingerprint: composeAdapter.fingerprint,
       })
       const executeTests = createExecuteTests({
         runs: runCore,
@@ -252,6 +304,8 @@ const command = new Command()
         projects: projectSettings,
         directory,
         files: createSettingsFiles(),
+        validateProject: (root, source) =>
+          readJsonSettings(root, undefined, { file: join(root, ".redpact/settings.json"), source }),
       })
       const unitTests = createUnitTests({
         worktrees,
@@ -270,6 +324,27 @@ const command = new Command()
         environments,
         sourceDigest: async (root, directory) => snapshotInputs(await projectFile(root, directory)),
       })
+      const pullRequests = createPullRequests({
+        worktrees,
+        git: createGitMutations(),
+        github: createGitHubPullRequests(undefined, async () => {
+          const document = await settingsEditor.instance()
+          if (document.issues.length) {
+            throw Object.assign(new Error("Fix global settings before using GitHub"), {
+              code: "invalid_input",
+            })
+          }
+          return (document.value?.github as { cliPath?: string } | undefined)?.cliPath
+        }),
+      })
+      const merges = createMergeService({
+        worktrees,
+        projects: projectSettings,
+        git: createGitMutations(),
+        store: createMergeStore(directory),
+        directory,
+      })
+      const directoryPicker = createDirectoryPicker(createNativeDirectoryPicker())
       const installed = await runtimePackage()
       const updates = createUpdates({
         currentVersion: installed.version,
@@ -294,7 +369,20 @@ const command = new Command()
         readTags: readRegistryTags,
         now: () => new Date().toISOString(),
       })
+      const projectGraph = createProjectGraph({
+        image: readCommittedImage,
+        fetch: fetchRemotes,
+        store: storage.store,
+        read: readHistory,
+        diff: readCommitDiff,
+      })
+      const pluginUpdates = createPluginUpdates({
+        client: createPluginClient(),
+        settings: settingsEditor,
+        now: () => new Date().toISOString(),
+      })
       const app = createApp({
+        pluginUpdates,
         updates,
         reviewContent: createReviewContent({
           worktrees,
@@ -324,6 +412,9 @@ const command = new Command()
           changedPaths: (root, base) => catalogPaths(root, base, "changed"),
           read: readProjectFile,
         }),
+        merges,
+        pullRequests,
+        directoryPicker,
         integrationTests: createIntegrationTests({
           worktrees,
           projects: projectSettings,
@@ -333,6 +424,9 @@ const command = new Command()
         unitTests,
         settingsEditor,
         projectSettings,
+        testContainer,
+        projectFiles: createProjectFiles({ projects: projectSettings, read: readProjectEntry }),
+        projectGraph,
         reviews,
         executionReviews,
         observation,
@@ -353,6 +447,7 @@ const command = new Command()
         settings,
         git,
         worktrees,
+        workStarts,
         defaultWorktreeId,
         environments,
       })
@@ -380,7 +475,10 @@ const command = new Command()
           ? createDesktopControl({
               input: runtimeInput ?? process.stdin,
               busy: () =>
+                pluginUpdates.status().busy ||
                 captures.all().some((run) => run.state !== "finished") ||
+                merges.busy() ||
+                pullRequests.busy() ||
                 storage.store.listRuns().some((run) => run.state !== "finished") ||
                 storage.store
                   .listEnvironments()
@@ -435,14 +533,18 @@ const command = new Command()
         }
         stopping = true
         updates.close()
+        await directoryPicker.close()
         desktop?.close()
         await projectObserver.close()
         await changes.close()
         server.close()
+        await pullRequests.close()
+        await merges.close()
         await executionReviews.close()
         await unitTests.close()
         await reviews.close()
         await captureWorkflow?.close()
+        await testContainer.close()
         await executeTests.close()
         await environments.close()
         storage.close()

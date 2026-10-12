@@ -16,5 +16,6 @@ export const idInput = z.object({ id: z.string().uuid() })
 
 export const projectInput = z.strictObject({
   path: z.string().min(1).max(4096),
+  name: z.string().trim().min(1).max(200).optional(),
 })
 export const worktreeInput = z.strictObject({ path: z.string().min(1).max(4096) })

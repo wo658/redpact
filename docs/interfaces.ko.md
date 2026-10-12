@@ -64,13 +64,7 @@ Unit과 Playwright는 캡처한 요청을 한 번 승인합니다. 모델은 승
 테스트를 실행하지 않습니다. 수집 오류는 진단으로 남습니다. 런타임 경계는
 [실행](execution.md)을 참고하세요.
 
-기존 체크아웃 연결은 `{ path }`만 받는 `POST /api/projects`와
-`POST /api/projects/:id/worktrees`를 사용합니다. MCP 실행도 같은 연결 워크플로를
-사용합니다. 연결은 같은 식별로 과거 연결 해제 기록을 재활성화할 수 있지만 워크트리를
-생성하거나 `.redpact/settings.json`을 쓰지 않습니다. 프로젝트·인스턴스 설정·tracking
-조회와 work item·제출·실행·일반 환경 list/get/stop 계약은 유지합니다.
-프로젝트 관리, 설정 쓰기, 디렉터리 선택기, 일반 파일, Git 변경·그래프·PR·워크트리
-생성, 수동 Container 시작, 호스트 플러그인 업데이트 API는 없습니다.
+전체 앱은 프로젝트 연결·관리, 설정 편집, 디렉터리·파일 탐색, Git 탐색·작업, 수동 Container 제어와 호스트 플러그인 업데이트 API를 유지합니다. MCP 도구는 실행·설정 조회 범위를 유지합니다. 앱 제어를 복원해도 Git 변경·설정 저장·승인 capability를 모델에 노출하지 않습니다. [내비게이션](ux-navigation.md), [설정 소유권](settings-reference.md), [Git 작업](git.md)을 참고하세요.
 
 ## 요청 승인과 Apps
 

@@ -66,14 +66,7 @@ prefer an explicit path when authoring. Discovery observes declared roots and na
 Git registrations without creating worktrees or running tests. Collection errors
 remain diagnostics. [Execution](execution.md) describes runtime boundaries.
 
-Existing-checkout binding uses `POST /api/projects` with only `{ path }` and
-`POST /api/projects/:id/worktrees` with `{ path }`. MCP execution uses the same
-binding workflow. Binding may reactivate an old disconnected record with the same
-identity; it never creates worktrees or writes `.redpact/settings.json`. Project,
-instance configuration and tracking readers remain available. Work items,
-submissions, execution and general environment list/get/stop retain their contracts.
-There are no project-management, settings-write, directory-picker, generic-file,
-Git mutation/graph/PR/worktree-creation, manual-Container-start or host-plugin-update APIs.
+The full app retains project connection and management, settings editors, directory and file browsing, Git navigation/actions, manual Container controls and host-plugin update APIs. MCP tools retain their narrower execution/configuration-inspection scope; restoring app controls does not expose Git mutations, settings writes or approval capabilities to the model. See [navigation](ux-navigation.md), [settings ownership](settings-reference.md) and [Git operations](git.md).
 
 ## Request approval and Apps
 

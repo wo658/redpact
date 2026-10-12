@@ -38,8 +38,7 @@ no installed browser or Playwright test runtime.
    results, and that server's origin.
 
 Do not copy run records between projects or servers. A local `pnpm test` result
-alone does not create a Redpact submission. A viewer opened without an execution or
-worktree link intentionally has no project manager or test catalog.
+alone does not create a Redpact submission. Opening the full app without an execution link must retain project management and test catalogs; exact review links must remain bound to their recorded worktree.
 
 ## Environment and extension
 
@@ -64,37 +63,19 @@ the example against the real settings/Compose reader and discovers its acceptanc
 scenarios. The regular server suite remains independent of Docker self-E2E execution.
 Typecheck the portable bundle with
 `pnpm --filter @redpact/server exec tsc -p ../../e2e/tsconfig.json`.
-Retained environments can be inspected through the environment API and explicitly
-stopped without deleting recorded evidence.
+Retained environments can be inspected in the Environment screen or through its API and explicitly stopped without deleting recorded evidence.
 
 ## Actual application verification
 
-`ui-tests/project/tests` verifies the actual connected viewer and MCP cards. The
-viewer accepts an exact execution link or a worktree-bound history link; it has no
-project manager, settings editor, catalog runner or standalone dashboard.
-`chat-review` checks this boundary and invalid routes. `execution-approval` checks
-captured inputs, both Integration approval gates, stale-input rejection, cancellation
-and live updates. `result-rows` checks recorded source, logs, images, attachments,
-progress and browser history at desktop and mobile widths. `mcp-app` exercises the
-real bundled card resources; `window-controls` covers the retained native shell.
+`ui-tests/project/tests` verifies the actual full app and the separately bundled inline MCP cards. Cover project/worktree navigation, files and diffs, Git, test catalogs, manual environments, dependencies and settings, including desktop/mobile controls and error states. Opening the full app without a record must show normal navigation or project connection. Exact execution links must preserve the recorded identity and explicit human approval boundary inside that app.
 
-The corresponding five files in `ui-tests/project/captures` record viewable states.
-Use `run_playwright` with the actual checkout and the declared `functional` or
-`captures` target. Target patterns are `project/tests/**/*.spec.ts` and
-`project/captures/**/*.spec.ts`; both have project scope. Capture completion alone
-is not visual approval. Inspect the images and identify seeded record fixtures as
-fixtures, not application execution evidence.
+Keep chat-context and approval checks alongside the full application coverage. Verify captured inputs, both Integration approval gates, Unit/Playwright request approval, stale-input rejection, cancellation and live updates. Exercise the actual bundled MCP cards independently; their request/result UI must not replace the standalone, desktop or Global App Page management experience.
 
-The native runner checks described in [development](../docs/development.md) cover
-actual capture collection, delayed/path attachments, crops, high-DPI pages and
-artifact persistence. They do not create a connected Integration submission.
+Use `run_playwright` with the actual checkout and the declared functional or capture target. Target patterns are relative to `ui-tests`. Capture completion alone is not visual approval: inspect desktop/mobile images and identify seeded record fixtures as fixtures, not application execution evidence. The native shell and companion's real MCP bridge need their own lifecycle checks.
 
-`host-boundaries.test.ts` verifies retired Git, project, settings and manual-container
-management APIs return 404 while checkout binding, configuration validation and
-recorded history remain available. Configuration tests author files directly and
-call MCP validation; reads must not silently repair invalid authored content.
-`runtime-migrations.test.ts` verifies original backups, retained evidence, interrupted
-migration recovery and rejection of unsupported history through the real CLI.
+The native runner checks described in [development](../docs/development.md) cover actual capture collection, delayed/path attachments, crops, high-DPI pages and artifact persistence. They do not create a connected Integration submission.
+
+`host-boundaries.test.ts` must verify restored management HTTP controls while preserving the narrower model-facing MCP scope. Configuration checks use the fixed settings contract and shared validation; reads must not silently repair invalid authored content. `runtime-migrations.test.ts` verifies original backups, retained evidence, interrupted migration recovery and rejection of unsupported history through the real CLI.
 
 ## Container-runner fixture transport
 

@@ -80,8 +80,8 @@ not a public HTTP endpoint. The WebView permits admitted loopback/about:blank
 navigation and denies external/file navigation. These desktop commands are allowed only for
 the main window at the owned server origin, with an additional caller-origin check;
 other loopback pages receive no desktop action authority. The GitHub command accepts
-no URL argument and opens only `https://github.com/wo658/redpact`. This retained native
-command does not grant GitHub account authority. The viewer has no GitHub or Star shortcut.
+no URL argument and opens only `https://github.com/wo658/redpact`; Star opens the same
+page, where the user can sign in and star the repository. It never stars automatically.
 
 ## Manual preview downloads
 
@@ -129,13 +129,20 @@ AppImage/RPM, ARM builds and an updater feed are not configured for these previe
 
 ## Signed updates
 
-The native updater backend checks at startup and every six hours. The focused
-review viewer does not display an Update shortcut or Updates panel; use the original
-installation method to manage the desktop package. Native update commands and signed
-release verification remain available to the desktop host. Checking never installs,
-and explicit installation retains native confirmation and active-work deferral.
-Feed and status errors do not establish that the installation is current. npm packages
-use their separate [runtime update workflow](installation.md).
+The desktop checks at startup and every six hours. The sidebar shows a text
+**Update** button only when a newer version has been discovered. Settings → Updates
+owns **Check for updates**; neither the sidebar nor the native menu has a permanent
+manual-check action. Settings checks do not install or request installation approval.
+A successful check updates the shared version indicator; an unavailable feed or failed
+check reports an error instead of claiming the installation is current.
+
+Clicking **Update** rechecks the release and opens native install/restart confirmation.
+Checking or installing disables the update action. Cancellation or active-work deferral
+preserves the available version. Native status is polled every five seconds; failed
+status reads hide the sidebar indicator until a successful read. Background feed
+failures preserve a previously discovered version. A successful no-update check hides
+the button. npm installations share the button and settings placement but use their
+own [runtime installation and restart path](installation.md).
 
 Release builds retain
 `https://github.com/wo658/redpact/releases/latest/download/latest.json`.

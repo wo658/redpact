@@ -206,16 +206,18 @@ try {
       "소유 MCP 종료는 런타임을 정리해야 한다",
     )
   } else {
-    await app.getByRole("heading", { name: "Open an execution from chat", exact: true }).waitFor()
+    await app.getByRole("tablist", { name: "Open workspaces", exact: true }).waitFor()
     assert.equal(
       await app.locator("html").evaluate((element) => element.classList.contains("dark")),
       false,
       "App 첫 표시는 저장된 독립 뷰어 선호보다 호스트의 밝은 테마를 따라야 한다",
     )
-    for (const name of ["Settings", "Tools", "Open project folder", "Current work"]) {
-      assert.equal(await app.getByRole("button", { name, exact: true }).count(), 0)
-    }
-    await captures(page, app, "empty")
+    await app.getByRole("button", { name: "Settings", exact: true }).waitFor()
+    assert.equal(
+      await app.getByRole("heading", { name: "Open an execution from chat", exact: true }).count(),
+      0,
+    )
+    await captures(page, app, "full-app")
     await page.goto(`${origin}/?kind=unit&id=${id}`)
     await app.getByRole("button", { name: "Approve execution", exact: true }).waitFor()
     await app

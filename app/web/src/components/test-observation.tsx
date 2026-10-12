@@ -2,15 +2,18 @@
 import { Check, Minus, X } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { ExecutionProgress } from "./execution-progress"
-import { EmptyState, Notice } from "./feedback"
+import { EmptyState, Loading, Notice } from "./feedback"
 import { ListGroup, ListHeader, ListItem, ListItems } from "./kibo-ui/list"
+import { useLiveRevision } from "./live-updates"
 import { ResultRow } from "./result-row"
+import { TestCode } from "./test-code"
 import { TestFileBrowser } from "./test-file-browser"
 import { Badge } from "./ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/coss-tabs"
 import { UnifiedDiff } from "./unified-diff"
 import "@/locales"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 import {
   Timeline,
   TimelineContent,
@@ -18,7 +21,306 @@ import {
   TimelineItem,
   TimelineSeparator,
 } from "@/components/reui/timeline"
-import type { TestRun, TestSubmission } from "@/lib/api"
+import { Button } from "@/components/ui/button"
+import type { Api, TestRun, TestSubmission } from "@/lib/api"
+
+export function TestObservation({
+  api,
+  worktreeId,
+  scope = "changed",
+  actionsContainer,
+}: {
+  api: Api
+  worktreeId: string
+  projectId?: string
+  scope?: "changed" | "all"
+  actionsContainer?: HTMLElement | null
+}) {
+  const { t } = useTranslation()
+  const revision = useLiveRevision()
+  const [data, setData] = useState<Awaited<ReturnType<Api["integrationTests"]>>>()
+  const [evidence, setEvidence] = useState<{
+    submission: TestSubmission
+    run: TestRun | null
+  } | null>(null)
+  const [error, setError] = useState("")
+  const [evidenceError, setEvidenceError] = useState("")
+  const [evidenceWorktree, setEvidenceWorktree] = useState("")
+  useEffect(() => {
+    void revision
+    const abort = new AbortController()
+    void api
+      .integrationTests(worktreeId, abort.signal, scope)
+      .then((value) => {
+        if (!abort.signal.aborted) {
+          setData(value)
+          setError("")
+        }
+      })
+      .catch((error) => {
+        if (!abort.signal.aborted) {
+          setError(String(error))
+        }
+      })
+    return () => abort.abort()
+  }, [api, worktreeId, revision, scope])
+  useEffect(() => {
+    void revision
+    const abort = new AbortController()
+    async function refresh() {
+      const page = await api.submissions(worktreeId, "", abort.signal)
+      const id = page.items[0]?.id
+      if (!id) {
+        return null
+      }
+      const [submission, runs] = await Promise.all([
+        api.submission(id, abort.signal),
+        api.runs(id, "", abort.signal),
+      ])
+      const run = runs.items[0] ? await api.run(runs.items[0].id, abort.signal) : null
+      return { submission, run }
+    }
+    void refresh()
+      .then((value) => {
+        if (!abort.signal.aborted) {
+          setEvidence(value)
+          setEvidenceWorktree(worktreeId)
+          setEvidenceError("")
+        }
+      })
+      .catch((error) => {
+        if (!abort.signal.aborted) {
+          setEvidenceError(String(error))
+        }
+      })
+    return () => abort.abort()
+  }, [api, worktreeId, revision])
+  return (
+    <section
+      aria-label={t("Integration Test")}
+      className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden"
+    >
+      <IntegrationRunControls
+        key={worktreeId}
+        api={api}
+        actionsContainer={actionsContainer}
+        runCurrent={scope === "all" ? () => api.runIntegrationTests(worktreeId) : undefined}
+        submissionId={evidence?.submission.id}
+        run={evidence?.run ?? null}
+        unavailable={!data || Boolean(error || evidenceError) || evidenceWorktree !== worktreeId}
+        onStarted={async (run) => {
+          if (scope === "all" && "submissionId" in run && typeof run.submissionId === "string") {
+            const submission = await api.submission(run.submissionId)
+            setEvidence({ submission, run })
+          } else {
+            setEvidence((current) =>
+              current && current.submission.id === evidence?.submission.id
+                ? { ...current, run }
+                : current,
+            )
+          }
+        }}
+      />
+      {error && (
+        <Notice error>{t("{{error}} · Displayed evidence may be outdated.", { error })}</Notice>
+      )}
+      {evidenceError && (
+        <Notice error>
+          {t("{{error}} · Displayed evidence may be outdated.", { error: evidenceError })}
+        </Notice>
+      )}
+      {!data && !error && <Loading>{t("Loading tests…")}</Loading>}
+      {data && (
+        <IntegrationTestFiles
+          api={api}
+          worktreeId={worktreeId}
+          data={data}
+          scope={scope}
+          submission={evidence?.submission ?? null}
+          run={evidence?.run ?? null}
+        />
+      )}
+    </section>
+  )
+}
+
+function IntegrationRunControls({
+  api,
+  submissionId,
+  run,
+  unavailable,
+  onStarted,
+  actionsContainer,
+  runCurrent,
+}: {
+  runCurrent?: () => Promise<TestRun>
+  api: Api
+  submissionId?: string
+  run: TestRun | null
+  unavailable: boolean
+  actionsContainer?: HTMLElement | null
+  onStarted: (run: TestRun) => void | Promise<void>
+}) {
+  const { t } = useTranslation()
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState("")
+  const [accepted, setAccepted] = useState<TestRun | null>(null)
+  useEffect(() => {
+    if (accepted && run?.id === accepted.id) {
+      setAccepted(null)
+    }
+  }, [accepted, run])
+  const currentRun = run?.id === accepted?.id ? run : (accepted ?? run)
+  const active = Boolean(currentRun && currentRun.state !== "finished")
+  async function execute() {
+    if ((!submissionId && !runCurrent) || pending || active || unavailable) {
+      return
+    }
+    setPending(true)
+    setError("")
+    try {
+      let next: TestRun
+      if (runCurrent) {
+        next = await runCurrent()
+      } else if (submissionId) {
+        next = await api.startRun(submissionId)
+      } else {
+        return
+      }
+      setAccepted(next)
+      await onStarted(next)
+    } catch (error) {
+      setError(String(error))
+    } finally {
+      setPending(false)
+    }
+  }
+  const runButton = (
+    <Button
+      size="toolbar"
+      variant="ghost"
+      title={
+        runCurrent
+          ? t("Runs current integration sources with the fixed project configuration.")
+          : t("Runs the latest submission in full, not the selected current file.")
+      }
+      disabled={(!submissionId && !runCurrent) || pending || active || unavailable}
+      onClick={() => void execute()}
+    >
+      {t("Run Integration tests")}
+    </Button>
+  )
+  const controls = (
+    <div className="flex items-center gap-2">
+      {runButton}
+      {active && currentRun && <ExecutionProgress kind="integration" run={currentRun} compact />}
+    </div>
+  )
+  return (
+    <>
+      {actionsContainer ? createPortal(controls, actionsContainer) : controls}
+      {!submissionId && !runCurrent && !unavailable && (
+        <Notice>{t("Submit tests before running them.")}</Notice>
+      )}
+      {error && <Notice error>{error}</Notice>}
+    </>
+  )
+}
+
+export function IntegrationTestFiles({
+  api,
+  worktreeId,
+  data,
+  submission,
+  run,
+  scope = "changed",
+}: {
+  api: Api
+  worktreeId: string
+  scope?: "changed" | "all"
+  data: Awaited<ReturnType<Api["integrationTests"]>>
+  submission: TestSubmission | null
+  run: TestRun | null
+}) {
+  const { t } = useTranslation()
+  const [path, setPath] = useState("")
+  const [view, setView] = useState("code")
+  const selected = data.catalog.files.find((file) => file.path === path) ?? data.catalog.files[0]
+  const relativePath = selected?.path.slice(data.directory.length + 1)
+  const captured = submission?.files.find((file) => file.path === relativePath)
+  const selectedSubmission =
+    submission && captured
+      ? {
+          ...submission,
+          files: [captured],
+          parsed: submission.parsed.filter((file) => file.path === relativePath),
+        }
+      : null
+  const result = run?.result
+    ? {
+        ...run.result,
+        cases: run.result.cases.filter((result) => result.file === relativePath),
+      }
+    : null
+  const selectedRun = run ? { ...run, result } : null
+  return (
+    <TestFileBrowser
+      mode={scope === "all" ? "project" : "worktree"}
+      files={data.catalog.files}
+      path={selected?.path ?? ""}
+      label={scope === "all" ? t("Integration test files") : t("Changed integration test files")}
+      onSelect={(path) => {
+        setPath(path)
+        setView("code")
+      }}
+    >
+      <Tabs
+        value={view}
+        onValueChange={(value) => setView(String(value))}
+        className="min-h-0 flex-1"
+      >
+        <TabsList variant="underline" className="shrink-0">
+          <TabsTrigger value="code">{t("Code")}</TabsTrigger>
+          <TabsTrigger value="results">{t("Execution results")}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="code" className="flex h-0 min-h-0 flex-col gap-3 overflow-auto">
+          {data.catalog.diagnostics.map((message) => (
+            <Notice key={message}>{message}</Notice>
+          ))}
+          {!selected && (
+            <EmptyState>
+              {scope === "all"
+                ? t("No integration test files.")
+                : t("No changed integration test files.")}
+            </EmptyState>
+          )}
+          {selected && selected.source !== null && (
+            <TestCode
+              api={api}
+              worktreeId={worktreeId}
+              scope={scope}
+              baseRevision={data.catalog.baseRevision}
+              source={{ path: selected.path, content: selected.source }}
+            />
+          )}
+          {selected && selected.source === null && <Notice>{selected.issue}</Notice>}
+        </TabsContent>
+        <TabsContent value="results" className="flex h-0 min-h-0 flex-col gap-3 overflow-auto">
+          {selectedSubmission ? (
+            <TestEvidence
+              key={`${submission?.id}:${relativePath}`}
+              withFileList={false}
+              submission={selectedSubmission}
+              run={selectedRun}
+            />
+          ) : (
+            <EmptyState>{t("No recorded result for this file.")}</EmptyState>
+          )}
+        </TabsContent>
+      </Tabs>
+    </TestFileBrowser>
+  )
+}
 
 export function TestEvidence({
   submission,

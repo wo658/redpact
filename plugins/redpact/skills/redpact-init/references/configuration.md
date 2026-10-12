@@ -51,9 +51,9 @@ to the consuming container. External services retain their origins and authentic
 
 Read the instance settings path and `projects` schema from `configure describe`.
 If needed, edit that instance file to observe the actual absolute root. Do not change
-its port or unrelated projects without a task reason. There is no public settings
-write endpoint. Existing-checkout binding can record an existing path but never creates
-a worktree or writes project settings.
+its port or unrelated projects without a task reason. The full app exposes explicit
+settings editing and project connection actions; chat setup writes files directly.
+Existing-checkout binding can record an existing path without creating a worktree.
 
 Use `get_workspace_status` and advertised read-only project/worktree APIs to verify
 the observed root and checkout. Read-only status does not register missing projects.

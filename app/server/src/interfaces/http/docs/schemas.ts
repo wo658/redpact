@@ -6,6 +6,7 @@ import {
   settingsShape,
   testSelectionSchema,
 } from "../../../core/settings-schema.js"
+import { startWorkInput } from "../../../core/start-work-schema.js"
 import { stepResultSchema } from "../../../core/step-schema.js"
 import { trackingSchema } from "../../../core/tracking-schema.js"
 import type {
@@ -16,6 +17,7 @@ import type {
   Worktree,
 } from "../../../core/types/contracts.js"
 import type { GitSnapshot } from "../../../core/types/git.js"
+import type { WorkStart } from "../../../core/types/start-work.js"
 
 const id = z.string().uuid()
 const strings = z.array(z.string())
@@ -163,6 +165,34 @@ export const runResponse: z.ZodType<Run & { environment?: z.infer<typeof environ
     environment: environmentSummary.optional(),
   })
   .meta({ id: "Run" })
+export const workStartResponse: z.ZodType<WorkStart> = z
+  .object({
+    id,
+    input: startWorkInput,
+    checkoutRoot: z.string(),
+    revision: z.string(),
+    worktreeId: id,
+    workItemId: id,
+    createdAt: z.string(),
+    state: z.enum(["prepared", "attempted", "created", "completed"]),
+  })
+  .meta({ id: "WorkStart" })
+export const startedWorkResponse = z
+  .object({
+    requestId: id,
+    workItemId: id,
+    worktreeId: id,
+    projectId: id,
+    checkoutRoot: z.string(),
+    projectRoot: z.string(),
+    revision: z.string(),
+    configure: z.object({
+      tool: z.literal("configure"),
+      arguments: z.object({ action: z.literal("describe"), worktreeId: id }),
+    }),
+    nextSteps: strings,
+  })
+  .meta({ id: "StartedWork" })
 const settingsIssue = z.object({
   code: z.string(),
   path: z.string(),

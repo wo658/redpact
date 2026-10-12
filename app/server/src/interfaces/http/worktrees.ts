@@ -2,7 +2,8 @@ import { zValidator } from "@hono/zod-validator"
 import { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
-import type { WorktreeService } from "../../core/types/services.js"
+import { startWorkInput } from "../../core/start-work-schema.js"
+import type { WorkStarts, WorktreeService } from "../../core/types/services.js"
 import { createWorktreeInspection } from "../../workflows/inspection.js"
 import { projectInput, worktreeInput } from "../schemas.js"
 import {
@@ -18,16 +19,60 @@ import {
   dependenciesResponse,
   gitResponse,
   projectResponse,
+  startedWorkResponse,
+  workStartResponse,
   worktreeResponse,
   worktreeSettingsResponse,
 } from "./docs/schemas.js"
 
-export function worktreeRoutes(service: WorktreeService) {
+export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
   const inspection = createWorktreeInspection(service)
   const imageSide = z
     .union([z.object({ dataUrl: z.string() }), z.object({ error: z.string() })])
     .nullable()
   const app = new Hono()
+  if (starts) {
+    app
+      .post(
+        "/work-starts",
+        describeRoute({
+          operationId: "startWork",
+          summary: "Create a managed worktree and work item",
+          tags: ["Worktrees"],
+          description:
+            "Creates or resumes durable worktree creation. Retry with identical requestId and inputs. baseRef and branch must be valid Git references; path must be absolute. Does not prepare containers or establish readiness.",
+          requestBody: jsonBody(startWorkInput),
+          responses: {
+            ...localErrors,
+            ...inputErrors,
+            ...notFound,
+            ...conflict,
+            200: jsonResponse(
+              startedWorkResponse,
+              "Create a managed worktree and work item response.",
+            ),
+          },
+        }),
+        zValidator("json", startWorkInput),
+        async (c) => c.json(await starts.start(c.req.valid("json")), 200),
+      )
+      .get(
+        "/work-starts/:id",
+        describeRoute({
+          operationId: "getWorkStart",
+          summary: "Read worktree creation state",
+          tags: ["Worktrees"],
+          description:
+            "Returns the durable operation record, including recoverable intermediate states.",
+          responses: {
+            ...localErrors,
+            ...notFound,
+            200: jsonResponse(workStartResponse, "Read worktree creation state response."),
+          },
+        }),
+        (c) => c.json(starts.get(c.req.param("id"))),
+      )
+  }
   return app
     .get(
       "/projects/:id/dependencies",
@@ -69,8 +114,8 @@ export function worktreeRoutes(service: WorktreeService) {
       }),
       zValidator("json", projectInput),
       async (c) => {
-        const { path } = c.req.valid("json")
-        return c.json(await service.connect(path), 201)
+        const { path, name } = c.req.valid("json")
+        return c.json(await service.connect(path, name), 201)
       },
     )
     .get(
@@ -106,6 +151,53 @@ export function worktreeRoutes(service: WorktreeService) {
             ? await service.projectDetails()
             : await service.listProjects(),
         ),
+    )
+    .patch(
+      "/projects/:id",
+      describeRoute({
+        operationId: "renameProject",
+        summary: "Rename a project",
+        tags: ["Projects"],
+        requestBody: jsonBody(z.strictObject({ name: z.string().trim().min(1).max(200) })),
+        responses: {
+          ...localErrors,
+          ...inputErrors,
+          ...notFound,
+          200: jsonResponse(projectResponse, "Updated display name."),
+        },
+      }),
+      zValidator("json", z.strictObject({ name: z.string().trim().min(1).max(200) })),
+      async (c) => c.json(await service.renameProject(c.req.param("id"), c.req.valid("json").name)),
+    )
+    .delete(
+      "/projects/:id",
+      describeRoute({
+        operationId: "disconnectProject",
+        summary: "Disconnect a project, preserving files and history",
+        tags: ["Projects"],
+        responses: {
+          ...localErrors,
+          ...notFound,
+          ...conflict,
+          200: jsonResponse(projectResponse, "Disconnected project."),
+        },
+      }),
+      async (c) => c.json(await service.disconnectProject(c.req.param("id"))),
+    )
+    .post(
+      "/projects/:id/reconnect",
+      describeRoute({
+        operationId: "reconnectProject",
+        summary: "Reconnect the original project directory",
+        tags: ["Projects"],
+        responses: {
+          ...localErrors,
+          ...notFound,
+          ...conflict,
+          200: jsonResponse(projectResponse, "Reconnected project."),
+        },
+      }),
+      async (c) => c.json(await service.reconnectProject(c.req.param("id"))),
     )
     .get(
       "/projects/:id",

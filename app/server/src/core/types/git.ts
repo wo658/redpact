@@ -46,7 +46,10 @@ export type GitContentAdapter = {
   readFile(projectPath: string, path: string, source: "head" | "index"): Promise<string | null>
 }
 
-export type GitAdapter = GitMetadataAdapter & GitStatusAdapter & GitContentAdapter
+export type GitAdapter = GitMetadataAdapter &
+  GitStatusAdapter &
+  GitContentAdapter &
+  GitBranchAdapter
 
 export type GitService = {
   image(path: string, mainBranch?: string | null, options?: GitImageOptions): Promise<GitImage>
@@ -64,4 +67,15 @@ export type GitDiff = {
   reason?: string
   patch: string
   omitted: string[]
+}
+
+export type BranchReview = {
+  name: string
+  revision: string
+  merged: boolean
+  worktrees: { path: string; missing: boolean }[]
+}
+export type GitBranchAdapter = {
+  branchReviews(root: string, mainBranch: string | null): Promise<BranchReview[]>
+  branchDiff(root: string, branch: string, mainBranch: string | null): Promise<GitDiff>
 }

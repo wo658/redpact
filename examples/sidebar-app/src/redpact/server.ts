@@ -138,7 +138,7 @@ export function createAppServer(options: {
       title: "Redpact",
       icons,
       description:
-        "Open an exact recorded execution in the Redpact App Page with kind and id, or open the runtime page without a selection. Opening does not run tests or approve requests.",
+        "Open an exact recorded execution in the Redpact App Page with kind and id, or open the full project workspace without a selection. Opening does not run tests or approve requests.",
       inputSchema: {
         kind: z.enum(["unit", "integration", "playwright"]).optional(),
         id: z.string().uuid().optional(),

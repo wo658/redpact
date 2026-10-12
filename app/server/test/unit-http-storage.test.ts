@@ -24,6 +24,7 @@ test.each([false, true])(
         projects: { root: async () => root },
         directory: root,
         files: createSettingsFiles(),
+        validateProject: (path, source) => readJsonSettings(path, undefined, { file, source }),
       })
       await writeFile(
         file,

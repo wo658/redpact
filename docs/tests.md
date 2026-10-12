@@ -5,14 +5,14 @@ description: Choose unit commands, integration scenarios, or browser tests and r
 
 # Writing verification
 
-Start with [Review your first change](review-workflow.md) to decide which evidence you need. This page explains how to author that evidence with your agent. Choose a test based on the behavior you need to verify.
+Start with [Review your first change](review-workflow.md) to decide which evidence you need. This page explains how to author that evidence with your agent. Choose a test based on the behavior you need to verify. Start with [your first run](first-run.md) if the project is not connected yet.
 
 | Need | Test type | Execution entry point | Recorded result |
 |---|---|---|---|
-| Run an existing test command | Unit | MCP `run_unit_tests` | Command status, exit code and output |
-| Verify a public API and dependencies | Integration | MCP `run_tests` | Captured Vitest sources, cases and observed steps |
-| Verify browser interactions | Playwright, `purpose: "functional"` | MCP `run_playwright` | Scenario and step verdicts, diagnostic attachments |
-| Show application states for review | Playwright, `purpose: "capture"` | MCP `run_playwright` | Named screenshots, sources and execution details |
+| Run an existing test command | Unit | MCP `run_unit_tests` or Unit controls in the app | Command status, exit code and output |
+| Verify a public API and dependencies | Integration | MCP `run_tests` or Integration controls | Captured Vitest sources, cases and observed steps |
+| Verify browser interactions | Playwright, `purpose: "functional"` | MCP `run_playwright` or Tests → Playwright controls | Scenario and step verdicts, diagnostic attachments |
+| Show application states for review | Playwright, `purpose: "capture"` | MCP `run_playwright` or Tests → Playwright controls | Named screenshots, sources and execution details |
 
 A screenshot lets someone inspect appearance. Assertions establish the behavior a test actually checks. Keep both when a change needs functional verification and visual review.
 
@@ -33,9 +33,7 @@ Add `unitTests` to the shared `.redpact/settings.json`. This fragment assumes a 
 
 Merge these fields into your configuration, preserving other settings. Paths resolve from the selected worktree. The Dockerfile must provide `/bin/sh`, the package manager and dependencies. Installation belongs in Dockerfile build steps because Redpact replaces the image's startup command. See [configuration](configuration.md).
 
-Call `run_unit_tests` with the absolute intended checkout. It executes the complete
-configured command. Selecting or listing a source file does not filter execution;
-`patterns` describes source discovery. Use a finite command with watch mode disabled.
+Open the project's **Tests** page and choose **Unit** to target the primary checkout. For a feature worktree, use its Unit Test execution controls. **Run Tests** executes the configured command in full. Selecting a source file does not filter execution; `patterns` determines which source files the viewer lists. Use a finite command with watch mode disabled.
 
 Each run gets a fresh container. It does not use host-installed dependencies or require Compose dependency selections. Redpact records the command outcome and bounded stdout/stderr; it does not infer individual test verdicts from text output.
 
@@ -64,7 +62,7 @@ Await each step in order. Put the operation or assertion inside its callback and
 
 Ask the agent to call `run_tests` with the absolute working-checkout path, and optional exact test paths relative to `tests.directory`. Helpers stay in the collected bundle. `run_tests` handles integration; unit commands and Playwright sources use their own execution paths.
 
-Read the returned state, then inspect execution through `get_run`. Preserve its identity and verify evidence belongs to the intended worktree on the connected instance. Running tests directly in a shell does not create a Redpact submission. Each `run_tests` request collects current sources into a fresh submission; recorded source remains separate from subsequent edits.
+Read the returned state, then inspect execution through `get_run`. Preserve its identity and verify evidence belongs to the intended worktree on the connected instance. Running tests directly in a shell does not create a Redpact submission. The project Integration run action collects current sources into a fresh submission; recorded source remains separate from subsequent edits.
 
 Use isolated fixture data. For a save operation, verify readback as well as the immediate response. For a regression, retain the actual failing assertion and rerun against updated application inputs. Collection errors and unavailable applications are setup failures, not proof that the intended assertion failed.
 
@@ -126,12 +124,9 @@ test("Settings page is ready for review", async ({ page }, info) => {
 
 Use stable, descriptive names such as `Page / Group / Capture name`. The viewer displays the complete name in its checkpoint selector; `/` is a naming convention, not a grouping instruction. See [browsing captures](results.md) for the file and checkpoint navigation. Choose useful states such as an empty form, validation error or saved result. Wait for application state and fonts instead of fixed sleeps. Capture the viewport or a meaningful section with enough context to judge the change.
 
-For functional targets, use `test.step` and assertions on observable results: navigate, submit a form, then verify the resulting state and relevant persistence. Screenshots are optional diagnostics. Functional attachments remain diagnostic evidence on that exact run.
+For functional targets, use `test.step` and assertions on observable results: navigate, submit a form, then verify the resulting state and relevant persistence. Screenshots are optional diagnostics. Functional screenshots do not populate the project's capture gallery.
 
-Call `run_playwright` with the actual checkout and declared target. The fixed shared
-configuration supplies application and dependency services. Default viewport is
-1920 × 1080; settings or request options can override it. Reading an image never
-starts execution. Inspect the returned request and its approval state.
+Open **Tests → Playwright → Run Tests** and select a worktree and target, or use worktree **Playwright** controls. The fixed project configuration supplies application and dependency services. The default viewport is 1920 × 1080; settings or run options can override it. Viewing a saved image never starts execution.
 
 ## Design assertions that answer the task
 
@@ -152,7 +147,7 @@ A mock-based test verifies your application against the implemented substitute. 
 
 Start a task-specific scene under `worktree/captures` when it exists only to review the current change. If it represents a state worth checking again, move the final source and required helpers into the maintained project layout, select the project target, and execute it there.
 
-The new execution matters: moving the file does not convert an old worktree record into a project record. Verify the new target's scope, purpose and screenshot names. Keep functional assertions in a functional target when their continued verdict is part of the project's regression coverage.
+The new execution matters: moving the file does not convert an old worktree record into a project record or populate the maintained gallery. Verify the new target's scope, purpose and screenshot names. Keep functional assertions in a functional target when their continued verdict is part of the project's regression coverage.
 
 ## Ask for a complete test handoff
 
@@ -169,8 +164,7 @@ rendered UI, say so when requesting functional evidence only.
 
 ## Finish a task without losing evidence
 
-Both Playwright scopes retain executed scenario sources and artifacts. Worktree drafts remain editable during the task. Once the final draft has been executed and resource cleanup has completed, use the explicit `POST /api/worktrees/:id/playwright/cleanup-worktree` operation if
-removing the recorded draft subtree is within the requested scope. There is no viewer cleanup wizard.
+Both Playwright scopes retain executed scenario sources and artifacts. Worktree drafts remain editable during the task. Once the final draft has been executed and resource cleanup has completed, use **Clean up worktree code** in Playwright to remove the recorded draft subtree.
 
 Cleanup refuses active execution, unrecorded new or edited drafts, changed configuration and unsafe paths. Inspect any refusal and record intended changes before retrying. Successful runs and merges do not automatically remove drafts. Draft cleanup preserves history. Maintaining a scenario long-term requires explicitly moving it into `project` and updating imports or target matches as needed.
 

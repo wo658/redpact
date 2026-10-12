@@ -6,7 +6,7 @@ import { expect, test, vi } from "vitest"
 import { openStore } from "../src/adapters/storage/files.js"
 import { createApp } from "../src/app.js"
 
-const retired = [
+const restored = [
   ["GET", "/worktrees/w/merge"],
   ["GET", "/worktrees/w/pull-request"],
   ["GET", "/instance/github"],
@@ -25,7 +25,7 @@ const retired = [
   ["GET", "/plugin-updates"],
 ] as const
 
-test.each(retired)("호스트가 소유하는 관리 API를 제거한다: %s %s", async (method, path) => {
+test.each(restored)("전체 앱의 관리 API를 복원한다: %s %s", async (method, path) => {
   const invoke = vi.fn(() => ({}))
   const service = new Proxy({}, { get: () => invoke })
   const app = createApp({
@@ -57,11 +57,11 @@ test.each(retired)("호스트가 소유하는 관리 API를 제거한다: %s %s"
           body: JSON.stringify(body),
         }),
   })
-  expect(response.status).toBe(404)
-  expect(invoke).not.toHaveBeenCalled()
+  expect(response.status).toBe(path.endsWith("/test-container/start") ? 202 : 200)
+  expect(invoke).toHaveBeenCalled()
 })
 
-test("기존 실행과 수동 환경은 관리 API 없이 조회하고 정리할 수 있다", async () => {
+test("기존 실행과 수동 환경은 관리 화면 복원 후에도 조회하고 정리할 수 있다", async () => {
   const stopEnvironment = vi.fn(async () => ({ id: "old-manual", state: "stopped" }))
   const app = createApp({
     environments: {
@@ -78,7 +78,7 @@ test("기존 실행과 수동 환경은 관리 API 없이 조회하고 정리할
   expect(stopEnvironment).toHaveBeenCalledWith("old-manual")
 })
 
-test("폐기한 worktree 생성 기록은 다시 시작해도 변경하지 않고 읽는다", async () => {
+test("기존 worktree 생성 기록은 다시 시작해도 변경하지 않고 읽는다", async () => {
   const root = await mkdtemp(join(tmpdir(), "redpact-retained-start-"))
   const id = randomUUID()
   const record = {

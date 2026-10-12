@@ -1,6 +1,6 @@
 ---
 title: Execution and environments
-description: Test runtimes, evidence, limits and cleanup.
+description: Test runtimes, evidence, manual containers, limits and cleanup.
 ---
 
 # Execution and environments
@@ -12,6 +12,7 @@ description: Test runtimes, evidence, limits and cleanup.
 | Unit | Project Dockerfile and complete configured command in a temporary container | Command status, exit code, stdout/stderr and cleanup status |
 | Integration | Containerized Vitest against a fresh Testcontainers Compose application environment | Immutable submitted source, cases, steps and run/environment records |
 | Playwright | Containerized browser against a temporary application environment | Functional results or capture evidence, optional video/trace |
+| Container | Explicitly started manual project application environment | Inspection endpoints and lifecycle state; not test evidence |
 
 Unit has no host-command fallback. Its Dockerfile must copy sources and dependencies
 into `/workspace`, provide `/bin/sh`, and install during build. `cwd` selects the
@@ -19,18 +20,30 @@ command directory. Dockerfile ENTRYPOINT/CMD do not supply Redpact's supervisor.
 The selected source file does not filter the configured command. Results do not
 invent per-case verdicts from an exit code.
 
-MCP `run_tests` captures fresh Integration sources for the explicit checkout.
-`run_unit_tests` executes the complete configured Unit command; `run_playwright`
-executes one declared functional or capture target. The viewer reads these records
-and provides human approval and cancellation, without a test-launch catalog.
-Submission identity and current files remain distinct. [Test authoring](tests.md)
-owns source collection and assertions; [interfaces](interfaces.md) owns request approval.
+Integration uses the current project catalog when started from Project Tests, or
+the latest submitted bundle when started from worktree review. MCP `run_tests`
+collects fresh sources for the supplied path. Submission identity and current file
+contents must remain distinguishable in the viewer. [Test authoring](tests.md)
+describes supported source collection and assertions.
 
-Recorded progress distinguishes preparation, execution, cleanup and terminal state.
-Unit includes source capture, Docker connection, image build and command execution;
-Integration includes queueing and environment preparation; Playwright includes app
-preparation and browser startup. Short stages may disappear between refreshes.
-These durable facts are not a live command-output stream or invented per-case timing.
+The three entries are separate execution contracts. MCP `run_tests` admits only
+Integration submissions. Unit runs start from the Unit tab or `run_unit_tests` and execute the complete
+configured command; their exit status is not an Integration case result. Playwright
+runs start by selecting a declared functional or capture target in the Playwright
+UI/API or `run_playwright`. Their screenshots, UI-review artifacts, execution record and cleanup stay
+with that Playwright run rather than an MCP submission. See [MCP interfaces](interfaces.md)
+for approval limits, recorded evidence lookup and cancellation.
+
+The viewer presents a common progress strip for all three run types in their
+result views. It shows the current preparation, execution, cleanup or finished
+stage and elapsed time; an active Unit or Integration run also appears beside its
+Run control. Unit distinguishes source capture, Docker connection, container
+build and command execution. Integration distinguishes queueing, environment
+preparation and test execution. Playwright distinguishes application preparation,
+browser startup and browser execution. These labels come from the durable facts
+already recorded on each run, so they can skip a short stage between refreshes.
+They are not individual timed events or a stream of live command output. Errors
+and cleanup results remain on the selected run.
 
 For agent-mediated verification, direct Docker/Compose, Vitest or Playwright CLI
 commands are local diagnostics, not Redpact execution evidence. Start each selected
@@ -57,6 +70,7 @@ Fingerprints cover the inputs described below, not every possible external effec
 Mutable image tags, external build contexts, host mounts, file-backed resources and
 remote services retain their existing Compose boundaries. Approval does not turn those
 inputs into immutable snapshots or prove runtime readiness.
+
 
 ## Temporary lifecycle
 
@@ -105,10 +119,26 @@ are independently managed and are not stopped by Redpact; tests own their fixtur
 isolation. Normal shutdown awaits execution and cleanup. Abrupt termination may
 leave resources until successful recovery.
 
-Historical manual environments remain readable and removable through general
-environment cleanup. New manual project environments cannot be started or restarted.
-Retired management operations do not delete their records or owned resources without
-cleanup. The host agent handles any separately requested development server.
+## Manual Container
+
+Project Container uses the live checkout of the configured main branch, including
+uncommitted inputs; directory projects use their connected root. No substitute
+checkout is chosen when the required checkout is missing. The fixed shared project configuration supplies the services and dependencies. One manual environment per project stays alive until
+Stop, Restart or server shutdown. It has `lifecycle: "manual"` and no test run IDs;
+it cannot be reused by test execution.
+
+Compose build images for a manual Container use a stable project-specific Compose name,
+so the latest tagged project image remains available between manual sessions. Temporary
+test environments use separate owned build tags and remove those tags after execution;
+Redpact preserves existing project image tags and unrelated Docker images. A manual
+restart removes a superseded image only when no other tags or containers reference it.
+
+Local edits show input changes but never hot-reload or restart the session. Restart
+removes old owned resources before capturing current inputs; failed cleanup blocks
+replacement. Stop remains available when source/settings are unavailable. Reverting
+inputs clears freshness differences. Unknown inputs show a diagnostic, not a false
+up-to-date state. HTTP endpoints are checked for host reachability before Ready;
+any HTTP response proves reachability, not application health.
 
 ## Compose and source capture
 
@@ -176,14 +206,25 @@ Targets declare maintenance `scope: "worktree" | "project"` and
 old Before/After baseline descriptions are not the current execution model.
 Capture is visual evidence; functional assertions establish tested behavior.
 
-The viewer opens one recorded execution and its captured source/artifacts.
-A missing PNG is explicit; another run's image is never substituted. Recorded CSS
-viewport provenance describes each PNG. Image pixels, filenames and current defaults
-do not establish the viewport or source freshness. Read the complete chosen target's
-results rather than inferring coverage from visible files.
+Playwright lists current worktree capture drafts and changed project capture files
+even before execution or when no PNG was recorded. Source presence keeps the tab,
+file selection and execution action available. Desktop/Mobile filters recorded
+images, not the source list. Images come from the latest matching execution for the
+selected size; no image in that execution means no substitution of an older image.
+Recorded CSS viewport width classifies each PNG at 768px; missing provenance stays
+visible in both modes with an explicit label. Image pixels, filenames and current
+run defaults do not establish viewport provenance. Project Captures lists declared
+capture sources before execution and separates each file's Test Code from its Screenshots;
+an empty Screenshots tab does not hide executable capture code. Each selected file shows
+a horizontal strip of named thumbnails above the large image. Click a thumbnail or use
+the radio group's arrow keys to select a checkpoint without opening a dropdown. The
+strip scrolls on narrow screens. The selected image fills the mobile content width and
+scrolls vertically instead of shrinking into the remaining height; its run link remains
+available below the image. Project Tests retains
+Captures, Tests and Runs independently of changed-file review.
 
-Runs with nonempty environment values omit trace archives. Images, videos and submitted
-source are not credential-scanned. Literal text masking is not a hostile-code sandbox.
+Runs with nonempty environment values omit trace archives. Images, videos and submitted source are not
+credential-scanned. Literal environment-value redaction in text is not a hostile-code sandbox.
 
 ## Limits and verdicts
 

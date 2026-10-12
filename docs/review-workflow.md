@@ -67,8 +67,7 @@ See [interfaces](interfaces.md) for admission and client requirements.
 The agent reads progress and terminal state, uses `get_review_context` for bounded
 failure details and evidence references, and links the recorded execution in the same
 viewer instance. Open that exact execution to inspect results, captured source,
-logs and screenshots. Its history stays bound to the recorded worktree; the viewer
-has no independent project selector or test-launch catalog.
+logs and screenshots. Its history stays bound to the recorded worktree. The full app also provides project/worktree navigation, test catalogs, environments and settings; inline chat cards remain focused on the request and its evidence.
 
 Read the assertions, not just their titles. A test named “updates the total” that
 only checks status 200 does not establish persistence. Compare case and step results

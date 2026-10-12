@@ -1,95 +1,254 @@
 ---
 title: Frontend conventions
-description: Execution review, worktree-bound history and connected evidence.
+description: Shared visual rules, navigation, live evidence and accessibility.
 ---
 
 # Frontend conventions
 
-The default `app/web` entry is the connected execution viewer. HTTP, desktop and
-the App Page render the same review surface; mock or demo pages are not backend evidence.
-[Architecture](architecture.md) owns server boundaries.
+The default `app/web` entry is a connected viewer, not a backend specification or
+a demo. Separate demo surfaces cannot establish real execution or approval behavior.
+Use [UX navigation](ux-navigation.md) for page ownership and [architecture](architecture.md)
+for service boundaries. Keep operational behavior out of styling-only abstractions.
 
-## Navigation and identity
+The local Sidebar App renders the same connected React viewer after explicit runtime
+startup; installation and stopped states stay in an isolated companion shell. Its
+bundled entry uses an App-only MCP transport for API reads/writes, scoped live changes
+and binary artifacts. Fonts and icons are inline; no nested iframe or browser network
+permission is required. Standalone and desktop entries retain HTTP and native SSE.
+See the [App Page installation contract](installation.md#local-redpact-app-page-experiment)
+for lifecycle, access boundaries, size limits and host verification requirements.
 
-The viewer has two destinations: an exact execution review and its worktree-bound
-history. A review URL is `/?page=review&kind=unit|integration|playwright&id=<id>`;
-optional recorded project/worktree parameters do not override the execution identity.
-The viewer resolves identity from the record. A history destination requires an
-explicit worktree binding. Reload and browser Back/Forward restore that destination.
-Without execution context, show an empty state asking the user to open a record from chat.
+## Full app and inline chat surfaces
 
-There are no project selectors, management/settings screens, tools menus, test-launch
-catalogs, manual Container, Git pages or Copy handoff controls. The host conversation
-owns task switching, configuration and code changes. An explicit human approval or
-cancellation control remains on the request review; its captured preview must be
-visible before approval. [Interfaces](interfaces.md) defines capability and origin rules.
+The standalone browser, desktop and Global App Page use the full management app: project/worktree navigation, files and diffs, Git, test catalogs, environments, dependencies, and project/global settings. Opening the app without a record restores normal project navigation or the connect-project screen.
 
-The native host retains its window lifecycle and platform controls. Installation,
-stopped and recovery states belong to the companion shell. The App Page bundles the
-same React entry with an App-only API/event/artifact bridge, inline fonts and icons,
-and no nested iframe or browser network permission. See [installation](installation.md#local-redpact-app-page-experiment).
+Inline MCP Apps use separately bundled request approval and result cards. They show the captured request, status and evidence for that conversation without embedding the full management navigation. They share the same runtime and evidence store. An exact `/?page=review&kind=unit|integration|playwright&id=<id>` link opens the recorded request or execution inside the full app. Record identity determines its worktree; current project selection cannot retarget it. Opening a link never requests a run. The linked review retains its worktree-bound history and explicit approval/cancellation controls.
 
 ## Components and visual rules
 
-Use adopted shadcn Base UI Nova primitives, `render` composition and Base UI events.
-The allowed shadcnblocks extension is the Linear theme. `src/components/ui` is vendored;
-compose it without unrelated edits and preserve licenses. Use semantic theme tokens,
-bundled Inter Variable for UI and JetBrains Mono Variable for code, with system fallbacks.
-Prism uses local GitHub PrettyLights `--code-highlight-*` tokens.
+Use the adopted shadcn Base UI Nova primitives, `render` composition and Base UI event
+contracts. The allowed shadcnblocks extension is the Linear theme; do not add unrelated
+registries or reintroduce Radix primitives. Retain specialized Git tree/diff/syntax,
+Kibo list and licensed ReUI timeline integrations for their existing roles.
 
-Use readable 14/21px body text, 24/32px page titles and 16/24px section titles.
-Controls use compact 13px labels. Selection uses `accent`/`accent-foreground`, distinct
-from hover and keyboard focus. Avoid decorative cards, nested borders and gradients.
-Preserve semantic error colors and complete diagnostics.
+`src/components/ui` is vendored. Feature work composes it; shared design changes may
+adapt density/geometry there once, preserving licenses and behavior. Do not override
+one shared control differently on every screen or edit unrelated vendored modules.
+Use semantic theme tokens, not raw colors or Tailwind palette utilities in components.
+Preserve Redpact colors and bundled Inter Variable with system glyph fallbacks.
+Code and diff surfaces use bundled JetBrains Mono Variable before the system mono
+fallback. Prism syntax tokens use the complete GitHub PrettyLights light/dark palette
+through local `--code-highlight-*` variables; do not depend on a syntax package's
+fallback colors or add per-screen syntax overrides.
 
-Recorded file names use bundled Material Icon Theme assets. Action icons use Lucide.
-Do not infer test outcomes from file icons, titles or source visibility. Source and
-artifact reads remain tied to their recorded execution, never generic project files.
+| Role | Geometry and typography |
+| --- | --- |
+| Page title | 24/32px, weight 600 |
+| Section title | 16/24px, weight 600 |
+| Reading text | 14/21px or 16/24px for long prose |
+| Controls and navigation | 13px labels; compact actions/metadata may use 12px |
+| Toolbar action | Compact 28px pill or circular icon control |
+| Form input/selector | Rectangular editable surface with 8px corners |
+| Sidebar selection | Soft rectangle, 8px corners |
+| Main frame/dialog | 12px corners; restrained border/elevation |
+| Static badge/inline code | Compact 6px corners |
+
+Shape follows role; do not force every control into a pill. Persistent selection
+uses `accent`/`accent-foreground`; hover uses a lighter transient state. Checked
+state and keyboard highlight stay distinct. Avoid decorative cards, nested borders,
+gradients and per-row boxes. Preserve action inversion and semantic error colors.
+
+## File and folder icons
+
+File Viewer, changed-file trees and source/diff headers use bundled Material Icon
+Theme SVG assets with the React icon pack. Exact file names take precedence over
+extensions; compound extensions such as `d.ts` take precedence over `ts`. Unknown
+files and folders use the theme defaults. Folder icons follow their name and open
+state. Light-specific variants follow the existing Light/Dark/System preference.
+Icon colors are upstream artwork rather than application status colors; Git status
+remains visible as `A/M/D/R/C` and line counts beside each changed file.
+
+The Vite build generates associations from the pinned `material-icon-theme` package
+and includes its SVG assets and MIT notice locally. No CDN or runtime manifest
+generation is required. The viewer uses file/folder names, not editor language-ID
+inference or user-configurable icon associations. Action icons continue to use Lucide.
+
+## File content previews
+
+File Viewer, worktree review, committed branch and Git Graph comparisons, and the
+uncommitted changes dialog share image presentation. PNG, JPEG, SVG, GIF, WebP,
+AVIF, BMP and ICO files open as images on a transparency checkerboard. Browser
+image decoding determines format support; corrupt or unsupported bytes show an
+explicit decode error. Each image is limited to 5 MiB; ordinary UTF-8 source
+previews retain their 1 MiB limit. Unsupported binary files remain explicit.
+
+SVG opens in Preview with a Source tab for the original text or comparison patch.
+Source-only file surfaces use the same SVG preview and source switch. SVG is loaded
+as an image rather than inserted into the document; scripts do not execute and
+external SVG resources may not render. File selection cancels pending comparison
+reads, and failed refreshes do not leave a different image labeled as current.
+
+Comparisons show Before and After, side by side when the containing workspace is
+wide enough and stacked on narrow screens. Missing images are distinct from read
+or decode errors. Commit and branch previews use their displayed Git revisions and
+retain the original path for renamed files. Staged previews compare HEAD to the
+index; unstaged previews compare the index to working files. Merely opening any
+preview never executes project code.
 
 ## Layout and reading width
 
-The review and history use normal document scrolling. Source and log panels may
-bound their own scrolling. Flex/grid boundaries use `min-w-0`; bounded nested
-scrolling uses `min-h-0`. Preserve the
-shared `640`, `768` and `wide` content-width policies: prose and evidence rows use
-768; source and specialized artifact layouts use available width. Mobile reflow
-must retain approval controls, diagnostics and source selection without overflow.
+The app header owns open-workspace tabs and native drag space outside the rounded content
+frame. Workspace tabs show `Project / Sidebar page`, including `Project / Worktrees` for
+worktree or branch review. Worktree names, branch paths and nested sections are intentionally
+omitted. The same label appears in the tooltip and accessible name, including the close action.
+Sidebar navigation and browser history update the location; nested detail selections remain
+in their page toolbar. Tabs are at most 256px wide and shrink to the available strip width.
+The project uses at most 40% of the label, leaving the remaining width for the sidebar page;
+both truncate independently. Tabs use left-aligned icons, a subtle outline. The selected tab uses the theme’s accent background and a stronger
+primary-colored border in both light and dark themes; keyboard focus remains a separate ring. The adjacent plus button opens the current page location in a fresh tab and remains reachable
+when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The
+browser desktop and native macOS/Windows provide a sidebar toggle; compact mobile screens retain
+the sidebar trigger. In browser and mobile layouts, the open sidebar places this control
+beside the project selector, immediately before project display options. When closed,
+a reopening control sits below the workspace header.
 
-Keep source navigation next to selected content, using a responsive picker where
-needed. Recorded source and logs preserve whitespace, literal newlines and wrapping
-or horizontal scrolling. Avoid an outer card around an entire source browser.
-Screenshots are evidence for visual inspection; show unavailable or failed artifacts
-explicitly rather than substituting another run's image.
+On native macOS and Windows, the sidebar toggle and Back/Forward buttons stay in
+one 48px titlebar header. macOS reserves the left side for system traffic lights;
+Windows puts navigation on the left and custom minimize, maximize/restore and close
+buttons on the right, replacing the system titlebar and hiding the native menu bar.
+Window buttons remain available during connection loading and failure. Close keeps
+the existing hide-window behavior; the native Quit shortcut remains separate.
+Empty header areas drag the native window and double-click toggles maximization.
+The Windows maximize button reflects resize/focus changes. It does not implement
+the Windows 11 Snap Layouts hover menu; native dragging, resizing, shortcuts and
+window snapping require Windows verification in addition to Chromium layout tests. Collapsing
+the sidebar does not move these controls. Workspace tabs occupy the app area to the
+right of the expanded sidebar; when collapsed, they start after the native navigation
+controls. Narrow native windows place the tab strip below the titlebar so both remain
+reachable. The sidebar project row does not duplicate the native toggle; mobile sheets
+retain their own close toggle. Browser desktops use browser Back/Forward controls.
+
+Worktree display options appear while hovering anywhere in the Worktrees section,
+including its remaining space above the footer. Keyboard focus, an open options menu
+and non-hover input keep the control available.
+
+Project/worktree tab activation and sidebar page selection use the browser session history.
+Native Back/Forward call the same History API as browser navigation, across workspace tabs.
+Repeated selection adds no duplicate entry; navigating after Back discards forward entries.
+History restores the destination page and reopens a closed destination tab while its project
+is connected. Reload restores the current destination, but not drafts or other tabs. File
+selection, review subtabs and scroll changes do not add history entries. The native buttons
+remain available because the History API does not expose complete traversal availability;
+at a history boundary traversal has no effect.
+The sidebar remains on the canvas. Preserve desktop
+gutters, collapsed state, full-width mobile content and native toolbar positioning.
+Workspace IDs are independent of project/worktree IDs. Each tab records its page and target;
+sidebar navigation updates the active tab, and labels reflect its current location. Creating a
+new tab copies that location with a fresh ID. Project/worktree changes retain the active tab ID
+and create a history destination even when its page name is unchanged. See
+[UX navigation](ux-navigation.md) for new-tab and close behavior.
+Open workspace tabs retain their React state and DOM through React Activity. Hidden tabs
+release effect subscriptions; activating a tab restarts reads without discarding its view state.
+Sidebar providers belong to each workspace tab. This retention is session-only and ends when
+the tab closes; it does not persist drafts across reloads.
+
+The app owns viewport height; evidence and lists scroll in their own panels.
+Flex/grid boundaries need `min-w-0` and, for nested scrolling, `min-h-0`.
+
+Use exactly the shared `640`, `768` and `wide` content-width policies from index.css:
+settings use 640, prose/evidence rows use 768, and specialized file/diff/graph layouts
+use available width. They are responsive maxima, not fixed user preferences.
+Settings gutters stay outside the reading column. File Viewer, worktree/branch diffs
+and test file browsers fill the content frame without an inset card, outer padding
+or a second rounded border. Page toolbars and file headers use bottom separators;
+file navigation uses the divider between panels. Keep padding within reading/result
+content rather than around the entire browser. Keep file navigation beside
+selected-file content, with a responsive picker when needed.
+
+Log uses continuous two-line rows: full wrapping intent, then kind/verdict/localized
+time and nearby copy action. Environment/dependency details use readable vertical
+rows and bounded key/value tables. Preserve whitespace, literal newlines and complete
+diagnostics; avoid making text smaller to fit. Diff/source wrap uses the global
+Word wrap preference, with horizontal scrolling when disabled.
+
+When recovery needs help outside Redpact, the owning view uses `CopyHandoff` with a
+specific title, summary and structured context. Include identifiers, observed state,
+selection and retained-resource references needed to continue work. Keep diagnostic
+file contents behind their local access boundary: copy their retained locations rather
+than automatically sending logs or secrets to a client. Merge and environment recovery
+share this shell without being forced into the same recovery instructions.
+The shell standardizes the heading, Copy action, selectable text, clipboard-failure
+fallback and optional labelled details disclosure. Do not label it generically as an
+agent handoff or force unrelated recovery content into a common text template.
+
+Every destructive `Notice` is a problem state and uses the same shell automatically.
+It supplies the visible diagnostic as copyable context under **Problem details** so a
+user can hand it off immediately. The diagnostic stays visible once; the formatted
+copy text appears only if clipboard access fails. Views with durable identifiers,
+selection or retained resources still provide their own specific `CopyHandoff`
+context rather than relying on this fallback.
+
+Only the active workspace mounts the project selector, so hidden tabs cannot retain
+its portaled menu.
+
+## One review toolbar
+
+A page owns one `ReviewToolbar` with navigation, secondary and actions slots.
+Project Tests supplies Unit/Integration/Playwright; active Playwright supplies
+Screenshots/Tests/Runs and its execution action within the same toolbar. File-level
+Code/Results tabs remain in their file panel. Controls can wrap at narrow widths;
+navigation groups own local overflow. Worktree review keeps navigation on the left
+and actions on the right in one row, including Playwright’s Mobile and Run Playwright
+controls. Each side scrolls horizontally when needed; labels keep their normal
+font size and do not wrap.
+
+Run result panels share the execution progress strip described in
+[execution](execution.md). Active Unit and Integration phases also appear by their
+Run controls so a user can see progress without switching tabs.
+
+Wrap related content in `ReviewToolbarScope`. One active `ReviewToolbarOverride`
+may target a scope; nested scopes are independent. Unmount inactive overrides.
+An omitted slot inherits, `null` hides, and supplied content replaces. Unmounting
+restores defaults. The shared component owns portals and preserves tab contexts;
+views do not register React nodes through effects or build another page toolbar.
 
 ## Observation, loading and recovery
 
-Native file events drive scoped invalidations. Review subscribes after resolving the
-recorded worktree; history uses that same explicit worktree's `scope=evidence`.
-This includes review state, executions and shared settings. A historical record with
-no worktree remains readable without subscribing to an unrelated checkout.
-Opening or refreshing a review never requests a run.
+Native file events are coalesced into scoped server invalidations. Expensive refresh
+work is bounded per target; unchanged projects are not rescanned on unrelated events.
+Watchers are disposed with their scope and recover explicitly from resource failures.
+The viewer subscribes to scoped SSE and refreshes the affected query. Project Tests
+uses the primary worktree scope for Unit and Integration, without also sending a project
+scope in the same subscription. Opening a page
+or observing changes never starts tests. Manual Container additionally polls its
+state/input identity while open.
 
-Keep navigation usable during loading and failed reads. Show errors beside their
-owning evidence or action. Do not convert stale evidence into an empty or current
-result. Preserve cancellation and cleanup outcomes separately from the test verdict,
-and dispose event subscriptions on exit.
+Keep navigation available during loading, empty and failed reads. Preserve active
+tabs while content remains available; hide only confirmed-empty worktree sections.
+Errors and active execution/cleanup must remain reachable. Stale evidence requires
+a visible diagnostic, not a fabricated empty state or silently current result.
+Handle live-update notices through the shared components and clean subscriptions
+on exit. Keep errors beside the action or content that owns recovery.
 
-## Language and accessibility
+## Language and access
 
-Translate UI copy through bundled catalogs; preserve identifiers and literal source.
-MCP cards and the App Page follow host appearance; standalone viewer theme preferences
-do not override the App host. Use semantic buttons, labels, tabs and dialogs with
-keyboard focus and selection behavior. Theme and source presentation are viewer
-preferences, not project execution settings.
+Translate UI copy through bundled locale catalogs; preserve identifiers and literal
+source. Theme supports Light/Dark/System and word wrap defaults on; browser-storage
+failure permits session interaction. MCP cards follow host appearance. These are not
+project configuration fields.
 
-For screen changes, run meaningful Playwright interactions against the actual app.
-For layout changes, inspect desktop/mobile captures. Component tests and builds
-supplement this evidence. Report any state that could not be verified.
+Use semantic buttons, labels, tabs and dialogs with keyboard focus/selection
+behavior. Responsive reflow must preserve controls, file selection and diagnostics.
+Run relevant functional Playwright tests against the actual application for screen
+changes. For layout/style changes, inspect desktop/mobile captures too. Component,
+structure and build checks supplement this evidence, never replace it.
 
 ## Documented palette
 
-[index.css](../app/web/src/index.css) owns implementation. The palette regression
-checks these values; change both for intentional palette changes.
+The CSS implementation remains in [index.css](../app/web/src/index.css). The
+palette-to-CSS regression checks these documented values; update both together for
+an intentional design change. Other token details live in CSS rather than another
+hand-maintained design registry.
 
 ```yaml
 colors:
