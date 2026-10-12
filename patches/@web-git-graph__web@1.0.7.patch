@@ -1,0 +1,312 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index ae62bc2179fb67f285e5ea46a3d88ff8ad28fe48..fd5792118fcf1ed7b5e071973c7450a2e3965c89 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -271,8 +271,8 @@
+-.ref.remote {
+-  /* --wgg-faint rather than --wgg-line: the border has to stay legible against
+-     both the dark and the light background. */
+-  border-color: var(--wgg-faint);
+-  background: transparent;
+-  color: var(--wgg-muted);
+-  font-weight: 400;
+-}
++.ref.remote {
++  /* --wgg-faint rather than --wgg-line: the border has to stay legible against
++     both the dark and the light background. */
++  border-color: var(--wgg-remote, var(--wgg-faint));
++  background: color-mix(in srgb, var(--wgg-remote, var(--wgg-faint)) 12%, transparent);
++  color: var(--wgg-remote, var(--wgg-muted));
++  font-weight: 400;
++}
+@@ -581,7 +581,9 @@ var WebGitGraphElement = class extends HTMLElementBase {
+   #abort;
+   #rowHeight = 24;
+   #overscan = 8;
+-  #detailsHeight = 240;
++  get #detailsHeight() {
++    return this.hasAttribute("hide-details") ? 0 : 240;
++  }
+   #showRemoteRefs = true;
+   #root;
+   addEventListener(type, listener, options) {
+@@ -1326,7 +1328,26 @@ var WebGitGraphElement = class extends HTMLElementBase {
+         this.#commitDate(commit),
+         dateFormat
+       );
+-      row.querySelector(".oid").textContent = shortOid(commit.oid);
++      row.querySelector(".message").title = commit.message;
++      const oidCell = row.querySelector(".oid");
++      if (this.hasAttribute("hide-details")) {
++        const copy = document.createElement("button");
++        copy.type = "button";
++        copy.className = "action copy";
++        copy.setAttribute("aria-label", "Copy SHA");
++        copy.textContent = shortOid(commit.oid);
++        copy.title = `Copy SHA: ${commit.oid}`;
++        copy.style.cssText = "padding:0;border:0;background:transparent;color:inherit;font:inherit";
++        copy.addEventListener("click", (event) => {
++          event.stopPropagation();
++          void this.#copy(commit.oid);
++        });
++        copy.addEventListener("keydown", (event) => event.stopPropagation());
++        copy.addEventListener("dblclick", (event) => event.stopPropagation());
++        oidCell.append(copy);
++      } else {
++        oidCell.textContent = shortOid(commit.oid);
++      }
+       const refs = row.querySelector(".refs");
+       const seenLabels = /* @__PURE__ */ new Set();
+       for (const ref of refsByTarget.get(commit.oid) ?? []) {
+@@ -1376,7 +1397,7 @@ var WebGitGraphElement = class extends HTMLElementBase {
+       });
+       windowElement.append(row);
+     }
+-    if (selectedIndex >= 0) {
++    if (selectedIndex >= 0 && detailsHeight > 0) {
+       const details = reusedDetails ?? document.createElement("aside");
+       details.className = "inline-details";
+       details.setAttribute("aria-label", this.#compareOid ? "Commit comparison" : "Commit details");
+@@ -1592,6 +1613,8 @@ var WebGitGraphElement = class extends HTMLElementBase {
+       files.append(pendingBars(PENDING_FILE_WIDTHS));
+       return;
+     }
++    // A history-only provider has no evidence about changed files.
++    if (!this.#provider?.getCommitDetails) { return; }
+     const changes = this.#details?.changes ?? [];
+     const parentOid = commit.parents[0];
+     const diff = parentOid && this.#provider?.getFileDiff ? { base: { kind: "commit", oid: parentOid }, head: revisionFor(commit) } : void 0;
+diff --git a/dist/index.js b/dist/index.js
+index f6d034531e892a0000631ed601461574acf17d6f..df1b14871bba4459e4dadd8b32b2c7046b43d28e 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -269,8 +269,8 @@
+-.ref.remote {
+-  /* --wgg-faint rather than --wgg-line: the border has to stay legible against
+-     both the dark and the light background. */
+-  border-color: var(--wgg-faint);
+-  background: transparent;
+-  color: var(--wgg-muted);
+-  font-weight: 400;
+-}
++.ref.remote {
++  /* --wgg-faint rather than --wgg-line: the border has to stay legible against
++     both the dark and the light background. */
++  border-color: var(--wgg-remote, var(--wgg-faint));
++  background: color-mix(in srgb, var(--wgg-remote, var(--wgg-faint)) 12%, transparent);
++  color: var(--wgg-remote, var(--wgg-muted));
++  font-weight: 400;
++}
+@@ -579,7 +579,9 @@ var WebGitGraphElement = class extends HTMLElementBase {
+   #abort;
+   #rowHeight = 24;
+   #overscan = 8;
+-  #detailsHeight = 240;
++  get #detailsHeight() {
++    return this.hasAttribute("hide-details") ? 0 : 240;
++  }
+   #showRemoteRefs = true;
+   #root;
+   addEventListener(type, listener, options) {
+@@ -1324,7 +1326,26 @@ var WebGitGraphElement = class extends HTMLElementBase {
+         this.#commitDate(commit),
+         dateFormat
+       );
+-      row.querySelector(".oid").textContent = shortOid(commit.oid);
++      row.querySelector(".message").title = commit.message;
++      const oidCell = row.querySelector(".oid");
++      if (this.hasAttribute("hide-details")) {
++        const copy = document.createElement("button");
++        copy.type = "button";
++        copy.className = "action copy";
++        copy.setAttribute("aria-label", "Copy SHA");
++        copy.textContent = shortOid(commit.oid);
++        copy.title = `Copy SHA: ${commit.oid}`;
++        copy.style.cssText = "padding:0;border:0;background:transparent;color:inherit;font:inherit";
++        copy.addEventListener("click", (event) => {
++          event.stopPropagation();
++          void this.#copy(commit.oid);
++        });
++        copy.addEventListener("keydown", (event) => event.stopPropagation());
++        copy.addEventListener("dblclick", (event) => event.stopPropagation());
++        oidCell.append(copy);
++      } else {
++        oidCell.textContent = shortOid(commit.oid);
++      }
+       const refs = row.querySelector(".refs");
+       const seenLabels = /* @__PURE__ */ new Set();
+       for (const ref of refsByTarget.get(commit.oid) ?? []) {
+@@ -1374,7 +1395,7 @@ var WebGitGraphElement = class extends HTMLElementBase {
+       });
+       windowElement.append(row);
+     }
+-    if (selectedIndex >= 0) {
++    if (selectedIndex >= 0 && detailsHeight > 0) {
+       const details = reusedDetails ?? document.createElement("aside");
+       details.className = "inline-details";
+       details.setAttribute("aria-label", this.#compareOid ? "Commit comparison" : "Commit details");
+@@ -1590,6 +1611,8 @@ var WebGitGraphElement = class extends HTMLElementBase {
+       files.append(pendingBars(PENDING_FILE_WIDTHS));
+       return;
+     }
++    // A history-only provider has no evidence about changed files.
++    if (!this.#provider?.getCommitDetails) { return; }
+     const changes = this.#details?.changes ?? [];
+     const parentOid = commit.parents[0];
+     const diff = parentOid && this.#provider?.getFileDiff ? { base: { kind: "commit", oid: parentOid }, head: revisionFor(commit) } : void 0;
+diff --git a/dist/register.cjs b/dist/register.cjs
+index d958fb3cb84c2935a68956d3f27bbd56120cc14a..ac9b347dc617020735a5ff9c2cb98e2c2aaf64ec 100644
+--- a/dist/register.cjs
++++ b/dist/register.cjs
+@@ -271,8 +271,8 @@
+-.ref.remote {
+-  /* --wgg-faint rather than --wgg-line: the border has to stay legible against
+-     both the dark and the light background. */
+-  border-color: var(--wgg-faint);
+-  background: transparent;
+-  color: var(--wgg-muted);
+-  font-weight: 400;
+-}
++.ref.remote {
++  /* --wgg-faint rather than --wgg-line: the border has to stay legible against
++     both the dark and the light background. */
++  border-color: var(--wgg-remote, var(--wgg-faint));
++  background: color-mix(in srgb, var(--wgg-remote, var(--wgg-faint)) 12%, transparent);
++  color: var(--wgg-remote, var(--wgg-muted));
++  font-weight: 400;
++}
+@@ -581,7 +581,9 @@ var WebGitGraphElement = class extends HTMLElementBase {
+   #abort;
+   #rowHeight = 24;
+   #overscan = 8;
+-  #detailsHeight = 240;
++  get #detailsHeight() {
++    return this.hasAttribute("hide-details") ? 0 : 240;
++  }
+   #showRemoteRefs = true;
+   #root;
+   addEventListener(type, listener, options) {
+@@ -1326,7 +1328,26 @@ var WebGitGraphElement = class extends HTMLElementBase {
+         this.#commitDate(commit),
+         dateFormat
+       );
+-      row.querySelector(".oid").textContent = shortOid(commit.oid);
++      row.querySelector(".message").title = commit.message;
++      const oidCell = row.querySelector(".oid");
++      if (this.hasAttribute("hide-details")) {
++        const copy = document.createElement("button");
++        copy.type = "button";
++        copy.className = "action copy";
++        copy.setAttribute("aria-label", "Copy SHA");
++        copy.textContent = shortOid(commit.oid);
++        copy.title = `Copy SHA: ${commit.oid}`;
++        copy.style.cssText = "padding:0;border:0;background:transparent;color:inherit;font:inherit";
++        copy.addEventListener("click", (event) => {
++          event.stopPropagation();
++          void this.#copy(commit.oid);
++        });
++        copy.addEventListener("keydown", (event) => event.stopPropagation());
++        copy.addEventListener("dblclick", (event) => event.stopPropagation());
++        oidCell.append(copy);
++      } else {
++        oidCell.textContent = shortOid(commit.oid);
++      }
+       const refs = row.querySelector(".refs");
+       const seenLabels = /* @__PURE__ */ new Set();
+       for (const ref of refsByTarget.get(commit.oid) ?? []) {
+@@ -1376,7 +1397,7 @@ var WebGitGraphElement = class extends HTMLElementBase {
+       });
+       windowElement.append(row);
+     }
+-    if (selectedIndex >= 0) {
++    if (selectedIndex >= 0 && detailsHeight > 0) {
+       const details = reusedDetails ?? document.createElement("aside");
+       details.className = "inline-details";
+       details.setAttribute("aria-label", this.#compareOid ? "Commit comparison" : "Commit details");
+@@ -1592,6 +1613,8 @@ var WebGitGraphElement = class extends HTMLElementBase {
+       files.append(pendingBars(PENDING_FILE_WIDTHS));
+       return;
+     }
++    // A history-only provider has no evidence about changed files.
++    if (!this.#provider?.getCommitDetails) { return; }
+     const changes = this.#details?.changes ?? [];
+     const parentOid = commit.parents[0];
+     const diff = parentOid && this.#provider?.getFileDiff ? { base: { kind: "commit", oid: parentOid }, head: revisionFor(commit) } : void 0;
+diff --git a/dist/register.js b/dist/register.js
+index 7cba2d60bb7db7289866da75f41af65ba630ea31..67f89f4f426177c7be62a5f315d349fbaff66260 100644
+--- a/dist/register.js
++++ b/dist/register.js
+@@ -269,8 +269,8 @@
+-.ref.remote {
+-  /* --wgg-faint rather than --wgg-line: the border has to stay legible against
+-     both the dark and the light background. */
+-  border-color: var(--wgg-faint);
+-  background: transparent;
+-  color: var(--wgg-muted);
+-  font-weight: 400;
+-}
++.ref.remote {
++  /* --wgg-faint rather than --wgg-line: the border has to stay legible against
++     both the dark and the light background. */
++  border-color: var(--wgg-remote, var(--wgg-faint));
++  background: color-mix(in srgb, var(--wgg-remote, var(--wgg-faint)) 12%, transparent);
++  color: var(--wgg-remote, var(--wgg-muted));
++  font-weight: 400;
++}
+@@ -579,7 +579,9 @@ var WebGitGraphElement = class extends HTMLElementBase {
+   #abort;
+   #rowHeight = 24;
+   #overscan = 8;
+-  #detailsHeight = 240;
++  get #detailsHeight() {
++    return this.hasAttribute("hide-details") ? 0 : 240;
++  }
+   #showRemoteRefs = true;
+   #root;
+   addEventListener(type, listener, options) {
+@@ -1324,7 +1326,26 @@ var WebGitGraphElement = class extends HTMLElementBase {
+         this.#commitDate(commit),
+         dateFormat
+       );
+-      row.querySelector(".oid").textContent = shortOid(commit.oid);
++      row.querySelector(".message").title = commit.message;
++      const oidCell = row.querySelector(".oid");
++      if (this.hasAttribute("hide-details")) {
++        const copy = document.createElement("button");
++        copy.type = "button";
++        copy.className = "action copy";
++        copy.setAttribute("aria-label", "Copy SHA");
++        copy.textContent = shortOid(commit.oid);
++        copy.title = `Copy SHA: ${commit.oid}`;
++        copy.style.cssText = "padding:0;border:0;background:transparent;color:inherit;font:inherit";
++        copy.addEventListener("click", (event) => {
++          event.stopPropagation();
++          void this.#copy(commit.oid);
++        });
++        copy.addEventListener("keydown", (event) => event.stopPropagation());
++        copy.addEventListener("dblclick", (event) => event.stopPropagation());
++        oidCell.append(copy);
++      } else {
++        oidCell.textContent = shortOid(commit.oid);
++      }
+       const refs = row.querySelector(".refs");
+       const seenLabels = /* @__PURE__ */ new Set();
+       for (const ref of refsByTarget.get(commit.oid) ?? []) {
+@@ -1374,7 +1395,7 @@ var WebGitGraphElement = class extends HTMLElementBase {
+       });
+       windowElement.append(row);
+     }
+-    if (selectedIndex >= 0) {
++    if (selectedIndex >= 0 && detailsHeight > 0) {
+       const details = reusedDetails ?? document.createElement("aside");
+       details.className = "inline-details";
+       details.setAttribute("aria-label", this.#compareOid ? "Commit comparison" : "Commit details");
+@@ -1590,6 +1611,8 @@ var WebGitGraphElement = class extends HTMLElementBase {
+       files.append(pendingBars(PENDING_FILE_WIDTHS));
+       return;
+     }
++    // A history-only provider has no evidence about changed files.
++    if (!this.#provider?.getCommitDetails) { return; }
+     const changes = this.#details?.changes ?? [];
+     const parentOid = commit.parents[0];
+     const diff = parentOid && this.#provider?.getFileDiff ? { base: { kind: "commit", oid: parentOid }, head: revisionFor(commit) } : void 0;

@@ -126,8 +126,9 @@ await writeFile(
     {
       $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
       name: "redpact-app",
-      version: "0.5.3",
-      description: "Develop through chat and review managed execution evidence in the App Page.",
+      version: "0.5.4",
+      description:
+        "Manage projects, environments and settings in the app, with separate chat approval and evidence cards.",
       author: { name: "Redpact contributors" },
       extensions: {
         "com.openai": {
@@ -135,7 +136,7 @@ await writeFile(
             displayName: "Redpact",
             composerIcon: "./assets/icon.png",
             logo: "./assets/icon.png",
-            shortDescription: "Develop in chat. Review recorded evidence.",
+            shortDescription: "Full workspace, connected chat verification.",
             developerName: "Redpact contributors",
             category: "Developer Tools",
             defaultPrompt: ["Open the Redpact App Page."],

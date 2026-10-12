@@ -5,6 +5,7 @@ import { secureHeaders } from "hono/secure-headers"
 import { describeRoute } from "hono-openapi"
 import { approvalPolicyRoutes } from "./interfaces/http/approval-policy.js"
 import { chatContextRoutes } from "./interfaces/http/chat-context.js"
+import { directoryPickerRoutes } from "./interfaces/http/directory-picker.js"
 import {
   conflict,
   invalidSettings,
@@ -21,12 +22,18 @@ import {
 import { environmentRoutes } from "./interfaces/http/environments.js"
 import { eventRoutes } from "./interfaces/http/events.js"
 import { integrationTestRoutes } from "./interfaces/http/integration-tests.js"
+import { mergeRoutes } from "./interfaces/http/merges.js"
 import { playwrightRoutes } from "./interfaces/http/playwright.js"
+import { pluginUpdateRoutes } from "./interfaces/http/plugin-updates.js"
+import { projectFileRoutes } from "./interfaces/http/project-files.js"
+import { projectGraphRoutes } from "./interfaces/http/project-graph.js"
 import { projectSettingsRoutes } from "./interfaces/http/project-settings.js"
+import { pullRequestRoutes } from "./interfaces/http/pull-requests.js"
 import { reviewContentRoutes } from "./interfaces/http/review-content.js"
 import { runRoutes } from "./interfaces/http/runs.js"
 import { settingsEditorRoutes } from "./interfaces/http/settings-editor.js"
 import { submissionRoutes } from "./interfaces/http/submissions.js"
+import { testContainerRoutes } from "./interfaces/http/test-container.js"
 import { uiRoutes } from "./interfaces/http/ui.js"
 import { unitTestRoutes } from "./interfaces/http/unit-tests.js"
 import { updateRoutes } from "./interfaces/http/updates.js"
@@ -65,6 +72,15 @@ export function createApp(services: Services, options: { uiDirectory?: string } 
       return error.getResponse()
     }
     const code = "code" in error ? error.code : undefined
+    if (code === "work_start_incomplete") {
+      return c.json(
+        { code, error: error.message, recovery: "recovery" in error ? error.recovery : undefined },
+        409,
+      )
+    }
+    if (code === "work_start_conflict") {
+      return c.json({ code, error: error.message }, 409)
+    }
     if (code === "settings_invalid") {
       return c.json(
         {
@@ -91,8 +107,23 @@ export function createApp(services: Services, options: { uiDirectory?: string } 
     ) {
       return c.json({ code, error: error.message }, 409)
     }
+    if (code === "directory_picker_busy") {
+      return c.json({ code, error: error.message }, 409)
+    }
+    if (code === "directory_picker_unavailable") {
+      return c.json({ code, error: error.message }, 503)
+    }
+    if (code === "directory_picker_failed") {
+      return c.json({ code, error: error.message }, 502)
+    }
     if (code === "not_found") {
       return c.json({ error: error.message }, 404)
+    }
+    if (code === "git_fetch_failed") {
+      return c.json({ code, error: error.message }, 502)
+    }
+    if (code === "graph_changed") {
+      return c.json({ code, error: error.message }, 409)
     }
     if (code === "invalid_input") {
       return c.json({ error: error.message }, 400)
@@ -102,14 +133,18 @@ export function createApp(services: Services, options: { uiDirectory?: string } 
     }
     return c.json({ error: "Internal server error" }, 500)
   })
-
+  if (services.pluginUpdates) {
+    app.route("/api", pluginUpdateRoutes(services.pluginUpdates))
+  }
   if (services.updates) {
     app.route("/api", updateRoutes(services.updates))
   }
   if (services.reviewContent) {
     app.route("/api", reviewContentRoutes(services.reviewContent))
   }
-
+  if (services.testContainer) {
+    app.route("/api/projects", testContainerRoutes(services.testContainer))
+  }
   if (services.captures && services.captureWorkflow) {
     app.route(
       "/api",
@@ -117,17 +152,28 @@ export function createApp(services: Services, options: { uiDirectory?: string } 
     )
   }
   app.route("/api", chatContextRoutes(services))
+  app.route("/api", directoryPickerRoutes(services.directoryPicker))
   if (services.integrationTests) {
     app.route("/api", integrationTestRoutes(services.integrationTests, services.runWorktreeTests))
   }
-
+  if (services.pullRequests) {
+    app.route("/api", pullRequestRoutes(services.pullRequests))
+  }
+  if (services.merges) {
+    app.route("/api", mergeRoutes(services.merges))
+  }
   if (services.unitTests) {
     app.route("/api", unitTestRoutes(services.unitTests))
   }
   if (services.settingsEditor) {
     app.route("/api", settingsEditorRoutes(services.settingsEditor))
   }
-
+  if (services.projectFiles) {
+    app.route("/api", projectFileRoutes(services.projectFiles))
+  }
+  if (services.projectGraph) {
+    app.route("/api", projectGraphRoutes(services.projectGraph))
+  }
   if (services.projectSettings) {
     app.route("/api", projectSettingsRoutes(services.projectSettings))
   }
@@ -144,7 +190,7 @@ export function createApp(services: Services, options: { uiDirectory?: string } 
     )
   }
   if (services.worktrees) {
-    app.route("/api", worktreeRoutes(services.worktrees))
+    app.route("/api", worktreeRoutes(services.worktrees, services.workStarts))
   }
   return app
     .get(

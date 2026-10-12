@@ -2,7 +2,7 @@ import { expect, test } from "vitest"
 import { createSteps } from "./steps"
 import { http, node, rpc } from "./target"
 
-test("호스트의 작업 관리 API는 제거하고 실행 대상 연결과 검증만 유지한다", async (context) => {
+test("앱의 프로젝트·환경·설정 관리와 채팅의 실행 조회·검증을 함께 제공한다", async (context) => {
   const step = createSteps(context)
   const root = await node<string>(`
     import {mkdtempSync,mkdirSync,writeFileSync} from 'node:fs';
@@ -22,35 +22,16 @@ test("호스트의 작업 관리 API는 제거하고 실행 대상 연결과 검
   expect(worktree.status).toBe(201)
   const projectPath = `/api/projects/${project.body.id}`
   const worktreePath = `/api/worktrees/${worktree.body.id}`
-  await step("Git·프로젝트·설정·환경 관리 경로는 요청을 받지 않는다", async () => {
-    const retired = [
-      ["GET", `${worktreePath}/merge`],
-      ["POST", `${worktreePath}/merge`],
-      ["POST", `${worktreePath}/git/commit`],
-      ["POST", `${worktreePath}/git/discard`],
-      ["GET", `${worktreePath}/pull-request`],
-      ["POST", `${worktreePath}/pull-request`],
-      ["POST", "/api/work-starts"],
-      ["GET", `${projectPath}/git/graph`],
-      ["POST", `${projectPath}/git/fetch`],
-      ["GET", `${projectPath}/files`],
-      ["PATCH", projectPath],
-      ["DELETE", projectPath],
-      ["POST", `${projectPath}/reconnect`],
-      ["POST", "/api/dialogs/directory"],
-      ["PUT", `${projectPath}/configuration`],
-      ["PUT", "/api/instance/settings"],
-      ["POST", `${projectPath}/tracking`],
-      ["GET", `${projectPath}/test-container`],
-      ["POST", `${projectPath}/test-container/start`],
-      ["GET", "/api/plugin-updates"],
-      ["POST", "/api/plugin-updates/install"],
-    ]
-    for (const [method, path] of retired) {
-      expect((await http(path, method, method === "GET" ? undefined : {})).status).toBe(404)
-    }
+  await step("프로젝트와 환경 관리 API를 제공하며 읽기만으로 실행하지 않는다", async () => {
+    const renamed = await http(projectPath, "PATCH", { name: "Managed workspace" })
+    expect(renamed.status).toBe(200)
+    expect(renamed.body.name).toBe("Managed workspace")
+    const environment = await http<{ environment: unknown }>(`${projectPath}/test-container`)
+    expect(environment.status).toBe(200)
+    expect(environment.body.environment).toBeNull()
+    expect((await http("/api/instance/settings")).status).toBe(200)
   })
-  await step("요청 거부 뒤에도 원본 설정과 체크아웃 기록은 보존한다", async () => {
+  await step("앱 관리와 채팅 조회는 같은 원본 설정과 체크아웃 기록을 사용한다", async () => {
     const source = await http<{ source: string }>(`${projectPath}/configuration`)
     expect(source.status).toBe(200)
     expect(source.body.source).toBe("{}")

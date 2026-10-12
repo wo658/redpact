@@ -21,9 +21,7 @@ freshness and human acceptance.
 4. Open the exact execution review link returned in chat. Inspect the captured
    inputs, evidence and worktree-bound history, then make any required decision.
 
-The host agent handles files, worktrees and Git. Redpact focuses on execution,
-approval and evidence; the review viewer has no generic file browser, Git Graph,
-Git mutation toolbar or independent task tabs.
+The full Redpact app keeps project/worktree management, files and diffs, Git, test catalogs, environments and settings in the browser, desktop and Global App Page. Inline MCP Apps provide separate approval and result cards in chat, connected to the same runtime and evidence. Exact execution links open inside the full app.
 
 > Use Redpact to implement quantity editing in a worktree with TDD. Check valid
 > persistence and invalid-input rejection, verify the real browser interaction,
@@ -65,8 +63,7 @@ Redpact는 Unit·Integration·Playwright 관리형 검증을 실행하고 입력
 4. 채팅에서 반환된 정확한 실행 검토 링크를 엽니다. 캡처된 입력·근거·워크트리별
    이력을 확인하고 필요한 결정을 내립니다.
 
-호스트 에이전트가 파일·워크트리·Git 작업을 맡습니다. Redpact는 실행·승인·근거에
-집중하며 일반 파일 탐색기, Git Graph, Git 변경 툴바나 독립 작업 탭을 두지 않습니다.
+전체 Redpact 앱은 브라우저·데스크톱·Global App Page에서 프로젝트·워크트리 관리, 파일·diff, Git, 테스트 카탈로그, 환경·설정을 제공합니다. 채팅 인라인 MCP Apps는 같은 런타임과 근거를 사용하는 별도의 승인·결과 카드입니다. 정확한 실행 링크도 전체 앱 안에서 열립니다.
 
 > Redpact를 사용해서 워크트리에서 TDD로 수량 편집을 구현해줘. 정상 저장과 잘못된
 > 입력 거부, 실제 브라우저 조작을 검증하고 데스크톱·모바일 화면을 기록해.

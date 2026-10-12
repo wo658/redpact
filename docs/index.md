@@ -1,39 +1,52 @@
 ---
-title: Develop in chat, review with Redpact
-description: Managed verification and recorded evidence for agent development.
+title: Review changes with Redpact
+description: Configure project dependencies and review worktree changes through execution evidence and application screens.
 ---
 
-# Develop in chat, review with Redpact
+# Review changes with Redpact
 
-Ask the coding agent to implement a change with TDD in an isolated worktree.
-Redpact captures execution inputs, runs Unit, Integration and Playwright checks,
-and opens the exact recorded request or result when a human decision is needed.
+Redpact is a local development review tool for people working with coding agents. Define the project's runtime needs, run tests against the working checkout, and inspect code changes, test intent, observed results, and application screenshots together.
 
-| Owner | Responsibility |
-| --- | --- |
-| Host conversation and agent | Worktrees, subagents, files, configuration, local TDD, Git and publication |
-| Redpact MCP | Configuration diagnostics, managed execution, status, cancellation and evidence lookup |
-| Redpact viewer and Apps | Human execution approval, recorded source/results/screens and worktree-bound history |
+When an agent reports completion, you should be able to see what changed, whether the requested behavior was checked, and what the application looked like. This guide follows that process.
 
-The viewer opens an execution link from chat. Its history stays bound to that
-record's worktree. With no execution context, it asks you to open a record from the
-conversation. Project management, settings editors, test launch catalogs, manual
-containers and Git operations are outside the viewer.
+## From project setup to change review
 
-> Implement quantity editing in a worktree using TDD. First observe the intended
-> assertion fail, then implement it. Use subagents for independent work. Request
-> managed API and browser checks against this checkout and return the recorded
-> execution links, desktop/mobile captures and remaining review decisions.
+```mermaid
+flowchart TD
+    P["Connect project"] --> D["Define app and dependencies"]
+    D --> W["Choose execution worktree"]
+    W --> E["Prepare environment and execute tests"]
+    E --> R["Review diff, intent, results and screens"]
+    R --> F["Request another change"]
+    F --> W
+```
 
-Under Ask, a person approves the captured request in an MCP App or the connected
-review screen. Approval authorizes execution; it does not accept the code change.
-A passing result, current-source freshness and human acceptance are separate facts.
-A collection or environment failure does not establish a TDD assertion failure.
+The agent investigates the repository and writes configuration, code, and tests. Redpact performs the selected execution and records evidence. You judge whether that evidence adequately covers the request.
 
-Start with [installation](installation.md), [configuration](configuration.md) and
-[the review workflow](review-workflow.md). [Results](results.md) explains evidence;
-[test authoring](tests.md) defines supported runtimes. All worktrees share one fixed
-configuration while each run owns its temporary resources. See [dependencies](dependencies.md).
+## Two questions to understand first
 
-Redpact is pre-release. This documentation describes the implementation and does
-not connect to local projects itself.
+**Which environment ran the code?** Shared settings define the app's database, cache, and external API options. All worktrees share one fixed dependency configuration; execution uses that checkout's files. Shared configuration does not imply shared runtime resources or data. Start with [Dependencies and worktrees](dependencies.md).
+
+**What supports the completion claim?** A diff shows code changes, tests show intended checks and their results, and captures show application states during execution. [Review your first change](review-workflow.md) connects these in one example.
+
+## Questions and evidence
+
+| Question | Evidence to inspect |
+|---|---|
+| Which checkout contains the requested change? | Actual worktree and diff |
+| Which dependencies were used? | Configured services and dependency kinds, recorded environment information |
+| Were success and error behavior checked? | Test source, case intent and assertions |
+| How far did execution actually get? | Recorded case and step results, diagnostics |
+| What did the user see? | State-specific captures from the actual application |
+| Was the revised code executed again? | New execution identity and recorded source |
+
+Passing tests establish that their assertions were satisfied. They do not automatically judge presentation or discover missing requirements. Current files can change after execution; read the recorded source when interpreting results.
+
+## Start with your project
+
+1. [Install and connect](installation.md) the local server and agent.
+2. [Connect and configure your project](first-project.md) using the actual repository.
+3. [Run your first test](first-run.md) to create execution evidence.
+4. Use [Reading results](results.md) and [Writing verification](tests.md) to cover your own change.
+
+Redpact is pre-release. This site describes the current local implementation. The documentation site itself does not connect to your projects.

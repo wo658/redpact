@@ -18,9 +18,12 @@ await client.connect(
     args: [entry],
   }),
 )
-const result = await client.readResource({
-  uri: "ui://redpact-app/0.5.3/page.html",
-})
+const { tools } = await client.listTools()
+const pageUri = tools.find((tool) => tool.name === "open_redpact_app")?._meta?.ui?.resourceUri
+if (typeof pageUri !== "string") {
+  throw new Error("Redpact App resource is missing")
+}
+const result = await client.readResource({ uri: pageUri })
 const html = result.contents[0].text
 const frames = result.contents[0]._meta?.ui?.csp?.frameDomains ?? []
 const appCsp = `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; frame-src ${frames.length ? frames.join(" ") : "'none'"};`

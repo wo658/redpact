@@ -44,7 +44,7 @@ test("serve without --project preserves a disconnected binding across restart", 
           projectId = projects[0].id
           expect(
             (await fetch(`${origin}/api/projects/${projectId}`, { method: "DELETE" })).status,
-          ).toBe(404)
+          ).toBe(200)
         } else {
           expect(projects).toEqual([])
           const retained = await (
@@ -63,10 +63,7 @@ test("serve without --project preserves a disconnected binding across restart", 
       }
       if (!restarting) {
         const file = join(root, "state", "projects", `${projectId}.json`)
-        const record = JSON.parse(await readFile(file, "utf8"))
-        record.data.disconnectedAt = new Date().toISOString()
-        retainedSource = JSON.stringify(record)
-        await writeFile(file, retainedSource)
+        retainedSource = await readFile(file, "utf8")
       }
     }
   } finally {

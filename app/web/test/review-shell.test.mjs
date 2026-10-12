@@ -49,31 +49,15 @@ after(async () => {
   dom.window.close()
 })
 const { createApi } = await server.ssrLoadModule("/src/lib/api.ts")
-test("문맥 없는 뷰어는 프로젝트를 조회하지 않고 채팅의 실행 링크만 안내한다", async () => {
+test("앱 홈은 프로젝트 관리에 연결하고 채팅 검토를 강요하지 않는다", async () => {
   const { default: App } = await server.ssrLoadModule("/src/App.tsx")
-  const original = globalThis.fetch
-  const calls = []
-  globalThis.fetch = async (url) => {
-    calls.push(url)
-    return Response.json([])
-  }
-  try {
-    render(createElement(App))
-    await act(async () => {})
-    assert.ok(screen.queryByRole("heading", { name: "Open an execution from chat" }))
-    assert.deepEqual(calls, [])
-    for (const name of [
-      "Tools",
-      "Settings",
-      "Connect project",
-      "Manage projects",
-      "Current work",
-    ]) {
-      assert.equal(screen.queryByRole("button", { name }), null)
-    }
-  } finally {
-    globalThis.fetch = original
-  }
+  const { sampleApi } = await import("./workspace-fixture.mjs")
+  captureEvents()
+  render(createElement(App, { api: sampleApi() }))
+  await waitFor(() => assert.ok(screen.getByRole("tablist", { name: "Open workspaces" })))
+  fireEvent.click(screen.getByRole("button", { name: "Redpact example", exact: true }))
+  assert.ok(await screen.findByRole("menuitem", { name: "Manage projects" }))
+  assert.equal(screen.queryByRole("heading", { name: "Open an execution from chat" }), null)
 })
 
 function captureEvents() {

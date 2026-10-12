@@ -3,11 +3,16 @@ import { mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
+import { createChangeWatcher } from "../src/adapters/changes/watch.js"
+import { readHistory } from "../src/adapters/git/history.js"
 import { createGitAdapter } from "../src/adapters/git/isomorphic.js"
 import { parseSource } from "../src/adapters/parser/source.js"
 import { createScheduler } from "../src/adapters/process/queue.js"
 import { createSettingsService } from "../src/adapters/settings/json.js"
 import { openStore } from "../src/adapters/storage/files.js"
+import { eventScope } from "../src/workflows/event-scope.js"
+import { createObserveProjects } from "../src/workflows/observe-projects.js"
+import { createProjectGraph } from "../src/workflows/project-graph.js"
 import { createSubmissions } from "../src/workflows/submissions.js"
 import {
   createTestApp as createApp,
@@ -1475,4 +1480,178 @@ test("상태용 체크아웃 조회는 프로젝트 등록과 설정 생성을 �
     checkoutRoot: checkout.checkoutRoot,
     disconnected: false,
   })
+})
+
+test("disconnected projects survive restart, stop observation and preserve submissions", async () => {
+  const project = await services.worktrees.connect(repository)
+  const worktree = await services.worktrees.ensure(project.id, repository)
+  const work = await services.submissions.createWork("Retained evidence", worktree.id)
+  const submission = await services.submissions.submitForWork(work.id, [
+    { path: "example.test.ts", source: 'test("retained", () => {})' },
+  ])
+  await services.worktrees.disconnectProject(project.id)
+  const readTests = vi.fn()
+  const observe = createObserveProjects({
+    worktrees: services.worktrees,
+    submissions: services.submissions,
+    files: { readTests } as never,
+    checkouts: async () => [repository],
+  })
+  expect(await observe([repository])).toEqual({ watchPaths: [], issues: [] })
+  expect(readTests).not.toHaveBeenCalled()
+  expect(services.submissions.get(submission.id)).toMatchObject({
+    id: submission.id,
+    worktreeId: worktree.id,
+  })
+  await expect(services.worktrees.resolve(worktree.id)).rejects.toMatchObject({
+    code: "project_disconnected",
+  })
+  await services.runs.close()
+  storage.close()
+  storage = openStore(join(directory, "state"))
+  expect(storage.store.getProject(project.id)?.disconnectedAt).toBeTruthy()
+  expect(storage.store.getSubmission(submission.id)?.worktreeId).toBe(worktree.id)
+})
+
+test("active project operations block disconnect without affecting another project", async () => {
+  const active = new Set<string>()
+  const worktrees = createWorktrees({
+    store: storage.store,
+    git: createGitAdapter(),
+    settings: createSettingsService,
+    activity: (id) => active.has(id),
+  })
+  const project = await worktrees.connect(repository)
+  const other = await worktrees.connect(directory)
+  active.add(project.id)
+  await expect(worktrees.disconnectProject(project.id)).rejects.toMatchObject({
+    code: "worktree_busy",
+  })
+  expect(worktrees.getProject(project.id).disconnectedAt).toBeUndefined()
+  expect((await worktrees.disconnectProject(other.id)).disconnectedAt).toBeTruthy()
+  active.clear()
+  expect((await worktrees.disconnectProject(project.id)).disconnectedAt).toBeTruthy()
+})
+
+test("tracking UI writes the primary project file without rewriting identity", async () => {
+  const project = await connect()
+  const record = join(directory, "state/projects", `${project.id}.json`)
+  const original = await readFile(record, "utf8")
+  const tracking = { mainBranch: git("branch", "--show-current"), hideMerged: false }
+  await services.worktrees.setTracking(project.id, tracking)
+  expect(await readFile(record, "utf8")).toBe(original)
+  expect(JSON.parse(await readFile(join(repository, ".redpact/tracking.json"), "utf8"))).toEqual(
+    tracking,
+  )
+})
+
+test("사이드바 표시 설정은 저장되고 작업 폴더 없는 브랜치도 읽을 수 있다", async () => {
+  const project = await connect()
+  const mainBranch = git("branch", "--show-current")
+  git("branch", "already-merged")
+  git("checkout", "-b", "branch-only")
+  await writeFile(join(repository, "branch.txt"), "committed branch content\n")
+  git("add", "branch.txt")
+  git("-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "branch change")
+  git("checkout", mainBranch)
+  await writeFile(join(repository, "unrelated.txt"), "uncommitted primary content")
+  const saved = await request(`/api/projects/${project.id}/tracking`, {
+    mainBranch,
+    hideMerged: true,
+    showBranches: true,
+  })
+  expect(saved.status).toBe(200)
+  expect(
+    (await (await request(`/api/projects/${project.id}/tracking`)).json()).tracking.showBranches,
+  ).toBe(true)
+  const response = await request(`/api/projects/${project.id}/branch-reviews`)
+  expect(response.status).toBe(200)
+  const branches = await response.json()
+  expect(branches.map((b: { name: string }) => b.name)).toContain("branch-only")
+  expect(branches.map((b: { name: string }) => b.name)).not.toContain("already-merged")
+  expect(branches.find((b: { name: string }) => b.name === "branch-only").worktrees).toEqual([])
+  const diff = await request(`/api/projects/${project.id}/branch-diff?branch=branch-only`)
+  expect(diff.status).toBe(200)
+  const body = await diff.json()
+  expect(body.patch).toContain("+committed branch content")
+  expect(body.patch).not.toContain("uncommitted primary content")
+  expect(git("branch", "--show-current")).toBe(mainBranch)
+  expect((await request(`/api/projects/${project.id}/branch-diff?branch=HEAD`)).status).toBe(404)
+})
+
+test("사라진 작업 폴더는 브랜치 목록에서 구분하며 조회로 다시 만들지 않는다", async () => {
+  const project = await connect()
+  git("worktree", "add", "-b", "missing-worktree", join(directory, "missing"))
+  await rm(join(directory, "missing"), { recursive: true })
+  await services.worktrees.setTracking(project.id, { mainBranch: null, hideMerged: false })
+  const response = await request(`/api/projects/${project.id}/branch-reviews`)
+  expect(response.status).toBe(200)
+  const rows = await response.json()
+  expect(rows.find((b: { name: string }) => b.name === "missing-worktree").worktrees).toEqual([
+    { path: join(await realpath(directory), "missing"), missing: true },
+  ])
+  expect(
+    (await services.worktrees.listWorktrees(project.id)).some(
+      (w) => w.branch === "missing-worktree",
+    ),
+  ).toBe(false)
+})
+
+test("reconnecting after Git initialization upgrades the same directory project", async () => {
+  const root = join(directory, "reconnect-git")
+  await mkdir(root)
+  const project = await services.worktrees.connect(root, "Keep name")
+  execFileSync("git", ["-C", root, "init", "-q"])
+  const connected = await services.worktrees.connect(root)
+  expect(connected.id).toBe(project.id)
+  expect(connected.name).toBe("Keep name")
+  expect(connected.location.kind).toBe("git")
+  expect(storage.store.listProjects()).toHaveLength(1)
+})
+
+test("an open directory project observes git init and exposes committed graph history", async () => {
+  const root = join(directory, "live-git")
+  await mkdir(root)
+  const project = await services.worktrees.connect(root)
+  const scopeServices = {
+    ...services,
+    executeTests: services.runs,
+    dataDirectory: join(directory, "state"),
+  }
+  const scope = await eventScope(scopeServices, { projectId: project.id })
+  const watcher = createChangeWatcher()
+  const changed = vi.fn()
+  const failed = vi.fn()
+  const subscription = watcher.subscribe(scope.roots, changed, failed)
+  try {
+    await subscription.ready
+    execFileSync("git", ["-C", root, "init", "-q"])
+    execFileSync("git", [
+      "-C",
+      root,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "commit",
+      "--allow-empty",
+      "-qm",
+      "First commit",
+    ])
+    await expect.poll(() => changed.mock.calls.length, { timeout: 5000 }).toBeGreaterThan(0)
+    await eventScope(scopeServices, { projectId: project.id })
+    expect(services.worktrees.getProject(project.id).location.kind).toBe("git")
+    const graph = createProjectGraph({
+      image: async () => ({ before: null, after: null }),
+      fetch: async () => ({ remotes: [] }),
+      store: storage.store,
+      read: readHistory,
+      diff: async () => ({ available: false, reason: "Unused", patch: "", omitted: [] }),
+    })
+    expect((await graph.history(project.id, { limit: 20 })).commits[0].message).toBe("First commit")
+    expect(failed).not.toHaveBeenCalled()
+  } finally {
+    await subscription.close()
+    await watcher.close()
+  }
 })

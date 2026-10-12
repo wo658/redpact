@@ -1,0 +1,3 @@
+services:
+  gateway:
+    image: node:24-bookworm-slim

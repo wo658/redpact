@@ -86,6 +86,23 @@ test("code surfaces use the bundled developer font and complete local syntax pal
   }
 })
 
+test("collapsed sidebar clears expanded row height and visually hides rich labels", async () => {
+  const sidebar = await readFile(new URL("src/components/ui/sidebar.tsx", root), "utf8")
+  assert.match(sidebar, /group-data-\[collapsible=icon\]:min-h-0!/)
+  for (const name of ["project-manager"]) {
+    const source = await readFile(new URL(`src/components/${name}.tsx`, root), "utf8")
+    assert.match(source, /min-w-0[^"\n]*group-data-\[collapsible=icon\]:sr-only/, name)
+    assert.doesNotMatch(source, /className="h-auto min-h-11/, name)
+  }
+})
+
+test("application sidebars use the official offcanvas collapse mode", async () => {
+  for (const name of ["project-manager"]) {
+    const source = await readFile(new URL(`src/components/${name}.tsx`, root), "utf8")
+    assert.match(source, /<Sidebar variant="inset" collapsible="offcanvas">/, name)
+  }
+})
+
 test("selection surfaces use accent while hover remains a lighter transient state", async () => {
   const tabs = await readFile(new URL("src/components/ui/coss-tabs.tsx", root), "utf8")
   assert.match(tabs, /-z-1 rounded-md bg-accent/)
@@ -110,6 +127,19 @@ test("sidebar and remaining selectable surfaces share accent interaction colors"
   }
 })
 
+test("review navigation uses compact text-only view tabs", async () => {
+  const toolbar = await readFile(new URL("src/components/review-toolbar.tsx", root), "utf8")
+  assert.match(toolbar, /variant="view"/)
+  assert.match(toolbar, /className="max-w-full overflow-x-auto"/)
+  for (const name of ["worktree-review"]) {
+    const source = await readFile(new URL(`src/components/${name}.tsx`, root), "utf8")
+    assert.match(source, /ui\/coss-tabs/)
+    assert.match(source, /<ReviewToolbar/)
+    assert.equal((source.match(/<TabsTrigger value="[^"]+">/g) ?? []).length, 6)
+    assert.doesNotMatch(source, /lucide-react/)
+  }
+})
+
 test("Linear segments match compact button height and avoid elevated mobile styling", async () => {
   const sizes = await readFile(new URL("src/lib/segmented-control.ts", root), "utf8")
   assert.match(sizes, /default: "h-7 px-2(?: [^"]+)?"/)
@@ -127,4 +157,17 @@ test("short segments have a minimum width while labels stay centered", async () 
   const tabs = await readFile(new URL("src/components/ui/coss-tabs.tsx", root), "utf8")
   assert.match(tabs, /items-center justify-center/)
   assert.match(tabs, /segmentedControlItemSizeClassNames\[resolvedSize\]/)
+})
+
+test("workspace header stays outside the framed main content", async () => {
+  const source = await readFile(new URL("src/components/project-manager.tsx", root), "utf8")
+  const headerStart = source.indexOf('className="app-header ')
+  const headerEnd = source.indexOf("</header>", headerStart)
+  const insetStart = source.indexOf("<SidebarInset")
+  assert.ok(
+    headerStart >= 0 && headerEnd < insetStart,
+    "The title and sidebar controls must precede the main frame",
+  )
+  assert.doesNotMatch(source.slice(headerStart, headerEnd), /<SidebarTrigger/)
+  assert.match(source.slice(insetStart), /md:rounded-xl md:ring-1 md:ring-border/)
 })

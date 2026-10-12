@@ -45,6 +45,11 @@ from src/styles/variables-semantic.css and src/styles/tailwind-utilities.css.
 License: MIT; root LICENSE verified 2026-09-10; reproduced in licenses/apps-sdk-ui.txt.
 The existing Redpact light/dark palette, shadows and compact control heights are retained.
 
+Apps SDK UI — Git Graph identity palette
+Source: https://github.com/openai/apps-sdk-ui/blob/main/src/styles/variables-primitive.css
+Scope: graph-only blue, green, purple, orange, pink, yellow and red tokens in src/index.css.
+License: MIT; reproduced in licenses/apps-sdk-ui.txt. Palette retrieved 2026-09-17.
+
 Code surface typography and syntax palette
 Sources: https://github.com/JetBrains/JetBrainsMono and
 https://github.com/primer/github-syntax-theme-generator

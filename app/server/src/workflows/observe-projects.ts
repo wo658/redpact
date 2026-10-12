@@ -123,7 +123,7 @@ export function createObserveProjects(deps: {
     const issues: { path: string; message: string }[] = []
     const inputs = new Map<string, string[]>()
     try {
-      const project = await deps.worktrees.connect(path)
+      const project = await deps.worktrees.connect(path, undefined, false)
       signal?.throwIfAborted()
       let roots = [path]
       if (project.location.kind === "git") {

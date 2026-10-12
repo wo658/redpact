@@ -1,8 +1,9 @@
 # Local Redpact App Page
 
 This package bundles the actual connected viewer and its App-only MCP bridge.
-The companion retains runtime installation, start/stop and recovery. Development,
-configuration and Git work stay in the host conversation.
+The companion retains runtime installation, start/stop and recovery. The full app
+preserves project, environment, settings and Git navigation. Inline chat approval
+and evidence cards use a separate MCP resource.
 
 See [installation](../../docs/installation.md#local-redpact-app-page-experiment) for
 supported host setup, trust boundaries and verification limitations.

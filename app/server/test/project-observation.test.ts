@@ -182,7 +182,7 @@ test("source observation skips collection and preserves other project watches", 
   connect.mockClear()
   resolve.mockClear()
   const result = await observe(["/one", "/two"], ["/one/source.ts"])
-  expect(connect.mock.calls).toEqual([["/one"]])
+  expect(connect.mock.calls).toEqual([["/one", undefined, false]])
   expect(resolve).not.toHaveBeenCalled()
   expect(result.watchPaths).toEqual(expect.arrayContaining(["/one", "/two"]))
   expect(result.issues.map((issue) => issue.path)).toEqual(expect.arrayContaining(["/one", "/two"]))

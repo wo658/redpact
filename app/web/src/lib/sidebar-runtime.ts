@@ -38,7 +38,7 @@ export async function initialize(
     }
     return value as T
   }
-  const app = new App({ name: "Redpact", version: "0.5.3" }, {}, { autoResize: false })
+  const app = new App({ name: "Redpact", version: "0.5.4" }, {}, { autoResize: false })
   let page: Page | undefined
   let token = ""
   let busy = false

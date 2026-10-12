@@ -5,14 +5,12 @@ description: Current component boundaries and the reasons behind them.
 
 # Architecture
 
-Redpact connects agent-led development in chat to managed execution and human review.
-The host agent owns worktree isolation, test-first implementation, authored files and
-Git operations. Redpact connects those checkouts, captures submitted test intent and
-source, executes tests, and presents observed evidence. The review viewer focuses on
-an exact execution and its worktree-bound history. The host owns project management,
-settings edits, file browsing, Git and task switching.
+Redpact is a local development review tool. It connects project checkouts, captures
+submitted test intent and source, executes tests, and presents observed evidence.
 Test success, configuration validity, application freshness and human acceptance
 are different facts. A result never implies the others.
+
+The full browser, desktop and Global App Page preserve the management app. Inline MCP Apps are separate approval/result surfaces connected to the same workflows and stored evidence. [Frontend conventions](frontend.md) defines their navigation boundary.
 
 ## Components
 
@@ -84,7 +82,8 @@ between record files.
 - Runtime storage uses JSON and artifact files with one writer per instance. Ordered Umzug startup
   migrations upgrade supported runtime layouts; see [storage](storage.md). There is
   no SQLite/Drizzle runtime.
-- Native Git owns read-only status, exclude semantics and source comparisons for all index formats. Repository discovery and supported blob reads retain isomorphic-git.
+- Native Git owns status and exclude semantics for all index formats, patches and
+  mutations. Repository discovery and supported blob reads retain isomorphic-git.
 - Parcel file observation drives scoped invalidations; observation never runs tests.
 - ts-morph extracts static test intent from isolated submitted-file symbols without
   loading TypeScript standard-library declarations. Vitest records actual integration results.
@@ -96,15 +95,16 @@ between record files.
 - MCP Apps implement request approval. Their capabilities
   rely on the client keeping App-only metadata out of model context; this does not
   establish code-review acceptance or isolation from trusted local processes.
+- GitHub publication reuses native Git and authenticated `gh`; GitHub owns PR identity.
 
-Standalone npm installs use a CLI parent to stop the owned server before delegating package replacement to its detected npm/pnpm owner. Native desktop keeps Tauri ownership. Update status remains available through the retained HTTP or native commands; the focused viewer has no update panel. SemVer comparison uses the existing node-semver implementation. See [runtime updates](installation.md) for installation limits and restart behavior.
+Standalone npm installs use a CLI parent to stop the owned server before delegating package replacement to its detected npm/pnpm owner. Native desktop keeps Tauri ownership. Both expose update availability to the viewer; SemVer comparison uses the existing node-semver implementation. See [runtime updates](installation.md) for installation limits and restart behavior.
 
 ## Scope and evidence
 
 Live Git checkout discovery and immutable execution identities are separate. A
 missing checkout can keep historical results while becoming unavailable for new
 execution. Shared fixed configuration is described in
-[settings ownership](configuration.md), not copied into worktree identity.
+[settings ownership](settings-reference.md), not copied into worktree identity.
 
 Use [execution](execution.md), [storage](storage.md), [interfaces](interfaces.md),
 [Git operations](git.md) and [frontend conventions](frontend.md) for their contracts.

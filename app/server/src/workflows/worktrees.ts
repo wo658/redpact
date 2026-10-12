@@ -14,6 +14,7 @@ import type { SettingsService } from "../core/types/settings.js"
 
 export function createWorktrees(deps: {
   store: Store
+  activity?(projectId: string): boolean
   git: Pick<GitAdapter, "metadata" | "primaryRoot" | "listWorktrees" | "currentBranch" | "isMerged">
   projects: ProjectSettingsService
   gitService(path: string): GitService
@@ -208,7 +209,7 @@ export function createWorktrees(deps: {
     void result.then(cleanup, cleanup)
     return result
   }
-  async function ensure(projectId: string, path: string) {
+  async function ensure(projectId: string, path: string, managed?: { id: string }) {
     const actual = await inspect(connected(projectId), path)
     const previous = deps.store
       .listWorktrees()
@@ -224,7 +225,7 @@ export function createWorktrees(deps: {
     }
     const worktree: Worktree = {
       ...actual,
-      id: randomUUID(),
+      id: managed?.id ?? randomUUID(),
       projectId,
       createdAt: new Date().toISOString(),
     }
@@ -233,12 +234,22 @@ export function createWorktrees(deps: {
   }
   async function discover(projectId: string, commonGitdir: string) {
     const known = deps.store.listWorktrees().filter((item) => item.projectId === projectId)
+    const reserved = new Set(
+      deps.store
+        .listWorkStarts()
+        .filter((request) => request.input.projectId === projectId && request.state !== "completed")
+        .map((request) => request.checkoutRoot),
+    )
     const current = new Set<string>()
     const paths = await deps.git.listWorktrees(commonGitdir)
     for (const path of paths) {
       try {
         const canonical = await directory(path)
         current.add(canonical)
+        // Discovery must not claim an ID reserved by a recoverable managed creation.
+        if (reserved.has(canonical)) {
+          continue
+        }
         const existing = known.filter((item) => item.checkoutRoot === canonical)
         if (
           (await Promise.all(existing.map((item) => available(getProject(projectId), item)))).some(
@@ -373,6 +384,51 @@ export function createWorktrees(deps: {
         }),
       )
     },
+    renameProject(id: string, name: string) {
+      return exclusive(() => {
+        const trimmed = name.trim()
+        if (!trimmed || trimmed.length > 200) {
+          problem("invalid_input", "Project name must contain 1 to 200 characters")
+        }
+        const project = { ...getProject(id), name: trimmed }
+        deps.store.updateProject(project)
+        return project
+      })
+    },
+    disconnectProject(id: string) {
+      return exclusive(() => {
+        const project = getProject(id)
+        if (project.disconnectedAt) {
+          return project
+        }
+        const running = deps.store.unfinishedRuns().some((run) => run.target?.projectId === id)
+        const resources = deps.store
+          .listEnvironments()
+          .some((env) => env.target.projectId === id && env.state !== "stopped")
+        const creation = deps.store
+          .listWorkStarts()
+          .some((item) => item.input.projectId === id && item.state !== "completed")
+        if (running || resources || creation || deps.activity?.(id)) {
+          problem(
+            "worktree_busy",
+            "Finish project operations and stop its environments before disconnecting",
+          )
+        }
+        const updated = { ...project, disconnectedAt: new Date().toISOString() }
+        deps.store.updateProject(updated)
+        return updated
+      })
+    },
+    reconnectProject(id: string) {
+      return exclusive(async () => {
+        const project = getProject(id)
+        const root = await deps.projects.root(id)
+        await inspect(project, root)
+        const { disconnectedAt: _disconnectedAt, ...updated } = project
+        deps.store.updateProject(updated)
+        return updated
+      })
+    },
     listProjects: (includeDisconnected = false) =>
       exclusive(async () => {
         for (const project of deps.store.listProjects()) {
@@ -416,7 +472,7 @@ export function createWorktrees(deps: {
       pendingLists.set(projectId, result)
       return result
     },
-    connect(path: string) {
+    connect(path: string, name?: string, reconnect = true) {
       return exclusive(async () => {
         const root = await directory(path)
         const git = await deps.git.metadata(root)
@@ -447,17 +503,20 @@ export function createWorktrees(deps: {
                 (item.location.root === root || item.location.root === rulesRoot)),
           )
         if (previous) {
+          if (previous.disconnectedAt && !reconnect) {
+            return connected(previous.id)
+          }
           if (previous.disconnectedAt) {
             await inspect(previous, root)
-            const { disconnectedAt: _disconnectedAt, ...bound } = previous
-            deps.store.updateProject(bound)
-            return bound
+            const { disconnectedAt: _disconnectedAt, ...updated } = previous
+            deps.store.updateProject(updated)
+            return updated
           }
           return previous
         }
         const project = {
           id: randomUUID(),
-          name: basename(root),
+          name: name?.trim() || basename(root),
           location,
           createdAt: new Date().toISOString(),
         }

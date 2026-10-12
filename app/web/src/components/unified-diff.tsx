@@ -7,6 +7,7 @@ import { Diff, type FileData, Hunk, type HunkData, tokenize } from "react-diff-v
 import refractor from "refractor"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { useWordWrap } from "@/lib/word-wrap"
 import { FileIcon } from "./file-icon"
 
 const languageOverrides: Record<string, string> = {
@@ -113,6 +114,7 @@ function TextDiff({
   source?: { path: string; content: string }
 }) {
   const { t } = useTranslation()
+  const [wordWrap] = useWordWrap()
 
   let path = ""
   if (file) {
@@ -156,7 +158,7 @@ function TextDiff({
       {hunks.length ? (
         <div className="min-h-0 flex-1 overflow-auto bg-background">
           <Diff
-            className={cn(source && "diff-source", "diff-wrap")}
+            className={cn(source && "diff-source", wordWrap && "diff-wrap")}
             diffType={file?.type ?? "modify"}
             hunks={hunks}
             tokens={tokens}

@@ -6,6 +6,7 @@ root, start the server, then run `pnpm dev`. See Vite's terminal output for its 
 Maintained documentation:
 
 - [Installation and server connection](../../docs/installation.md)
+- [UX navigation](../../docs/ux-navigation.md)
 - [Frontend conventions and verification](../../docs/frontend.md)
 - [HTTP/MCP interfaces](../../docs/interfaces.md)
 - [Development commands](../../docs/development.md)

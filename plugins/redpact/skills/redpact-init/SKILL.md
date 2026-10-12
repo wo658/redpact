@@ -12,8 +12,9 @@ Read the [configuration guide](references/configuration.md) before authoring.
 Inspect the application and `configure describe`, preserve unrelated configuration,
 and write the supported `.redpact/settings.json` directly. Configure observation in
 the instance file only when needed; verify actual discovery separately from validation.
-There is no settings editor, folder picker, project-management wizard or manual
-Container to operate. The host owns worktrees, files and Git.
+The full app also provides project management, settings and manual Container controls.
+Chat setup uses the file-authoring workflow above; inline MCP cards handle request
+approval and evidence without embedding the full management interface.
 
 Use the [dependency guide](../redpact/references/dependencies.md) when services,
 connections or fixed dependency kinds need setup. Reuse inspected facts and accepted

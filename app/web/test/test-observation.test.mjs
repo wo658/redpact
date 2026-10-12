@@ -10,6 +10,7 @@ const server = await createServer({
 })
 after(() => server.close())
 const { TestEvidence } = await server.ssrLoadModule("/src/components/test-observation.tsx")
+const { TestObservation } = await server.ssrLoadModule("/src/components/test-observation.tsx")
 const submission = {
   id: "submission-one",
   digest: "digest-one",
@@ -152,6 +153,35 @@ test("overview leaves unobserved declarations outside success and failure groups
   const html = renderToStaticMarkup(createElement(TestEvidence, { submission, run: null }))
   assert.match(html, /No recorded result/)
   assert.doesNotMatch(html, /aria-label="Success"|aria-label="Failed"/)
+})
+
+test("project integration execution explains its project defaults and exposes their editor", async () => {
+  const html = renderToStaticMarkup(
+    createElement(TestObservation, {
+      api: {},
+      projectId: "project",
+      worktreeId: "primary",
+      scope: "all",
+    }),
+  )
+  assert.doesNotMatch(html, /Integration defaults/)
+  assert.match(html, /fixed project configuration/)
+  assert.doesNotMatch(html, /saved worktree environment choices/)
+})
+
+test("each test surface names its own execution path", async () => {
+  const { UnitTests } = await server.ssrLoadModule("/src/components/unit-tests.tsx")
+  const integration = renderToStaticMarkup(
+    createElement(TestObservation, {
+      api: {},
+      projectId: "project",
+      worktreeId: "primary",
+      scope: "all",
+    }),
+  )
+  const unit = renderToStaticMarkup(createElement(UnitTests, { api: {}, worktreeId: "primary" }))
+  assert.match(integration, /Run Integration tests/)
+  assert.match(unit, /Run Unit command/)
 })
 
 test("실행 결과 제목과 판정은 별도 행으로 읽을 수 있다", () => {

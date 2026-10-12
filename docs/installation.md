@@ -40,13 +40,12 @@ updates are managed through image replacement, not the viewer's package installe
 `docker compose down -v` also deletes that instance's settings and evidence.
 
 The default container starts with no connected projects and does not mount host
-repositories or the Docker socket. To execute against a real project, explicitly bind-mount
-its checkout in a Compose override and use its **container path** in configuration
-and MCP requests.
+repositories or the Docker socket. To browse a real project, explicitly bind-mount
+its checkout in a Compose override and connect its **container path** in the viewer.
 Keep any referenced worktrees and Git common directories accessible at their stored
 paths, and ensure the container's `node` user has the necessary permissions.
-This baseline hosts the viewer/API; it does not establish managed test execution
-or host Git operation readiness. Managed tests need
+This baseline hosts the viewer/API; it does not establish managed test execution,
+GitHub CLI authentication or managed worktree creation readiness. Managed tests need
 additional Docker access and consistent host/container bind paths. For a full local
 development runner, use the host-installed runtime described below.
 
@@ -65,7 +64,7 @@ development runner, use the host-installed runtime described below.
 | Claude Code plugin | MCP connection and skills | Claude Code plus the same running instance |
 
 Managed execution additionally needs Docker with Compose. Git operations use native
-Git for source identity. Installation and MCP
+Git; managed worktree creation requires maintained Git 2.50+. Installation and MCP
 connectivity do not verify Docker readiness or client support for MCP Apps.
 The [npm installation matrix](development.md) covers Windows x64 with Node 24 and 26.
 ARM Windows/Linux, other Linux distributions and a Universal macOS installer remain
@@ -298,7 +297,8 @@ Cursor installation and MCP Apps rendering remain unverified.
 Gemini CLI uses GitHub extensions with `gemini-extension.json`, rather than these
 marketplace catalogs. This repository does not currently package a Gemini extension.
 Other MCP-capable clients can connect directly as described below. Redpact's in-app
-each host manages its own plugin updates.
+plugin update controls currently support Codex and Claude Code only; other clients
+manage their own plugins.
 
 The plugin uses `http://127.0.0.1:54321/mcp`. To use a different instance, configure
 a direct HTTP MCP connection to its actual port instead of assuming the plugin
@@ -398,15 +398,11 @@ and runtime evidence are separate. Runtime update requests from the viewer repor
 that the App installer owns updates; the companion does not run an independent
 npm self-update behind the page.
 
-Before installation or startup, the page displays its setup screen. A healthy
-runtime displays the exact-record viewer and worktree-bound history. With no record,
-it asks the user to open an execution from chat. `open_redpact_app` accepts paired
-`kind` and UUID `id` to open that record directly; it does not request or approve a run.
-The App accepts only a local canonical review path from its UI metadata. Status
-polls preserve that selection, including the **Open local viewer** recovery link.
-Project management, settings editors, manual Container and Git controls are absent.
+Before installation or startup, the page displays its setup screen. A healthy runtime displays the full app: projects, worktrees, files, diffs, Git, tests, environments and settings. With no record, normal project navigation or project connection is available. `open_redpact_app` also accepts paired `kind` and UUID `id` to open an exact request or execution inside the app without requesting or approving a run. The App accepts only a local canonical review path from its UI metadata. Status polls preserve that selection, including the **Open local viewer** recovery link. Inline chat approval/result cards remain separate from this full App Page.
 
 The App resource bundles the existing React viewer, styles, fonts and icons directly.
+Its URI includes a hash of the bundled HTML, so an updated plugin does not reuse a
+previous build’s cached screen. Preview clients discover this URI from the opener tool.
 It requires no nested iframe, browser HTTP connection or loopback CSP exception.
 Codex can block HTTP frames even when the resource declares a loopback origin;
 the App therefore uses the supported MCP Apps tool bridge instead.
@@ -442,8 +438,8 @@ or moving its desktop application to Trash also leaves runtime data untouched.
 For verification, install Playwright Chromium (`pnpm exec playwright install chromium`)
 and run `pnpm typecheck` and `pnpm test`. After building the current server/viewer and
 this companion, `pnpm test:browser` checks the source-built runtime through the real
-MCP bridge. It verifies the empty state, exact request routing, history, responsive
-layout and preserved approval boundary. Published-package installation is a separate
+MCP bridge. It verifies full app entry, project navigation, exact request routing, history, responsive
+layout and the separate inline approval boundary. Published-package installation is a separate
 check: `REDPACT_TEST_RUNTIME=installed REDPACT_TEST_MANAGER=npm pnpm test:browser`
 (or `pnpm` as manager) verifies installation and owned lifecycle without claiming
 current-source viewer behavior. The installer still pins public 0.8.0.
@@ -466,15 +462,53 @@ The installation and stopped screens share a centered logo, short state heading 
 
 ## Agent plugin updates
 
-Manage installation and updates with the host's plugin tools. Redpact does not inspect
-host installation catalogs or expose an API that changes plugins through host CLIs.
-Plugin connections/skills and the Redpact runtime are separate: updating a plugin
-does not replace the runtime or its data. Refresh the host's MCP catalog after changing
-its connection.
+Settings → Agent plugins checks installed Redpact plugins in Codex and Claude Code.
+Set **Codex CLI path** or **Claude Code CLI path** in instance settings when automatic
+executable detection fails; use an absolute executable path without arguments and
+save before checking. Empty paths use PATH and common local installation directories.
+The CLI runs as the Redpact server's OS user on its host, not as the browser user.
+Other agents are not yet supported.
+
+**Check plugin updates** reads each agent's installed-plugin and marketplace JSON.
+It follows the installed `redpact@<marketplace>` identity, including personal and
+local marketplaces; it does not switch the plugin to the official marketplace.
+One enabled user installation is required. Disabled plugins, other scopes and
+multiple installations need management in the owning agent. Missing CLI, incomplete
+output, unknown versions and refresh failures remain explicit errors.
+
+Redpact refreshes only that marketplace through the agent CLI when it is remote.
+Codex Git marketplaces use `plugin marketplace upgrade <marketplace>`; Claude Code
+remote marketplaces use `plugin marketplace update <marketplace>`. Local marketplaces
+are read directly. The marketplace catalog resolves the plugin directory, whose
+agent-specific manifest supplies the available version. Codex local-path entries
+and Claude Code relative-directory entries are supported, including those inside
+Git marketplaces. Entries pointing to a separate remote plugin repository are not
+yet supported and must be managed in the agent.
+
+The comparison does not use the app's GitHub Release version or judge app/plugin
+compatibility. Only a strictly greater stable SemVer shows **Update**; build metadata
+alone does not indicate a newer release. The supported Codex reinstall convention
+`X.Y.Z+codex.YYYYMMDDhhmmss` is an exception: for the same base version, a later
+timestamp offers an update. Newer installed versions are never downgraded. Publishers must increment the plugin manifest version when distributing
+changes. Checks are manual; normal status polling reads the last in-memory result
+without running CLI commands. Restarting Redpact clears that result.
+
+**Update** opens a confirmation for the displayed agent/version. Redpact rechecks
+the saved CLI path, installed version, marketplace identity and available version.
+Codex installs with `plugin add redpact@<marketplace> --json`; Claude Code uses
+`plugin update redpact@<marketplace> --scope user`. The marketplace name comes from
+the validated installed identity. No shell command is accepted. Each CLI command
+has a two-minute limit. Checks and installations are serialized within the instance.
+
+Success requires reading back the requested installed version. Start a new agent
+session afterward; disk installation does not refresh an existing conversation.
+Redpact itself does not restart. Interactive CLI approval, installation failure or
+a changed candidate remains an error requiring a fresh check. No automatic rollback
+is provided. Do not update the same plugin concurrently in another client.
 
 ## Requirements
 
-Install Node.js 24 or newer and pnpm for the server and web viewer. Managed test execution also needs Docker with Compose. Unit commands run in Docker using the project's configured Dockerfile; managed integration tests prepare Compose application services. Git features use native Git. The host owns worktree creation and Git mutations.
+Install Node.js 24 or newer and pnpm for the server and web viewer. Managed test execution also needs Docker with Compose. Unit commands run in Docker using the project's configured Dockerfile; managed integration tests prepare Compose application services. Git features use native Git. Use maintained Git 2.50 or newer for managed worktree creation.
 
 Run these commands from the Redpact source checkout:
 
@@ -519,7 +553,7 @@ curl --fail http://127.0.0.1:54318/api/health
 
 `docker version` should report the server as well as the client. If it cannot reach the Docker daemon, start Docker before attempting managed execution. The health request should succeed once Redpact is listening. Neither check proves that your application's image builds or its services become healthy.
 
-Next, call `configure describe` from your agent with the actual application directory. The viewer opens a returned execution record from chat. If health works but the agent cannot connect, inspect the MCP endpoint and client connection rather than changing project test settings.
+Next, open the Vite viewer and connect your application directory. Finally, call `configure describe` from your agent. If health works but the agent cannot connect, inspect the MCP endpoint and client connection rather than changing project test settings.
 
 ## Keep instance addresses together
 
@@ -571,39 +605,38 @@ This builds the current checkout, installs `/Applications/Redpact.app`, launches
 
 The desktop owns a separate instance. Its first-launch MCP endpoint is `http://127.0.0.1:54321/mcp`; use the saved instance port if changed. Closing the window keeps the server available; quitting Redpact shuts it down. Development-server history does not automatically appear in the desktop.
 
-Continue with [your first project](configuration.md), or see [troubleshooting](troubleshooting.md).
+Continue with [your first project](first-project.md), or see [troubleshooting](troubleshooting.md).
 
 ## Runtime updates
 
-The focused review viewer has no Update shortcut or Updates settings panel. Manage
-the installed package through its original installation method. The existing npm
-update HTTP workflow and [signed native updater](desktop.md) remain backend
-capabilities; reading status never installs a release.
+Windows/macOS desktop apps and npm-installed browser viewers show **Update** in the
+sidebar only when a newer version is available. Manual **Check for updates** lives in
+Settings → Updates. Desktop installation uses the [signed native updater](desktop.md).
 
 The npm runtime queries the public `@wo658/redpact` registry dist-tags at startup and every
-six hours; HTTP status reads return the server cache. Stable installations follow
+six hours; browser polling reads the server cache. Stable installations follow
 `latest`; prerelease installations consider `beta` and `latest` and never downgrade.
 Checks have a ten-second deadline. Registry absence, invalid metadata and network
 failure are errors, not proof that the installed version is current. Source checkouts
 and desktop-owned servers do not start npm checks.
 
 For recognized global npm/pnpm installations and direct local npm/pnpm dependencies,
-`redpact serve` keeps a CLI parent process outside the replaceable server. An explicit
-HTTP install request must name the discovered version.
+`redpact serve` keeps a CLI parent process outside the replaceable server. Clicking
+**Update** opens confirmation; **Install and restart** requests the displayed version.
 New requests pause while admitted requests finish. Active tests, environment operations
 and other tracked work defer installation and restore service. Only after the owned
 server stops does the parent run the original package manager against the explicit
 version with lifecycle scripts disabled. Local updates modify the owning project's
 package manifest and lockfile, preserving development-dependency classification.
 The parent verifies the installed package version and restarts with the same options
-and listening port; clients reconnect after the runtime restarts.
+and listening port; the browser reloads after observing that version.
 
 An installation under a custom global prefix can still start when that prefix is
 not the package manager's active global root; a missing project manifest there does
 not block startup. Automatic updates require the original owner to be recognized.
 
 `npx` caches, unrecognized installation owners, source launches and direct `main.js`
-launches do not receive automatic installation authority. Unsupported installation requests report manual
+launches do not receive automatic installation authority. The dialog explains manual
 recovery instead of guessing a global install. For `npx`, stop the old process and
 run `npx @wo658/redpact@latest serve` with the original options; prerelease users choose their
 intended explicit version/channel. Other installations use their original manager.

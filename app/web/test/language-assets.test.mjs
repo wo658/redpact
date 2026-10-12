@@ -66,9 +66,23 @@ test("English assets own counts and complete interpolated messages", async () =>
     interpolation: { escapeValue: false },
     resources: { en: { translation: en } },
   })
-  for (const count of [0, 1, 2]) {
-    assert.equal(i18n.t("fileCount", { count }), `${count} ${count === 1 ? "file" : "files"}`)
+  for (const [key, singular, plural] of [
+    ["localProjects", "local project", "local projects"],
+    ["worktreeCount", "worktree", "worktrees"],
+    ["fileCount", "file", "files"],
+    ["endpointCount", "endpoint", "endpoints"],
+  ]) {
+    assert.equal(i18n.t(key, { count: 0 }), `0 ${plural}`)
+    assert.equal(i18n.t(key, { count: 1 }), `1 ${singular}`)
+    assert.equal(i18n.t(key, { count: 2 }), `2 ${plural}`)
   }
-  assert.equal(i18n.t("Copy log: {{name}}", { name: "Verification" }), "Copy log: Verification")
-  assert.equal(i18n.t("{{seconds}}s elapsed", { seconds: 8 }), "8s elapsed")
+  assert.equal(
+    i18n.t("Open {{project}} {{worktree}}", { project: "orders", worktree: "feature/cart" }),
+    "Open orders feature/cart",
+  )
+  assert.equal(
+    i18n.t("{{base}} fork → worktree", { base: "release/next" }),
+    "release/next fork → worktree",
+  )
+  assert.equal(i18n.t("{{minutes}}m ago", { minutes: 8 }), "8m ago")
 })

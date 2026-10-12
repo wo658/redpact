@@ -36,19 +36,47 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
     expect(result.settings.playwright.uiLanguage).toBe("ko")
     const browserFiles = await discoverPlaywright(root, result.settings.playwright)
     expect(browserFiles.map(({ path, purpose }) => ({ path, purpose }))).toEqual([
+      { path: "project/captures/application.spec.ts", purpose: "capture" },
       { path: "project/captures/chat-review.spec.ts", purpose: "capture" },
+      { path: "project/captures/dependencies.spec.ts", purpose: "capture" },
+      { path: "project/captures/desktop-update.spec.ts", purpose: "capture" },
       { path: "project/captures/execution-approval.spec.ts", purpose: "capture" },
       { path: "project/captures/integration-approval.spec.ts", purpose: "capture" },
       { path: "project/captures/mcp-app.spec.ts", purpose: "capture" },
+      { path: "project/captures/problem-notice.spec.ts", purpose: "capture" },
       { path: "project/captures/result-rows.spec.ts", purpose: "capture" },
+      { path: "project/captures/word-wrap.spec.ts", purpose: "capture" },
+      { path: "project/captures/workspace-history.spec.ts", purpose: "capture" },
+      { path: "project/tests/capture-viewport.spec.ts", purpose: "functional" },
       { path: "project/tests/chat-review.spec.ts", purpose: "functional" },
+      { path: "project/tests/copy-handoff.spec.ts", purpose: "functional" },
+      { path: "project/tests/dependencies.spec.ts", purpose: "functional" },
+      { path: "project/tests/desktop-update.spec.ts", purpose: "functional" },
       { path: "project/tests/execution-approval.spec.ts", purpose: "functional" },
+      { path: "project/tests/execution-progress.spec.ts", purpose: "functional" },
+      { path: "project/tests/fixed-execution-settings.spec.ts", purpose: "functional" },
+      { path: "project/tests/git-graph.spec.ts", purpose: "functional" },
+      { path: "project/tests/header-location.spec.ts", purpose: "functional" },
+      { path: "project/tests/material-icons.spec.ts", purpose: "functional" },
       { path: "project/tests/mcp-app.spec.ts", purpose: "functional" },
+      { path: "project/tests/plugin-updates.spec.ts", purpose: "functional" },
+      { path: "project/tests/problem-notice.spec.ts", purpose: "functional" },
+      { path: "project/tests/product-demo.spec.ts", purpose: "functional" },
+      { path: "project/tests/project-management.spec.ts", purpose: "functional" },
       { path: "project/tests/result-rows.spec.ts", purpose: "functional" },
+      { path: "project/tests/review-header.spec.ts", purpose: "functional" },
+      { path: "project/tests/screenshot-gallery.spec.ts", purpose: "functional" },
+      { path: "project/tests/settings.spec.ts", purpose: "functional" },
+      { path: "project/tests/sidebar-controls.spec.ts", purpose: "functional" },
+      { path: "project/tests/test-code-diff.spec.ts", purpose: "functional" },
+      { path: "project/tests/viewers.spec.ts", purpose: "functional" },
       { path: "project/tests/window-controls.spec.ts", purpose: "functional" },
+      { path: "project/tests/word-wrap.spec.ts", purpose: "functional" },
+      { path: "project/tests/workspace-history.spec.ts", purpose: "functional" },
+      { path: "project/tests/workspace-tabs.spec.ts", purpose: "functional" },
     ])
     expect(browserFiles.every((file) => file.scope === "project")).toBe(true)
-    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(5)
+    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(27)
     const files = await createLocalFiles().readTests(root, result.settings.tests.directory)
     const scenarios = files
       .filter((file) => file.path.endsWith(".test.ts"))

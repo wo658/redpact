@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { McpServer, type ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js"
 import {
   type Icon,
@@ -10,7 +11,6 @@ import type { createBridge } from "./bridge.js"
 import type { localRuntime } from "./local.js"
 import { readPage } from "./page.js"
 
-export const pageUri = "ui://redpact-app/0.5.3/page.html"
 export function createAppServer(options: {
   runtime: ReturnType<typeof localRuntime>
   html: string
@@ -18,10 +18,13 @@ export function createAppServer(options: {
   bridge?: ReturnType<typeof createBridge>
   icon?: string
 }) {
+  // Hosts cache App resources by URI across plugin updates.
+  const digest = createHash("sha256").update(options.html).digest("hex")
+  const pageUri = `ui://redpact-app/${digest}/page.html`
   const icons = options.icon
     ? [{ src: options.icon, mimeType: "image/svg+xml", sizes: ["any"] }]
     : undefined
-  const server = new McpServer({ name: "redpact-app", version: "0.5.3", icons })
+  const server = new McpServer({ name: "redpact-app", version: "0.5.4", icons })
   const tools: Tool[] = []
   function registerTool<T extends z.ZodRawShape>(
     name: string,
@@ -138,7 +141,7 @@ export function createAppServer(options: {
       title: "Redpact",
       icons,
       description:
-        "Open an exact recorded execution in the Redpact App Page with kind and id, or open the runtime page without a selection. Opening does not run tests or approve requests.",
+        "Open an exact recorded execution in the Redpact App Page with kind and id, or open the full project workspace without a selection. Opening does not run tests or approve requests.",
       inputSchema: {
         kind: z.enum(["unit", "integration", "playwright"]).optional(),
         id: z.string().uuid().optional(),

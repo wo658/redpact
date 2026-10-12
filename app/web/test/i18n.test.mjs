@@ -15,8 +15,48 @@ test("Korean mode translates the live connection screen", async () => {
   }
   const { default: App } = await server.ssrLoadModule("/src/App.tsx")
   const html = renderToStaticMarkup(createElement(App))
-  assert.match(html, /채팅에서 실행 기록을 여세요/)
-  assert.doesNotMatch(html, /role="combobox"/)
+  assert.match(html, /로컬 Redpact에 연결 중/)
+  assert.match(html, /한국어/)
+  const control = new JSDOM(html).window.document.querySelector(
+    '[role="combobox"][aria-label="언어"]',
+  )
+  assert.ok(control)
+})
+
+test("switching en ↔ ko updates live controls and keeps server evidence verbatim", async () => {
+  const { i18n } = await server.ssrLoadModule("/src/locales/index.ts")
+  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  const { TestEvidence } = await server.ssrLoadModule("/src/components/test-observation.tsx")
+  const submission = {
+    id: "submission-123",
+    digest: "abc123",
+    parsed: [],
+    files: [{ path: "src/checkout.test.ts", source: 'expect("<customer>").toBe("paid")' }],
+  }
+  const run = {
+    state: "finished",
+    limitations: ["Original server limitation"],
+    result: {
+      outcome: "assertion_failed",
+      cases: [],
+      errors: ["Original assertion error <customer>"],
+    },
+  }
+  for (const language of ["en", "ko", "en"]) {
+    await i18n.changeLanguage(language)
+    const html = renderToStaticMarkup(
+      createElement(ProjectManager, { api: {}, initialProjects: [] }),
+    )
+    assert.ok(html.includes(language === "ko" ? "프로젝트 폴더 열기" : "Open project folder"))
+    const picker = new JSDOM(html).window.document.querySelector('[role="radiogroup"]')
+    assert.equal(picker, null)
+    const evidence = renderToStaticMarkup(createElement(TestEvidence, { submission, run }))
+    assert.ok(evidence.includes(language === "ko" ? "assertion 실패" : "assertion_failed"))
+    assert.ok(evidence.includes(i18n.t("Executed source")))
+    assert.ok(evidence.includes("Original assertion error"))
+    assert.ok(evidence.includes("&lt;customer&gt;"))
+    assert.ok(!evidence.includes("<customer>"))
+  }
 })
 
 test("catalogs cover the same keys and interpolation values in both languages", async () => {
@@ -30,6 +70,16 @@ test("catalogs cover the same keys and interpolation values in both languages", 
     assert.deepEqual(variables(ko[key]), variables(en[key]), key)
   }
   await i18n.changeLanguage("ko")
+  for (const count of [0, 1, 2]) {
+    assert.equal(i18n.t("fileCount", { count }), `파일 ${count}개`)
+    assert.equal(i18n.t("worktreeCount", { count }), `worktree ${count}개`)
+    assert.equal(i18n.t("localProjects", { count }), `로컬 프로젝트 ${count}개`)
+    assert.equal(i18n.t("endpointCount", { count }), `endpoint ${count}개`)
+  }
+  assert.equal(
+    i18n.t("Open {{project}} {{worktree}}", { project: "<project>", worktree: "feature/cart" }),
+    "<project> feature/cart 열기",
+  )
   await i18n.changeLanguage("fr")
   assert.equal(i18n.t("Language"), "Language")
   await i18n.changeLanguage("en")
@@ -73,7 +123,7 @@ test("saved choice wins, regional browser languages resolve, and blocked storage
       },
     })
     await i18n.changeLanguage("ko")
-    assert.equal(i18n.t("Open an execution from chat"), "채팅에서 실행 기록을 여세요")
+    assert.equal(i18n.t("Language"), "언어")
     assert.equal(document.documentElement.lang, "ko")
     assert.equal(preferredLanguage(), "en")
   } finally {
@@ -106,4 +156,41 @@ test("shared UI default accessibility text follows Korean mode", async () => {
   )
   assert.match(combobox, /선택 항목 열기/)
   await i18n.changeLanguage("en")
+})
+
+test("Korean developer vocabulary preserves technical terms and readable guidance", async () => {
+  const { i18n } = await server.ssrLoadModule("/src/locales/index.ts")
+  await i18n.changeLanguage("ko")
+  try {
+    const labels = {
+      Changes: "Diff",
+      Tests: "Test",
+      Worktree: "Worktree",
+      Branch: "Branch",
+      Dependencies: "Dependencies",
+      "Per-environment": "환경별 실행",
+      "Shared local": "로컬 공용",
+      Mock: "모의 실행",
+      "Remote connection": "원격 연결",
+      "Not assessed": "Not assessed",
+      "Mode configured": "Mode configured",
+      Assertions: "Assertions",
+      "Stack trace": "Stack trace",
+      "Base ref": "Base ref",
+      "Staged · HEAD → index": "Staged · HEAD → index",
+      "Unstaged · index → working tree": "Unstaged · index → working tree",
+      "Environment overrides": "env override",
+      key: "key",
+      value: "value",
+    }
+    for (const [key, label] of Object.entries(labels)) {
+      assert.equal(i18n.t(key), label, key)
+    }
+    assert.equal(i18n.t("Loading tests…"), "test를 불러오는 중…")
+    assert.equal(i18n.t("Git diff unavailable"), "Git diff를 불러올 수 없습니다")
+    assert.equal(i18n.t("Settings"), "Settings")
+    assert.equal(i18n.t("Retry connection"), "다시 연결")
+  } finally {
+    await i18n.changeLanguage("en")
+  }
 })
