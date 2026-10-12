@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { McpServer, type ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js"
 import {
   type Icon,
@@ -10,7 +11,6 @@ import type { createBridge } from "./bridge.js"
 import type { localRuntime } from "./local.js"
 import { readPage } from "./page.js"
 
-export const pageUri = "ui://redpact-app/0.5.1/page.html"
 export function createAppServer(options: {
   runtime: ReturnType<typeof localRuntime>
   html: string
@@ -18,6 +18,9 @@ export function createAppServer(options: {
   bridge?: ReturnType<typeof createBridge>
   icon?: string
 }) {
+  // Hosts cache App resources by URI across plugin updates.
+  const digest = createHash("sha256").update(options.html).digest("hex")
+  const pageUri = `ui://redpact-app/${digest}/page.html`
   const icons = options.icon
     ? [{ src: options.icon, mimeType: "image/svg+xml", sizes: ["any"] }]
     : undefined

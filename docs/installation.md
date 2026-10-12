@@ -402,6 +402,8 @@ npm self-update behind the page.
 Before installation or startup, the page displays its setup screen. A healthy runtime displays the full app: projects, worktrees, files, diffs, Git, tests, environments and settings. With no record, normal project navigation or project connection is available. `open_redpact_app` also accepts paired `kind` and UUID `id` to open an exact request or execution inside the app without requesting or approving a run. The App accepts only a local canonical review path from its UI metadata. Status polls preserve that selection, including the **Open local viewer** recovery link. Inline chat approval/result cards remain separate from this full App Page.
 
 The App resource bundles the existing React viewer, styles, fonts and icons directly.
+Its URI includes a hash of the bundled HTML, so an updated plugin does not reuse a
+previous build’s cached screen. Preview clients discover this URI from the opener tool.
 It requires no nested iframe, browser HTTP connection or loopback CSP exception.
 Codex can block HTTP frames even when the resource declares a loopback origin;
 the App therefore uses the supported MCP Apps tool bridge instead.

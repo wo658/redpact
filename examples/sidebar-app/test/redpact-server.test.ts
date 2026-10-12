@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js"
 import { expect, test, vi } from "vitest"
-import { createAppServer, pageUri } from "../src/redpact/server.js"
+import { createAppServer } from "../src/redpact/server.js"
 
 test("활성화 이후 앱 조회는 서버를 재시작하지 않고 수동 시작은 앱 전용 권한을 검사한다", async () => {
   const status = {
@@ -38,6 +38,13 @@ test("활성화 이후 앱 조회는 서버를 재시작하지 않고 수동 시
   await client.connect(clientTransport)
   try {
     const { tools } = await client.listTools()
+    const ui = tools.find((tool) => tool.name === "open_redpact_app")?._meta?.ui as
+      | { resourceUri: string }
+      | undefined
+    if (!ui) {
+      throw new Error("App resource metadata is missing")
+    }
+    const pageUri = ui.resourceUri
     expect(tools.map((tool) => tool.name)).not.toContain("connect_redpact_project")
     expect(tools.map((tool) => tool.name)).not.toContain("get_redpact_evidence")
     expect(tools.find((tool) => tool.name === "redpact_viewer_request")?._meta).toMatchObject({
@@ -108,4 +115,33 @@ test("활성화 이후 앱 조회는 서버를 재시작하지 않고 수동 시
     await client.close()
     await server.close()
   }
+})
+
+test("화면 내용이 바뀌면 호스트가 새 리소스를 읽고 이전 화면 주소를 재사용하지 않는다", async () => {
+  async function resource(html: string) {
+    const runtime = { status: vi.fn() } as unknown as Parameters<
+      typeof createAppServer
+    >[0]["runtime"]
+    const server = createAppServer({ runtime, html, token: "test-capability" })
+    const client = new Client({ name: "resource-update-test", version: "1.0.0" })
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+    await server.connect(serverTransport)
+    await client.connect(clientTransport)
+    try {
+      const { tools } = await client.listTools()
+      const ui = tools.find((tool) => tool.name === "open_redpact_app")?._meta?.ui as {
+        resourceUri: string
+      }
+      const result = await client.readResource({ uri: ui.resourceUri })
+      expect(result.contents[0]).toMatchObject({ text: html })
+      return ui.resourceUri
+    } finally {
+      await client.close()
+      await server.close()
+    }
+  }
+  const previous = await resource("<h1>Execution review</h1>")
+  const restored = await resource("<h1>Project workspace</h1>")
+  expect(restored).not.toBe(previous)
+  expect(await resource("<h1>Project workspace</h1>")).toBe(restored)
 })
