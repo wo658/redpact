@@ -10,7 +10,7 @@ import type { createBridge } from "./bridge.js"
 import type { localRuntime } from "./local.js"
 import { readPage } from "./page.js"
 
-export const pageUri = "ui://redpact-app/0.5.1/page.html"
+export const pageUri = "ui://redpact-app/0.5.3/page.html"
 export function createAppServer(options: {
   runtime: ReturnType<typeof localRuntime>
   html: string
@@ -21,7 +21,7 @@ export function createAppServer(options: {
   const icons = options.icon
     ? [{ src: options.icon, mimeType: "image/svg+xml", sizes: ["any"] }]
     : undefined
-  const server = new McpServer({ name: "redpact-app", version: "0.5.1", icons })
+  const server = new McpServer({ name: "redpact-app", version: "0.5.3", icons })
   const tools: Tool[] = []
   function registerTool<T extends z.ZodRawShape>(
     name: string,

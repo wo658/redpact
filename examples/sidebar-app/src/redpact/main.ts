@@ -31,9 +31,6 @@ const server = createAppServer({
   html: await readFile(new URL("./app.html", import.meta.url), "utf8"),
   token: randomUUID(),
 })
-const activation = runtime.activate().catch((error: unknown) => {
-  console.error(`Redpact automatic startup failed: ${String(error)}`)
-})
 await server.connect(new StdioServerTransport())
 
 let closing = false
@@ -43,7 +40,6 @@ async function close() {
   }
   closing = true
   try {
-    await activation
     const status = await runtime.status()
     if (status.owned) {
       await runtime.stop()

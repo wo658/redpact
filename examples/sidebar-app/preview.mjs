@@ -19,11 +19,11 @@ await client.connect(
   }),
 )
 const result = await client.readResource({
-  uri: "ui://redpact-app/0.5.1/page.html",
+  uri: "ui://redpact-app/0.5.3/page.html",
 })
 const html = result.contents[0].text
 const frames = result.contents[0]._meta?.ui?.csp?.frameDomains ?? []
-const appCsp = `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; frame-src ${frames.length ? frames.join(" ") : "'none'"};`
+const appCsp = `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; frame-src ${frames.length ? frames.join(" ") : "'none'"};`
 const bundled = await build({
   entryPoints: [fileURLToPath(new URL("src/harness.ts", import.meta.url))],
   bundle: true,

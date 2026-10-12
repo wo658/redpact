@@ -337,7 +337,7 @@ The artifact uses portable `plugin.json` and `mcp.json`: contained commands and
 `${PLUGIN_ROOT}` resolve from the installed plugin copy, not the source checkout.
 Windows, Linux and macOS Intel artifacts are not yet packaged.
 
-After saving work and restarting Codex, look for **Redpact App** in Global Apps.
+After saving work and restarting Codex, look for **Redpact** in Global Apps.
 `open_redpact_app` declares `global` and `thread` entrypoints. Actual Global Apps
 visibility must be checked in the host; a browser harness cannot
 establish it.
@@ -359,12 +359,11 @@ only after the package version, entrypoint and viewer have been checked. It does
 not change global PATH, globally installed packages, or project dependencies.
 `REDPACT_APP_INSTALL_DIR` overrides the package root for the MCP process.
 
-When the plugin's MCP session starts, it automatically starts an already installed
-managed runtime if the endpoint is stopped. A healthy existing server is reused;
-an unrecognized listener blocks startup. Missing packages still require explicit
-installation. Automatic startup failures are written to the MCP process stderr;
-the startup screen remains available for manual recovery. Status polling never
-restarts a runtime that was stopped during the session.
+Opening the plugin or reconnecting its MCP session only checks runtime status; it
+never installs or starts Redpact automatically. A missing managed package displays
+**Install Redpact**. An installed but stopped runtime displays **Start Redpact**,
+including after a host restart. A healthy existing server is reused; an unrecognized
+listener blocks startup. Status polling preserves an explicitly stopped runtime.
 
 **Start Redpact** appears on the startup screen after installation succeeds. While running, the existing Desktop/Web viewer fills the entire app area,
 without a plugin header or additional navigation. **Refresh**, **Open local viewer**
@@ -417,7 +416,10 @@ local runtime. Arbitrary origins, non-API paths and redirects are rejected; brow
 cookies and authorization headers are not forwarded. Requests support the viewer's
 GET/POST/PUT/PATCH/DELETE operations. JSON request bodies are limited to 1 MiB of
 text and responses to 16 MiB; larger artifacts must be opened in the standalone
-viewer. Binary responses become local blob URLs, revoked when the view unmounts.
+viewer. Capture images use data URLs so they also render in hosts that disallow
+`blob:` image sources. Other binary attachments use local blob URLs, revoked when
+the view unmounts. Failed image requests and decoding errors display the artifact
+name and a diagnostic instead of a broken image icon.
 The runtime's own Host, Origin and Fetch Metadata checks remain unchanged.
 
 The companion keeps real scoped SSE subscriptions and the App polls their revision

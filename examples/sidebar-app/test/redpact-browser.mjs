@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { fork, spawn } from "node:child_process"
+import { createHash, randomUUID } from "node:crypto"
 import { once } from "node:events"
 import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { createServer } from "node:net"
@@ -127,6 +128,14 @@ async function sourceRequest() {
   const entry =
     process.env.REDPACT_TEST_RUNTIME_ENTRY ??
     fileURLToPath(new URL("../../../app/server/dist/main.js", import.meta.url))
+  if (!process.env.REDPACT_TEST_RUNTIME_ENTRY) {
+    // 소스 빌드에서는 패키징 전이므로 독립 뷰어의 실제 빌드 산출물을 배치한다.
+    await cp(
+      new URL("../../../app/web/dist/", import.meta.url),
+      new URL("../../../app/server/dist/ui/", import.meta.url),
+      { recursive: true },
+    )
+  }
   capture(
     fork(entry, ["--port", String(runtimePort), "--data-dir", dataDir], {
       execArgv: [],
@@ -156,6 +165,84 @@ async function captures(page, app, state) {
       fullPage: true,
     })
   }
+}
+async function recordedImages(page, requestId) {
+  const context = await (
+    await fetch(`${runtimeOrigin}/api/review-context?kind=unit&id=${requestId}`)
+  ).json()
+  const id = randomUUID()
+  const directory = join(dataDir, "playwright-runs", id, "after")
+  await mkdir(directory, { recursive: true })
+  await page.setViewportSize({ width: 1920, height: 1080 })
+  const png = await page.screenshot()
+  const artifacts = []
+  for (const [name, bytes] of [
+    ["기억 설정 캡처", png],
+    ["호칭 정정 결과 캡처", png],
+    ["손상된 캡처", Buffer.from("invalid PNG")],
+    ["누락된 캡처", png],
+  ]) {
+    const artifactId = randomUUID()
+    if (name !== "누락된 캡처") {
+      await writeFile(join(directory, artifactId), bytes)
+    }
+    artifacts.push({
+      id: artifactId,
+      name,
+      contentType: "image/png",
+      bytes: bytes.length,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+      viewport: { width: 1920, height: 1080 },
+    })
+  }
+  const now = new Date().toISOString()
+  // 과거 기록 fixture는 실제 서버·MCP·뷰어 전달을 검사하며 새 실행 증거가 아니다.
+  await writeFile(
+    join(dataDir, "playwright-runs", `${id}.json`),
+    JSON.stringify({
+      version: 1,
+      id,
+      target: "captures",
+      purpose: "capture",
+      scope: "project",
+      worktreeId: context.worktreeId,
+      projectId: context.projectId,
+      projectRoot: context.path,
+      revision: null,
+      settings: {
+        directory: "ui-tests",
+        service: "app",
+        port: 3000,
+        viewport: { width: 1920, height: 1080 },
+        targets: { captures: { purpose: "capture", testMatch: ["captures/*.ts"] } },
+      },
+      selection: { services: ["app"], select: {} },
+      settingsDigest: "fixture",
+      sourceDigest: "fixture",
+      appDigest: "fixture",
+      createdAt: now,
+      finishedAt: now,
+      state: "finished",
+      outcome: "passed",
+      before: { state: "unavailable", cases: [] },
+      after: {
+        state: "finished",
+        cases: [
+          {
+            id: "recorded",
+            file: "captures/memory.ts",
+            title: "저장된 캡처 이미지",
+            status: "passed",
+            duration: 10,
+            errors: [],
+            steps: [],
+            artifacts,
+          },
+        ],
+      },
+    }),
+  )
+  return { id, png }
 }
 try {
   const id = installed ? undefined : await sourceRequest()
@@ -187,6 +274,17 @@ try {
     assert.equal(state.status.installation.state, "installed")
     assert.equal(state.status.installation.manager, manager)
     await captures(page, app, "ready")
+    await stop(preview)
+    await startPreview()
+    await page.reload()
+    await app.getByRole("button", { name: "Start Redpact", exact: true }).waitFor()
+    assert.equal(
+      (await appTool("get_redpact_page")).page.status.state,
+      "stopped",
+      "새 MCP 세션도 설치된 런타임을 자동 시작하지 않아야 한다",
+    )
+    await assert.rejects(fetch(`${runtimeOrigin}/api/health`))
+
     await app.getByRole("button", { name: "Start Redpact", exact: true }).click()
     await app.locator("body[data-running=true]").waitFor({ timeout: 60000 })
     const first = await appTool("get_redpact_page")
@@ -254,7 +352,49 @@ try {
     assert.equal(cancelled.state, "cancelled")
     assert.equal(cancelled.executionId, null)
     assert.equal(await app.locator("iframe").count(), 0)
+    const capture = await recordedImages(page, id)
+    await page.goto(`${origin}/?kind=playwright&id=${capture.id}`)
+    for (const name of ["기억 설정 캡처", "호칭 정정 결과 캡처"]) {
+      const image = app.getByRole("img", { name, exact: true })
+      await image.waitFor()
+      await image.evaluate((element) => element.decode().catch(() => {}))
+      assert.equal(
+        await image.evaluate((element) => element.naturalWidth),
+        1920,
+        "blob:을 허용하지 않는 임베드에서도 기록된 PNG가 실제로 디코딩되어야 한다",
+      )
+      assert.deepEqual(
+        Buffer.from((await image.getAttribute("src")).split(",")[1], "base64"),
+        capture.png,
+        "이미지 변환은 캡처의 원본 바이트를 보존해야 한다",
+      )
+    }
+    for (const name of ["손상된 캡처", "누락된 캡처"]) {
+      await app.getByRole("alert").filter({ hasText: name }).waitFor()
+      assert.equal(
+        await app.getByRole("img", { name, exact: true }).count(),
+        0,
+        "실패한 이미지는 깨진 아이콘 대신 식별 가능한 오류를 표시해야 한다",
+      )
+    }
+    await captures(page, app, "recorded-images")
+    await app.getByRole("alert").last().scrollIntoViewIfNeeded()
+    await page.screenshot({ path: new URL("390-image-errors.png", output).pathname })
     assert.deepEqual(await app.locator("body").evaluate(() => window.cspViolations), [])
+    await page.goto(`${runtimeOrigin}/?page=review&kind=playwright&id=${capture.id}`)
+    for (const name of ["기억 설정 캡처", "호칭 정정 결과 캡처"]) {
+      const image = page.getByRole("img", { name, exact: true })
+      await image.waitFor()
+      await image.evaluate((element) => element.decode())
+      assert.equal(
+        await image.evaluate((element) => element.naturalWidth),
+        1920,
+        "독립 뷰어도 같은 원본 이미지를 직접 표시해야 한다",
+      )
+    }
+    for (const name of ["손상된 캡처", "누락된 캡처"]) {
+      await page.getByRole("alert").filter({ hasText: name }).waitFor()
+    }
     await stop(preview)
     assert.equal(
       (await fetch(`${runtimeOrigin}/api/health`)).ok,

@@ -1,6 +1,16 @@
 import { readdir, readFile } from "node:fs/promises"
 import { expect, test } from "vitest"
 
+test("앱 표시 이름은 Redpact다", async () => {
+  const manifest = JSON.parse(
+    await readFile(
+      new URL("../dist/redpact-marketplace/plugins/redpact-app/plugin.json", import.meta.url),
+      "utf8",
+    ),
+  )
+  expect(manifest.extensions["com.openai"].interface.displayName).toBe("Redpact")
+})
+
 test("사이드바와 모델 도구는 같은 로컬 런타임에 연결한다", async () => {
   const root = new URL("../dist/redpact-marketplace/plugins/redpact-app/", import.meta.url)
   const manifest = JSON.parse(await readFile(new URL("mcp.json", root), "utf8"))

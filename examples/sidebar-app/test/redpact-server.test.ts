@@ -14,7 +14,6 @@ test("활성화 이후 앱 조회는 서버를 재시작하지 않고 수동 시
   }
   const runtime = {
     status: vi.fn(async () => status),
-    activate: vi.fn(async () => status),
     start: vi.fn(async () => status),
     stop: vi.fn(async () => status),
     install: vi.fn(async () => status),

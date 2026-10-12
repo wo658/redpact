@@ -1,5 +1,5 @@
 // Serialize lifecycle changes so a stop cannot race an unfinished start.
-export function createRuntime<T extends { state: string; installation?: { state: string } }>(deps: {
+export function createRuntime<T extends { state: string }>(deps: {
   inspect: () => Promise<T>
   launch: () => Promise<void>
   halt?: () => Promise<void>
@@ -15,13 +15,6 @@ export function createRuntime<T extends { state: string; installation?: { state:
   }
   return {
     status: deps.inspect,
-    activate: () =>
-      enqueue(async () => {
-        const status = await deps.inspect()
-        if (status.state === "stopped" && status.installation?.state === "installed") {
-          await deps.launch()
-        }
-      }),
     start: () =>
       enqueue(async () => {
         if ((await deps.inspect()).state === "stopped") {

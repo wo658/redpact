@@ -75,6 +75,8 @@ export const ko = {
   Redpact: "Redpact",
   "Starting…": "시작 중…",
   "Image absent in this revision": "Image absent in this revision",
+  "Unable to load image: {{name}}": "Unable to load image: {{name}}",
+  "Loading image: {{name}}": "Loading image: {{name}}",
   "This image could not be decoded.": "This image could not be decoded.",
   Before: "Before",
   After: "After",
