@@ -297,7 +297,7 @@ async function scoreCandidate(
     .filter(Boolean)
   const scopeViolations = [
     ...changed.filter((path) => !subject.task.files.includes(path)),
-    ...untracked.filter((path) => !/^(test|tests|integration|ui-tests)\//.test(path)),
+    ...untracked.filter((path) => !/^(test|tests|task-tests|integration|ui-tests)\//.test(path)),
   ]
   const snapshot = join(root, "snapshots", subject.id)
   await cp(subject.checkout, snapshot, {
