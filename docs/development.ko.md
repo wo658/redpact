@@ -320,11 +320,87 @@ Compose 명령은 로컬 fixture 검증이며 Redpact 관리 실행 증거가 �
 절대경로 `cwd`, `promptFile`, 새 `outputDirectory`, `condition`(`A`, `B`, `C`),
 명시적 `model`, `reasoningEffort`, `timeoutMs`가 필요합니다. C에는 연결된 `/mcp`
 엔드포인트를 가리키는 `redpactUrl`도 필요합니다. 수집기는 승인 우회 없이 Codex의
-workspace-write 격리를 사용하고 플러그인과 중첩 에이전트를 끄며 인증을 유지합니다.
+workspace-write 격리를 기본으로 사용하고(`approvalMode: "sandbox_only"`) 플러그인과
+중첩 에이전트를 끄며 인증을 유지합니다. 사용자가 자동 승인 검토를 명시적으로 허용하면
+`approvalMode: "auto_review"`는 `--sandbox workspace-write` 대신 `--approve-for-me`를
+사용합니다. 두 CLI 플래그는 상호 배타적이며 어느 모드도 승인을 우회하지 않습니다.
 조건 비교 전 사용자·프로젝트 지시와 도구 격리는 별도로 확인해야 합니다. 단조 시계의
 경과시간, JSONL, stderr, 프로세스 메타데이터, 사용량 요약을 기록합니다. 시간초과는
-자손 프로세스나 컨테이너 정리를 증명하지 않습니다. 이는 단일 과제 수집기이며 부모
-조율, 독립 평가, 통합 절차나 전체 파일럿 자동화가 아닙니다.
+자손 프로세스나 컨테이너 정리를 증명하지 않습니다. 아래 배치 조율기가 이 수집기와
+독립 산출물 평가를 연결합니다. 병합한 배치의 통합 검증은 범위에 포함하지 않습니다.
+
+배치 실행기는 자식 에이전트 자체를 피실험자로 실행합니다. 각 피실험자는 실험 준비를
+돕는 보조 에이전트가 아니라 자기 컨텍스트와 Git worktree를 갖는 새로운 일회성
+`codex exec` 프로세스입니다. 동일한 기준 fixture 커밋에서 동일한 세 과제 중 하나를
+받습니다. 조건 내에서는 세 과제를 병렬로 실행합니다. 조건 간에는 반복마다 seed로
+섞은 순서에 따라 순차 실행하여 같은 호스트에서 조건들이 자원을 두고 경쟁하지 않습니다.
+
+다음 필드로 JSON 설정을 준비합니다. 경로는 실제 호스트 경로여야 하며 모델은 해당
+Codex CLI에서 사용할 수 있어야 합니다.
+
+```json
+{
+  "root": "/absolute/project/experiments/tea17-run-01",
+  "model": "gpt-6.1-sol",
+  "reasoningEffort": "medium",
+  "approvalMode": "auto_review",
+  "conditions": ["A", "B", "C"],
+  "repetitions": 2,
+  "seed": 17,
+  "timeoutMs": 900000,
+  "evaluationTimeoutMs": 120000,
+  "redpactOrigin": "http://127.0.0.1:54322",
+  "playwrightModule": "/absolute/node_modules/playwright/index.mjs",
+  "httpGuideFile": "/absolute/redpact-checkout/tools/pilot/http-guide.txt"
+}
+```
+
+```sh
+node tools/pilot/batch.ts prepare /absolute/private/config.json
+node tools/pilot/batch.ts run /absolute/project/experiments/tea17-run-01/manifest.json
+```
+
+예시는 사용자가 허용한 자동 승인 검토를 선택합니다. `approvalMode`를 생략하거나
+`sandbox_only`로 설정하면 기본값인 명시적 workspace-write 샌드박스를 사용합니다.
+`auto_review`는 사용자 허용이 있을 때만 사용합니다. 거절된 요청은 차단 상태로
+trace에 보고하고 우회 경로로 재시도하지 않습니다. 비교하는 모든 A/B/C 피실험자에
+동일한 승인 모드를 적용합니다. 자식 프로세스 종료, 실행 기록, 저장한 artifact만으로
+자원 정리를 증명하지 않으며 남은 컨테이너와 자손 프로세스를 독립적으로 확인합니다.
+
+`root`는 아직 없는 경로이며 영구적인 프로젝트 소유 위치에 보존해야 합니다. `prepare`는
+기준 저장소, 피실험자 worktree, 비공개 프롬프트, 고정된 평가 테스트 사본과
+`manifest.json`을 만들며 개발 에이전트를 실행하지 않습니다. `repetitions`는 1–20,
+`conditions`는 중복 없는 A/B/C 값입니다. `timeoutMs`는 피실험자별,
+`evaluationTimeoutMs`는 평가별 제한시간입니다. B에는 `httpGuideFile`이 필수입니다.
+검토한 서버 경로·요청 본문·승인 제약을 담은 `tools/pilot/http-guide.txt`를 사용합니다.
+호출 전 연결된 런타임의 OpenAPI 계약을 확인하며, 의도적으로 선택한 런타임의 계약이
+다를 때만 가이드를 교체합니다.
+API 경로를 추측하거나 인간 승인용 엔드포인트를 에이전트 작업으로 제공하지 않습니다.
+B/C에는 실제 연결된 루프백 HTTP 런타임을 가리키는 `redpactOrigin`이 필요합니다.
+
+`run`은 실행 전에 깨끗한 기준 checkout과 고정 평가자를 확인합니다. B/C에서는 런타임
+기능을 조회하고 `configure describe`로 실험 primary 설정 루트를 확인한 뒤 공유 설정
+템플릿을 작성하고 피실험자 checkout을 검증합니다. 기능이 없으면 실행을 차단합니다.
+런타임을 업데이트하거나 MCP를 HTTP로 대체하지 않습니다. A만 실행하면 Redpact 설정이
+필요하지 않습니다. 검증 통과가 실행 승인이나 Docker 준비 상태를 뜻하지는 않습니다.
+
+A 피실험자는 직접 Compose로 검증하고 B는 shell HTTP 요청, C는 Redpact MCP를
+사용합니다. 개발 중 로컬 단위 테스트는 모두 허용합니다. 공개 프롬프트에는 평가자가
+사용하는 UI 선택자와 컨트롤 이름을 명시합니다. 평가 파일은 피실험자 checkout 밖에 두고
+다른 worktree, 이전 trace, 과거 브랜치, 참조 구현을 읽지 않도록 지시합니다. 이는 지시에
+의한 분리이며 호스트 읽기를 막는 보안 경계가 아닙니다. 인과 비교 전에 원본 trace와
+변경 파일 범위를 검토해야 합니다.
+
+각 배치가 끝나면 산출물을 복사해 고정하고 배정된 과제를 독립 평가합니다. `report.json`은
+피실험자별 증거, 실제 입력·캐시 입력·출력 토큰 사용량(누락은 `null`), 과제 성공률과
+테스트 통과율, 피실험자·배치 경과시간을 담습니다. 인프라 오류를 기능 실패나 테스트
+0건 성공으로 바꾸지 않습니다. 평가가 불완전하면 전체 정확도는 미확인으로 두고 관찰한
+결과를 별도 보고합니다. 실패 실행도 개발 비용에 포함하며 평가 시간은 따로 기록합니다.
+결정적인 프로세스 조율기에는 모델 토큰 비용이 없습니다. 준비 보조 에이전트와 사람 개입은
+그 합계 밖이므로 별도 공개해야 합니다. 전송 조건 준수는 trace 수동 검토, 자원 정리는
+독립 확인이 필요합니다. 독립 인수 테스트 통과만으로 병합 코드의 정확성이나 관리형 검증
+완료를 증명하지 않습니다. 증거와 worktree는 보존하며 완료한 manifest를 새 반복으로
+재사용하지 않습니다.
 
 평가자 전용 테스트는 `tools/pilot/evaluation`에 있습니다. `PILOT_CHECKOUT`을 평가할
 fixture의 절대경로로 설정하고 `node --test tools/pilot/evaluation/*.acceptance.ts`를
@@ -344,3 +420,7 @@ Vitest Integration step과 분리된 Playwright functional/capture target이 있
 설정된 Redpact 러너가 필요하며 템플릿 복사나 로컬 기준 테스트 통과가 관리 실행을
 증명하지 않습니다. 샘플에 별도의 제품 CLI는 필요하지 않습니다. B 조건은 HTTP를 사용하고,
 포함된 CLI는 실험 준비·점검·계측만 담당합니다.
+
+Playwright functional 대상은 `baseline.spec.ts`와 피실험자가 작성한
+`ui-tests/task.spec.ts`를 포함하며 프롬프트에 파일명을 명시합니다. 모든 조건의
+HTTP 검증 테스트는 `integration/`에 작성하고 `APP_URL`을 사용합니다.

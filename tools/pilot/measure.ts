@@ -13,11 +13,18 @@ export interface MeasureConfig {
   reasoningEffort: string
   redpactUrl?: string
   timeoutMs: number
+  approvalMode?: "sandbox_only" | "auto_review"
 }
 
 function validate(config: MeasureConfig) {
   if (!config || !["A", "B", "C"].includes(config.condition)) {
     throw new Error("condition must be A, B, or C")
+  }
+  if (
+    config.approvalMode !== undefined &&
+    !["sandbox_only", "auto_review"].includes(config.approvalMode)
+  ) {
+    throw new Error("approvalMode must be sandbox_only or auto_review")
   }
   for (const key of ["cwd", "promptFile", "outputDirectory"] as const) {
     if (typeof config[key] !== "string" || !isAbsolute(config[key])) {
@@ -54,8 +61,9 @@ function argumentsFor(config: MeasureConfig) {
     "--ignore-user-config",
     "--ephemeral",
     "--json",
-    "--sandbox",
-    "workspace-write",
+    ...(config.approvalMode === "auto_review"
+      ? ["--approve-for-me"]
+      : ["--sandbox", "workspace-write"]),
     "--disable",
     "plugins",
     "--disable",
@@ -102,6 +110,7 @@ export async function measureRun(
     signal: string | null
     timedOut: boolean
     resourceCleanupVerified: boolean
+    approvalMode: "sandbox_only" | "auto_review"
     condition: MeasureConfig["condition"]
     model: string
     reasoningEffort: string
@@ -112,17 +121,37 @@ export async function measureRun(
     const child = spawn(executable.command, [...(executable.args ?? []), ...argumentsFor(config)], {
       cwd: config.cwd,
       shell: false,
+      detached: process.platform !== "win32",
       stdio: ["pipe", stdout.fd, stderr.fd],
     })
     let infrastructureError: string | null = null
     let timedOut = false
-    let killTimer: ReturnType<typeof setTimeout> | undefined
+    let timeoutCleanup: Promise<void> | undefined
+    const signalGroup = (signal: NodeJS.Signals) => {
+      if (process.platform === "win32" || !child.pid) {
+        child.kill(signal)
+        return
+      }
+      try {
+        process.kill(-child.pid, signal)
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ESRCH") {
+          infrastructureError = `Process group cleanup failed: ${(error as NodeJS.ErrnoException).code ?? "unknown"}`
+        }
+      }
+    }
     const timer = setTimeout(() => {
       timedOut = true
       infrastructureError =
         "Execution timeout; descendant processes and test resources require inspection."
-      child.kill("SIGTERM")
-      killTimer = setTimeout(() => child.kill("SIGKILL"), 1000)
+      signalGroup("SIGTERM")
+      // The leader may exit first; still kill remaining descendants before capture.
+      timeoutCleanup = new Promise<void>((done) => {
+        setTimeout(() => {
+          signalGroup("SIGKILL")
+          done()
+        }, 1000)
+      })
     }, config.timeoutMs)
     child.on("error", (error: NodeJS.ErrnoException) => {
       infrastructureError = `Spawn failed: ${error.code ?? "unknown"}`
@@ -137,7 +166,7 @@ export async function measureRun(
       child.once("close", (exitCode, signal) => done({ exitCode, signal })),
     )
     clearTimeout(timer)
-    clearTimeout(killTimer)
+    await timeoutCleanup
     if (result.signal && !infrastructureError) {
       infrastructureError = `Process terminated by ${result.signal}`
     }
@@ -147,6 +176,7 @@ export async function measureRun(
       infrastructureError,
       timedOut,
       resourceCleanupVerified: false,
+      approvalMode: config.approvalMode ?? "sandbox_only",
       condition: config.condition,
       model: config.model,
       reasoningEffort: config.reasoningEffort,

@@ -344,12 +344,96 @@ The single-task collector runs `node tools/pilot/measure.ts CONFIG.json`. Its JS
 requires absolute `cwd`, `promptFile`, and new `outputDirectory` paths, `condition`
 (`A`, `B`, or `C`), an explicit `model`, `reasoningEffort`, and `timeoutMs`. C also
 requires `redpactUrl` pointing to the connected `/mcp` endpoint. The collector uses
-Codex workspace-write isolation without approval bypass, disables plugins and nested
-agents, and keeps authentication. User/project instruction and tool isolation must
+Codex workspace-write isolation by default (`approvalMode: "sandbox_only"`),
+disables plugins and nested agents, and keeps authentication. When the user
+explicitly authorizes automatic approval review, `approvalMode: "auto_review"`
+uses `--approve-for-me` instead of `--sandbox workspace-write`. These CLI flags
+are mutually exclusive; neither mode enables an approval bypass. User/project instruction and tool isolation must
 still be audited before comparing conditions. It records monotonic elapsed time,
 JSONL, stderr, process metadata and usage summary. Timeout does not prove descendant
-or container cleanup. This is a single-task collector, not the parent coordinator,
-independent evaluator, integration procedure, or full pilot automation.
+or container cleanup. The batch coordinator below combines this collector with
+independent candidate evaluation; merged-batch integration remains outside its scope.
+
+The batch runner makes the child agents themselves the experimental subjects.
+Each subject is a fresh, ephemeral `codex exec` process with its own context and Git
+worktree, not a helper agent used to prepare the experiment. It receives one of the
+same three tasks from the same frozen fixture commit. Within a condition, the three
+tasks run concurrently. Conditions run sequentially in a seeded shuffled order on
+each repetition, avoiding competition between conditions on the host.
+
+Prepare a JSON configuration with these fields; paths must identify the actual host
+and the model must be available to its Codex CLI:
+
+```json
+{
+  "root": "/absolute/project/experiments/tea17-run-01",
+  "model": "gpt-6.1-sol",
+  "reasoningEffort": "medium",
+  "approvalMode": "auto_review",
+  "conditions": ["A", "B", "C"],
+  "repetitions": 2,
+  "seed": 17,
+  "timeoutMs": 900000,
+  "evaluationTimeoutMs": 120000,
+  "redpactOrigin": "http://127.0.0.1:54322",
+  "playwrightModule": "/absolute/node_modules/playwright/index.mjs",
+  "httpGuideFile": "/absolute/redpact-checkout/tools/pilot/http-guide.txt"
+}
+```
+
+```sh
+node tools/pilot/batch.ts prepare /absolute/private/config.json
+node tools/pilot/batch.ts run /absolute/project/experiments/tea17-run-01/manifest.json
+```
+
+The example selects user-authorized automatic approval review. Omit `approvalMode`
+or set it to `sandbox_only` to use the default explicit workspace-write sandbox.
+Use `auto_review` only with the user's authorization; denied requests remain
+blocked and must be reported in the captured trace, not retried through a bypass.
+Keep the same approval mode for every A/B/C subject in a comparison. Child-process
+exit, recorded executions and saved artifacts do not establish resource cleanup;
+inspect retained containers and descendant processes independently.
+
+`root` must be new and retained in a permanent project-owned location. `prepare`
+creates the baseline repository, subject worktrees, private prompts, a frozen copy
+of evaluator tests, and `manifest.json`; it does not launch development agents.
+`repetitions` accepts 1–20, and `conditions` must contain unique A/B/C values.
+`timeoutMs` bounds each subject and `evaluationTimeoutMs` bounds each evaluation.
+For B, `httpGuideFile` is required. Use the supplied `tools/pilot/http-guide.txt`,
+which documents the inspected server routes, payloads and approval limitations.
+Check the connected runtime's OpenAPI contract before executing its operations;
+replace the guide only when an intentionally selected runtime has a different contract. Do not guess API
+routes or supply human approval endpoints as agent operations. `redpactOrigin` is
+required for B/C and must identify the connected loopback HTTP runtime.
+
+`run` checks clean baseline checkouts and the frozen evaluator before dispatch. For
+B/C it discovers runtime capabilities, resolves the experiment primary settings root
+with `configure describe`, authors the shared settings template there and validates
+subject checkouts. Missing capabilities block dispatch; the runner neither updates
+the runtime nor replaces MCP with HTTP. A-only runs do not require Redpact setup.
+Validation alone does not grant execution approval or establish Docker readiness.
+
+A subjects use direct Compose verification; B subjects use shell HTTP requests;
+C subjects use Redpact MCP. All may use local unit tests while developing. Public
+prompts disclose the UI selectors and control labels checked by the evaluator.
+Evaluator files remain outside subject checkouts, and subjects are instructed not
+to inspect other worktrees, prior traces, history branches or reference solutions.
+This is instruction-based separation, not a security boundary preventing host reads.
+Review raw traces and changed-file scope before making a causal comparison.
+
+After each batch, the runner snapshots each candidate and evaluates its assigned
+task independently. `report.json` contains per-subject evidence, actual input,
+cached-input and output token usage (missing usage remains `null`), task success
+and test pass rates, and subject and batch elapsed times. Infrastructure errors do
+not become functional failures or successful zero-test runs. Incomplete evaluation
+keeps aggregate accuracy unknown while reporting observed outcomes separately.
+Development costs include failed executions; evaluator time is recorded separately.
+The deterministic coordinator has no model token cost; preparation assistants and
+any human intervention are outside that recorded total and must be disclosed.
+Transport compliance requires manual trace review, and resource cleanup requires
+independent inspection. Reports do not establish merged-code correctness or completed
+managed verification solely from passing independent acceptance tests. Evidence and
+worktrees are retained; do not reuse a completed manifest as a fresh repetition.
 
 Evaluator-only tests live in `tools/pilot/evaluation`. Set `PILOT_CHECKOUT` to the
 absolute candidate fixture root and run `node --test tools/pilot/evaluation/*.acceptance.ts`.
@@ -371,3 +455,7 @@ Playwright functional/capture targets. These need their configured Redpact runne
 copying the template or passing local baseline checks does not establish managed
 execution. The sample requires no additional product CLI: the B condition uses
 HTTP, and the included CLIs prepare/check/measure the experiment only.
+
+The functional Playwright target includes `baseline.spec.ts` and the subject-authored
+`ui-tests/task.spec.ts`; prompts specify that filename. HTTP verification tests
+are authored under `integration/` and use `APP_URL` in every condition.

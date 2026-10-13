@@ -12,7 +12,11 @@ const { createApp } = await import(pathToFileURL(join(root, "src/server.ts")).hr
 test("재시도: 일시 오류 2회 뒤 성공하면 주문과 재고를 한 번 반영한다", async () => {
   const payment = createPayment({ transientFailures: 2 })
   const shop = createShop({ stock: 10, priceCents: 250, charge: payment.charge })
-  assert.deepEqual(await shop.checkout({ quantity: 2 }), { id: 4, quantity: 2, totalCents: 500 })
+  let order: unknown
+  await assert.doesNotReject(async () => {
+    order = await shop.checkout({ quantity: 2 })
+  })
+  assert.deepEqual(order, { id: 4, quantity: 2, totalCents: 500 })
   assert.equal(payment.attempts(), 3)
   assert.equal(shop.stock(), 8)
   assert.equal(shop.orders().length, 4)
@@ -25,7 +29,9 @@ test("재시도: 총 3회 실패 후 재고 복구와 다음 요청 성공을 �
   assert.equal(payment.attempts(), 3)
   assert.equal(shop.stock(), 10)
   assert.equal(shop.orders().length, 3)
-  await shop.checkout({ quantity: 2 })
+  await assert.doesNotReject(async () => {
+    await shop.checkout({ quantity: 2 })
+  })
   assert.equal(payment.attempts(), 4)
   assert.equal(shop.stock(), 8)
   assert.equal(shop.orders().length, 4)

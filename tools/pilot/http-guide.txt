@@ -1,0 +1,127 @@
+Redpact HTTP operations for condition B
+
+This guide describes the checked-in server contract. Before sending a mutation,
+read GET /openapi.json on the assigned Redpact origin and verify that operation
+exists on that connected runtime. Missing operations block verification; do not
+update the runtime, switch to MCP, guess routes or change approval settings.
+Use only the assigned absolute checkout. This guide does not authorize reading
+another subject's files or evidence. Send JSON with Content-Type: application/json;
+URL-encode query values and path identifiers. Use a JSON serializer for request
+bodies rather than interpolating source text into shell commands. Preserve HTTP
+status and response bodies, including errors, in the recorded shell output.
+
+1. Inspect status and identify your existing checkout.
+
+GET /api/workspace-status?path=<URL-encoded assigned absolute checkout>
+
+This is the read-only equivalent of get_workspace_status({path}). It does not
+register a checkout or execute code. Record configuration and attention states.
+For HTTP operations needing IDs, connect only the assigned existing checkout:
+
+POST /api/projects
+Body: {"path":"<assigned absolute checkout>"}
+
+Read the returned project id. Then resolve the same checkout under that project:
+
+POST /api/projects/<projectId>/worktrees
+Body: {"path":"<assigned absolute checkout>"}
+
+Read the returned worktree id. These operations resolve existing project/checkouts;
+they do not create a Git worktree. Never call work-starts in this experiment.
+
+GET /api/worktrees/<worktreeId>/settings
+
+This reads and validates shared settings against this checkout's Compose inputs.
+Do not change the settings. Validation is not execution approval or readiness.
+
+2. Collect and submit current Integration sources, then execute them.
+
+Optional read-only catalog:
+GET /api/worktrees/<worktreeId>/integration-tests?scope=all
+
+Submit your authored Integration tests explicitly:
+
+POST /api/work-items
+Body: {"intent":"<your task intent>","worktreeId":"<your worktreeId>"}
+
+Read the returned work item id, then:
+POST /api/work-items/<workItemId>/submissions
+Body: {"files":[{"path":"task.test.ts","source":"<exact authored test source>"}]}
+
+Include the same task tests and required helpers that MCP run_tests would collect
+from tests.directory (integration/ in this fixture). Bundle paths are relative to
+that test root, not absolute host paths. Each file has path and source; serialize
+its actual contents. Supported source paths end in .ts, .js or .json, with at most
+50 files, 240 characters per path and 200000 characters per source. Do not submit
+a generated substitute for the authored task tests. The fixture uses Vitest with
+APP_URL bound by shared tests.env. Static source submission does not execute tests
+or establish human approval. Read the returned immutable submission id, then:
+
+POST /api/runs
+Body: {"submissionId":"<returned submissionId>"}
+
+This validates submission settings and queues the managed Vitest execution in a
+fresh temporary environment (HTTP 202). Preserve the returned run and submission
+IDs; inspect the response before selecting subsequent IDs. The existing health
+smoke is not the task's acceptance oracle. Do not use the convenience worktree
+integration-tests/run route as a substitute for this explicit authored bundle.
+
+GET /api/runs/<runId>
+GET /api/runs/<runId>/logs
+GET /api/submissions/<submissionId>
+
+Poll the run at a bounded interval until terminal state or your time budget ends.
+get_run in MCP serves the corresponding Integration result lookup. A queued run,
+source submission, failed collection or missing log is not a passing test. Record
+scenario results, limitations, preparation failures and cleanup errors. Missing
+output may remain null until the runner finishes.
+
+The HTTP route and MCP run_tests both provide managed Integration verification,
+but their approval entry points differ: POST /api/runs calls the execution
+workflow directly; MCP may create a pending review request. Do not claim these approval
+flows are identical, and include any approval wait in the experiment record.
+
+3. Execute configured Playwright targets and read recorded results.
+
+GET /api/worktrees/<worktreeId>/playwright
+
+POST /api/worktrees/<worktreeId>/playwright/run
+Body: {"target":"functional","viewport":{"width":1440,"height":900}}
+
+Repeat functional execution with width 390 and height 844. The fixture defines
+functional and capture targets. The functional target collects baseline.spec.ts
+and the subject-authored task.spec.ts in ui-tests/. To request screenshots through its configured
+capture target, use the same route with target "capture" and the chosen viewport.
+Do not modify target settings. The target selects its configured files: merely
+adding a file outside testMatch does not make it execute. Existing baseline.spec.ts
+is a smoke test, so report exactly which assertions were actually exercised.
+This operation corresponds to MCP run_playwright({path,target,viewport}) at the
+verification-purpose level; HTTP identifies the checkout by worktree ID.
+
+GET /api/playwright-runs/<executionId>
+
+Poll the returned execution identity, and inspect per-side outcomes, cases, errors
+and artifact identities. For an artifact returned by this execution:
+GET /api/playwright-runs/<executionId>/<side>/artifacts/<artifactId>
+where side is before or after. Never invent an artifact ID. Keep capture evidence
+separate from functional assertions. MCP get_execution provides the corresponding
+result/image/source access; there is no generic REST /api/executions endpoint to
+invent here.
+
+4. Read bounded review evidence.
+
+GET /api/review-context?kind=integration&id=<runId>
+GET /api/review-context?kind=playwright&id=<executionId>
+
+These are read-only equivalents of get_review_context({kind,id}). Preserve the
+returned stable viewer address and report requested human action. Do not call
+execution-review approval endpoints, obtain or replay App-only capabilities,
+change approval policy, or present agent action as human consent. If an execution
+is pending human approval, report the blocker and wait within the time budget.
+If the runtime rejects a request, record the rejection; do not route around it.
+
+Only cancel an execution you started when required for your own timeout/cleanup:
+POST /api/runs/<runId>/cancel
+POST /api/playwright-runs/<executionId>/cancel
+No request body is required. Cancellation does not prove cleanup succeeded.
+Preserve historical submissions and runs, and report unresolved retained resources.

@@ -19,7 +19,7 @@
       "functional": {
         "purpose": "functional",
         "scope": "worktree",
-        "testMatch": ["baseline.spec.ts"]
+        "testMatch": ["baseline.spec.ts", "task.spec.ts"]
       },
       "capture": {
         "purpose": "capture",
