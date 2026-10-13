@@ -421,6 +421,8 @@ Evaluator files remain outside subject checkouts, and subjects are instructed no
 to inspect other worktrees, prior traces, history branches or reference solutions.
 This is instruction-based separation, not a security boundary preventing host reads.
 Review raw traces and changed-file scope before making a causal comparison.
+Scope checks read NUL-delimited Git paths so non-ASCII names, spaces and newlines
+in evidence filenames do not become false scope violations.
 
 `environmentGuideFile` is optional. When supplied, the runner appends its exact
 contents to every subject prompt, identically across A/B/C. Record immutable Docker

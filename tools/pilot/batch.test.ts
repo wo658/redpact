@@ -11,7 +11,7 @@ test("세 조건의 두 반복을 재현 가능한 순서로 배치한다", () =
   }
 })
 
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { prepareBatch, runBatch } from "./batch.ts"
@@ -176,6 +176,64 @@ test("공통 환경 안내를 세 피실험자 프롬프트에 동일하게 고�
           "PINNED_BROWSER warm-image fresh-profile",
         ),
       )
+    }
+  } finally {
+    await rm(parent, { recursive: true, force: true })
+  }
+})
+
+test("한국어·공백·줄바꿈 증거 경로를 허용하면서 실제 범위 이탈은 보존한다", async () => {
+  const { parent, manifest } = await fixture()
+  const outside = "범위 밖\n파일.txt"
+  try {
+    const report = await runBatch(manifest, {
+      setup: async () => {},
+      measure: async (config) => {
+        await mkdir(join(config.cwd, "ui-tests/evidence"), { recursive: true })
+        await writeFile(
+          join(config.cwd, "ui-tests/evidence/기준 화면 390×844\ntrace.txt"),
+          "evidence",
+        )
+        await writeFile(join(config.cwd, outside), "out of scope")
+        const metadata = {
+          elapsedMs: 1,
+          exitCode: 0,
+          infrastructureError: null,
+          timedOut: false,
+          signal: null,
+          resourceCleanupVerified: false,
+          approvalMode: "sandbox_only" as const,
+          condition: config.condition,
+          model: "fixture",
+          reasoningEffort: "medium",
+        }
+        return {
+          metadata,
+          summary: summarizeRun(
+            JSON.stringify({ type: "thread.started", thread_id: config.cwd }) +
+              "\n" +
+              JSON.stringify({
+                type: "turn.completed",
+                usage: { input_tokens: 1, cached_input_tokens: 0, output_tokens: 1 },
+              }),
+            metadata,
+          ),
+        }
+      },
+      evaluate: async (options) => ({
+        status: "passed" as const,
+        tests: 1,
+        passed: 1,
+        failed: 0,
+        accuracy: 1,
+        infrastructureError: null,
+        elapsedMs: 1,
+        exitCode: 0,
+        evidenceDirectory: options.evidenceDirectory,
+      }),
+    })
+    for (const row of report.rows) {
+      assert.deepEqual(row.scopeViolations, [outside])
     }
   } finally {
     await rm(parent, { recursive: true, force: true })

@@ -294,11 +294,13 @@ async function scoreCandidate(
   evaluate: typeof evaluateCandidate,
 ) {
   const { root } = manifest.config
-  const changed = (await git(subject.checkout, "diff", "--name-only", manifest.baseline))
-    .split("\n")
+  const changed = (await git(subject.checkout, "diff", "--name-only", "-z", manifest.baseline))
+    .split("\0")
     .filter(Boolean)
-  const untracked = (await git(subject.checkout, "ls-files", "--others", "--exclude-standard"))
-    .split("\n")
+  const untracked = (
+    await git(subject.checkout, "ls-files", "--others", "--exclude-standard", "-z")
+  )
+    .split("\0")
     .filter(Boolean)
   const scopeViolations = [
     ...changed.filter((path) => !subject.task.files.includes(path)),
