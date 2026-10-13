@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Order Desk pilot</title>
+  <style>
+    body { font: 16px system-ui, sans-serif; margin: 24px; color: #202020; }
+    main { max-width: 760px; margin: auto; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { padding: 12px 8px; border-bottom: 1px solid #ddd; text-align: left; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Order Desk</h1>
+    <p id="status" role="status">Loading orders…</p>
+    <table aria-label="Orders">
+      <thead><tr><th>Order</th><th>Quantity</th><th>Total cents</th></tr></thead>
+      <tbody id="orders"></tbody>
+    </table>
+  </main>
+  <script type="module">
+    const response = await fetch('/orders')
+    const orders = await response.json()
+    for (const order of orders) {
+      const row = document.createElement('tr')
+      for (const value of [order.id, order.quantity, order.totalCents]) {
+        const cell = document.createElement('td')
+        cell.textContent = String(value)
+        row.append(cell)
+      }
+      document.querySelector('#orders').append(row)
+    }
+    document.querySelector('#status').textContent = `${orders.length} orders`
+  </script>
+</body>
+</html>

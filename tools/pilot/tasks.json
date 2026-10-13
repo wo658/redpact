@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "fixture": "tools/pilot/fixture",
+  "limitations": [
+    "주문과 재고는 메모리에만 저장됩니다. DB, 마이그레이션, 재시작 후 영속성은 평가하지 않습니다.",
+    "기준 테스트는 기준 커밋만 검증합니다. 과제 완료 평가는 별도 인수 테스트로 수행합니다."
+  ],
+  "tasks": [
+    {
+      "id": "api",
+      "title": "HTTP 주문 수량 입력 검증",
+      "files": ["src/checkout-request.ts"],
+      "acceptance": [
+        "빈 본문은 수량 1로 처리한다.",
+        "JSON 객체의 quantity가 양의 안전한 정수이면 해당 수량을 사용한다.",
+        "quantity 2는 총액 500이며 재고를 2 감소시킨다.",
+        "잘못된 JSON, null, 배열, 누락 quantity, 0, 음수, 소수, 문자열은 400을 반환하고 주문·재고·결제 시도를 변경하지 않는다.",
+        "잘못된 요청 후 정상 요청은 성공한다."
+      ]
+    },
+    {
+      "id": "ui",
+      "title": "실제 주문 목록의 최소 수량 필터",
+      "files": ["src/page.html"],
+      "acceptance": [
+        "최소 수량 입력과 적용·초기화 버튼을 제공한다.",
+        "초기 seed 수량 1·2·3을 모두 표시하며 최소 수량 2 적용 시 2·3만 표시한다.",
+        "초기화하면 전체 목록과 입력 초기 상태로 돌아간다.",
+        "결과가 없으면 명확한 빈 상태를 표시한다.",
+        "목록 요청 실패 시 오류와 다시 시도 버튼을 제공하며 재시도 성공 시 목록을 복구한다.",
+        "입력과 버튼을 키보드로 조작할 수 있다.",
+        "1440×900과 390×844에서 조작 가능하고 페이지 가로 넘침이 없다."
+      ]
+    },
+    {
+      "id": "retry",
+      "title": "일시적 결제 오류의 제한된 자동 재시도",
+      "files": ["src/payment.ts"],
+      "acceptance": [
+        "PaymentError.transient가 true일 때만 최초 시도 포함 최대 3회 호출한다.",
+        "일시 실패 2회 뒤 성공하면 주문 1건을 생성하고 재고를 한 번만 감소시킨다.",
+        "일시 실패 3회면 요청 실패, 재고 원복, 신규 주문 없음이며 시도 횟수는 3이다.",
+        "영구 오류와 알 수 없는 오류는 재시도하지 않는다.",
+        "실패 종료 후 다음 주문 요청은 정상 처리할 수 있다.",
+        "같은 상품의 동시 주문이 재고를 초과 판매하지 않는다."
+      ]
+    }
+  ],
+  "verification": {
+    "baselineOnly": "fixture/test/baseline.test.ts는 미구현 상태를 의도적으로 검증하므로 기준 커밋 준비 단계에서만 실행한다. 개발 완료 후 회귀 검증 대상으로 사용하지 않는다.",
+    "managedIntegration": "fixture/integration/health.test.ts는 Redpact Vitest runner가 실행하는 공개 HTTP smoke 테스트이다. 과제별 인수 평가를 대신하지 않는다.",
+    "managedBrowser": "fixture/ui-tests/baseline.spec.ts와 capture.spec.ts는 Redpact Playwright runner를 사용한다.",
+    "independentEvaluation": "evaluation/*.acceptance.ts는 평가자만 수정하며 개발 작업용 fixture 복사에 포함하지 않는다.",
+    "settings": "fixture/settings.example.json은 설정 템플릿이다. configure describe 후 공통 primary settings에 반영하고 configure validate를 수행한다. runner 의존성은 Redpact가 제공하며 fixture에는 설치하지 않는다."
+  }
+}

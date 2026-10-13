@@ -299,3 +299,75 @@ After publication, run the `Public installation verification` workflow to instal
 from the real public URL on Linux x64, macOS arm64 and macOS x64, then check the CLI,
 bundled viewer and MCP. Verify Homebrew and both plugin clients separately; these
 checks do not prove Docker execution or MCP Apps card support in each client.
+
+
+## Comparative pilot fixtures
+
+`tools/pilot/fixture` is an isolated, in-memory Order Desk fixture for comparing
+ordinary worktrees, shell HTTP calls to Redpact, and direct MCP. It does not test
+DB persistence or migrations. `tools/pilot/tasks.json` defines the three Korean
+acceptance tasks and separate edit boundaries. The baseline intentionally lacks
+request quantity parsing, UI filtering and payment retries; its passing baseline
+tests do not mean those tasks are solved. Experiment proposals and results belong
+in the tracking issue, not in product documentation.
+
+```sh
+node --test tools/pilot/*.test.ts tools/pilot/fixture/test/*.test.ts
+REDPACT_URL=http://127.0.0.1:54322 node tools/pilot/preflight.ts
+node tools/pilot/metrics.ts /path/to/events.jsonl /path/to/metadata.json
+docker compose -p tea17-fixture -f tools/pilot/fixture/compose.yaml up -d --build --wait
+docker compose -p tea17-fixture -f tools/pilot/fixture/compose.yaml port app 3000
+```
+
+Use the actual connected runtime origin. Preflight discovers model-visible MCP tools
+and HTTP routes without running tests or changing approval policy. Exit 2 means
+required capabilities are missing; exit 1 means discovery failed. Exit 0 proves only
+capability presence, not execution readiness, route equivalence or approval. An
+optional output path writes a new JSON report and refuses to replace an existing one.
+Do not substitute HTTP execution for missing MCP tools in a measured MCP condition.
+
+Metrics consume Codex JSONL plus metadata containing `elapsedMs`, `exitCode`, and
+optional `infrastructureError`. Missing usage is unknown, never zero; cached input
+is part of total input. Maximum context occupancy and compaction count are unknown
+unless independently instrumented. Preserve raw traces privately outside Git; they
+may contain prompts, code and tool output. Development and evaluator costs must be
+reported separately, including the coordinating parent when measured.
+
+The Compose command is local fixture verification, not managed Redpact evidence.
+The app has seeded orders with quantities 1, 2 and 3 and fresh per-process inventory.
+`PAYMENT_FAILURES` and `PAYMENT_PERMANENT` configure its deterministic payment mock.
+The ephemeral published port avoids a fixed host-port requirement. Retain inspection
+environments while needed; remove only the owned fixture with the same Compose
+project name and `down --volumes` when inspection is finished.
+
+The single-task collector runs `node tools/pilot/measure.ts CONFIG.json`. Its JSON
+requires absolute `cwd`, `promptFile`, and new `outputDirectory` paths, `condition`
+(`A`, `B`, or `C`), an explicit `model`, `reasoningEffort`, and `timeoutMs`. C also
+requires `redpactUrl` pointing to the connected `/mcp` endpoint. The collector uses
+Codex workspace-write isolation without approval bypass, disables plugins and nested
+agents, and keeps authentication. User/project instruction and tool isolation must
+still be audited before comparing conditions. It records monotonic elapsed time,
+JSONL, stderr, process metadata and usage summary. Timeout does not prove descendant
+or container cleanup. This is a single-task collector, not the parent coordinator,
+independent evaluator, integration procedure, or full pilot automation.
+
+Evaluator-only tests live in `tools/pilot/evaluation`. Set `PILOT_CHECKOUT` to the
+absolute candidate fixture root and run `node --test tools/pilot/evaluation/*.acceptance.ts`.
+The UI evaluator uses installed Playwright, or an explicit `PILOT_PLAYWRIGHT_MODULE`
+module path. It checks Apply/Reset/Retry controls in English on the actual app.
+The unchanged baseline is expected to fail task acceptance. Keep evaluator tests,
+reference solutions and previous traces outside every development agent's checkout;
+copy only the fixture when creating experiment repositories. Baseline tests that
+assert intentionally missing behavior are preparation checks, not candidate
+regression requirements. Validate evaluator red/green with a separate private
+reference implementation before freezing a pilot. Managed runner templates are
+separate from this independent evaluation path.
+
+`fixture/settings.example.json` is a template, not active shared configuration.
+Resolve the generated experiment repository's primary settings root with `configure
+describe` before authoring its `.redpact/settings.json`; then validate that same
+checkout. The fixture includes portable Vitest Integration steps and separate
+Playwright functional/capture targets. These need their configured Redpact runners;
+copying the template or passing local baseline checks does not establish managed
+execution. The sample requires no additional product CLI: the B condition uses
+HTTP, and the included CLIs prepare/check/measure the experiment only.

@@ -279,3 +279,68 @@ Claude 형식의 카탈로그를 읽을 수 있습니다. 플러그인 변경 �
 Linux x64, macOS arm64, macOS x64 설치를 수행하고 CLI·번들 뷰어·MCP를 확인합니다.
 Homebrew와 두 플러그인 클라이언트는 별도로 검증합니다. 이 검사는 Docker 실행이나
 각 클라이언트의 MCP Apps 카드 지원을 증명하지 않습니다.
+
+
+## 비교 파일럿 fixture
+
+`tools/pilot/fixture`는 일반 worktree, Redpact HTTP API의 shell 호출, 직접 MCP를
+비교하기 위한 독립적인 메모리 기반 Order Desk fixture입니다. DB 영속성이나
+마이그레이션은 검증하지 않습니다. `tools/pilot/tasks.json`에 한국어 인수 과제 세 개와
+독립적인 수정 경계를 정의합니다. 기준 앱에는 요청 수량 파싱, UI 필터, 결제 재시도가
+의도적으로 없습니다. 기준 테스트 통과가 과제 완료를 뜻하지 않습니다. 실험 제안과
+결과는 제품 문서가 아닌 추적 이슈에 기록합니다.
+
+```sh
+node --test tools/pilot/*.test.ts tools/pilot/fixture/test/*.test.ts
+REDPACT_URL=http://127.0.0.1:54322 node tools/pilot/preflight.ts
+node tools/pilot/metrics.ts /path/to/events.jsonl /path/to/metadata.json
+docker compose -p tea17-fixture -f tools/pilot/fixture/compose.yaml up -d --build --wait
+docker compose -p tea17-fixture -f tools/pilot/fixture/compose.yaml port app 3000
+```
+
+실제로 연결된 런타임 주소를 사용합니다. 사전점검은 테스트 실행이나 승인 정책 변경 없이
+모델에 노출되는 MCP 도구와 HTTP 경로를 조회합니다. 종료 코드 2는 필수 기능 누락,
+1은 조회 실패입니다. 0은 기능 존재만 확인하며 실행 준비, 경로 동등성, 승인을 증명하지
+않습니다. 선택적인 출력 경로에는 새 JSON 보고서를 기록하고 기존 파일을 덮어쓰지 않습니다.
+MCP 측정 조건에서 누락된 도구를 HTTP 실행으로 대체하지 않습니다.
+
+계측기는 Codex JSONL과 `elapsedMs`, `exitCode`, 선택적 `infrastructureError`를 담은
+메타데이터를 읽습니다. 사용량 누락은 0이 아닌 미확인으로 처리하며 캐시 입력은 전체
+입력에 포함됩니다. 최대 컨텍스트 점유와 압축 횟수는 별도 계측 없이는 미확인입니다.
+원본 trace에는 프롬프트, 코드, 도구 출력이 포함될 수 있으므로 Git 밖에 비공개로
+보존합니다. 개발과 평가 비용을 분리하고 측정한 부모의 조율 비용도 포함합니다.
+
+Compose 명령은 로컬 fixture 검증이며 Redpact 관리 실행 증거가 아닙니다. 앱은 수량
+1·2·3의 초기 주문과 프로세스별 새 재고를 제공합니다. `PAYMENT_FAILURES`와
+`PAYMENT_PERMANENT`는 결정적인 결제 mock을 설정합니다. 임시 공개 포트를 사용하므로
+고정 호스트 포트가 필요하지 않습니다. 확인에 필요한 환경은 유지하고, 확인이 끝나면
+같은 Compose 프로젝트 이름과 `down --volumes`로 소유한 fixture만 제거합니다.
+
+단일 과제 수집기는 `node tools/pilot/measure.ts CONFIG.json`으로 실행합니다. JSON에는
+절대경로 `cwd`, `promptFile`, 새 `outputDirectory`, `condition`(`A`, `B`, `C`),
+명시적 `model`, `reasoningEffort`, `timeoutMs`가 필요합니다. C에는 연결된 `/mcp`
+엔드포인트를 가리키는 `redpactUrl`도 필요합니다. 수집기는 승인 우회 없이 Codex의
+workspace-write 격리를 사용하고 플러그인과 중첩 에이전트를 끄며 인증을 유지합니다.
+조건 비교 전 사용자·프로젝트 지시와 도구 격리는 별도로 확인해야 합니다. 단조 시계의
+경과시간, JSONL, stderr, 프로세스 메타데이터, 사용량 요약을 기록합니다. 시간초과는
+자손 프로세스나 컨테이너 정리를 증명하지 않습니다. 이는 단일 과제 수집기이며 부모
+조율, 독립 평가, 통합 절차나 전체 파일럿 자동화가 아닙니다.
+
+평가자 전용 테스트는 `tools/pilot/evaluation`에 있습니다. `PILOT_CHECKOUT`을 평가할
+fixture의 절대경로로 설정하고 `node --test tools/pilot/evaluation/*.acceptance.ts`를
+실행합니다. UI 평가자는 설치된 Playwright 또는 명시적인 `PILOT_PLAYWRIGHT_MODULE`
+모듈 경로를 사용합니다. 실제 앱의 영어 Apply/Reset/Retry 컨트롤을 검증합니다.
+수정하지 않은 기준 앱은 과제 인수 테스트에 실패하는 것이 정상입니다. 평가 테스트,
+참조 정답과 이전 trace는 모든 개발 에이전트의 checkout 밖에 두고 실험 저장소에는
+fixture만 복사합니다. 의도적인 미구현 상태를 단언하는 기준 테스트는 준비용 점검이며
+과제 산출물이 지켜야 할 회귀 요구가 아닙니다. 파일럿을 고정하기 전에 별도의 비공개
+참조 구현으로 평가자의 red/green을 검증합니다. 관리 실행 러너 템플릿은 이 독립 평가
+경로와 구분합니다.
+
+`fixture/settings.example.json`은 템플릿이며 활성 공유 설정이 아닙니다. 생성한 실험
+저장소에서 `configure describe`로 기본 설정 루트를 확인한 뒤 그 위치의
+`.redpact/settings.json`을 작성하고 같은 checkout을 검증합니다. fixture에는 이식 가능한
+Vitest Integration step과 분리된 Playwright functional/capture target이 있습니다.
+설정된 Redpact 러너가 필요하며 템플릿 복사나 로컬 기준 테스트 통과가 관리 실행을
+증명하지 않습니다. 샘플에 별도의 제품 CLI는 필요하지 않습니다. B 조건은 HTTP를 사용하고,
+포함된 CLI는 실험 준비·점검·계측만 담당합니다.
