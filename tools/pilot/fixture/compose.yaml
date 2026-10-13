@@ -2,6 +2,9 @@ services:
   app:
     build: .
     ports: ["3000"]
+    networks:
+      default:
+        aliases: [app.redpact.test]
     environment:
       PAYMENT_FAILURES: "${PAYMENT_FAILURES:-0}"
       PAYMENT_PERMANENT: "${PAYMENT_PERMANENT:-0}"

@@ -377,7 +377,8 @@ and the model must be available to its Codex CLI:
   "evaluationTimeoutMs": 120000,
   "redpactOrigin": "http://127.0.0.1:54322",
   "playwrightModule": "/absolute/node_modules/playwright/index.mjs",
-  "httpGuideFile": "/absolute/redpact-checkout/tools/pilot/http-guide.txt"
+  "httpGuideFile": "/absolute/redpact-checkout/tools/pilot/http-guide.txt",
+  "environmentGuideFile": "/absolute/private/environment-guide.txt"
 }
 ```
 
@@ -420,6 +421,43 @@ Evaluator files remain outside subject checkouts, and subjects are instructed no
 to inspect other worktrees, prior traces, history branches or reference solutions.
 This is instruction-based separation, not a security boundary preventing host reads.
 Review raw traces and changed-file scope before making a causal comparison.
+
+`environmentGuideFile` is optional. When supplied, the runner appends its exact
+contents to every subject prompt, identically across A/B/C. Record immutable Docker
+image IDs, runner/browser fingerprints, cache policy and the shared execution
+instructions there before preparing the baseline. The current browser protocol
+pins Playwright 1.63.0 and Chromium 153.0.8010.12 on Linux arm64. Reuse the same
+prewarmed runtime images across conditions, while creating fresh runner containers
+and browser profiles for each execution. This measures development with warm
+images and excludes initial dependency/browser installation cost. Model prompt
+caching is not controlled; preserve observed cached-input token usage and disclose
+that limitation rather than calling the experiment cache-free.
+
+For direct A verification, the fixture includes `integration.ts` and `browser.ts`.
+They accept the owned Compose network and an immutable `sha256:` Docker image ID,
+copy the current test sources into a fresh container, and retain results plus
+runner/browser fingerprints under `artifacts/`. They do not call Redpact. B/C use
+the managed runtime with the same pinned runner images. Supply the appropriate
+image IDs in the shared environment guide; do not substitute mutable image tags.
+The direct browser helper takes explicit viewport dimensions: use 1440×900 and
+390×844 for the pilot instead of relying on its defaults.
+
+```sh
+node integration.ts OWNED_COMPOSE_NETWORK IMMUTABLE_INTEGRATION_IMAGE_ID
+node browser.ts OWNED_COMPOSE_NETWORK IMMUTABLE_BROWSER_IMAGE_ID http://app.redpact.test:3000 functional 1440 900
+node browser.ts OWNED_COMPOSE_NETWORK IMMUTABLE_BROWSER_IMAGE_ID http://app.redpact.test:3000 functional 390 844
+```
+
+Worktree Playwright sources live in `ui-tests/worktree/`: `baseline.spec.ts` is the
+public smoke, `task.spec.ts` is the subject's functional test, and `capture.spec.ts`
+is the capture scenario. Shared settings select both baseline and task files for
+the functional target, and the capture file for the capture target; both targets
+have `scope: "worktree"`. The configured desktop viewport is 1440×900 and mobile
+viewport is 390×844. Keep the independent evaluator's host, browser module and
+browser version fixed across all candidates and record them separately: its host
+browser is an assessment environment, not the subject's pinned Linux browser.
+Runtime updates require separate authorization and preparation; the batch runner
+only checks the connected runtime and never upgrades it during measurement.
 
 After each batch, the runner snapshots each candidate and evaluates its assigned
 task independently. `report.json` contains per-subject evidence, actual input,

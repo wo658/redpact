@@ -90,7 +90,7 @@ Body: {"target":"functional","viewport":{"width":1440,"height":900}}
 
 Repeat functional execution with width 390 and height 844. The fixture defines
 functional and capture targets. The functional target collects baseline.spec.ts
-and the subject-authored task.spec.ts in ui-tests/. To request screenshots through its configured
+and the subject-authored task.spec.ts in ui-tests/worktree/. To request screenshots through its configured
 capture target, use the same route with target "capture" and the chosen viewport.
 Do not modify target settings. The target selects its configured files: merely
 adding a file outside testMatch does not make it execute. Existing baseline.spec.ts

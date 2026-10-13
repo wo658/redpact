@@ -1,0 +1,24 @@
+Browser verification protocol (all conditions)
+
+The coordinator builds the existing Redpact Playwright Dockerfile before measurement. It computes SHA-256 over each filename followed by its bytes, in order: Dockerfile, reporter.mjs, viewport.cjs, capture-viewport.cjs. Build with REDPACT_PLAYWRIGHT_INPUTS=<digest> and tag redpact-playwright:1.63.0-v1. Record docker image inspect ID, architecture, input digest, Playwright package version and Chromium browser.version(). The runtime selects this same cached image by its io.redpact.playwright-inputs label. Abort a run if a different matching image ID is selected.
+
+Warm the fixture Node base image and application build layers before measurement for every subject checkout. Build the Playwright image once outside measurement. No npm/pnpm install, Playwright download or image pull belongs in a measured run. This is warm dependency/image cache, with a fresh application, fresh container filesystem and fresh browser context/profile for each run. Model prompt-cache hits are not controllable; report cached and uncached input tokens separately.
+
+A subjects use direct Docker Compose and the browser.ts helper in their checkout. They must use the coordinator-supplied immutable sha256 image ID, never another local browser. For example, after docker compose -p <unique-project> up -d --build --wait:
+
+node browser.ts <unique-project>_default <IMAGE_ID> http://app.redpact.test:3000 functional 1440 900
+node browser.ts <unique-project>_default <IMAGE_ID> http://app.redpact.test:3000 capture 1440 900
+
+Author ui-tests/worktree/task.spec.ts for functional coverage. The capture target runs ui-tests/worktree/capture.spec.ts, whose test can create its own mobile context. Explicitly cover 1440x900 and 390x844. The helper copies tests/config into a new unprivileged container, runs the image's installed Chromium and @playwright/test, preserves fingerprint/results/traces under artifacts/browser-*, and removes its own browser container in finally. Run docker compose -p <unique-project> down --volumes --remove-orphans after verification. The helper does not clean the Compose application.
+
+B/C use the runtime functional/capture targets with the same settings (locale ko-KR, UTC, default desktop viewport explicitly set to 1440x900, mobile390x844). Read returned browserVersion and execution evidence and compare with the preflight fingerprint. Their runtime containers use the same image ID and fresh profiles. Different reporters and orchestration remain intentional transport/workflow differences. Default Redpact screenshots, traces, worker count, retries, memory and shared-memory limits match the A helper. Cold-cache performance is not measured by this protocol.
+
+A Integration verification
+
+Use the coordinator-supplied immutable ID for the warmed redpact-vitest:4.0.18-v1 image built from app/server/src/adapters/test-runner/Dockerfile. The helper never installs packages during measurement:
+
+node integration.ts <unique-project>_default <VITEST_IMAGE_ID>
+
+Author Vitest HTTP tests in integration/*.test.ts (using APP_URL=http://app.redpact.test:3000). The helper copies integration sources into a fresh image container, provides the baked Vitest dependency, sets one fork worker with no file parallelism and 10-second test/hook timeouts, captures JSON results and Node/Vitest/platform fingerprints under artifacts/integration-*, and removes the runner container. The parent still owns Compose cleanup. Do not add package.json or dependency installs to the test directory for these fixed-dependency tasks.
+
+Runner time limits: A browser global timeout600s, Docker attach watchdog630s; managed default execution limit600s. Playwright per-test timeout30s. Vitest per-test/hook timeout10s. A integration has an internal600s process limit and Docker attach watchdog630s for cleanup; experiments have an independent subject budget.

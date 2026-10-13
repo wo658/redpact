@@ -66,7 +66,7 @@ test/baseline.test.ts는 미구현 기준 상태만 검증하므로 완료 후 �
     sections.push(`진행자가 제공한 검증 가이드:\n${verificationGuide}`)
   }
   if (task.id === "ui") {
-    sections.push(`UI 과제의 Playwright 테스트는 ui-tests/task.spec.ts에 작성하세요. 공유 functional target은 baseline.spec.ts와 task.spec.ts를 실행합니다.
+    sections.push(`UI 과제의 Playwright 테스트는 ui-tests/worktree/task.spec.ts에 작성하세요. 공유 functional target은 baseline.spec.ts와 task.spec.ts를 실행합니다.
 UI 공개 계약: 최소 수량 입력은 접근 가능한 number 입력 한 개(spinbutton)로 제공하세요.
 버튼의 접근 가능한 이름은 Apply, Reset, Retry로 지정하세요. Reset은 입력값도 빈 문자열로 돌립니다.
 기존 #orders tbody와 행의 Order, Quantity, Total cents 열 순서를 유지하세요.

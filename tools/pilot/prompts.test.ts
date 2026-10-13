@@ -76,6 +76,6 @@ test("제한시간이 잘못되면 실험 지시를 생성하지 않는다", () 
 test("관리형 functional 대상에 포함되는 과제 파일명을 모든 조건에 알린다", () => {
   for (const condition of ["A", "B", "C"] as const) {
     const prompt = makeTaskPrompt({ ...common, task: { ...task, id: "ui" }, condition })
-    assert.ok(prompt.includes("ui-tests/task.spec.ts"))
+    assert.ok(prompt.includes("ui-tests/worktree/task.spec.ts"))
   }
 })

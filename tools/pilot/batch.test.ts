@@ -152,3 +152,32 @@ test("준비 이후 프롬프트나 평가기가 달라지면 피실험자를 �
     }
   }
 })
+
+test("공통 환경 안내를 세 피실험자 프롬프트에 동일하게 고정한다", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "pilot-environment-"))
+  try {
+    const guide = join(parent, "guide.txt")
+    await writeFile(guide, "PINNED_BROWSER warm-image fresh-profile")
+    const manifest = await prepareBatch({
+      root: join(parent, "experiment"),
+      model: "fixture",
+      reasoningEffort: "medium",
+      conditions: ["A"],
+      repetitions: 1,
+      seed: 17,
+      timeoutMs: 1000,
+      evaluationTimeoutMs: 1000,
+      playwrightModule: "/fixture/playwright.mjs",
+      environmentGuideFile: guide,
+    })
+    for (const subject of manifest.batches[0].subjects) {
+      assert.ok(
+        (await readFile(subject.promptFile, "utf8")).includes(
+          "PINNED_BROWSER warm-image fresh-profile",
+        ),
+      )
+    }
+  } finally {
+    await rm(parent, { recursive: true, force: true })
+  }
+})

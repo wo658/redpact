@@ -351,7 +351,8 @@ Codex CLI에서 사용할 수 있어야 합니다.
   "evaluationTimeoutMs": 120000,
   "redpactOrigin": "http://127.0.0.1:54322",
   "playwrightModule": "/absolute/node_modules/playwright/index.mjs",
-  "httpGuideFile": "/absolute/redpact-checkout/tools/pilot/http-guide.txt"
+  "httpGuideFile": "/absolute/redpact-checkout/tools/pilot/http-guide.txt",
+  "environmentGuideFile": "/absolute/private/environment-guide.txt"
 }
 ```
 
@@ -390,6 +391,39 @@ A 피실험자는 직접 Compose로 검증하고 B는 shell HTTP 요청, C는 Re
 다른 worktree, 이전 trace, 과거 브랜치, 참조 구현을 읽지 않도록 지시합니다. 이는 지시에
 의한 분리이며 호스트 읽기를 막는 보안 경계가 아닙니다. 인과 비교 전에 원본 trace와
 변경 파일 범위를 검토해야 합니다.
+
+`environmentGuideFile`은 선택 사항입니다. 지정하면 해당 내용을 모든 A/B/C 피실험자
+프롬프트에 동일하게 덧붙입니다. 기준 상태를 준비하기 전에 불변 Docker 이미지 ID,
+러너·브라우저 식별 정보, 캐시 정책과 공통 실행 지시를 기록합니다. 현재 브라우저 프로토콜은
+Linux arm64의 Playwright 1.63.0과 Chromium 153.0.8010.12를 고정합니다. 조건마다
+동일하게 미리 준비한 런타임 이미지를 재사용하되 실행할 때마다 러너 컨테이너와 브라우저
+프로필은 새로 만듭니다. 따라서 이미지 캐시가 준비된 개발을 측정하며 최초 의존성·브라우저
+설치 비용은 제외합니다. 모델 프롬프트 캐시는 통제하지 않습니다. 관찰된 캐시 입력 토큰을
+보존하고 이 제약을 공개하며 캐시가 없는 실험이라고 표현하지 않습니다.
+
+A의 직접 검증용으로 fixture에 `integration.ts`와 `browser.ts`를 제공합니다. 소유한
+Compose 네트워크와 불변 `sha256:` Docker 이미지 ID를 받아 현재 테스트 소스를 새
+컨테이너에 복사하고 결과와 러너·브라우저 식별 정보를 `artifacts/`에 보존합니다.
+Redpact를 호출하지 않습니다. B/C는 같은 고정 러너 이미지를 사용하는 관리형 런타임을
+호출합니다. 공통 환경 가이드에 해당 이미지 ID를 제공하고 변경 가능한 이미지 태그로
+대체하지 않습니다. 직접 브라우저 도우미에는 viewport를 명시적으로 전달합니다.
+파일럿에서는 도우미 기본값에 의존하지 않고 1440×900과 390×844를 사용합니다.
+
+```sh
+node integration.ts OWNED_COMPOSE_NETWORK IMMUTABLE_INTEGRATION_IMAGE_ID
+node browser.ts OWNED_COMPOSE_NETWORK IMMUTABLE_BROWSER_IMAGE_ID http://app.redpact.test:3000 functional 1440 900
+node browser.ts OWNED_COMPOSE_NETWORK IMMUTABLE_BROWSER_IMAGE_ID http://app.redpact.test:3000 functional 390 844
+```
+
+Worktree Playwright 소스는 `ui-tests/worktree/`에 둡니다. `baseline.spec.ts`는 공개
+smoke, `task.spec.ts`는 피실험자가 작성하는 기능 테스트, `capture.spec.ts`는 캡처
+시나리오입니다. 공유 설정은 functional target에서 baseline과 task 파일을, capture
+target에서 capture 파일을 선택합니다. 두 target의 `scope`는 `worktree`입니다.
+설정된 desktop viewport는 1440×900, mobile viewport는 390×844입니다. 독립 평가자의
+호스트·브라우저 모듈·브라우저 버전은 모든 산출물에서 동일하게 유지하고 별도로 기록합니다.
+평가자 호스트 브라우저는 평가 환경이며 피실험자의 고정 Linux 브라우저와 구분합니다.
+런타임 업데이트는 별도 허용과 준비가 필요합니다. 배치 실행기는 연결된 런타임을
+확인할 뿐 측정 도중 업그레이드하지 않습니다.
 
 각 배치가 끝나면 산출물을 복사해 고정하고 배정된 과제를 독립 평가합니다. `report.json`은
 피실험자별 증거, 실제 입력·캐시 입력·출력 토큰 사용량(누락은 `null`), 과제 성공률과

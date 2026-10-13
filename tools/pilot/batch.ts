@@ -32,6 +32,7 @@ export interface BatchConfig {
   redpactOrigin?: string
   playwrightModule: string
   approvalMode?: "sandbox_only" | "auto_review"
+  environmentGuideFile?: string
   httpGuideFile?: string
 }
 interface Subject {
@@ -155,6 +156,9 @@ function validate(config: BatchConfig) {
 export async function prepareBatch(config: BatchConfig): Promise<Manifest> {
   validate(config)
   const tasks: Task[] = JSON.parse(await readFile(join(here, "tasks.json"), "utf8")).tasks
+  const environmentGuide = config.environmentGuideFile
+    ? await readFile(config.environmentGuideFile, "utf8")
+    : ""
   const httpGuide = config.httpGuideFile ? await readFile(config.httpGuideFile, "utf8") : ""
   if (config.conditions.includes("B") && !httpGuide.trim()) {
     throw new Error("B HTTP operation guide is empty")
@@ -195,14 +199,15 @@ export async function prepareBatch(config: BatchConfig): Promise<Manifest> {
       const checkout = join(config.root, "worktrees", id)
       await git(primary, "worktree", "add", "-b", id, checkout, baseline)
       const promptFile = join(config.root, "private", `${id}.txt`)
-      const prompt = makeTaskPrompt({
-        task,
-        condition: batch.condition,
-        checkout,
-        redpactOrigin: config.redpactOrigin ?? "",
-        verificationGuide: batch.condition === "B" ? httpGuide : undefined,
-        timeoutSeconds: Math.ceil(config.timeoutMs / 1000),
-      })
+      const prompt =
+        makeTaskPrompt({
+          task,
+          condition: batch.condition,
+          checkout,
+          redpactOrigin: config.redpactOrigin ?? "",
+          verificationGuide: batch.condition === "B" ? httpGuide : undefined,
+          timeoutSeconds: Math.ceil(config.timeoutMs / 1000),
+        }) + (environmentGuide ? `\n\n${environmentGuide}` : "")
       await writeFile(promptFile, prompt, { flag: "wx", mode: 0o600 })
       subjects.push({
         id,

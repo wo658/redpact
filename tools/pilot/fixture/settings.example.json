@@ -19,13 +19,21 @@
       "functional": {
         "purpose": "functional",
         "scope": "worktree",
-        "testMatch": ["baseline.spec.ts", "task.spec.ts"]
+        "testMatch": ["worktree/baseline.spec.ts", "worktree/task.spec.ts"]
       },
       "capture": {
         "purpose": "capture",
         "scope": "worktree",
-        "testMatch": ["capture.spec.ts"]
+        "testMatch": ["worktree/capture.spec.ts"]
       }
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "mobileViewport": {
+      "width": 390,
+      "height": 844
     }
   }
 }
