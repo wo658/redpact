@@ -9,10 +9,10 @@ Start with [Review your first change](review-workflow.md) to decide which eviden
 
 | Need | Test type | Execution entry point | Recorded result |
 |---|---|---|---|
-| Run an existing test command | Unit | MCP `run_unit_tests` or Unit controls in the app | Command status, exit code and output |
+| Run an existing test command | Unit | MCP `run_tests` (`kind: "unit"`) or Unit controls in the app | Command status, exit code and output |
 | Verify a public API and dependencies | Integration | MCP `run_tests` or Integration controls | Captured Vitest sources, cases and observed steps |
-| Verify browser interactions | Playwright, `purpose: "functional"` | MCP `run_playwright` or Tests → Playwright controls | Scenario and step verdicts, diagnostic attachments |
-| Show application states for review | Playwright, `purpose: "capture"` | MCP `run_playwright` or Tests → Playwright controls | Named screenshots, sources and execution details |
+| Verify browser interactions | Playwright, `purpose: "functional"` | MCP `run_tests` (`kind: "playwright"`) or Tests → Playwright controls | Scenario and step verdicts, diagnostic attachments |
+| Show application states for review | Playwright, `purpose: "capture"` | MCP `run_tests` (`kind: "playwright"`) or Tests → Playwright controls | Named screenshots, sources and execution details |
 
 A screenshot lets someone inspect appearance. Assertions establish the behavior a test actually checks. Keep both when a change needs functional verification and visual review.
 

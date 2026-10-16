@@ -6,7 +6,6 @@ import { reviewContextSchema, workspaceStatusSchema } from "../../core/chat-cont
 import { reviewContextInput, workspaceStatusInput } from "../../core/verification-schema.js"
 import {
   approveReview,
-  cancelReview,
   getReviewContext,
   getWorkspaceStatus,
 } from "../../workflows/chat-context.js"
@@ -73,15 +72,5 @@ export function chatContextRoutes(services: Services) {
       zValidator("json", approvalInput),
       async (c) =>
         c.json(await approveReview(services, { ...c.req.valid("param"), ...c.req.valid("json") })),
-    )
-    .post(
-      "/execution-reviews/:kind/:id/cancel",
-      docs(
-        "cancelExecutionReview",
-        "Cancel an identified pending request or its execution",
-        reviewContextSchema,
-      ),
-      zValidator("param", reviewContextInput),
-      async (c) => c.json(await cancelReview(services, c.req.valid("param"))),
     )
 }

@@ -76,13 +76,13 @@ export function UnitTests({
     const id = toast.add({ title: error, type: "error", timeout: 5000 })
     return () => toast.close(id)
   }, [error])
-  async function action(run?: UnitRun) {
+  async function action() {
     if (pending) {
       return
     }
     setPending(true)
     try {
-      const result = run ? await api.cancelUnitRun(run.id) : await api.runUnitTests(worktreeId)
+      const result = await api.runUnitTests(worktreeId)
       setRunId(result.id)
       setView("results")
       setData((previous) =>
@@ -116,16 +116,6 @@ export function UnitTests({
   const controls = (
     <div className="flex items-center gap-2">
       {runButton}
-      {running && (
-        <Button
-          size="toolbar"
-          variant="ghost"
-          disabled={pending}
-          onClick={() => void action(running)}
-        >
-          {t("Cancel command")}
-        </Button>
-      )}
       {running && <ExecutionProgress kind="unit" run={running} compact />}
     </div>
   )
@@ -246,11 +236,6 @@ export function UnitTests({
                   >
                     <ExecutionProgress kind="unit" run={run} />
                     {run.cleanup?.error && <Notice error>{run.cleanup.error}</Notice>}
-                    {run.cleanup?.state === "failed" && (
-                      <Button variant="outline" disabled={pending} onClick={() => void action(run)}>
-                        {t("Retry container cleanup")}
-                      </Button>
-                    )}
                     {run.error && <Notice error>{run.error}</Notice>}
                     {run.truncated && <Notice>{t("Command output was truncated.")}</Notice>}
                     {run.stdout && (

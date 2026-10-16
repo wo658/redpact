@@ -150,7 +150,7 @@ test("HTTP lists execution environments and preserves their immutable run links"
   expect(stops).toBe(1)
   expect(storage.store.getRun(run.id)?.environmentId).toBe(id)
 })
-test("explicit environment stop cancels its active test before deleting resources", async () => {
+test("public environment stop rejects active tests while internal stop preserves cleanup", async () => {
   await app.request(`/api/worktrees/${worktreeId}/selection`, {
     method: "PUT",
     headers,
@@ -160,7 +160,9 @@ test("explicit environment stop cancels its active test before deleting resource
   const runId = response.structuredContent.id
   await expect.poll(() => runs.get(runId).state).toBe("running")
   const id = runs.get(runId).environmentId!
-  expect((await operation("stop_environment", { id })).isError).not.toBe(true)
+  expect((await operation("stop_environment", { id })).isError).toBe(true)
+  expect(runs.get(runId).state).toBe("running")
+  await runs.stopEnvironment(id)
   await environments.idle()
   await runs.stopEnvironment.idle()
   expect(runs.get(runId).result?.outcome).toBe("cancelled")

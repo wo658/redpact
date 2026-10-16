@@ -63,15 +63,15 @@ the example against the real settings/Compose reader and discovers its acceptanc
 scenarios. The regular server suite remains independent of Docker self-E2E execution.
 Typecheck the portable bundle with
 `pnpm --filter @redpact/server exec tsc -p ../../e2e/tsconfig.json`.
-Retained environments can be inspected in the Environment screen or through its API and explicitly stopped without deleting recorded evidence.
+Retained environments can be inspected in the Environment screen or through its API. Manual environments can be stopped; test environments retain automatic cleanup without a public stop route.
 
 ## Actual application verification
 
 `ui-tests/project/tests` verifies the actual full app and the separately bundled inline MCP cards. Cover project/worktree navigation, files and diffs, Git, test catalogs, manual environments, dependencies and settings, including desktop/mobile controls and error states. Opening the full app without a record must show normal navigation or project connection. Exact execution links must preserve the recorded identity and explicit human approval boundary inside that app.
 
-Keep chat-context and approval checks alongside the full application coverage. Verify captured inputs, both Integration approval gates, Unit/Playwright request approval, stale-input rejection, cancellation and live updates. Exercise the actual bundled MCP cards independently; their request/result UI must not replace the standalone, desktop or Global App Page management experience.
+Keep chat-context and approval checks alongside the full application coverage. Verify captured inputs, both Integration approval gates, Unit/Playwright request approval, stale-input rejection, cancellation non-exposure and live updates. Exercise the actual bundled MCP cards independently; their request/result UI must not replace the standalone, desktop or Global App Page management experience.
 
-Use `run_playwright` with the actual checkout and the declared functional or capture target. Target patterns are relative to `ui-tests`. Capture completion alone is not visual approval: inspect desktop/mobile images and identify seeded record fixtures as fixtures, not application execution evidence. The native shell and companion's real MCP bridge need their own lifecycle checks.
+Use `run_tests` (`kind: "playwright"`) with the actual checkout and the declared functional or capture target. Target patterns are relative to `ui-tests`. Capture completion alone is not visual approval: inspect desktop/mobile images and identify seeded record fixtures as fixtures, not application execution evidence. The native shell and companion's real MCP bridge need their own lifecycle checks.
 
 The native runner checks described in [development](../docs/development.md) cover actual capture collection, delayed/path attachments, crops, high-DPI pages and artifact persistence. They do not create a connected Integration submission.
 

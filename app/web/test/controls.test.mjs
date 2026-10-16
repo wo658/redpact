@@ -1971,7 +1971,7 @@ test("고정 실행 화면은 오래된 워크트리 선택을 읽거나 편집�
   await i18n.changeLanguage("en")
 })
 
-test("environment cleanup failures and retry remain available with details collapsed", async () => {
+test("manual environment cleanup failures and retry remain available with details collapsed", async () => {
   await i18n.changeLanguage("en")
   const { WorktreeEnvironments } = await server.ssrLoadModule(
     "/src/components/worktree-environments.tsx",
@@ -1979,7 +1979,7 @@ test("environment cleanup failures and retry remain available with details colla
   const selection = { services: ["app"], select: {} }
   const environment = {
     id: "failed-cleanup",
-    lifecycle: "run",
+    lifecycle: "manual",
     state: "stop_failed",
     createdAt: "2026-09-11",
     selection,
@@ -2558,7 +2558,8 @@ test("unit view browses added source but runs the whole configured command witho
   const user = userEvent.setup({ document })
   await user.click(screen.getByRole("button", { name: "Run Unit command" }))
   assert.deepEqual(calls, [["w1"]])
-  await screen.findByRole("button", { name: "Cancel command" })
+  assert.equal(screen.queryByRole("button", { name: "Cancel command" }), null)
+  assert.equal(screen.getByRole("button", { name: "Run Unit command" }).disabled, true)
 })
 
 test("unit command can run even when this worktree added no test files", async () => {
@@ -2745,7 +2746,7 @@ test("폴더 선택 취소는 연결하지 않고 오류 뒤에는 다시 선택
   assert.equal(connections, 2)
 })
 
-test("temporary environments have no manual start and cleanup failures can be retried", async () => {
+test("temporary environments expose neither manual start nor forced removal", async () => {
   await i18n.changeLanguage("en")
   const { WorktreeEnvironments } = await server.ssrLoadModule(
     "/src/components/worktree-environments.tsx",
@@ -2784,14 +2785,9 @@ test("temporary environments have no manual start and cleanup failures can be re
   assert.equal(screen.queryByRole("button", { name: "Start manual environment" }), null)
   await user.click(await screen.findByRole("button", { name: "Environment details manual-1" }))
   assert.deepEqual(calls, [])
-  await user.click(screen.getByRole("button", { name: "Remove environment" }))
-  await screen.findByText("Cleanup failed")
-  assert.ok(screen.queryByRole("button", { name: "Retry removal" }))
-  assert.ok(
-    screen.queryByText(
-      "Removal deletes containers, volumes and captured files. Logs and test results are kept.",
-    ),
-  )
+  assert.equal(screen.queryByRole("button", { name: "Remove environment" }), null)
+  assert.equal(screen.queryByRole("button", { name: "Retry removal" }), null)
+  assert.deepEqual(calls, [])
 })
 
 test("unit viewer separates source review from command history and preserves file selection", async () => {
@@ -3099,7 +3095,7 @@ test("프로젝트 설정에서 단위 테스트 Dockerfile을 저장하고 다�
   }
 })
 
-test("컨테이너 정리 실패는 성공한 테스트 결과를 유지하며 정리만 재시도한다", async () => {
+test("컨테이너 정리 실패는 성공한 테스트 결과를 유지하고 취소 우회를 제공하지 않는다", async () => {
   await i18n.changeLanguage("en")
   const { UnitTests } = await server.ssrLoadModule("/src/components/unit-tests.tsx")
   const settings = {
@@ -3138,13 +3134,10 @@ test("컨테이너 정리 실패는 성공한 테스트 결과를 유지하며 �
   const user = userEvent.setup({ document })
   await user.click(await screen.findByRole("tab", { name: "Command results" }))
   await screen.findByText("Success")
-  await user.click(await screen.findByRole("button", { name: "Retry container cleanup" }))
-  await waitFor(() => assert.equal(calls, 1))
-  await waitFor(() =>
-    assert.equal(screen.queryByRole("button", { name: "Retry container cleanup" }), null),
-  )
+  assert.equal(screen.queryByRole("button", { name: "Retry container cleanup" }), null)
+  assert.equal(calls, 0)
   assert.ok(screen.getByText("Success"))
-  assert.equal(screen.queryByText(/Container cleanup:/), null)
+  assert.ok(screen.getByText("Docker unavailable"))
   assert.equal(screen.queryByText("stderr"), null)
   assert.equal(screen.getByText("Exit code: 0").textContent, "Exit code: 0")
 })
@@ -5521,7 +5514,7 @@ test("기능 테스트 파일은 UI 캡처 파일 목록에서 제외한다", as
   )
 })
 
-test("변경 관련 증거가 없어도 진행 중 실행의 취소와 정리 상태는 유지한다", async () => {
+test("변경 관련 증거가 없어도 진행 상태를 보존하고 취소 버튼을 제공하지 않는다", async () => {
   await i18n.changeLanguage("en")
   const { CaptureReview } = await server.ssrLoadModule("/src/components/capture-review.tsx")
   const run = {
@@ -5550,11 +5543,10 @@ test("변경 관련 증거가 없어도 진행 중 실행의 취소와 정리 �
       },
     }),
   )
-  const cancel = await screen.findByRole("button", { name: "Cancel", exact: true })
+  await screen.findByRole("status", { name: "Playwright progress" })
+  assert.equal(screen.queryByRole("button", { name: "Cancel", exact: true }), null)
   assert.equal(screen.getByRole("button", { name: "Run Playwright" }).disabled, true)
-  await userEvent.setup().click(cancel)
-  await waitFor(() => assert.deepEqual(cancelled, ["active"]))
-  await screen.findByText("No recorded captures or tests match this worktree's changes.")
+  assert.deepEqual(cancelled, [])
 })
 
 test("프로젝트 기본 경로가 없으면 기능 워크트리의 테스트를 조회하거나 실행하지 않는다", async () => {

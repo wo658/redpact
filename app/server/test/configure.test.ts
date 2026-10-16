@@ -159,14 +159,16 @@ test("unit-only configuration guidance requires its runtime container without in
   )
   const result = (await configure("validate")).structuredContent
   expect(result.validation.valid).toBe(true)
-  expect(result.nextSteps.join(" ")).toContain("run_unit_tests")
-  expect(result.nextSteps.join(" ")).toContain("run_tests is only for managed integration")
+  expect(result.nextSteps.join(" ")).toContain("kind=unit")
+  expect(result.nextSteps.join(" ")).toContain(
+    "kind=integration requires configured Compose services",
+  )
   expect(result.nextSteps.join(" ")).toContain("human approval")
   expect(result.nextSteps.join(" ")).toContain("MCP App or connected viewer")
   const description = (await configure("describe")).structuredContent
   expect(description.nextSteps.join(" ")).toContain("For managed integration")
   expect(description.specification.workflow.join(" ")).toContain("Preserve existing")
-  for (const tool of ["run_unit_tests", "run_playwright", "get_execution"]) {
+  for (const tool of ["kind=unit", "kind=playwright", "get_run"]) {
     expect(description.specification.workflow.join(" ")).toContain(tool)
   }
 })

@@ -43,13 +43,18 @@ export async function runPlaywrightVerification(
     run: await captures.start(checkout.id, undefined, input.viewport, input.target),
   }
 }
-export async function listExecutions(services: Services, path: string, before?: string) {
+export async function listExecutions(
+  services: Services,
+  path: string,
+  before?: string,
+  kind?: Kind,
+) {
   const checkout = await worktrees(services).observed(path)
   if (checkout) {
     return {
       path,
       worktreeId: checkout.worktreeId,
-      ...services.runs.listForWorktree(checkout.worktreeId, before),
+      ...services.runs.listForWorktree(checkout.worktreeId, before, kind),
     }
   }
   return { path, worktreeId: null, items: [], nextCursor: null }
@@ -72,7 +77,8 @@ export async function readExecution(services: Services, input: z.infer<typeof ex
     }
   }
   if (detail === "log") {
-    return { kind, id, ...(await services.runs.copyLog(kind, id)) }
+    const { text } = await services.runs.copyLog(kind, id)
+    return { kind, id, text: text.slice(0, 65536), truncated: text.length > 65536 }
   }
   if (detail === "source") {
     const path = input.sourcePath ?? problem("invalid_input", "sourcePath is required")
@@ -161,4 +167,41 @@ async function readPlaywrightImage(services: Services, input: z.infer<typeof exe
     problem("invalid_input", "Image content is unsupported or too large")
   }
   return { kind, id, artifact, image: content.data }
+}
+
+export async function projectContainer(
+  services: Services,
+  path: string,
+  action: "inspect" | "start" | "restart" | "stop",
+) {
+  const checkout = await worktrees(services).observed(path)
+  if (!checkout || checkout.disconnected) {
+    problem("not_found", "Connect the project before managing its manual container")
+  }
+  const container =
+    services.testContainer ??
+    problem("settings_unsupported", "Manual container workflow is unavailable")
+  return container[action](checkout.projectId)
+}
+
+export async function readRunArtifact(
+  services: Services,
+  input: { kind: "playwright"; id: string; artifactId: string; side: "before" | "after" },
+) {
+  const captures =
+    services.captures ?? problem("settings_unsupported", "Playwright evidence is unavailable")
+  const run = captures.get(input.id)
+  const artifact =
+    run[input.side].cases
+      .flatMap((item) => item.artifacts)
+      .find((item) => item.id === input.artifactId) ??
+    problem("not_found", "Artifact does not belong to this execution and side")
+  if (artifact.bytes > 8 * 1024 * 1024) {
+    problem("invalid_input", "Use the viewer for artifacts larger than 8 MiB")
+  }
+  const content = await captures.artifact(input.id, input.side, input.artifactId)
+  if (content.data.byteLength > 8 * 1024 * 1024 || content.contentType !== artifact.contentType) {
+    problem("invalid_input", "Artifact content is unsupported or too large")
+  }
+  return { kind: input.kind, id: input.id, artifact, data: content.data }
 }

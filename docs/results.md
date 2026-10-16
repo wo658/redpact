@@ -13,7 +13,7 @@ If you have no evidence yet, follow [your first run](first-run.md). For executio
 
 Use the exact `reviewPath` returned by `get_review_context` on the same app instance. It opens the request or execution inside the full app and resolves the recorded worktree. Under Ask, inspect the captured inputs before approving; Integration requires environment and test approval, while Unit and Playwright each approve one captured request. The review links to worktree-bound history. No record is needed to open the full app and browse projects.
 
-Execution outcome, current-source freshness and human acceptance remain separate. Unverified freshness is `unknown`; acceptance is `not_recorded`. A finished Playwright run does not alone prove cleanup; without explicit cleanup evidence its summary remains `unknown`. Use `get_execution` for bounded logs, retained Integration/Playwright source and PNGs, and `cancel_execution` to cancel requests or executions without approving them.
+Execution outcome, current-source freshness and human acceptance remain separate. Unverified freshness is `unknown`; acceptance is `not_recorded`. A finished Playwright run does not alone prove cleanup; without explicit cleanup evidence its summary remains `unknown`. Use `get_run` for bounded logs and retained Integration/Playwright source, and `get_run_artifact` for owned attachments. Tests have no public cancel action.
 
 ## Find the right view
 
@@ -118,7 +118,7 @@ For a visual issue, name the capture and describe the visible problem. For a set
 
 ## Understand resource and source retention
 
-Every execution owns temporary resources and cleans them up after completion, failure or cancellation. Manual preparation and environment reuse are not supported. A cleanup failure can leave resources behind. Retry Unit container cleanup in its execution details; use the environment controls for managed application resources. Use viewer cancellation and environment controls when needed; MCP `cancel_execution` cancels pending requests and active executions; environment cleanup remains available through the app controls.
+Every execution owns temporary resources and cleans them up automatically after completion, failure or internal interruption. Public test cancellation and forced environment stop are unavailable. Report retained cleanup failures with their execution identity; startup recovery preserves evidence. Project Container controls manage only the separate manual environment. See [interfaces](interfaces.md).
 
 **Clean up worktree code** removes recorded Playwright task drafts only after its checks pass. Historical evidence remains. Unit runtime input copies are removed during cleanup while command evidence remains. Integration submissions retain their captured test bundle.
 

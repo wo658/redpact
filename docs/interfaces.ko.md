@@ -23,55 +23,68 @@ HTTP와 MCP는 같은 애플리케이션 workflow로 진입하고 실행·설정
 | `get_workspace_status` | 절대 체크아웃 `path`; 읽기 전용 설정 진단, 기존 연결, 승인 대기, 활성·최근 실행과 정리 문제 |
 | `get_review_context` | 실행 `kind`와 `id`; 제한된 실패 정보, 기록된 근거 참조, 캡처된 승인 미리보기와 상대 뷰어 검토 경로 |
 | `configure` | 절대 실행 `path`의 `describe`, `inspect`, `validate`. 스키마, 루트, 진단과 선택적 계획 반환 |
-| `run_tests` | 절대 `path`, 선택적 정확한 `tests` 경로. Integration 제출·실행 |
-| `get_run` | 반환된 실행 또는 검토 `id`로 상태, 결과와 환경 정리 조회 |
-| `run_unit_tests` | 기존 체크아웃의 절대 `path`로 설정된 전체 Unit 명령 실행 |
-| `run_playwright` | 기존 체크아웃의 절대 `path`, 필수 선언된 `target`, 선택적 `viewport` |
-| `list_executions` | 체크아웃의 절대 `path`, 선택적 반환 커서 `before`로 세 실행 유형의 보존된 이력 조회 |
-| `get_execution` | `kind`, `id`와 `detail`로 결과, 제한된 로그, 캡처된 테스트 소스 또는 기록된 PNG 조회 |
-| `cancel_execution` | `kind`, `id`로 해당 실행의 기존 수명주기에 따라 취소 |
+| `run_tests` | 절대 `path`, `kind: integration / unit / playwright`; Integration은 선택적 `tests`, Unit은 전체 명령, Playwright는 필수 `target`과 선택적 `viewport` 사용 |
+| `get_run` | `kind`, `id`, 선택적 `detail: result / log / source / image`로 상태·기록된 증거·정리 조회 |
+| `list_runs` | 체크아웃 절대 `path`, 선택적 `kind`와 반환 커서 `before`; 종류에 맞는 실행을 페이지당 최대 20개 조회 |
+| `get_run_artifact` | Playwright `id`, `artifactId`, 선택적 `side`; 해당 실행 소유 PNG·영상·trace를 최대 8 MiB까지 조회 |
+| `project_container` | 관찰된 프로젝트 체크아웃의 절대 `path`, `action: inspect / start / restart / stop`; 기존 메인 체크아웃 수동 환경 수명주기 |
 
-실행은 공유된 고정 프로젝트 설정에서 도출하며 `selection` 입력은 거부합니다.
-Configure는 설정 저장, 컨테이너 시작, 테스트 승인을 하지 않습니다.
-Describe 후 호스트 에이전트로 파일을 작성하고 같은 체크아웃을 validate하세요.
-파일 편집과 native Git 작업은 호스트 에이전트가 담당합니다. 이 도구들은 Git 워크트리를
-생성하거나 임의 셸 명령을 받거나 독립적인 컨테이너 관리를 제공하지 않습니다.
-실행 workflow가 자신의 임시 환경을 준비하고 정리합니다.
+`run_tests`는 엄격한 discriminated union으로 종류별 입력을 검증합니다. Unit은 파일
+필터와 임의 명령을 거부하고 Playwright는 임의 케이스 선택을 거부합니다. 모든 종류는
+HTTP와 같은 워크플로, 고정 프로젝트 설정과 기존 입력 캡처를 사용합니다. Configure는
+파일 저장·리소스 시작·승인을 하지 않습니다. describe 후 공유 파일을 편집하고 validate하세요.
 
-`list_executions`로 같은 체크아웃의 증거를 찾고 `get_execution`에
-`kind: integration | unit | playwright`와 ID를 전달합니다. 관찰되지 않은 체크아웃은
-프로젝트 등록 없이 빈 이력을 반환합니다. `detail: source`에는 `sourcePath`가 필요하며
-현재 파일이 아닌 기록된 Integration 또는 Playwright 테스트 코드를 읽습니다.
-Unit은 전체 명령 출력을 보존합니다. `detail: image`에는 Playwright `artifactId`가
-필요하고 `side: before | after`(기본 `after`)를 받으며 최대 8 MiB의 PNG 이미지 콘텐츠를
-반환합니다. 더 큰 이미지, 동영상과 trace는 뷰어를 사용하세요.
-과거 증거의 통과는 현재 코드의 최신성이나 사람의 수락을 입증하지 않습니다.
+호환성을 위해 `run_tests`에서 `kind`를 생략하면 Integration입니다. id-only `get_run`
+요청(`{"id":"..."}`)은 기존 전체 Integration 실행·검토 응답을 유지합니다. 명시적인 `kind`는
+세 종류 모두 제한된 결과 계약을 선택합니다. 상태·판정·정리·캡처된 `identity`·케이스 개수와
+최대 20개 실패 및 20개 산출물 메타데이터, 전체 `failureCount`/`artifactCount`/`evidenceCount`,
+`truncated`를 반환합니다. 메시지와 라벨은 2,048자로 제한합니다. 기본 결과에 원시 케이스 본문,
+stdout/stderr와 설정 원문을 복제하지 않습니다. `evidence`, 산출물 `retrieval`, `reviewPath`로
+상세를 확인하세요. 대기 요청은 승인 카드를 유지하며 실행 수락을 의미하지 않습니다. 기존 `run_unit_tests` / `run_playwright`는
+해당 kind를 지정한 `run_tests`로, `get_execution`은 `get_run`으로,
+`list_executions`는 `list_runs`로 변경하세요. 이전 도구 이름은 노출하지 않습니다.
 
-세 실행 도구는 요청 시 인스턴스 승인 정책을 캡처합니다. Auto는 기존 실행 workflow를
-통해 시작합니다. Ask는 프로젝트 코드를 실행하지 않고 `awaiting_approval` 검토 ID와
-MCP App 카드를 반환합니다. Integration은 환경 다음 테스트 승인 순서를 유지하고,
-Unit과 Playwright는 캡처한 요청을 한 번 승인합니다. 모델은 승인하거나 정책을 바꿀 수
-없습니다. `get_execution` result는 검토 ID를 받고 Unit/Playwright 카드를 갱신합니다.
-대기 중 검토에는 실행의 로그·소스·이미지가 없습니다. 수락 후 Unit/Playwright 검토 ID는
-연결된 실행 증거를 조회하며, Integration 로그·소스에는 실제 실행 ID를 사용합니다.
+```json
+{"kind":"unit","path":"/absolute/checkout"}
+{"kind":"integration","path":"/absolute/checkout","tests":["service.test.ts"]}
+{"kind":"playwright","path":"/absolute/checkout","target":"functional"}
+```
 
-`cancel_execution`은 세 종류의 대기 중 검토 ID를 승인 없이 취소합니다. 취소 후 결과를
-조회해 테스트 결과와 정리 실패를 구분하세요. Unit과 Playwright의 기존 정리 재시도
-동작은 유지됩니다.
+`list_runs`의 커서를 사용할 때 같은 체크아웃과 종류 필터를 유지하세요. 존재하지만 관찰하지 않은
+체크아웃은 등록 없이 빈 이력을 반환하며 존재하지 않는 경로는 입력 오류입니다. `get_run`의 `detail: source`는 `sourcePath`가
+필요하며 캡처된 Integration·Playwright 소스를 읽습니다. Unit은 전체 명령 출력을 보존합니다.
+`detail: log`는 최대 65,536자로 제한하고 잘림 여부를 반환하며 기존 실행 시 비밀값 마스킹을
+유지합니다. `detail: image`는 해당 실행의 Playwright PNG를 받습니다. `get_run_artifact`는
+바이트를 읽기 전에 실행·side 소유권을 검증하고 PNG는 이미지, 영상·trace는 내장 리소스로
+반환합니다. 더 큰 산출물은 뷰어에서 확인합니다. 증거는 소스 최신성이나 사람의 수락이 아닙니다.
 
-시작 기본값이나 기존 `worktreeId`로 대상을 찾을 수 있지만 작성 시 명시적 경로를
-권장합니다. 발견은 선언된 루트와 native Git 등록을 관찰할 뿐 워크트리를 만들거나
-테스트를 실행하지 않습니다. 수집 오류는 진단으로 남습니다. 런타임 경계는
-[실행](execution.md)을 참고하세요.
+모든 종류는 요청 시 승인 정책을 보존합니다. Auto는 기존 워크플로를 시작하고 Ask는 프로젝트
+코드를 실행하지 않은 검토를 반환합니다. Integration은 환경 승인 후 테스트 승인이 필요하며
+Unit·Playwright는 캡처된 요청 하나를 승인합니다. 모델은 승인하거나 정책을 바꿀 수 없습니다.
+대기 검토에는 실행 증거가 없습니다. 수락 후 Unit·Playwright 검토 ID는 실행 증거로 연결되며
+Integration 로그·소스는 실제 실행 ID를 사용합니다.
 
-전체 앱은 프로젝트 연결·관리, 설정 편집, 디렉터리·파일 탐색, Git 탐색·작업, 수동 Container 제어와 호스트 플러그인 업데이트 API를 유지합니다. MCP 도구는 실행·설정 조회 범위를 유지합니다. 앱 제어를 복원해도 Git 변경·설정 저장·승인 capability를 모델에 노출하지 않습니다. [내비게이션](ux-navigation.md), [설정 소유권](settings-reference.md), [Git 작업](git.md)을 참고하세요.
+테스트 취소 도구, HTTP 취소 엔드포인트, 뷰어 취소 버튼과 테스트 환경 강제 종료 경로는
+노출하지 않습니다. timeout·서버 종료·실패 복구·증거 보존·자동 정리는 내부 수명주기로
+유지합니다. 과거 취소 결과는 계속 조회할 수 있습니다. 수동 환경 종료로 테스트를 취소할 수 없습니다.
+
+`project_container`는 관찰된 연결 프로젝트가 필요합니다. path는 프로젝트를 식별하며 기능
+워크트리를 가리켜도 기존 설정의 메인 체크아웃이 수동 환경 입력을 제공합니다. inspect는
+실행하지 않습니다. start·restart는 기존 공유 설정·입력 검사·동시성 제한을 사용하며 준비 상태와
+실패는 inspect로 조회합니다. stop은 해당 프로젝트의 수동 환경만 종료합니다. 명시적인 수동
+작업은 테스트 승인과 별개이며 테스트 환경 재사용·임의 Docker 명령·다른 리소스 삭제를 허용하지
+않습니다. 설정 누락과 체크아웃 문제는 진단으로 반환합니다.
+
+전체 앱은 프로젝트 관리·설정·파일 탐색·Git·수동 Container 제어를 유지합니다. MCP는 Git 변경,
+설정 쓰기와 승인 기능을 모델에 노출하지 않습니다. [실행](execution.md),
+[설정 소유권](settings-reference.md), [Git 작업](git.md)을 참고하세요.
 
 ## 요청 승인과 Apps
 
 번들 리소스는 `ui://redpact/environment.html`, `ui://redpact/tests.html`입니다.
 응답 snapshot을 표시하며 지속 polling·구독을 하지 않습니다. Environment 카드는 실행 시
 의존성 선택 없이 각 의존성의 고정 종류를 한 번씩 표시합니다. `get_run`은 Integration
-snapshot을, `get_execution`은 Unit/Playwright 검토를 갱신합니다. 연결된 뷰어에서 실행
+snapshot을, `get_run`은 Unit/Playwright 검토를 갱신합니다. 연결된 뷰어에서 실행
 이력·상세 증거·복구 제어를 확인합니다.
 
 새 실행 요청은 인스턴스 `approval` 정책을 캡처합니다.
@@ -111,7 +124,7 @@ Ask를 Auto로 몰래 바꿀 수 없습니다. 뷰어의 명시적 검토 동작
 `get_review_context`는 실행 또는 대기 요청 하나의 제한된 실패 정보, 근거 참조와 상대
 `reviewPath`를 반환합니다. 같은 뷰어 출처와 결합해서 사용하며 환경 인증 값이나 UI
 capability는 포함하지 않습니다. 실패·근거 참조를 각각 최대 20개와 전체 개수로 반환하고,
-보존된 상세는 `get_execution`으로 확인합니다. 관련 현재 입력을 실제로 비교하기 전에는
+보존된 상세는 `get_run`으로 확인합니다. 관련 현재 입력을 실제로 비교하기 전에는
 최신성이 `unknown`이며 사람의 수락은 `not_recorded`입니다. Unit 명령 실패를 자동으로
 assertion 실패로 분류하지 않습니다.
 
@@ -123,14 +136,14 @@ Playwright 종료만으로 환경 제거를 증명하지 않습니다. 카드와
 근거가 없으면 정리를 `unknown`으로, 정리 오류가 기록되었으면 `failed`로 표시합니다.
 
 정확한 기록 뷰어는 `GET /api/review-context?kind=...&id=...`를 사용합니다.
-`GET /api/workspace-status?path=...`는 읽기 전용 체크아웃 관찰 API입니다. 명시적인 뷰어 승인·취소는
-`/api/execution-reviews/:kind/:id/approve`와 `/cancel`을 사용하며 승인은 예상 revision과
+`GET /api/workspace-status?path=...`는 읽기 전용 체크아웃 관찰 API입니다. 명시적인 뷰어 승인은
+`/api/execution-reviews/:kind/:id/approve`를 사용하며 승인은 예상 revision과
 Integration의 해당 승인 대상을 확인합니다. 기존 same-origin·local-host 경계를 유지합니다.
 모델용 도구에는 뷰어 승인 작업을 노출하지 않습니다. [탐색](frontend.md)을 참고하세요.
 
 워크트리의 `scope=evidence` 이벤트 구독에는 Integration과 Unit/Playwright 검토 기록,
 보존된 실행 근거와 공유 프로젝트 설정이 포함됩니다. 다른 워크트리의 기록을 받지 않으면서
-채팅으로 만든 요청과 승인·취소 변경을 연결된 검토 화면에 반영합니다. 명시적인 워크트리
+채팅으로 만든 요청과 승인 변경을 연결된 검토 화면에 반영합니다. 명시적인 워크트리
 ID가 필요하며 체크아웃을 사용할 수 없어도 보존된 실행 근거를 계속 관찰합니다.
 
 ## 로컬 접근 경계
