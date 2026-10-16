@@ -47,10 +47,12 @@ export async function openLargeCommit(
     localStorage.setItem("redpact:language", "en")
   }, project.id)
   await page.goto("/")
-  if (!(await page.getByRole("button", { name: "Git Graph", exact: true }).isVisible())) {
+  if ((page.viewportSize()?.width ?? 1920) < 768) {
     await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
   }
-  await page.getByRole("button", { name: "Git Graph", exact: true }).click()
+  const navigation = page.getByRole("button", { name: "Git Graph", exact: true })
+  await expect(navigation).toBeInViewport()
+  await navigation.click()
   if ((page.viewportSize()?.width ?? 1920) < 768) {
     await page.keyboard.press("Escape")
   }
