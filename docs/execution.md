@@ -300,3 +300,38 @@ Testcontainers and extracted with host `tar`.
 Reassess and test the patch when upgrading Testcontainers, including installed-package
 bundling. These extensions are repository-maintained library changes, not claims that
 unmodified upstream 12.1.0 provides these contracts.
+
+### Network allocation and recovery
+
+Integration and Playwright allocate one runner bridge in addition to Compose's
+non-external application networks. A default Compose application therefore normally
+uses two subnets per execution. Authored networks are preserved to retain their
+IPAM, isolation and driver semantics. External networks are never owned merely
+because a service joins them. Manual environments retain their networks until stopped.
+
+Docker allocates subnets from its daemon address pools unless an authored network
+specifies IPAM. A pool with prefix `/16` subdivided into `/24` networks has 256
+subnets before existing allocations and routing conflicts are considered. Address
+exhaustion alone does not identify a Testcontainers defect or prove a leak: inspect
+retained environments, the daemon's `default-address-pools`, allocated subnet sizes,
+and host/VPN routes separately. Overlapping authored subnets are a different error.
+Preparation logs retain the daemon error and add guidance for these two cases.
+
+Cleanup discovers resources by the exact instance owner and environment labels,
+then rechecks those labels before removal. It does not require a current Compose
+project label: an older resource can retain valid ownership with a missing or stale
+Compose label. Such networks previously escaped discovery and could leave an
+allocated subnet after cleanup reported success. Missing ownership is not permission
+to delete a network. Containers are removed before networks; failed removal preserves
+resource IDs and the daemon reason in `cleanup.log` and the environment error. The
+record refreshes its remaining resources when the daemon is reachable, stays
+`stop_failed`, and supports another Stop attempt. If inspection is unavailable,
+previously known resources remain recorded rather than being declared absent.
+Startup also checks previously stopped records with a known daemon identity for owned
+leftovers, and uses durable environment records to recover interrupted execution resources;
+records, submissions and logs remain after removal. Resources with no durable record
+or verifiable ownership require explicit investigation and are never globally pruned.
+
+Before changing daemon pools, retry cleanup for owned retained environments and
+verify the resulting network list. Increasing pool capacity does not fix a cleanup
+failure, and global network pruning can delete other projects' resources.
