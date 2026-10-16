@@ -59,7 +59,7 @@ recorded code and screenshots remain in execution history.
 ## Recorded source and review
 
 A chosen target executes the complete matching source set in the selected checkout.
-Read its captured source, cases and images through `get_execution` and open the exact
+Read its captured source, cases and images through `get_run` and open the exact
 `get_review_context` path. Worktree-bound history retains previous attempts and
 artifacts after draft cleanup. Current source visibility does not prove execution,
 and an old passing run does not validate later application edits.
@@ -82,8 +82,8 @@ For app service, dependency or connection changes, read [Project dependencies](d
 
 ## Execute and inspect
 
-Resolve the actual worktree on the connected instance. Prefer MCP `run_playwright`
-with the absolute checkout path and declared target, then `get_execution` with
+Resolve the actual worktree on the connected instance. Prefer MCP `run_tests` (`kind: "playwright"`)
+with the absolute checkout path and declared target, then `get_run` with
 `kind: "playwright"`. Under Ask, present the request for human approval; do not
 change policy or invoke an App-only approval action. If MCP Apps are unavailable,
 obtain its review path using `get_review_context` and direct the user to the same
@@ -91,8 +91,7 @@ connected viewer for an explicit approval action, following
 [Review and handoff](review-evidence.md). Optional viewport overrides apply to this
 execution. Read
 GET /api/playwright-runs/:id until terminal, inspect case/step evidence and distinct
-cleanup errors. MCP run_tests remains Vitest integration execution and does not
-accept Playwright files. Do not substitute direct Docker or Playwright CLI execution:
+cleanup errors. Use `run_tests` with `kind: "playwright"`; Integration file filters are not valid for this kind. Do not substitute direct Docker or Playwright CLI execution:
 it creates no target record, UI Review artifacts or cleanup evidence. Never use an
 unavailable endpoint as if it succeeded.
 
@@ -106,9 +105,7 @@ for stored images, original-size inspection, source and trace links.
 Viewing artifacts never starts an application. Respect repository restrictions on
 additional interactive browser or screenshot inspection.
 
-Cancel/retry cleanup through MCP `cancel_execution` with `kind: "playwright"`, or
-POST /api/playwright-runs/:id/cancel. Cancellation is
-separate from test verdicts. Preserve recorded evidence and unrelated environments.
+Public test cancellation and forced environment stop are unavailable. Automatic timeout, shutdown and recovery retain evidence and cleanup. Report cleanup failures with the run identity.
 Report exactly which browser scenarios and rendered images were observed, source
 identity and image/browser/viewport conditions. Linux web captures do not prove
 native desktop-shell behavior. An unsupported installed server is a setup or

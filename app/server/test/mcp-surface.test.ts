@@ -16,20 +16,16 @@ test("MCP는 검증 도구를 확장하되 Git·파일 편집·독립 환경 관
   })
   const { result } = await response.json()
   expect(result.tools.map((tool: { name: string }) => tool.name).sort()).toEqual([
-    "cancel_execution",
     "configure",
-    "get_execution",
     "get_review_context",
     "get_run",
+    "get_run_artifact",
     "get_workspace_status",
-    "list_executions",
-    "run_playwright",
+    "list_runs",
+    "project_container",
     "run_tests",
-    "run_unit_tests",
   ])
   const run = result.tools.find((tool: { name: string }) => tool.name === "run_tests")
-  expect(run.inputSchema.properties).toHaveProperty("path")
-  expect(run.inputSchema.properties).not.toHaveProperty("submissionId")
-  expect(run.description).toMatch(/managed Integration tests/)
-  expect(run.description).toMatch(/never runs Unit commands or Playwright targets/)
+  expect(JSON.stringify(run.inputSchema)).toContain('"kind"')
+  expect(JSON.stringify(run.inputSchema)).not.toContain('"submissionId"')
 })

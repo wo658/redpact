@@ -253,23 +253,19 @@ test("fixed settings supply a review snapshot and later changes require fresh re
   expect(executions).toBe(0)
 })
 
-test("통합 조회·취소 도구는 대기 중인 검토를 승인하거나 토큰을 노출하지 않는다", async () => {
+test("통합 조회 도구는 대기 중인 검토를 승인하거나 토큰을 노출하지 않는다", async () => {
   const pending = await call("run_tests", { path: root })
   const id = pending.structuredContent.id
   const token = pending._meta.redpact.token
-  const result = await call("get_execution", { kind: "integration", id })
+  const result = await call("get_run", { kind: "integration", id })
   expect(result.isError).not.toBe(true)
   expect(result.structuredContent).toMatchObject({
-    kind: "integration",
-    review: { state: "pending", id },
+    state: "awaiting_approval",
+    id,
   })
   expect(JSON.stringify(result.structuredContent)).not.toContain(token)
   expect(JSON.stringify(result.content)).not.toContain(token)
   expect(result._meta.redpact.token).toBe(token)
-  const cancelled = await call("cancel_execution", { kind: "integration", id })
-  expect(cancelled.isError).not.toBe(true)
-  expect(cancelled.structuredContent.review.state).toBe("cancelled")
-  expect(JSON.stringify(cancelled)).not.toContain(token)
   expect(preparations).toBe(0)
   expect(executions).toBe(0)
 })

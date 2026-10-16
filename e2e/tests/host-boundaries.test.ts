@@ -38,7 +38,7 @@ test("앱의 프로젝트·환경·설정 관리와 채팅의 실행 조회·검
     expect((await http<{ id: string }>(worktreePath)).body.id).toBe(worktree.body.id)
     const history = await rpc<{ structuredContent: { worktreeId: string; items: unknown[] } }>(
       "tools/call",
-      { name: "list_executions", arguments: { path: root } },
+      { name: "list_runs", arguments: { path: root } },
     )
     expect(history.structuredContent).toMatchObject({ worktreeId: worktree.body.id, items: [] })
     const validation = await rpc<{ structuredContent: { validation: { valid: boolean } } }>(

@@ -35,7 +35,10 @@ export async function openExecutionReview(page: Page) {
     expect(response.body.error).toBeUndefined()
     return response.body.result
   }
-  const result = await rpc("tools/call", { name: "run_unit_tests", arguments: { path: root } })
+  const result = await rpc("tools/call", {
+    name: "run_tests",
+    arguments: { kind: "unit", path: root },
+  })
   expect(result.isError).not.toBe(true)
   expect(result.structuredContent.state).toBe("awaiting_approval")
   const id = result.structuredContent.reviewId
@@ -101,7 +104,7 @@ export async function openExecutionReview(page: Page) {
     },
     async refresh() {
       const snapshot = await rpc("tools/call", {
-        name: "get_execution",
+        name: "get_run",
         arguments: { kind: "unit", id },
       })
       await page.evaluate(
@@ -116,7 +119,6 @@ export async function openExecutionReview(page: Page) {
       )
     },
     async restore() {
-      await rpc("tools/call", { name: "cancel_execution", arguments: { kind: "unit", id } })
       expect((await http("/api/approval-policy", "POST", original.body)).status).toBe(200)
     },
   }
@@ -178,12 +180,6 @@ export async function openIntegrationReviewViewer(page: Page) {
     return response.body.result
   }
   async function restore() {
-    if (id) {
-      await rpc("tools/call", {
-        name: "cancel_execution",
-        arguments: { kind: "integration", id },
-      })
-    }
     expect((await http("/api/approval-policy", "POST", original.body)).status).toBe(200)
   }
   try {

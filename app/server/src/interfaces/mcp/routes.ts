@@ -2,15 +2,12 @@ import { isAbsolute } from "node:path"
 import { createMcpHonoApp } from "@modelcontextprotocol/hono"
 import { McpServer, WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/server"
 import { z } from "zod"
-import { problem } from "../../core/problems.js"
 import type { publicSettings } from "../../core/settings.js"
-import { projectPath } from "../../core/settings-schema.js"
 import { configure, configureInput } from "../../workflows/configure.js"
 import type { Services } from "../../workflows/services.js"
-import { idInput } from "../schemas.js"
-import { environmentResource, registerApps, reviewResult, testsResource, uiMeta } from "./apps.js"
+import { environmentResource, registerApps, uiMeta } from "./apps.js"
 import { registerChatContextTools } from "./chat-context.js"
-import { invoke, output, readOnly } from "./result.js"
+import { invoke, readOnly } from "./result.js"
 import { registerVerificationTools } from "./verification.js"
 
 const pathInput = z
@@ -74,67 +71,6 @@ export function mcpRoutes(services: Services) {
                 "valid" in value.validation &&
                 !value.validation.valid,
             ),
-        }
-      },
-    )
-    server.registerTool(
-      "run_tests",
-      {
-        description:
-          "Run managed Integration tests from tests.directory in the project at path. This MCP tool never runs Unit commands or Playwright targets; use run_unit_tests or run_playwright for those separate runtimes. Snapshots Integration sources and returns a run ID while the server prepares the selected Compose environment and executes Vitest. Execution uses the fixed shared project configuration. Temporary environments are removed after execution, with logs and results preserved. No registration or submission calls are required.",
-        _meta: uiMeta(testsResource),
-        inputSchema: z.strictObject({
-          path: pathInput,
-          tests: z.array(projectPath).min(1).max(50).optional(),
-        }),
-        annotations: {
-          readOnlyHint: false,
-          destructiveHint: false,
-          idempotentHint: false,
-          openWorldHint: true,
-        },
-      },
-      async (input) => {
-        if (services.reviews) {
-          try {
-            return reviewResult(await services.reviews.start(input), services.reviews)
-          } catch (error) {
-            return invoke(() => {
-              throw error
-            })
-          }
-        }
-        return invoke(() =>
-          (services.runFiles ?? problem("settings_unsupported", "File execution is unavailable"))(
-            input,
-          ),
-        )
-      },
-    )
-    server.registerTool(
-      "get_run",
-      {
-        description:
-          "Read run state, results and environment cleanup status. A queued run may still be preparing its environment. Results preserve executed source identity and do not establish code freshness or approval.",
-        inputSchema: idInput,
-        _meta: uiMeta(testsResource),
-        annotations: readOnly,
-      },
-      ({ id }) => {
-        const review = services.reviews?.get(id)
-        if (review && services.reviews) {
-          return reviewResult(
-            review,
-            services.reviews,
-            review.review.state === "pending" ? "review" : "tests",
-          )
-        }
-        const run = services.runs.get(id)
-        return {
-          ...output(run),
-          _meta: {
-            redpact: { kind: "tests", run, submission: services.submissions.get(run.submissionId) },
-          },
         }
       },
     )

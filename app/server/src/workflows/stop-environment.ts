@@ -1,3 +1,4 @@
+import { problem } from "../core/problems.js"
 import type { EnvironmentService, RunService, StopEnvironment } from "../core/types/services.js"
 
 export function createStopEnvironment(deps: {
@@ -47,4 +48,16 @@ export function createStopEnvironment(deps: {
       await Promise.all([...pending.values()])
     },
   })
+}
+
+// Public manual removal must never become a test cancellation entry point.
+export async function stopManualEnvironment(
+  environments: EnvironmentService,
+  stop: StopEnvironment,
+  id: string,
+) {
+  if (environments.get(id).lifecycle !== "manual") {
+    problem("invalid_input", "Test environments use automatic cleanup; manual stop is unavailable")
+  }
+  return stop(id)
 }

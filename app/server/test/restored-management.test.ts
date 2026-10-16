@@ -65,6 +65,7 @@ test("기존 실행과 수동 환경은 관리 화면 복원 후에도 조회하
   const stopEnvironment = vi.fn(async () => ({ id: "old-manual", state: "stopped" }))
   const app = createApp({
     environments: {
+      get: () => ({ id: "old-manual", lifecycle: "manual", state: "stop_failed" }),
       refresh: () => ({ id: "old-manual", lifecycle: "manual", state: "stop_failed" }),
     },
     stopEnvironment,

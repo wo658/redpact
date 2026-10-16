@@ -2,17 +2,18 @@ import type { McpServer } from "@modelcontextprotocol/server"
 import { z } from "zod"
 import { problem } from "../../core/problems.js"
 import {
-  executionIdentity,
-  executionReadInput,
-  playwrightExecutionInput,
-  unitExecutionInput,
+  artifactInput,
+  getRunInput,
+  runTestsInput,
   verificationPath,
 } from "../../core/verification-schema.js"
+import { getRunSummary } from "../../workflows/run-summary.js"
 import type { Services } from "../../workflows/services.js"
 import {
-  cancelExecution,
   listExecutions,
+  projectContainer,
   readExecution,
+  readRunArtifact,
   runPlaywrightVerification,
   runUnitVerification,
 } from "../../workflows/verification.js"
@@ -64,44 +65,31 @@ export function registerVerificationTools(server: McpServer, services: Services)
     openWorldHint: true,
   }
   server.registerTool(
-    "run_unit_tests",
+    "run_tests",
     {
       description:
-        "Run the complete configured Unit command for an absolute existing checkout path, in its own temporary container. Records command output, input identity and cleanup; no per-file filter or host-command fallback. Does not create Git worktrees. Under Ask policy, returns a review card and waits for explicit human approval of the captured command and inputs. Read get_execution with kind=unit for progress and evidence.",
-      inputSchema: unitExecutionInput,
-      annotations: execution,
-      _meta: uiMeta(testsResource),
-    },
-    async ({ path }) => {
-      try {
-        const value = await runUnitVerification(services, path)
-        if ("review" in value) {
-          return executionReviewResult(
-            value,
-            services.executionReviews ??
-              problem("settings_unsupported", "Execution approval is unavailable"),
-          )
-        }
-        return { ...output(value), _meta: { redpact: executionSnapshot(value.kind, value.run) } }
-      } catch (error) {
-        return invoke(() => {
-          throw error
-        })
-      }
-    },
-  )
-  server.registerTool(
-    "run_playwright",
-    {
-      description:
-        "Run one declared Playwright target for an absolute existing checkout path. Choose the exact target name from configure inspect; target purpose determines functional results or capture evidence. Uses the actual application in a temporary environment, preserving screenshots and source identity. Does not create Git worktrees or grant approval. Under Ask policy, returns a review card for explicit human approval of the captured target, viewport and inputs. Read get_execution with kind=playwright.",
-      inputSchema: playwrightExecutionInput,
+        "Run managed Integration, Unit or Playwright verification from an absolute existing checkout. kind defaults to integration for legacy calls. Integration accepts tests; Unit runs its complete configured command; Playwright requires a declared target and optional viewport. Ask policy retains each kind's captured-input approval gates. No arbitrary command or per-case selection.",
+      inputSchema: runTestsInput,
       annotations: execution,
       _meta: uiMeta(testsResource),
     },
     async (input) => {
       try {
-        const value = await runPlaywrightVerification(services, input)
+        if (input.kind === "integration") {
+          const request = { path: input.path, tests: input.tests }
+          if (services.reviews) {
+            return reviewResult(await services.reviews.start(request), services.reviews)
+          }
+          return output(
+            await (
+              services.runFiles ?? problem("settings_unsupported", "File execution is unavailable")
+            )(request),
+          )
+        }
+        const value =
+          input.kind === "unit"
+            ? await runUnitVerification(services, input.path)
+            : await runPlaywrightVerification(services, input)
         if ("review" in value) {
           return executionReviewResult(
             value,
@@ -118,77 +106,113 @@ export function registerVerificationTools(server: McpServer, services: Services)
     },
   )
   server.registerTool(
-    "list_executions",
+    "list_runs",
     {
       description:
         "Read retained Unit, Integration and Playwright execution history for an absolute checkout path, newest first, with the returned cursor for pagination. Does not connect a project, create a checkout, start containers or run tests. An unobserved checkout has no recorded history.",
       inputSchema: z.strictObject({
         path: verificationPath,
         before: z.string().min(1).max(4096).optional(),
+        kind: z.enum(["integration", "unit", "playwright"]).optional(),
       }),
       annotations: readOnly,
     },
-    ({ path, before }) => invoke(() => listExecutions(services, path, before)),
+    ({ path, before, kind }) => invoke(() => listExecutions(services, path, before, kind)),
   )
   server.registerTool(
-    "get_execution",
+    "get_run",
     {
       description:
-        "Read recorded verification evidence by kind and ID. detail=result returns progress, source identity, verdict and cleanup; log returns bounded recorded diagnostics; source with sourcePath reads captured Integration/Playwright test code, never the live file; image with artifactId returns a recorded Playwright PNG (at most 8 MiB). Video, trace and larger images remain in the viewer. Passing evidence is not current-code freshness or human acceptance. Review IDs are supported for result and return a refreshed approval card; recorded evidence requires an admitted execution.",
-      inputSchema: executionReadInput,
+        "Read recorded verification evidence by kind and ID. Explicit kind with detail=result returns a bounded summary (20 failures/artifacts with counts and truncation), captured identity, verdict, cleanup and detail/viewer references; id-only calls retain the legacy Integration response; log returns bounded recorded diagnostics; source with sourcePath reads captured Integration/Playwright test code, never the live file; image with artifactId returns a recorded Playwright PNG (at most 8 MiB). Video, trace and larger images remain in the viewer. Passing evidence is not current-code freshness or human acceptance. Review IDs are supported for result and return a refreshed approval card; recorded evidence requires an admitted execution.",
+      inputSchema: getRunInput,
       _meta: uiMeta(testsResource),
       annotations: readOnly,
     },
     async (input) => {
       try {
-        const value = await readExecution(services, input)
-        const review =
-          input.detail === "result" ? services.executionReviews?.get(input.id) : undefined
-        if (review && services.executionReviews) {
-          return executionReviewResult(review, services.executionReviews)
-        }
-        const integration =
-          input.kind === "integration" && input.detail === "result"
-            ? services.reviews?.get(input.id)
-            : undefined
-        if (integration && services.reviews) {
-          return { ...output(value), _meta: reviewResult(integration, services.reviews)._meta }
-        }
-        let redpact: object
-        if (input.detail === "result" && "run" in value && value.run) {
-          redpact =
-            input.kind === "integration"
-              ? {
-                  kind: "tests",
-                  run: value.run,
-                  submission: services.submissions.get(
-                    (value.run as { submissionId: string }).submissionId,
-                  ),
-                }
-              : executionSnapshot(
-                  input.kind,
-                  value.run as
-                    | import("../../core/types/unit-tests.js").UnitRun
-                    | import("../../core/types/playwright.js").CaptureRun,
-                )
-        } else {
-          let text: unknown
-          if ("source" in value) {
-            text = value.source
+        if (!("kind" in input)) {
+          const review = services.reviews?.get(input.id)
+          if (review && services.reviews) {
+            return reviewResult(
+              review,
+              services.reviews,
+              review.review.state === "pending" ? "review" : "tests",
+            )
           }
-          if ("text" in value) {
-            text = value.text
-          }
-          redpact = {
-            kind: "evidence",
-            evidence: {
-              kind: input.kind,
-              id: input.id,
-              detail: input.detail,
-              text,
-              sourcePath: input.sourcePath,
+          const run = services.runs.get(input.id)
+          return {
+            ...output(run),
+            _meta: {
+              redpact: {
+                kind: "tests",
+                run,
+                submission: services.submissions.get(run.submissionId),
+              },
             },
           }
+        }
+        if (input.detail === "result") {
+          const summary = getRunSummary(services, input)
+          const executionReview = services.executionReviews?.get(input.id)
+          if (!summary.executionId && executionReview && services.executionReviews) {
+            return {
+              ...executionReviewResult(executionReview, services.executionReviews),
+              ...output(summary),
+            }
+          }
+          const integrationReview =
+            input.kind === "integration" ? services.reviews?.get(input.id) : undefined
+          if (!summary.executionId && integrationReview && services.reviews) {
+            return { ...reviewResult(integrationReview, services.reviews), ...output(summary) }
+          }
+          if (input.kind === "integration") {
+            return {
+              ...output(summary),
+              _meta: {
+                redpact: {
+                  kind: "evidence",
+                  evidence: {
+                    kind: input.kind,
+                    id: input.id,
+                    detail: "result",
+                    text: JSON.stringify(summary),
+                  },
+                },
+              },
+            }
+          }
+          const redpact = {
+            kind: "execution",
+            execution: {
+              kind: input.kind,
+              id: summary.executionId,
+              path: summary.path,
+              state: summary.state,
+              outcome: summary.outcome,
+              error: summary.failures[0]?.message,
+              cleanup: summary.cleanup.state,
+              ...summary.identity,
+            },
+          }
+          return { ...output(summary), _meta: { redpact } }
+        }
+        const value = await readExecution(services, input)
+        let text: unknown
+        if ("source" in value) {
+          text = value.source
+        }
+        if ("text" in value) {
+          text = value.text
+        }
+        const redpact = {
+          kind: "evidence",
+          evidence: {
+            kind: input.kind,
+            id: input.id,
+            detail: input.detail,
+            text,
+            sourcePath: input.sourcePath,
+          },
         }
         if ("image" in value && value.image) {
           const { image, ...metadata } = value
@@ -214,18 +238,52 @@ export function registerVerificationTools(server: McpServer, services: Services)
     },
   )
   server.registerTool(
-    "cancel_execution",
+    "get_run_artifact",
     {
       description:
-        "Cancel only the identified Unit, Integration or Playwright execution, retaining its evidence. Existing execution workflows own cancellation and resource cleanup; this is not an arbitrary container or environment stop. Unit and Playwright also support their existing cleanup retry. A review ID cancels its pending request without approving it.",
-      inputSchema: executionIdentity,
+        "Read one recorded Playwright screenshot, video or trace owned by the named run and side, up to 8 MiB. Larger artifacts remain in the viewer. Artifact IDs from other executions are rejected.",
+      inputSchema: artifactInput,
+      annotations: readOnly,
+    },
+    async (input) => {
+      try {
+        const { data, ...metadata } = await readRunArtifact(services, input)
+        const encoded = Buffer.from(data).toString("base64")
+        const attachment =
+          metadata.artifact.contentType === "image/png"
+            ? { type: "image" as const, mimeType: "image/png", data: encoded }
+            : {
+                type: "resource" as const,
+                resource: {
+                  uri: `redpact://runs/${input.id}/${input.side}/${input.artifactId}`,
+                  mimeType: metadata.artifact.contentType,
+                  blob: encoded,
+                },
+              }
+        return { ...output(metadata), content: [...output(metadata).content, attachment] }
+      } catch (error) {
+        return invoke(() => {
+          throw error
+        })
+      }
+    },
+  )
+  server.registerTool(
+    "project_container",
+    {
+      description:
+        "Inspect/start/restart/stop the observed project's manual Compose environment. path identifies the project; execution always uses its configured main checkout, never the supplied feature checkout. Stop only owns the manual environment and cannot stop test executions. Inspect is read-only; other actions are explicit manual lifecycle requests, independent of test approval.",
+      inputSchema: z.strictObject({
+        path: verificationPath,
+        action: z.enum(["inspect", "start", "restart", "stop"]),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
-        idempotentHint: true,
-        openWorldHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
       },
     },
-    ({ kind, id }) => invoke(() => cancelExecution(services, kind, id)),
+    ({ path, action }) => invoke(() => projectContainer(services, path, action)),
   )
 }

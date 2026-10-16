@@ -47,7 +47,9 @@ test("Integration 환경 승인 전에 요청에 저장된 앱 서비스와 테�
   }
 })
 
-test("채팅의 Unit 승인 카드는 변경된 입력을 실행하지 않고 취소를 반영한다", async ({ page }) => {
+test("채팅의 Unit 승인 카드는 변경된 입력을 실행하지 않고 승인 경계를 유지한다", async ({
+  page,
+}) => {
   const review = await openExecutionReview(page)
   try {
     await test.step("실제 MCP 요청의 명령과 승인 대기 상태를 확인한다", async () => {
@@ -61,20 +63,15 @@ test("채팅의 Unit 승인 카드는 변경된 입력을 실행하지 않고 �
       await review.card.getByRole("button", { name: "Approve execution" }).click()
       await expect(review.frame.getByText(/Execution inputs changed during review/)).toBeVisible()
       const state = await review.rpc("tools/call", {
-        name: "get_execution",
+        name: "get_run",
         arguments: { kind: "unit", id: review.id },
       })
       expect(state.structuredContent.state).toBe("awaiting_approval")
       expect(state.structuredContent.run).toBeUndefined()
     })
-    await test.step("채팅에서 취소한 검토를 다시 읽으면 승인 버튼을 제거한다", async () => {
-      await review.rpc("tools/call", {
-        name: "cancel_execution",
-        arguments: { kind: "unit", id: review.id },
-      })
+    await test.step("새로 읽은 검토도 입력 변경 후 실행을 승인하지 않는다", async () => {
       await review.refresh()
-      await expect(review.card.getByText("cancelled", { exact: true })).toBeVisible()
-      await expect(review.card.getByRole("button", { name: "Approve execution" })).toHaveCount(0)
+      await expect(review.card.getByRole("button", { name: "Approve execution" })).toBeVisible()
     })
   } finally {
     await review.restore()
@@ -82,7 +79,7 @@ test("채팅의 Unit 승인 카드는 변경된 입력을 실행하지 않고 �
 })
 
 for (const width of [1280, 390]) {
-  test(`${width}px 실행 검토 링크는 승인 입력과 취소 상태를 같은 요청에 유지한다`, async ({
+  test(`${width}px 실행 검토 링크는 승인 입력을 같은 요청에 유지하고 취소를 노출하지 않는다`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 })
@@ -128,26 +125,18 @@ for (const width of [1280, 390]) {
         await page.getByRole("button", { name: "Approve execution", exact: true }).click()
         await expect(page.getByText(/Execution inputs changed during review/)).toBeVisible()
         const response = await review.rpc("tools/call", {
-          name: "get_execution",
+          name: "get_run",
           arguments: { kind: "unit", id: review.id },
         })
         expect(response.structuredContent.state).toBe("awaiting_approval")
         expect(response.structuredContent.run).toBeUndefined()
       })
-      await test.step("명시적인 뷰어 취소가 MCP 상태와 재열기에도 반영된다", async () => {
-        await page.getByRole("button", { name: "Cancel request", exact: true }).click()
-        await expect(page.getByText("cancelled", { exact: true })).toBeVisible()
-        await expect(
-          page.getByRole("button", { name: "Approve execution", exact: true }),
-        ).toHaveCount(0)
-        const response = await review.rpc("tools/call", {
-          name: "get_review_context",
-          arguments: { kind: "unit", id: review.id },
-        })
-        expect(response.structuredContent.state).toBe("cancelled")
-        expect(response.structuredContent.id).toBe(review.id)
+      await test.step("새로고침해도 취소 제어가 없고 같은 요청을 유지한다", async () => {
+        await expect(page.getByRole("button", { name: "Cancel request", exact: true })).toHaveCount(
+          0,
+        )
         await page.reload()
-        await expect(page.getByText("cancelled", { exact: true })).toBeVisible()
+        await expect(page.getByText(review.id, { exact: true })).toBeVisible()
         await expect(page.getByRole("button", { name: "Cancel request", exact: true })).toHaveCount(
           0,
         )
@@ -157,54 +146,3 @@ for (const width of [1280, 390]) {
     }
   })
 }
-
-test("채팅에서 취소한 요청은 실행 상세에 새로고침 없이 반영된다", async ({ page }) => {
-  await page.addInitScript(() => {
-    const NativeEvents = window.EventSource
-    const opened = new Set<string>()
-    Object.assign(window, { redpactOpenEvents: opened })
-    window.EventSource = class extends NativeEvents {
-      constructor(url: string | URL, options?: EventSourceInit) {
-        super(url, options)
-        this.addEventListener("open", () => opened.add(this.url))
-        this.addEventListener("error", () => opened.delete(this.url))
-      }
-      close() {
-        opened.delete(this.url)
-        super.close()
-      }
-    }
-  })
-  const review = await openExecutionReviewViewer(page)
-  async function waitForEvidence() {
-    await expect
-      .poll(() =>
-        page.evaluate((worktreeId) => {
-          const opened = (window as unknown as { redpactOpenEvents: Set<string> }).redpactOpenEvents
-          return [...opened].some((value) => {
-            const url = new URL(value)
-            return (
-              url.searchParams.get("scope") === "evidence" &&
-              url.searchParams.get("worktreeId") === worktreeId
-            )
-          })
-        }, review.context.worktreeId),
-      )
-      .toBe(true)
-  }
-  try {
-    await waitForEvidence()
-    await test.step("상세를 보는 동안 채팅에서 취소하면 승인 제어가 사라진다", async () => {
-      await review.rpc("tools/call", {
-        name: "cancel_execution",
-        arguments: { kind: "unit", id: review.id },
-      })
-      await expect(page.getByText("cancelled", { exact: true })).toBeVisible()
-      await expect(
-        page.getByRole("button", { name: "Approve execution", exact: true }),
-      ).toHaveCount(0)
-    })
-  } finally {
-    await review.restore()
-  }
-})

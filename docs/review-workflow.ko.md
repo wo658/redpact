@@ -48,14 +48,14 @@ flowchart TD
 
 | 근거 | MCP 진입점 |
 | --- | --- |
-| 설정된 Unit 전체 명령 | `run_unit_tests` |
+| 설정된 Unit 전체 명령 | `run_tests` (`kind: "unit"`) |
 | 공개 API와 저장 동작 시나리오 | `run_tests` |
-| 실제 브라우저 조작 | functional target을 지정한 `run_playwright` |
-| 기록된 애플리케이션 화면 | capture target을 지정한 `run_playwright` |
+| 실제 브라우저 조작 | functional target을 지정한 `run_tests` (`kind: "playwright"`) |
+| 기록된 애플리케이션 화면 | capture target을 지정한 `run_tests` (`kind: "playwright"`) |
 
 각 요청은 정확한 워크트리 경로와 공유 고정 설정을 사용합니다. Unit, Integration,
 Playwright의 런타임과 근거 계약은 서로 다릅니다. Ask 정책에서는 지원되는 App 카드나
-연결된 실행 검토 화면에서 사람이 실행을 승인해야 합니다. 에이전트는 요청을 설명하거나 취소할 수 있지만 대신
+연결된 실행 검토 화면에서 사람이 실행을 승인해야 합니다. 에이전트는 대기 요청을 설명할 수 있지만 대신
 승인하거나 정책을 바꿔 진행할 수 없습니다. 승인은 검토한 입력에 연결되며 결과 코드의
 수락을 뜻하지 않습니다. 실행 허용 조건과 클라이언트 요구사항은
 [인터페이스](interfaces.md)를 참고하세요.

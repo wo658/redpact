@@ -57,7 +57,7 @@ export function reviewSummaryBase(
       {
         type: "log",
         label: "Recorded diagnostics",
-        tool: "get_execution",
+        tool: "get_run",
         arguments: { kind, id: run.id, detail: "log" },
       },
     ],
@@ -147,7 +147,7 @@ export function integrationReviewContext(
     context.evidence.push({
       type: "source",
       label: file.path,
-      tool: "get_execution",
+      tool: "get_run",
       arguments: { kind: "integration", id: run.id, detail: "source", sourcePath: file.path },
     })
   }
@@ -192,7 +192,7 @@ export function playwrightReviewContext(run: CaptureRun): ReviewContext {
         context.evidence.push({
           type: "source",
           label: item.file,
-          tool: "get_execution",
+          tool: "get_run",
           arguments: { kind: "playwright", id: run.id, detail: "source", sourcePath: item.file },
         })
       }
@@ -205,7 +205,7 @@ export function playwrightReviewContext(run: CaptureRun): ReviewContext {
           bytes: artifact.bytes,
           ...(image
             ? {
-                tool: "get_execution",
+                tool: "get_run",
                 arguments: {
                   kind: "playwright",
                   id: run.id,

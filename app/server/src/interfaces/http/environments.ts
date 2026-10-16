@@ -3,6 +3,7 @@ import { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
 import type { EnvironmentService, StopEnvironment } from "../../core/types/services.js"
+import { stopManualEnvironment } from "../../workflows/stop-environment.js"
 import { conflict, inputErrors, jsonResponse, localErrors, notFound } from "./docs/metadata.js"
 import { environmentResponse } from "./docs/schemas.js"
 export const listEnvironmentInput = z.strictObject({ worktreeId: z.string().uuid() })
@@ -60,7 +61,7 @@ export function environmentRoutes(
         summary: "Stop an environment",
         tags: ["Environments"],
         description:
-          "Cancels linked execution before asynchronously removing owned resources and captured runtime files, preserving logs and immutable test evidence. Poll until stopped; stop_failed retains resources for retry.",
+          "Removes a manual environment. Test-owned environments reject manual stop and retain automatic lifecycle cleanup.",
         responses: {
           ...localErrors,
           ...notFound,
@@ -68,6 +69,7 @@ export function environmentRoutes(
           202: jsonResponse(environmentResponse, "Stop an environment response."),
         },
       }),
-      async (c) => c.json(await stopEnvironment(c.req.param("id")), 202),
+      async (c) =>
+        c.json(await stopManualEnvironment(environments, stopEnvironment, c.req.param("id")), 202),
     )
 }
