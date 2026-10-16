@@ -6,7 +6,7 @@ import { EmptyState, Loading, Notice } from "./feedback"
 import { ListGroup, ListHeader, ListItem, ListItems } from "./kibo-ui/list"
 import { useLiveRevision } from "./live-updates"
 import { ResultRow } from "./result-row"
-import { TestCode } from "./test-code"
+import { SelectedTestSource } from "./selected-test-source"
 import { TestFileBrowser } from "./test-file-browser"
 import { Badge } from "./ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/coss-tabs"
@@ -294,16 +294,17 @@ export function IntegrationTestFiles({
                 : t("No changed integration test files.")}
             </EmptyState>
           )}
-          {selected && selected.source !== null && (
-            <TestCode
+          {selected && (
+            <SelectedTestSource
+              key={`${worktreeId}:${scope}:${selected.path}`}
               api={api}
               worktreeId={worktreeId}
+              kind="integration"
+              path={selected.path}
               scope={scope}
-              baseRevision={data.catalog.baseRevision}
-              source={{ path: selected.path, content: selected.source }}
+              catalog={data.catalog}
             />
           )}
-          {selected && selected.source === null && <Notice>{selected.issue}</Notice>}
         </TabsContent>
         <TabsContent value="results" className="flex h-0 min-h-0 flex-col gap-3 overflow-auto">
           {selectedSubmission ? (

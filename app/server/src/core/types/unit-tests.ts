@@ -4,10 +4,12 @@ export type UnitTestSettings = z.infer<typeof unitTestSettingsSchema>
 export type UnitRun = z.infer<typeof unitRunSchema>
 export type UnitCatalog = {
   baseRevision?: string
-  files: { path: string; source: string | null; issue?: string }[]
+  files: { path: string }[]
   diagnostics: string[]
 }
+export type TestSource = { path: string; source: string | null; issue?: string }
 export type UnitTestFiles = {
+  source(root: string, path: string, patterns: string[], directory?: string): Promise<TestSource>
   catalog(
     root: string,
     base: string | null,
@@ -34,6 +36,7 @@ export type UnitCommand = {
 }
 export type UnitRunStore = { list(): UnitRun[]; save(run: UnitRun): void }
 export type UnitTestsService = {
+  source(worktreeId: string, path: string): Promise<TestSource>
   busy(ids?: string[]): boolean
   inspect(
     worktreeId: string,

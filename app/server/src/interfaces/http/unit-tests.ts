@@ -22,6 +22,16 @@ export function unitTestRoutes(service: UnitTestsService) {
     })
   return new Hono()
     .get(
+      "/worktrees/:id/unit-tests/source",
+      docs(
+        "getUnitTestSource",
+        "Read one configured unit test source without execution",
+        z.object({ path: z.string(), source: z.string().nullable(), issue: z.string().optional() }),
+      ),
+      zValidator("query", z.object({ path: z.string().min(1) })),
+      async (c) => c.json(await service.source(c.req.param("id"), c.req.valid("query").path)),
+    )
+    .get(
       "/worktrees/:id/unit-tests",
       docs(
         "inspectUnitTests",

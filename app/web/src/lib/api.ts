@@ -173,11 +173,12 @@ export type UnitRun = {
   truncated: boolean
   error: string | null
 }
+export type TestSource = { path: string; source: string | null; issue?: string }
 export type UnitInspection = {
   settings: UnitRun["settings"] | null
   catalog: {
     baseRevision?: string
-    files: { path: string; source: string | null; issue?: string }[]
+    files: { path: string }[]
     diagnostics: string[]
   }
   runs: UnitRun[]
@@ -507,6 +508,12 @@ export function createApi(fetcher: typeof fetch = viewerFetch) {
     },
     pickDirectory: (signal?: AbortSignal) =>
       request<{ path: string | null }>("/dialogs/directory", {}, signal),
+    testSource: (id: string, kind: "unit" | "integration", path: string, signal?: AbortSignal) =>
+      request<TestSource>(
+        `/worktrees/${encodeURIComponent(id)}/${kind}-tests/source?path=${encodeURIComponent(path)}`,
+        undefined,
+        signal,
+      ),
     unitTests: (id: string, signal?: AbortSignal, scope: "changed" | "all" = "changed") =>
       request<UnitInspection>(
         `/worktrees/${encodeURIComponent(id)}/unit-tests?scope=${scope}`,

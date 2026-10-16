@@ -5,7 +5,7 @@ import { createIntegrationTests } from "../src/workflows/integration-tests.js"
 test("full integration inspection bypasses comparison and validates its HTTP scope", async () => {
   const mergeBase = vi.fn(async () => "base")
   const catalog = vi.fn(async () => ({
-    files: [{ path: "tests/existing.test.ts", source: "existing" }],
+    files: [{ path: "tests/existing.test.ts" }],
     diagnostics: [],
   }))
   const integrationTests = createIntegrationTests({
@@ -23,7 +23,7 @@ test("full integration inspection bypasses comparison and validates its HTTP sco
   const app = createApp({ integrationTests, runWorktreeTests } as never)
   const response = await app.request("/api/worktrees/w/integration-tests?scope=all")
   expect(response.status).toBe(200)
-  expect((await response.json()).catalog.files[0].source).toBe("existing")
+  expect((await response.json()).catalog.files[0]).toEqual({ path: "tests/existing.test.ts" })
   expect(mergeBase).not.toHaveBeenCalled()
   expect(catalog).toHaveBeenCalledWith("/checkout", null, expect.any(Array), "tests", "all")
   expect(runWorktreeTests).not.toHaveBeenCalled()

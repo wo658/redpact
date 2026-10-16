@@ -116,6 +116,13 @@ export function createUnitTests(deps: {
             (run.state === "running" || run.cleanup.state !== "removed"),
         ),
     get,
+    async source(id, path) {
+      const { target, settings } = await configured(id)
+      if (!settings) {
+        problem("invalid_input", "Configure unit tests before previewing sources")
+      }
+      return deps.files.source(target.worktree.projectRoot, path, settings.patterns)
+    },
     async inspect(id, scope = "changed") {
       const { target, settings } = await configured(id)
       let catalog: UnitCatalog = { files: [], diagnostics: [] }
