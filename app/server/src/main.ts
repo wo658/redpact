@@ -37,6 +37,7 @@ import { createCaptureStore } from "./adapters/storage/captures.js"
 import { createExecutionReviewStore } from "./adapters/storage/execution-reviews.js"
 import { openStore } from "./adapters/storage/files.js"
 import { loadInstance } from "./adapters/storage/instance.js"
+import { createLifecycleLog } from "./adapters/storage/lifecycle-log.js"
 import { createMergeStore } from "./adapters/storage/merges.js"
 import { createRuntimeMigrationFiles } from "./adapters/storage/migrations.js"
 import { createReviewStore } from "./adapters/storage/reviews.js"
@@ -77,6 +78,7 @@ import {
 import { createRunQueries } from "./workflows/run-queries.js"
 import { createRuns } from "./workflows/runs.js"
 import { migrateRuntime } from "./workflows/runtime-migrations.js"
+import { createRuntimeShutdown } from "./workflows/runtime-shutdown.js"
 import { createSettingsEditor } from "./workflows/settings-editor.js"
 import { createWorkStarts } from "./workflows/start-work.js"
 import { createStopEnvironment } from "./workflows/stop-environment.js"
@@ -119,7 +121,27 @@ const command = new Command()
 
     const directory = resolve(options.dataDir)
     await mkdir(directory, { recursive: true, mode: 0o700 })
-    const storage = openStore(directory)
+    const lifecycle = createLifecycleLog(directory)
+    lifecycle("runtime.start.requested", { parentPid: process.ppid, supervised: runtimeSupervised })
+    let storage: ReturnType<typeof openStore>
+    try {
+      storage = openStore(directory)
+    } catch (error) {
+      lifecycle("runtime.start.failed", { error: String(error) })
+      throw error
+    }
+    // Fatal termination cannot leave JavaScript writers running after the lock is released.
+    const releaseAtExit = () => {
+      try {
+        storage.close()
+        lifecycle("runtime.writer.released", { phase: "process_exit" })
+      } catch (error) {
+        lifecycle("runtime.writer.release_failed", { error: String(error) })
+        console.error("Failed to release runtime writer", error)
+        process.exitCode = 1
+      }
+    }
+    process.once("exit", releaseAtExit)
     try {
       await migrateRuntime(createRuntimeMigrationFiles(directory))
       const { instance, settings: instanceSettings } = loadInstance(directory)
@@ -452,6 +474,7 @@ const command = new Command()
         environments,
       })
 
+      let shutdownReason = "manual"
       const runtimeInput = runtimeSupervised ? new PassThrough() : undefined
       if (runtimeInput) {
         process.on("message", (message: unknown) => {
@@ -462,13 +485,24 @@ const command = new Command()
             "runtimeControl" in message &&
             (message.runtimeControl === "update" || message.runtimeControl === "shutdown")
           ) {
+            shutdownReason = message.runtimeControl === "update" ? "update" : "manual"
+            if (
+              message.runtimeControl === "shutdown" &&
+              "reason" in message &&
+              (message.reason === "SIGINT" || message.reason === "SIGTERM")
+            ) {
+              shutdownReason = message.reason
+            }
             runtimeInput.write(`${message.runtimeControl}\n`)
           }
           if ("runtimeUpdateError" in message && typeof message.runtimeUpdateError === "string") {
             updates.installationFailed(message.runtimeUpdateError)
           }
         })
-        process.once("disconnect", () => runtimeInput.end())
+        process.once("disconnect", () => {
+          shutdownReason = "parent_disconnect"
+          runtimeInput.end()
+        })
       }
       const desktop =
         desktopMode || runtimeSupervised
@@ -486,7 +520,7 @@ const command = new Command()
                     ["preparing", "in_use", "stopping"].includes(environment.state),
                   ) ||
                 unitStore.list().some((run) => run.state === "running"),
-              stop: () => stop(),
+              stop: () => stop(shutdownReason),
               send: (message) => {
                 if (runtimeSupervised) {
                   if (process.connected) {
@@ -502,15 +536,27 @@ const command = new Command()
               },
             })
           : undefined
+      const activeRequests = new Set<Promise<Response>>()
+      let acceptingRequests = true
       const server = serve(
         {
-          fetch: (request, env) =>
-            desktop ? desktop.fetch(() => app.fetch(request, env)) : app.fetch(request, env),
+          fetch: (request, env) => {
+            if (!acceptingRequests) {
+              return new Response("Redpact is stopping", { status: 503 })
+            }
+            const pending = Promise.resolve(
+              desktop ? desktop.fetch(() => app.fetch(request, env)) : app.fetch(request, env),
+            )
+            activeRequests.add(pending)
+            void pending.finally(() => activeRequests.delete(pending)).catch(() => {})
+            return pending
+          },
           hostname: options.host,
           port,
         },
         (address) => {
           const url = options.host === "127.0.0.1" ? `http://127.0.0.1:${address.port}/` : undefined
+          lifecycle("runtime.start.completed", { port: address.port })
           logger.info(
             { host: options.host, port: address.port, url },
             options.host === "127.0.0.1"
@@ -526,45 +572,102 @@ const command = new Command()
         },
       )
       updates.start()
-      let stopping = false
-      const stop = async () => {
-        if (stopping) {
-          return
-        }
-        stopping = true
-        updates.close()
-        await directoryPicker.close()
-        desktop?.close()
-        await projectObserver.close()
-        await changes.close()
-        server.close()
-        await pullRequests.close()
-        await merges.close()
-        await executionReviews.close()
-        await unitTests.close()
-        await reviews.close()
-        await captureWorkflow?.close()
-        await testContainer.close()
-        await executeTests.close()
-        await environments.close()
-        storage.close()
-        if (desktop && "closeAllConnections" in server) {
-          server.closeAllConnections()
-        }
+      const shutdown = createRuntimeShutdown(
+        [
+          {
+            name: "HTTP admission",
+            close: () => {
+              acceptingRequests = false
+              server.close()
+            },
+          },
+          { name: "updates", close: () => updates.close() },
+          { name: "directory picker", close: () => directoryPicker.close() },
+          { name: "desktop control", close: () => desktop?.close() },
+          { name: "project observer", close: () => projectObserver.close() },
+          { name: "change streams", close: () => changes.close() },
+          { name: "pull requests", close: () => pullRequests.close() },
+          { name: "merges", close: () => merges.close() },
+          { name: "execution reviews", close: () => executionReviews.close() },
+          { name: "unit tests", close: () => unitTests.close() },
+          { name: "reviews", close: () => reviews.close() },
+          { name: "captures", close: () => captureWorkflow?.close() },
+          { name: "test containers", close: () => testContainer.close() },
+          { name: "integration tests", close: () => executeTests.close() },
+          { name: "environments", close: () => environments.close() },
+          {
+            name: "HTTP connections",
+            close: () => {
+              if ("closeAllConnections" in server) {
+                server.closeAllConnections()
+              }
+            },
+          },
+          {
+            name: "HTTP handlers",
+            close: async () => {
+              await Promise.allSettled(activeRequests)
+            },
+          },
+        ],
+        () => {
+          storage.close()
+          process.removeListener("exit", releaseAtExit)
+        },
+      )
+      const stop = (reason: string) => {
+        lifecycle("runtime.shutdown.requested", { reason })
+        return shutdown()
+          .then(() => {
+            lifecycle("runtime.shutdown.completed", { reason, writer: "released" })
+          })
+          .catch((error: unknown) => {
+            lifecycle("runtime.shutdown.failed", {
+              reason,
+              writer: "held_until_exit",
+              error: String(error),
+              steps:
+                error instanceof AggregateError
+                  ? error.errors.map((failure) => ({
+                      error: String(failure),
+                      cause: String(failure.cause),
+                    }))
+                  : [],
+            })
+            logger.error(
+              { err: error },
+              "Runtime shutdown failed; terminating with writer ownership held",
+            )
+            process.exitCode = 1
+            // Let the supervisor receive the failure before ending any remaining writers.
+            setImmediate(() => process.exit(1))
+            throw error
+          })
+      }
+      const stopFromSignal = (reason: string) => {
+        void stop(reason)
+          .then(() => {
+            if (process.connected) {
+              process.disconnect()
+            }
+          })
+          .catch(() => {})
       }
       process.once("SIGINT", () => {
-        void stop()
+        stopFromSignal("SIGINT")
       })
       process.once("SIGTERM", () => {
-        void stop()
+        stopFromSignal("SIGTERM")
       })
       server.once("error", (error) => {
         logger.error(error)
-        void stop()
+        lifecycle("runtime.server.failed", { error: String(error) })
+        stopFromSignal("server_error")
         process.exitCode = 1
       })
     } catch (error) {
-      storage.close()
+      lifecycle("runtime.start.failed", { error: String(error), writer: "held_until_exit" })
+      // Startup may already have launched writers; release only at process exit.
       throw error
     }
   })

@@ -52,6 +52,7 @@ export function superviseRuntime(options: {
   start: (error?: string, port?: number) => ChildProcess
   install: (version: string) => Promise<void>
   exit: (code: number) => void
+  log?: (event: string, fields: Record<string, unknown>) => void
 }) {
   let port: number | undefined
   let child: ChildProcess
@@ -65,6 +66,7 @@ export function superviseRuntime(options: {
   function start(error?: string) {
     child = options.start(error, port)
     const owned = child
+    options.log?.("supervisor.child.started", { childPid: owned.pid })
     owned.on("message", (message: unknown) => {
       if (
         message &&
@@ -86,12 +88,20 @@ export function superviseRuntime(options: {
       }
       void update(version)
     })
-    owned.on("exit", (code) => {
+    owned.on("exit", (code, signal) => {
+      options.log?.("supervisor.child.exited", {
+        childPid: owned.pid,
+        code,
+        signal,
+        updating,
+        closing,
+      })
       if (!updating) {
         options.exit(code ?? 1)
       }
     })
-    owned.on("error", () => {
+    owned.on("error", (error) => {
+      options.log?.("supervisor.child.failed", { childPid: owned.pid, error: String(error) })
       if (!updating) {
         options.exit(1)
       }
@@ -131,10 +141,14 @@ export function superviseRuntime(options: {
   }
   start()
   return {
-    close() {
+    close(reason: "manual" | "SIGINT" | "SIGTERM" = "manual") {
       closing = true
+      options.log?.("supervisor.shutdown.requested", { childPid: child.pid, reason })
       if (child.connected) {
-        send({ runtimeControl: "shutdown" })
+        send({ runtimeControl: "shutdown", reason })
+      } else if (child.exitCode === null && child.signalCode === null) {
+        options.log?.("supervisor.child.stop_signal", { childPid: child.pid, signal: "SIGTERM" })
+        child.kill("SIGTERM")
       } else if (!updating) {
         options.exit(0)
       }

@@ -212,7 +212,9 @@ one tarball, records its source commit, version and SHA-256, and retains it as a
 Actions artifact. Linux x64, macOS ARM64/Intel and Windows x64 install that same file
 with Node 24 and 26, a fresh npm cache/prefix and lifecycle scripts enabled. Checks
 cover installed package identity, CLI startup, health, bundled viewer, MCP configure
-and owned-process shutdown. Windows invokes the installed CLI JavaScript entry with
+and owned-process shutdown. The installed artifact also verifies live-writer exclusion,
+forced-termination recovery and concurrent recovery with preserved evidence on every
+OS/Node matrix entry. Windows invokes the installed CLI JavaScript entry with
 Node rather than the `.cmd` shim. These checks do not prove every Node 24+ version,
 Docker execution, or registry download availability.
 
@@ -247,7 +249,9 @@ HTTP agent plugin examples use 54321, and the App Page Plugin uses 54322. Instan
 data and update ownership remain separate. Reconnect the host after Plugin/schema changes.
 
 The runtime package includes web assets, MCP resources, notices, runner files and
-lockfile evidence. Preserve the bundled Testcontainers patch, locked Umzug graph (including the AJV
+lockfile evidence. The pinned `fs-native-extensions` package and its native prebuilds
+are bundled for the common runtime writer guard; verify them through the installed
+package matrix before release. Preserve the bundled Testcontainers patch, locked Umzug graph (including the AJV
 security override), and licenses through installed-package verification. Packaging
 retains workspace overrides in its staging install; consumers receive the bundled
 graph because they do not inherit workspace overrides. The macOS-only optional

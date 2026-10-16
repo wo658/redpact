@@ -44,6 +44,7 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
       expect(published.bundledDependencies).toContain("umzug")
       expect(published.optionalDependencies?.fsevents).toBe("2.3.3")
       expect(published.bundledDependencies).toContain("fsevents")
+      expect(published.bundledDependencies).toContain("fs-native-extensions")
       const contents = execFileSync("tar", ["-tzf", tarball], { encoding: "utf8" }).split("\n")
       expect(contents).toContain("package/dist/adapters/environment/compose-worker.js")
       expect(contents).toContain("package/dist/adapters/test-runner/reporter.mjs")
@@ -55,6 +56,12 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
       expect(contents).toContain("package/node_modules/umzug/LICENSE")
       expect(contents).toContain("package/node_modules/fsevents/fsevents.node")
       expect(contents).toContain("package/node_modules/fsevents/LICENSE")
+      expect(contents).toContain("package/node_modules/fs-native-extensions/LICENSE")
+      for (const platform of ["darwin-arm64", "darwin-x64", "linux-x64", "win32-x64"]) {
+        expect(contents).toContain(
+          `package/node_modules/fs-native-extensions/prebuilds/${platform}/fs-native-extensions.node`,
+        )
+      }
       expect(contents).toContain("package/LICENSE")
       expect(contents).toContain("package/NOTICE")
       expect(published.dependencies.vite).toBeUndefined()
@@ -66,6 +73,15 @@ test.skipIf(process.env.REDPACT_PACKAGE_TEST !== "1")(
       expect(contents).toContain("package/dist/ui/licenses/shadcn-ui.txt")
       expect(contents.some((path) => /^package\/(src|test|app|\.redpact|\.git)\//.test(path))).toBe(
         false,
+      )
+
+      execFileSync(
+        process.execPath,
+        [
+          fileURLToPath(new URL("../../../tools/install/writer-recovery.mjs", import.meta.url)),
+          installed,
+        ],
+        { cwd: directory, encoding: "utf8", timeout: 60000 },
       )
 
       // Exercise the shipped patch without Docker, using a failing Compose transport.

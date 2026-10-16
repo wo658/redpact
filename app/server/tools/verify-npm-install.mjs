@@ -54,6 +54,14 @@ try {
     ],
     { cwd: directory, env, stdio: "inherit", timeout: 60000 },
   )
+  execFileSync(
+    process.execPath,
+    [
+      fileURLToPath(new URL("../../../tools/install/writer-recovery.mjs", import.meta.url)),
+      installed,
+    ],
+    { cwd: directory, env, stdio: "inherit", timeout: 60000 },
+  )
   console.log(
     `PASS: npm global install ${actual.version}; ${process.platform}/${process.arch}; Node ${process.version}`,
   )

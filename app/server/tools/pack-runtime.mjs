@@ -29,7 +29,7 @@ try {
   manifest.bugs = { url: "https://github.com/wo658/redpact/issues" }
   // Consumers do not inherit workspace patches or overrides. Ship both locked graphs.
   // fsevents registry metadata adds a broken install script; retain its prebuilt package.
-  manifest.bundledDependencies = ["testcontainers", "umzug", "fsevents"]
+  manifest.bundledDependencies = ["testcontainers", "umzug", "fsevents", "fs-native-extensions"]
   delete manifest.scripts
   await writeFile(join(stage, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`)
   await writeFile(join(stage, "pnpm-lock.yaml"), stringify(lock))
