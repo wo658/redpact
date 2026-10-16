@@ -23,6 +23,8 @@ import { resourceLimitSchema } from "../../core/test-resource-schema.js"
 import { trackingSchema } from "../../core/tracking-schema.js"
 import type { Run, Store, Submission, WorkItem } from "../../core/types/contracts.js"
 
+import { acquireWriterLock } from "./writer-lock.js"
+
 const id = z.string().regex(/^[a-zA-Z0-9_-]+$/)
 const workStartSchema = z.strictObject({
   id,
@@ -171,18 +173,7 @@ const worktreeSelectionSchema = z.strictObject({
 export function openStore(directory: string) {
   const root = resolve(directory)
   mkdirSync(root, { recursive: true, mode: 0o700 })
-  const lockPath = join(root, ".writer.lock")
-  let lock: number
-  try {
-    lock = openSync(lockPath, "wx", 0o600)
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
-      throw error
-    }
-    throw new Error(
-      `State directory is locked: ${lockPath}. Stop its owner before removing a stale lock.`,
-    )
-  }
+  const releaseWriter = acquireWriterLock(root)
   // The writer owns immutable records; keep only ordering metadata, never source bundles.
   type SubmissionOrder = Pick<Submission, "id" | "createdAt" | "worktreeId">
   let submissionOrder: Map<string, SubmissionOrder[]> | undefined
@@ -253,8 +244,7 @@ export function openStore(directory: string) {
       return
     }
     closed = true
-    closeSync(lock)
-    unlinkSync(lockPath)
+    releaseWriter()
   }
   function ensureOpen() {
     if (closed) {
@@ -657,13 +647,6 @@ export function openStore(directory: string) {
           return run && run.state !== "finished" ? [run] : []
         })
     },
-  }
-  try {
-    writeFileSync(lock, JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() }))
-    fsyncSync(lock)
-  } catch (error) {
-    close()
-    throw error
   }
   return { store, close }
 }

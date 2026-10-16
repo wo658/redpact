@@ -61,7 +61,8 @@ but there are no database foreign keys or cross-file transactions.
 │   ├── <id>.json
 │   └── <id>/                         # preparation logs and temporary inputs
 ├── playwright-runs/                         # Playwright records and artifacts
-└── .writer.lock
+├── .writer.guard                          # permanent OS lock inode
+└── .writer.lock                           # current process ownership
 ```
 
 The storage adapters define exact current layouts and versions. The diagram shows
@@ -120,6 +121,32 @@ records refuse overwrite. Validate shapes, parent bindings and identity invarian
 report corruption rather than resetting or silently skipping it. A writer lock
 records process ownership; never steal a live or unknown owner's lock.
 
+The common CLI, desktop and App runtime holds an OS advisory lock on the permanent
+`.writer.guard` file throughout startup, execution and shutdown. The guard serializes
+owner recovery and is released by the kernel when a process dies, including forced
+termination. Never delete or replace this guard file, even when it appears empty.
+A remaining guard file does not mean the instance is running.
+
+Under that guard, startup automatically recovers `.writer.lock` only when its valid
+PID metadata identifies a process the OS reports as absent (`ESRCH`). The old owner
+file is preserved as `.writer.lock.stale-<id>` before acquisition; records, migrations,
+settings and evidence remain unchanged. Owner metadata is published atomically so
+interrupted initialization does not expose a partial new owner. Concurrent starters
+admit one writer; others report a locked instance and can retry after it stops.
+Live PIDs, reused PIDs, permission-denied probes and malformed/unknown owners block
+startup without deleting the marker. For those cases, inspect the owner and stop it
+before manual recovery. Automatic recovery assumes a local filesystem and one host
+PID namespace; do not share an instance directory between machines or containers
+with separate PID namespaces. These operational lock files do not change record
+formats or require a data reset or migration.
+
+Shutdown stops accepting connections and attempts every cleanup in order, reporting
+all failures. Repeated requests share the same cleanup. The writer lock is released
+only after successful cleanup; if cleanup fails, the process terminates with a
+nonzero status and holds ownership until its final synchronous exit cleanup. This
+prevents an unfinished writer from overlapping a replacement. Forced termination
+still relies on startup recovery; no signal handler can handle `SIGKILL` or power loss.
+
 Reservation, run publication and resource creation cross file/process boundaries.
 Persist enough operation-specific state to reconcile partial completion. Recovery
 must not invent execution evidence, retarget accepted inputs or replay uncertain
@@ -172,3 +199,17 @@ Implementation: [storage adapters](../app/server/src/adapters/storage),
 
 Migration implementation: [workflow](../app/server/src/workflows/runtime-migrations.ts),
 [file adapter](../app/server/src/adapters/storage/migrations.ts).
+
+Runtime lifecycle diagnostics are appended synchronously to `runtime-lifecycle.jsonl`
+in the instance data directory, independently of the parent connection. Entries include
+PID/time, startup requests/completion/failure, shutdown reasons (`manual`, `update`,
+`parent_disconnect`, `SIGINT`, `SIGTERM`, `server_error`), cleanup errors, writer release
+and stale-owner recovery. The installed CLI supervisor also records child PID, exit code
+and signal, including forced child termination while the supervisor survives.
+SIGINT/SIGTERM received by the CLI remain the shutdown reason in both supervisor
+and child records. Shutdown waits for admitted HTTP handlers before releasing writer
+ownership. SIGKILL of
+both processes cannot produce a final entry. Logs are retained without automatic rotation;
+archive them only while the instance is stopped. A live or reused PID is never reclaimed;
+invalid metadata and failed liveness probes report distinct refusal reasons. These logs
+provide future diagnosis; they do not establish the original cause of earlier shutdowns.

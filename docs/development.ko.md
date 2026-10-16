@@ -196,7 +196,8 @@ Redpact는 베타 기간에 `0.x.y` 제품 버전을 사용하고 사용자에�
 macOS ARM64/Intel, Windows x64에서 Node 24·26으로 같은 파일을 설치합니다.
 각 설치는 새 npm 캐시·설치 경로와 활성화된 lifecycle script를 사용합니다.
 설치 패키지 식별 정보, CLI 시작, health, 번들 뷰어, MCP configure와 소유 프로세스 종료를
-검사합니다. Windows에서는 `.cmd` shim 대신 설치된 CLI JavaScript 진입점을 Node로
+검사합니다. 설치된 아티팩트로 각 OS/Node 조합에서 살아 있는 writer의 중복 접근 차단,
+강제 종료 후 복구, 증거를 보존하는 동시 복구도 검증합니다. Windows에서는 `.cmd` shim 대신 설치된 CLI JavaScript 진입점을 Node로
 실행합니다. 모든 Node 24+ 버전, Docker 실행, 레지스트리 다운로드 가용성을 보장하지 않습니다.
 
 모든 런타임 릴리스 검사가 통과한 뒤에만 검증한 npm tarball을
@@ -228,6 +229,8 @@ Plugin 예시는 54321, App Page Plugin은 54322를 사용합니다. 각 인스�
 업데이트 소유권은 독립적입니다. Plugin·스키마 변경 후 호스트를 다시 연결하세요.
 
 패키지는 웹 에셋, MCP 리소스, 고지, 실행기 파일과 lockfile 증거를 포함합니다.
+공통 런타임 writer guard에 사용하는 고정 버전 `fs-native-extensions`와 네이티브
+prebuild를 번들로 포함하며, 릴리스 전에 설치 패키지 matrix로 검증해야 합니다.
 설치 검증에서 번들 Testcontainers patch, AJV 보안 override를 포함한 고정 Umzug
 의존성 그래프, 라이선스를 보존하세요. 패키징의 준비 설치는 workspace override를
 유지합니다. 설치 소비자는 workspace override를 상속하지 않으므로 번들 그래프를 받습니다.

@@ -68,3 +68,34 @@ test("패키지 설치 실패는 다시 실행한 서버에 오류를 전달한�
   first.emit("exit", 0)
   await vi.waitFor(() => expect(start).toHaveBeenLastCalledWith("Registry unavailable", undefined))
 })
+
+test("supervisor records forced child exit independently of child logging", () => {
+  const owned = child()
+  const log = vi.fn()
+  superviseRuntime({
+    start: () => owned as unknown as ChildProcess,
+    install: async () => {},
+    exit: vi.fn(),
+    log,
+  })
+  owned.emit("exit", null, "SIGKILL")
+  expect(log).toHaveBeenCalledWith(
+    "supervisor.child.exited",
+    expect.objectContaining({ code: null, signal: "SIGKILL" }),
+  )
+})
+
+test("supervisor waits for a disconnected live child instead of orphaning it", () => {
+  const owned = Object.assign(child(), { connected: false, kill: vi.fn() })
+  const exit = vi.fn()
+  const supervisor = superviseRuntime({
+    start: () => owned as unknown as ChildProcess,
+    install: async () => {},
+    exit,
+  })
+  supervisor.close()
+  expect(owned.kill).toHaveBeenCalledWith("SIGTERM")
+  expect(exit).not.toHaveBeenCalled()
+  owned.emit("exit", 0, null)
+  expect(exit).toHaveBeenCalledWith(0)
+})
