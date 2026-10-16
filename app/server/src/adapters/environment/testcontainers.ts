@@ -17,7 +17,7 @@ import { minimalEnvironment } from "../process/environment.js"
 import { readJsonSettings } from "../settings/json.js"
 import { snapshotComposeInputs } from "./compose-inputs.js"
 import type { EffectiveCompose } from "./compose-model.js"
-
+import { networkDiagnostic } from "./network-diagnostic.js"
 import {
   containerLogSnapshot,
   containersWithLabels,
@@ -41,9 +41,11 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
   async function runtime(record: Environment) {
     return runtimeIdentity(record.runtimeId)
   }
-  async function ids(kind: string, project: string) {
+  async function ids(kind: string, record: Environment) {
     const client = await runtimeClient()
-    const filters = { label: [`com.docker.compose.project=${project}`] }
+    const filters = {
+      label: [`io.redpact.owner=${record.ownerId}`, `io.redpact.environment=${record.id}`],
+    }
     if (kind === "container") {
       return (await containersWithLabels(filters.label)).map((item) => item.Id)
     }
@@ -58,7 +60,7 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
     const endpoints: Environment["endpoints"] = {}
     const observed = new Map<string, boolean>()
     for (const kind of ["container", "network", "volume"] as const) {
-      for (const id of await ids(kind, record.projectName)) {
+      for (const id of await ids(kind, record)) {
         const client = await runtimeClient()
         const item = kind === "container" ? await inspectContainer(id) : null
         let metadata: { Labels?: Record<string, string> } | null = null
@@ -331,7 +333,9 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         )
         try {
           const result = await child
-          await writeFile(join(root, "preparation.log"), redact(result.stderr), { mode: 0o600 })
+          await writeFile(join(root, "preparation.log"), redact(networkDiagnostic(result.stderr)), {
+            mode: 0o600,
+          })
           if (result.exitCode !== 0) {
             throw new Error("Compose startup failed")
           }
@@ -373,7 +377,7 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
       } catch (error) {
         await appendFile(
           join(root, "preparation.log"),
-          redact(error instanceof Error ? error.message : "Preparation failed"),
+          redact(networkDiagnostic(error instanceof Error ? error.message : "Preparation failed")),
           { mode: 0o600 },
         )
         throw error
@@ -381,7 +385,7 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         if (current.runtimeId) {
           try {
             const lines: string[] = []
-            for (const id of await ids("container", current.projectName)) {
+            for (const id of await ids("container", current)) {
               const result = await containerLogSnapshot(id, 100)
               lines.push(`${id}\n${redact(result)}`)
             }
@@ -453,13 +457,30 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
               }
             }
           }
-        } catch {
-          failures.push(resource.kind)
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : "Removal failed"
+          failures.push(`${resource.kind} ${resource.id}: ${reason}`)
         }
       }
-      const remaining = await inspect(record)
-      if (remaining.resources.length || failures.length) {
-        throw new Error("Owned resources could not all be removed")
+      const remaining = await inspect(record).catch((error) => {
+        const reason = error instanceof Error ? error.message : "Inspection failed"
+        failures.push(`Final inspection unavailable: ${reason}`)
+        return undefined
+      })
+      if (!remaining || remaining.resources.length || failures.length) {
+        const inventory =
+          (remaining ?? observed).resources
+            .map((resource) => `${resource.kind} ${resource.id}`)
+            .join(", ") || "none"
+        const inventoryLabel = remaining ? "Remaining" : "Last observed"
+        const diagnostic = environmentRedactions(record)
+          .reduce(
+            (text, secret) => text.split(secret).join("[REDACTED]"),
+            `Cleanup failed; retry Stop. ${inventoryLabel}: ${inventory}. ${failures.join("; ")}`,
+          )
+          .slice(-65536)
+        await appendFile(join(directory(record), "cleanup.log"), `${diagnostic}\n`, { mode: 0o600 })
+        throw new Error(diagnostic)
       }
       const source = join(directory(record), "source")
       const imageCleanup = join(source, ".redpact-image-cleanup.yaml")

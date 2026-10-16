@@ -372,10 +372,23 @@ export function createEnvironments(deps: {
       try {
         await deps.adapter.stop(get(id))
         save(id, { state: "stopped", resources: [], endpoints: {}, errors: [] })
-      } catch {
+      } catch (error) {
+        const latest = get(id)
+        const observation = await deps.adapter.inspect(latest).catch(() => undefined)
+        const diagnostic = environmentRedactions(latest)
+          .reduce(
+            (text, secret) => text.split(secret).join("[REDACTED]"),
+            error instanceof Error
+              ? error.message
+              : "Cleanup failed; retained ownership can be retried",
+          )
+          .slice(-65536)
         save(id, {
           state: "stop_failed",
-          errors: ["Cleanup failed; retained ownership can be retried"],
+          ...(observation
+            ? { resources: observation.resources, endpoints: observation.endpoints }
+            : {}),
+          errors: [diagnostic],
         })
       }
       return get(id)
@@ -383,6 +396,20 @@ export function createEnvironments(deps: {
     async recover() {
       for (const record of deps.store.listEnvironments()) {
         if (record.state === "stopped") {
+          if (record.ownerId !== deps.ownerId) {
+            continue
+          }
+          if (record.runtimeId) {
+            const observation = await deps.adapter.inspect(record).catch(() => undefined)
+            if (observation?.resources.length) {
+              save(record.id, {
+                state: "stop_failed",
+                resources: observation.resources,
+                endpoints: observation.endpoints,
+                errors: ["Owned resources remain after earlier cleanup; retry Stop"],
+              })
+            }
+          }
           continue
         }
         if (record.ownerId !== deps.ownerId) {
