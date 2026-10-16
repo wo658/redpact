@@ -158,9 +158,9 @@ actual HTTP/DB behavior is established by test assertions. Completion jobs use `
 The Redpact settings schema, conflicting dependency bindings, input identity,
 cancellation and cleanup ownership checks remain separate from Compose policy.
 
-`docker compose config` is used to resolve merged inputs and paths for capture,
-not to run an additional policy validator. Testcontainers 12.1.0 has no public
-resolved-model API. Resolved service definitions preserve Compose options before
+The patched Testcontainers Compose config API resolves merged inputs and paths for capture,
+not an additional policy validator. It bounds command duration/output, accepts cancellation,
+and invokes native `docker compose config` with the supplied minimal environment. Resolved service definitions preserve Compose options before
 Testcontainers starts the selected services. The server passes its minimal process
 environment and explicitly supplied bindings, not arbitrary server credentials.
 Project `.env` and `env_file` are interpreted by Compose. Use a local Unix Docker
@@ -277,29 +277,36 @@ Implementation: [execution workflow](../app/server/src/workflows/execute-tests.t
 
 ## Testcontainers delegation
 
-The pinned `testcontainers@12.1.0` owns Compose startup, image build/pull,
-container handles, mapped-port discovery, container inspection, ordinary exec,
-archive retrieval, stop/removal and network removal. The exported runtime client
-also resolves existing container IDs after a worker exits or the server restarts;
-recovery does not reconstruct a live Compose environment handle. All runtime
-access uses the local socket selected by Testcontainers. Runner network IDs are
-resolved from the runtime rather than passed as an unverified generated name.
+The pinned `testcontainers@12.1.0` and its checked-in patch own Docker operations:
+Compose config/build/start, image build/pull/inspection/selective removal, container
+and network discovery, volume inspection/removal, logs, exec, resource updates,
+OOM events, archives and ordered stop/removal. Production adapters do not invoke
+Docker CLI or Dockerode directly. The runtime client resolves existing IDs after
+worker exit or restart and supplies the selected local socket and daemon identity.
 
-Redpact still owns lifecycle admission, cancellation, durable identity, resource
-ownership, image retention, evidence and cleanup retries. Public Testcontainers
-APIs do not cover every operation in this pinned version. Its exposed Docker
-connection supplies these narrowly scoped exceptions:
+The patch extends existing library clients where the pinned release lacks APIs.
+It propagates build-stream failures even when an earlier image tag exists, returns
+an inspected image ID after building, and honors `autoCleanup: false` inside failed
+container waits. Finite log snapshots propagate retrieval errors and handle TTY and
+multiplexed stdout/stderr. Exec supports cancellation and bounded output; the runtime
+retains responsibility for stopping the container and recording limits and verdicts.
+Compose config is bounded to 30 seconds and 4 MiB by default.
 
-- Listing stopped containers and owned networks/volumes, daemon identity and limits.
-- Selective image deletion and volume inspection/removal. Image inspection uses
-  Testcontainers; deletion never prunes shared images or Docker build caches.
-- Finite final log snapshots: `ContainerClient.logs` always follows and suppresses
-  retrieval errors in this version. Cleanup must retain failures and shutdown output.
-- Bounded streaming exec, memory/swap updates and historical OOM queries. Ordinary
-  `exec` buffers the complete output and has no cancellation/output-limit contract.
+Integration and Playwright runner tags include the digest of their complete bundled
+build inputs. Reuse requires a matching input label, and execution uses the inspected
+image ID. Build errors never fall back to a previous tag. Unit images retain per-run
+owner labels and enable BuildKit for authored Dockerfile features such as cache mounts.
+Shared runner Dockerfiles use the library default builder. Build layer caching stays enabled; automatic image deletion is disabled
+so Redpact applies the ownership and retention rules above. Mutable upstream images
+and external downloads remain outside the immutable source guarantee.
 
-Compose input resolution still uses `docker compose config` for the capture contract
-above; the public runtime client does not expose a resolved-model API. Archive bytes come from Testcontainers and the
-host `tar` command extracts runner outputs. Revisit these exceptions and the
-failed-start patch when upgrading Testcontainers. They are not full delegation of
-image deletion, log snapshots or bounded execution to dedicated library APIs.
+Redpact owns approval, input/evidence identity, durable state, resource ownership,
+retention and cleanup retries. Services with healthchecks wait for health; other
+running services do not wait for published ports. This does not establish HTTP/DB
+readiness, which belongs in test assertions. Failed startup preserves containers
+until evidence collection and owned-resource cleanup. Archives are retrieved through
+Testcontainers and extracted with host `tar`.
+
+Reassess and test the patch when upgrading Testcontainers, including installed-package
+bundling. These extensions are repository-maintained library changes, not claims that
+unmodified upstream 12.1.0 provides these contracts.

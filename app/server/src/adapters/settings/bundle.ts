@@ -1,7 +1,7 @@
 import { constants } from "node:fs"
 import { lstat, open, realpath } from "node:fs/promises"
 import { dirname, join } from "node:path"
-import { execa } from "execa"
+import { getComposeClient } from "testcontainers"
 import { parseDocument } from "yaml"
 import { projectPath } from "../../core/settings-schema.js"
 import type { ComposeModel } from "../environment/compose-model.js"
@@ -88,30 +88,15 @@ export async function readComposeModel(root: string, files: string[]) {
     )
   ) {
     // Let Compose discover imported services rather than implementing include/extends ourselves.
-    const resolved = await execa(
-      "docker",
-      [
-        "compose",
-        "--project-directory",
-        dirname(join(root, files[0])),
-        "--profile",
-        "*",
-        ...files.flatMap((file) => ["-f", join(root, file)]),
-        "config",
-        "--no-interpolate",
-        "--no-env-resolution",
-        "--format",
-        "json",
-      ],
-      {
-        cwd: root,
-        env: minimalEnvironment(),
-        extendEnv: false,
-        timeout: 30000,
-        maxBuffer: 4 * 1024 * 1024,
-      },
-    )
-    return { model: JSON.parse(resolved.stdout) as ComposeModel, sources }
+    const client = await getComposeClient(minimalEnvironment())
+    const resolved = await client.config({
+      filePath: root,
+      files: files.map((file) => join(root, file)),
+      projectName: "redpact-input-inspection",
+      composeOptions: ["--project-directory", dirname(join(root, files[0])), "--profile", "*"],
+      commandOptions: ["--no-interpolate", "--no-env-resolution"],
+    })
+    return { model: resolved as ComposeModel, sources }
   }
   return { model, sources }
 }

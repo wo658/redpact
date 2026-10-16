@@ -1,11 +1,11 @@
-import { PassThrough, Readable } from "node:stream"
+import { Readable } from "node:stream"
 import { execa } from "execa"
 import { getContainerRuntimeClient, ImageName } from "testcontainers"
 
-// Keep unsupported operations on the connection selected by Testcontainers.
+// All runtime operations use the connection selected by Testcontainers.
 export async function runtimeClient() {
   const client = await getContainerRuntimeClient()
-  const modem = client.container.dockerode.modem as unknown as { socketPath?: string }
+  const modem = client.info.containerRuntime
   if (typeof modem.socketPath !== "string" || !modem.socketPath.startsWith("/")) {
     throw new Error("Only a local Docker socket is supported")
   }
@@ -14,7 +14,7 @@ export async function runtimeClient() {
 
 export async function runtimeIdentity(expected?: string | null) {
   const client = await runtimeClient()
-  const { ID } = await client.container.dockerode.info()
+  const { id: ID } = await client.inspect()
   if (!ID || (expected && ID !== expected)) {
     throw new Error("Runtime identity mismatch")
   }
@@ -28,8 +28,7 @@ export async function inspectContainer(id: string) {
 
 export async function containersWithLabels(labels: string[]) {
   const client = await runtimeClient()
-  // ContainerClient.list only includes running containers; recovery needs all states.
-  return client.container.dockerode.listContainers({ all: true, filters: { label: labels } })
+  return client.container.list({ all: true, filters: { label: labels } })
 }
 
 export async function removeContainer(id: string) {
@@ -53,26 +52,21 @@ export async function inspectImage(name: string) {
 
 export async function removeImage(name: string) {
   const client = await runtimeClient()
-  // ImageClient has build/pull/inspect/exists but no selective removal API.
-  await client.container.dockerode.getImage(name).remove({ force: false })
+  await client.image.remove(ImageName.fromString(name))
 }
 
 export async function containerLogSnapshot(id: string, tail: number) {
   const client = await runtimeClient()
   const container = client.container.getById(id)
-  // ContainerClient.logs always follows and suppresses fetch errors in 12.1.0.
-  const data = await container.logs({ follow: false, stdout: true, stderr: true, tail })
-  const output = new PassThrough()
+  const stream = await client.container.logs(container, { follow: false, tail })
   let text = ""
-  output.on("data", (chunk: Buffer) => {
-    text = (text + chunk.toString()).slice(-65536)
-  })
-  const source = Readable.from([data])
-  client.container.dockerode.modem.demuxStream(source, output, output)
-  await new Promise<void>((resolve, reject) => {
-    source.once("end", resolve)
-    source.once("error", reject)
-  })
+  try {
+    for await (const chunk of stream) {
+      text = (text + chunk.toString()).slice(-65536)
+    }
+  } finally {
+    stream.destroy()
+  }
   return text
 }
 
@@ -82,7 +76,7 @@ export async function runnerNetwork(
   environment: string,
 ) {
   const client = await runtimeClient()
-  const networks = await client.container.dockerode.listNetworks({
+  const networks = await client.network.list({
     filters: {
       label: [
         ...(project ? [`com.docker.compose.project=${project}`] : []),
@@ -117,6 +111,6 @@ export async function copyContainerOutput(id: string, target: string) {
 
 export async function runtimeSocket() {
   const client = await runtimeClient()
-  const modem = client.container.dockerode.modem as unknown as { socketPath: string }
+  const modem = client.info.containerRuntime
   return `unix://${modem.socketPath}`
 }

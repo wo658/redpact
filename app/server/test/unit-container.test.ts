@@ -23,7 +23,7 @@ dockerTest(
       await writeFile(join(root, "nested/input.txt"), "uncommitted WT")
       await writeFile(
         join(root, "unit.Dockerfile"),
-        "FROM alpine:3.21\nWORKDIR /workspace\nCOPY . .\nVOLUME /unit-state\n",
+        "FROM alpine:3.21\nWORKDIR /workspace\nCOPY . .\nRUN --mount=type=cache,target=/unit-cache echo buildkit > /unit-cache/marker\nVOLUME /unit-state\n",
       )
       const run = (command: string): UnitRun => ({
         version: 2,
@@ -56,10 +56,14 @@ dockerTest(
         "test ! -e /workspace/.venv; test ! -e /workspace/node_modules; cat input.txt; pwd; echo container-only > result.txt",
       )
       records.push(success)
-      const result = await adapter.execute(success, new AbortController().signal, (change) =>
+      const pendingSuccess = adapter.execute(success, new AbortController().signal, (change) =>
         Object.assign(success, change),
       )
-      expect(result).toMatchObject({ outcome: "command_succeeded", exitCode: 0 })
+      await expect(pendingSuccess).resolves.toMatchObject({
+        outcome: "command_succeeded",
+        exitCode: 0,
+      })
+      const result = await pendingSuccess
       expect(result.stdout).toContain("uncommitted WT/workspace/nested")
       await expect(readFile(join(root, "nested/result.txt"))).rejects.toThrow()
       expect(success).toMatchObject({

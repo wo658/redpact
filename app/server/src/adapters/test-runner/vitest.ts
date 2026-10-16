@@ -120,39 +120,50 @@ export function createVitestRunner(
       if (!existsSync(worker)) {
         worker = new URL("./worker.ts", import.meta.url)
       }
-      const child = execa(process.execPath, [fileURLToPath(worker)], {
-        input: JSON.stringify({
-          assets: dirname(fileURLToPath(import.meta.url)),
-          source: sourceDirectory,
-          config: await readFile(configPath, "utf8"),
-          id: runId,
-          ...connections.runtime,
-          network: connections.runtime.network
-            ? (await (await runtimeClient()).network.getById(connections.runtime.network).inspect())
-                .Id
-            : await runnerNetwork(
-                undefined,
-                connections.runtime.ownerId,
-                connections.runtime.environmentId,
-              ),
-          limits,
-          connections: { version: connections.version, services: connections.services },
-          environment: {
-            ...environment,
-            REDPACT_CONNECTIONS_FILE: "/review/connections.json",
-            REDPACT_REPORT: "/review/output/report.json",
-            REDPACT_REDACT_VALUES: JSON.stringify(redactionValues),
-          },
-        }),
-        ipc: true,
-        detached: true,
-        env: { ...minimalEnvironment(), DOCKER_HOST: await runtimeSocket() },
-        extendEnv: false,
-        cancelSignal: signal,
-        forceKillAfterDelay: 2000,
-        timeout: 900000,
-        reject: false,
-      })
+      const runtime = await runtimeClient()
+      const child = execa(
+        process.execPath,
+        [
+          ...(worker.pathname.endsWith(".ts") ? ["--import", import.meta.resolve("tsx")] : []),
+          fileURLToPath(worker),
+        ],
+        {
+          input: JSON.stringify({
+            assets: dirname(fileURLToPath(import.meta.url)),
+            source: sourceDirectory,
+            config: await readFile(configPath, "utf8"),
+            id: runId,
+            ...connections.runtime,
+            network: connections.runtime.network
+              ? (
+                  await runtime.network.inspect(
+                    runtime.network.getById(connections.runtime.network),
+                  )
+                ).Id
+              : await runnerNetwork(
+                  undefined,
+                  connections.runtime.ownerId,
+                  connections.runtime.environmentId,
+                ),
+            limits,
+            connections: { version: connections.version, services: connections.services },
+            environment: {
+              ...environment,
+              REDPACT_CONNECTIONS_FILE: "/review/connections.json",
+              REDPACT_REPORT: "/review/output/report.json",
+              REDPACT_REDACT_VALUES: JSON.stringify(redactionValues),
+            },
+          }),
+          ipc: true,
+          detached: true,
+          env: { ...minimalEnvironment(), DOCKER_HOST: await runtimeSocket() },
+          extendEnv: false,
+          cancelSignal: signal,
+          forceKillAfterDelay: 2000,
+          timeout: 900000,
+          reject: false,
+        },
+      )
       try {
         let preparation: Awaited<typeof child>
         try {

@@ -1,4 +1,6 @@
-import { GenericContainer, Wait } from "testcontainers"
+import { Wait } from "testcontainers"
+
+import { runnerImage } from "../environment/runner-image.js"
 
 process.once("disconnect", () => {
   try {
@@ -14,10 +16,12 @@ for await (const chunk of process.stdin) {
 }
 const spec = JSON.parse(input)
 try {
-  const image = await GenericContainer.fromDockerfile(spec.assets, "Dockerfile").build(
-    "redpact-vitest:4.0.18-v1",
-    { deleteOnExit: false },
-  )
+  const image = await runnerImage(spec.assets, "redpact-vitest", [
+    "Dockerfile",
+    "reporter.mjs",
+    "package.json",
+    "pnpm-lock.yaml",
+  ])
   const container = await image
     .withLabels({
       "io.redpact.owner": spec.ownerId,
