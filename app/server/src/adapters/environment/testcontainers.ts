@@ -1,11 +1,11 @@
 import { existsSync } from "node:fs"
-import { appendFile, mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { appendFile, mkdir, rm, writeFile } from "node:fs/promises"
 import { dirname, isAbsolute, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { isDeepStrictEqual } from "node:util"
 import { execa } from "execa"
 import { getComposeClient } from "testcontainers"
-import { parse, stringify } from "yaml"
+import { stringify } from "yaml"
 import { applyHostPorts } from "../../core/manual-ports.js"
 import { environmentRedactions, runnerServiceHost } from "../../core/runner-environment.js"
 import { testSelectionSchema } from "../../core/settings-schema.js"
@@ -18,6 +18,7 @@ import { minimalEnvironment } from "../process/environment.js"
 import { readJsonSettings } from "../settings/json.js"
 import { snapshotComposeInputs } from "./compose-inputs.js"
 import type { EffectiveCompose } from "./compose-model.js"
+import { retainLegacyImageOwnership } from "./legacy-image-ownership.js"
 import { networkDiagnostic } from "./network-diagnostic.js"
 import {
   containerLogSnapshot,
@@ -392,6 +393,7 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         await removeContainer(runner.Id)
       }
       const observed = await inspect(record)
+      const legacyImages = await retainLegacyImageOwnership(directory(record), record, observed)
       const deadline = Date.now() + record.settings.environment.stopTimeoutMs
       const failures: string[] = []
       for (const resource of observed.resources.sort(
@@ -459,10 +461,6 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         await appendFile(join(directory(record), "cleanup.log"), `${diagnostic}\n`, { mode: 0o600 })
         throw new Error(diagnostic)
       }
-      const legacyModelPath = join(directory(record), "source", ".redpact-resolved.yaml")
-      const legacyModel = existsSync(legacyModelPath)
-        ? (parse(await readFile(legacyModelPath, "utf8")) as EffectiveCompose)
-        : null
       const images = new Set(
         record.services.map((service) => `${record.projectName}-${service.name}`),
       )
@@ -471,14 +469,8 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         if (!built) {
           continue
         }
-        const service = legacyModel?.services[image.slice(record.projectName.length + 1)]
         const legacyOwned =
-          !built.Config.Labels?.["io.redpact.owner"] &&
-          service?.build &&
-          !service.image &&
-          [...record.resources, ...observed.resources].some(
-            (resource) => resource.kind === "container" && resource.image === built.Id,
-          )
+          !built.Config.Labels?.["io.redpact.owner"] && legacyImages[image] === built.Id
         if (built.Config.Labels?.["io.redpact.owner"] !== record.ownerId && !legacyOwned) {
           throw new Error(`Image ownership mismatch for retained tag ${image}`)
         }

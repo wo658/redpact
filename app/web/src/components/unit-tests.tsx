@@ -56,6 +56,7 @@ export function UnitTests({
   const [pending, setPending] = useState(false)
   const [refresh, setRefresh] = useState(0)
   const [error, setError] = useState("")
+  const [loadError, setLoadError] = useState("")
   useEffect(() => {
     void revision
     void refresh
@@ -65,11 +66,13 @@ export function UnitTests({
       .then((result) => {
         if (!abort.signal.aborted) {
           setData(result)
+          setLoadError("")
           setError("")
         }
       })
       .catch((error) => {
         if (!abort.signal.aborted) {
+          setLoadError(String(error))
           setError(String(error))
         }
       })
@@ -87,6 +90,7 @@ export function UnitTests({
       return
     }
     setPending(true)
+    setError("")
     try {
       const result = await api.runUnitTests(worktreeId, executionScopeOverride(executionScope))
       setRunId(result.id)
@@ -113,7 +117,7 @@ export function UnitTests({
       size="toolbar"
       variant="ghost"
       title={t("Run tests with the selected execution scope.")}
-      disabled={pending || Boolean(running) || Boolean(error) || !data?.settings}
+      disabled={pending || Boolean(running) || Boolean(loadError) || !data?.settings}
       onClick={() => void action()}
     >
       {t("Run Unit command")}

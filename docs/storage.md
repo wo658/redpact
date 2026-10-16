@@ -227,3 +227,11 @@ capture `main` or `worktree` when started; later branch changes never retarget t
 policy. Original bytes and interrupted retry follow the ordered migration rules above.
 Manual environment source and generated `runtime/` files are removed only after explicit
 successful teardown; server shutdown preserves their ownership for reconnection.
+
+Before removing containers for an older unlabeled build image, cleanup atomically writes
+`environments/<id>/runtime/legacy-image-ownership.json` from the captured implicit build
+and currently observed owned containers. This generated operation artifact binds each
+tag to its immutable image ID, environment, instance owner and Docker runtime; it does
+not change historical records. Partial failures retain it for retry after containers are
+gone. Missing proof requires fresh observed ownership; corrupt or mismatched proof and
+replaced images never authorize deletion. Successful teardown removes the artifact.

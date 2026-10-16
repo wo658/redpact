@@ -334,50 +334,60 @@ test("이전 정리 완료 기록도 소유 네트워크가 남아 있으면 복
   expect(service.get(env.id).state).toBe("stopped")
 })
 
-test("수동 환경 scope 마이그레이션은 원본 백업을 보존하고 중단 후 재시도한다", async () => {
-  const environment = await service.prepare(
-    worktreeId,
-    randomUUID(),
-    settingsDigest,
-    selection,
-    null,
-  )
-  await service.idle()
-  const legacy = { ...environment }
-  delete legacy.manualScope
-  const source = JSON.stringify({ version: 1, data: legacy })
-  const migrationRoot = join(root, "migration")
-  await mkdir(join(migrationRoot, "environments"), { recursive: true })
-  await mkdir(join(migrationRoot, ".migrations"), { recursive: true })
-  const path = join(migrationRoot, "environments", `${environment.id}.json`)
-  await writeFile(path, source)
-  await writeFile(
-    join(migrationRoot, ".migrations", "completed.json"),
-    JSON.stringify(["001-fixed-environment-settings", "002-flat-environment-values"]),
-  )
-  const files = createRuntimeMigrationFiles(migrationRoot)
-  await expect(
-    migrateRuntime({
-      ...files,
-      recordHistory: async () => {
-        throw new Error("interrupted")
-      },
-    }),
-  ).rejects.toThrow("interrupted")
-  expect(JSON.parse(await readFile(path, "utf8")).data.manualScope).toBe("main")
-  expect(
-    await readFile(
-      join(
-        migrationRoot,
-        ".migrations",
-        "backups",
-        "004-manual-environment-scope",
-        "environments",
-        `${environment.id}.json`,
+test.each([
+  { completedSelection: false, firstPending: "003-execution-selection" },
+  { completedSelection: true, firstPending: "004-manual-environment-scope" },
+])(
+  "수동 환경 scope 마이그레이션은 $firstPending 원본 백업을 보존하고 중단 후 재시도한다",
+  async ({ completedSelection, firstPending }) => {
+    const environment = await service.prepare(
+      worktreeId,
+      randomUUID(),
+      settingsDigest,
+      selection,
+      null,
+    )
+    await service.idle()
+    const legacy = { ...environment }
+    delete legacy.manualScope
+    const source = JSON.stringify({ version: 1, data: legacy })
+    const migrationRoot = join(root, "migration")
+    await mkdir(join(migrationRoot, "environments"), { recursive: true })
+    await mkdir(join(migrationRoot, ".migrations"), { recursive: true })
+    const path = join(migrationRoot, "environments", `${environment.id}.json`)
+    await writeFile(path, source)
+    await writeFile(
+      join(migrationRoot, ".migrations", "completed.json"),
+      JSON.stringify([
+        "001-fixed-environment-settings",
+        "002-flat-environment-values",
+        ...(completedSelection ? ["003-execution-selection"] : []),
+      ]),
+    )
+    const files = createRuntimeMigrationFiles(migrationRoot)
+    await expect(
+      migrateRuntime({
+        ...files,
+        recordHistory: async () => {
+          throw new Error("interrupted")
+        },
+      }),
+    ).rejects.toThrow("interrupted")
+    expect(JSON.parse(await readFile(path, "utf8")).data.manualScope).toBe("main")
+    expect(
+      await readFile(
+        join(
+          migrationRoot,
+          ".migrations",
+          "backups",
+          firstPending,
+          "environments",
+          `${environment.id}.json`,
+        ),
+        "utf8",
       ),
-      "utf8",
-    ),
-  ).toBe(source)
-  await migrateRuntime(files)
-  expect(((await files.history()) as string[]).at(-1)).toBe("004-manual-environment-scope")
-})
+    ).toBe(source)
+    await migrateRuntime(files)
+    expect(((await files.history()) as string[]).at(-1)).toBe("004-manual-environment-scope")
+  },
+)

@@ -7148,3 +7148,39 @@ test("선택 소스는 늦은 성공과 오류 응답을 버리고 현재 파일
   assert.equal(screen.queryByText("Error: STALE_ERROR"), null)
   assert.ok(screen.getByText("LATEST_SOURCE"))
 })
+
+test("변경 Unit 실행이 거절되어도 전체 범위로 전환해 다시 실행한다", async () => {
+  await i18n.changeLanguage("en")
+  const { UnitTests } = await server.ssrLoadModule("/src/components/unit-tests.tsx")
+  const calls = []
+  const settings = { cwd: ".", command: "test", patterns: ["unit/*.test.ts"] }
+  render(
+    createElement(UnitTests, {
+      worktreeId: "w",
+      api: {
+        unitTests: async () => ({ settings, catalog: { files: [], diagnostics: [] }, runs: [] }),
+        runUnitTests: async (_id, executionScope) => {
+          calls.push(executionScope)
+          if (executionScope === "changed") {
+            throw new Error("No tests selected")
+          }
+          return { id: "all-run", settings, state: "running", stdout: "", stderr: "" }
+        },
+      },
+    }),
+  )
+  const user = userEvent.setup({ document })
+  await waitFor(() =>
+    assert.equal(screen.getByRole("button", { name: "Run Unit command" }).disabled, false),
+  )
+  const run = screen.getByRole("button", { name: "Run Unit command" })
+  await user.click(screen.getByRole("combobox", { name: "Execution scope" }))
+  await user.click(await screen.findByRole("option", { name: "Changed tests", exact: true }))
+  await user.click(run)
+  await waitFor(() => assert.deepEqual(calls, ["changed"]))
+  await user.click(screen.getByRole("combobox", { name: "Execution scope" }))
+  await user.click(await screen.findByRole("option", { name: "All tests", exact: true }))
+  assert.equal(run.disabled, false, "거절된 요청 때문에 전체 실행이 잠기면 안 된다")
+  await user.click(run)
+  await waitFor(() => assert.deepEqual(calls, ["changed", "all"]))
+})
