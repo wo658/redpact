@@ -18,38 +18,60 @@ export function integrationTestRoutes(
   service: IntegrationTestsService,
   runWorktreeTests?: Services["runWorktreeTests"],
 ) {
-  const routes = new Hono().get(
-    "/worktrees/:id/integration-tests",
-    describeRoute({
-      operationId: "inspectIntegrationTests",
-      summary: "Read integration test sources without execution",
-      tags: ["Submissions"],
-      responses: {
-        ...localErrors,
-        ...inputErrors,
-        ...notFound,
-        200: jsonResponse(
-          z.object({
-            directory: z.string(),
-            catalog: z.object({
-              baseRevision: z.string().optional(),
-              diagnostics: z.array(z.string()),
-              files: z.array(
-                z.object({
-                  path: z.string(),
-                  source: z.string().nullable(),
-                  issue: z.string().optional(),
-                }),
-              ),
+  const routes = new Hono()
+    .get(
+      "/worktrees/:id/integration-tests/source",
+      describeRoute({
+        operationId: "getIntegrationTestSource",
+        summary: "Read one configured integration source without execution",
+        tags: ["Submissions"],
+        responses: {
+          ...localErrors,
+          ...inputErrors,
+          ...notFound,
+          200: jsonResponse(
+            z.object({
+              path: z.string(),
+              source: z.string().nullable(),
+              issue: z.string().optional(),
             }),
-          }),
-          "Current sources in the requested scope; recorded execution sources remain immutable.",
-        ),
-      },
-    }),
-    zValidator("query", z.object({ scope: z.enum(["changed", "all"]).default("changed") })),
-    async (c) => c.json(await service.inspect(c.req.param("id"), c.req.valid("query").scope)),
-  )
+            "Selected current source or a file preview diagnostic.",
+          ),
+        },
+      }),
+      zValidator("query", z.object({ path: z.string().min(1) })),
+      async (c) => c.json(await service.source(c.req.param("id"), c.req.valid("query").path)),
+    )
+    .get(
+      "/worktrees/:id/integration-tests",
+      describeRoute({
+        operationId: "inspectIntegrationTests",
+        summary: "Read integration test file metadata without execution",
+        tags: ["Submissions"],
+        responses: {
+          ...localErrors,
+          ...inputErrors,
+          ...notFound,
+          200: jsonResponse(
+            z.object({
+              directory: z.string(),
+              catalog: z.object({
+                baseRevision: z.string().optional(),
+                diagnostics: z.array(z.string()),
+                files: z.array(
+                  z.object({
+                    path: z.string(),
+                  }),
+                ),
+              }),
+            }),
+            "Current sources in the requested scope; recorded execution sources remain immutable.",
+          ),
+        },
+      }),
+      zValidator("query", z.object({ scope: z.enum(["changed", "all"]).default("changed") })),
+      async (c) => c.json(await service.inspect(c.req.param("id"), c.req.valid("query").scope)),
+    )
   if (runWorktreeTests) {
     routes.post(
       "/worktrees/:id/integration-tests/run",

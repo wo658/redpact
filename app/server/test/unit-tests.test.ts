@@ -43,6 +43,7 @@ function fixture() {
     files: {
       directory: async () => "/project",
       catalog: async () => ({ files: [], diagnostics: [] }),
+      source: async (_root: string, path: string) => ({ path, source: "test" }),
     },
     command: { execute, stop: vi.fn(async (_run: UnitRun) => {}) },
     store: {

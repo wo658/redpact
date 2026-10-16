@@ -24,6 +24,19 @@ The standalone browser and Global App Page use the full management app: project/
 
 Inline MCP Apps use separately bundled request approval and result cards. They show the captured request, status and evidence for that conversation without embedding the full management navigation. They share the same runtime and evidence store. An exact `/?page=review&kind=unit|integration|playwright&id=<id>` link opens the recorded request or execution inside the full app. Record identity determines its worktree; current project selection cannot retarget it. Opening a link never requests a run. The linked review retains its worktree-bound history and explicit approval/cancellation controls.
 
+## Test file browsing
+
+Unit and Integration lists return file paths separately from selected-file source.
+The lists have no 200-file cutoff or combined source-byte budget. Project Tests
+shows all matching Git-visible files; worktree review shows changed matching files.
+Selecting a file fetches only that source and cancels the previous selection's
+request, so a late response cannot replace the current file.
+
+Previews retain a 200,000-byte per-file limit and reject binary content, symlinked
+files and paths outside the selected checkout. Files with preview errors remain
+selectable in the list. Previewing a file does not execute it or change the execution
+scope described in [execution](execution.md). Recorded submission sources stay immutable.
+
 ## Components and visual rules
 
 Use the adopted shadcn Base UI Nova primitives, `render` composition and Base UI event

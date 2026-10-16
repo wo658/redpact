@@ -163,3 +163,14 @@ Implementation: [MCP registration](../app/server/src/interfaces/mcp/routes.ts),
 [review workflow](../app/server/src/workflows/review-tests.ts).
 
 Runtime update status and explicit check/install actions use `GET /api/updates`, `POST /api/updates/check` and `POST /api/updates/install`. Installation requires `{ version }` matching the discovered version and a recognized CLI supervisor; cached `canInstall`, `busy`, `error` and `installError` distinguish capability, work and failures. Reads never install. These HTTP routes retain the same-origin/local-host boundary and expose no arbitrary command or registry URL. See [runtime updates](installation.md).
+
+## Current test catalog and source
+
+`GET /api/worktrees/:id/unit-tests` and `/integration-tests` return metadata-only
+catalog entries (`path`), preserving `scope=all|changed` with `changed` as the default.
+Use the corresponding `/unit-tests/source?path=...` or
+`/integration-tests/source?path=...` endpoint for one selected current source.
+The decoded path must belong to the configured, Git-visible test catalog. Invalid
+selection returns 400; a file preview failure returns `{ path, source: null, issue }`.
+Successful reads return `{ path, source }`. These reads never execute tests or alter
+recorded sources. See [file browsing](frontend.md) for preview limits and navigation.
