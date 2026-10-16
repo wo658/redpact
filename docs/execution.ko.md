@@ -213,7 +213,15 @@ Screenshots 탭도 실행 가능한 capture 코드를 숨기지 않습니다. �
 인스턴스 기본값은 `environmentConcurrency: 2`, `testResources.memoryMiB: 2048`,
 `testResources.timeoutSeconds: 600`입니다. 범위는 동시 관리 환경 1–4개, 메모리
 64–1048576 MiB, 시간 1–86400초입니다. 새 작업은 새 설정을 캡처하며 테스트·hook별
-timeout은 별개입니다.
+timeout은 별개이며 기본값과 허용 범위는 [러너 선언](configuration.md)을 참고하세요.
+예를 들어 `tests.timeoutMs: 180000`은 테스트에 3분을 허용하지만 인스턴스 실행 예산이
+더 짧으면 러너가 먼저 중단됩니다. 명시한 Vitest 테스트/hook timeout은 기본값보다 우선합니다.
+
+Integration 테스트/hook timeout 오류는 Vitest 원문과 함께 적용 제한, 경과한 case 시간,
+테스트/hook 단계, 마지막으로 중단된 이름 있는 Step을 기록합니다. module과 중첩 suite hook 오류는
+경과한 module 시간을 기록하며, 해당 테스트가 건너뛰어지거나 통과해도 실행 오류로 남습니다. 이는 어설션 실패가 아닌 실행 오류입니다.
+러너 전체 실행 시간 제한은 별도 리소스 제한 증거와 stdout/stderr를 남기며,
+준비 단계 제한도 별개입니다.
 
 Unit, Integration, Playwright는 Docker 메모리·swap 제한과 외부 실행 시간 제한을
 사용합니다. Integration은 V8 heap도 제한합니다. 제출한 패키지 설치는 러너 안에서

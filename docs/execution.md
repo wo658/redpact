@@ -231,7 +231,17 @@ credential-scanned. Literal environment-value redaction in text is not a hostile
 Instance defaults are `environmentConcurrency: 2`, `testResources.memoryMiB: 2048`
 and `testResources.timeoutSeconds: 600`. Allowed ranges are 1–4 concurrent managed
 environments, 64–1048576 MiB and 1–86400 seconds. New operations capture new settings.
-Per-test/hook timeouts remain separate.
+Per-test/hook timeouts remain separate; [runner declarations](configuration.md)
+defines their default and allowed range. For example, `tests.timeoutMs: 180000`
+allows a test to run for three minutes, but a shorter instance budget still stops
+the runner first. Explicit Vitest test/hook timeouts override the default.
+
+Integration test/hook timeout errors retain Vitest's original message and add the
+effective limit, elapsed case duration, test/hook stage and last interrupted named
+Step when present. Module and nested suite-hook failures report elapsed module duration and remain
+execution errors even when their tests were skipped or passed. These are
+execution errors, not assertion failures. Runner wall-clock limits instead retain
+resource-limit evidence and stdout/stderr; preparation limits are separate.
 
 Unit, Integration and Playwright use Docker memory/swap limits and an external wall-clock
 timer. Integration also bounds the V8 heap. Its submitted package installation executes

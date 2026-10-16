@@ -158,7 +158,7 @@ export function AuthoredSettings({ api, projectId }: { api: Api; projectId?: str
           kind: "number",
           fallback: "10000",
           min: 1,
-          max: 60000,
+          max: 2147483647,
         },
         { key: "tests.env", label: t("Test environment"), kind: "json", fallback: "{}" },
       ]
