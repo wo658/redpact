@@ -5,7 +5,7 @@ The companion retains runtime installation, start/stop and recovery. The full ap
 preserves project, environment, settings and Git navigation. Inline chat approval
 and evidence cards use a separate MCP resource.
 
-See [installation](../../docs/installation.md#local-redpact-app-page-experiment) for
+See [installation](../../docs/installation.md) for
 supported host setup, trust boundaries and verification limitations.
 
 - `pnpm build` bundles `app/web/src/entries/sidebar.tsx` and `src/redpact/main.ts`.

@@ -9,8 +9,6 @@ Redpact의 공개 소스와 런타임 다운로드는
 [wo658/redpact](https://github.com/wo658/redpact)에서 제공합니다. 런타임 패키지는
 CLI와 브라우저 뷰어를 설치합니다. Tauri 데스크톱 앱은 설치하지 않습니다.
 
-<a id="start-in-the-app"></a>
-
 ## 앱에서 시작하기
 
 Redpact의 주 사용 방식은 GPT 대화 옆의 전체 개발 작업공간입니다. 지원하는 GPT / Codex 호스트의 **Apps in sidebar**에서 Redpact를 열고
@@ -159,8 +157,6 @@ HTTP 플러그인은 `http://127.0.0.1:54321/mcp`, App Page Plugin은 54322 포�
 실행 승인 카드는 호환되는 MCP Apps 호스트가 필요합니다. 플러그인 설치만으로 카드
 지원을 증명할 수 없으며, 승인 UI가 없다고 승인을 우회해서는 안 됩니다.
 [인터페이스 계약](interfaces.md)을 참고하세요.
-
-<a id="local-redpact-app-page-experiment"></a>
 
 ## App Page Plugin 패키징과 동작
 

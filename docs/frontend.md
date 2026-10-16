@@ -15,7 +15,7 @@ startup; installation and stopped states stay in an isolated companion shell. It
 bundled entry uses an App-only MCP transport for API reads/writes, scoped live changes
 and binary artifacts. Fonts and icons are inline; no nested iframe or browser network
 permission is required. Standalone and desktop entries retain HTTP and native SSE.
-See the [App Page installation contract](installation.md#local-redpact-app-page-experiment)
+See the [App Page installation contract](installation.md)
 for lifecycle, access boundaries, size limits and host verification requirements.
 
 ## Full app and inline chat surfaces

@@ -5,7 +5,7 @@ description: Configure project dependencies and review worktree changes through 
 
 # Review changes with Redpact
 
-Start with the [Redpact in-app workspace](installation.md#start-in-the-app) beside your GPT conversation. Install the App Page Plugin and open Redpact from Apps in sidebar, or install the web runtime with npm/pnpm. Native desktop distribution has ended. The full app provides project/worktree navigation and evidence, while inline chat cards handle execution approval and results.
+Start with the [Redpact in-app workspace](installation.md) beside your GPT conversation. Install the App Page Plugin and open Redpact from Apps in sidebar, or install the web runtime with npm/pnpm. Native desktop distribution has ended. The full app provides project/worktree navigation and evidence, while inline chat cards handle execution approval and results.
 
 Redpact is a local development review tool for people working with coding agents. Define the project's runtime needs, run tests against the working checkout, and inspect code changes, test intent, observed results, and application screenshots together.
 

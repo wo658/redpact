@@ -9,9 +9,13 @@ Native Windows, Linux and macOS desktop distribution has ended. There are no new
 native installers, Homebrew Casks or signed updater releases. Existing GitHub
 assets remain historical artifacts and are not a supported installation path.
 
+## Supported installation
+
 Use [npm/pnpm or the App Page Plugin](installation.md). Both provide the shared web
 app and runtime. Desktop source remains in `app/desktop` for reference; its version
 is not coupled to web/runtime releases. Native release workflows have been removed.
+
+## Existing installations
 
 Quit a previous desktop instance before starting another server on its port.
 Existing settings and evidence are not deleted or automatically migrated by a new

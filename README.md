@@ -11,7 +11,7 @@ worktrees, files, Git changes, tests and environments without leaving the app.
 The current implementation is a **GPT / Codex App Page Plugin**; it is not
 a listing in the public ChatGPT app directory. Supported installation paths are npm/pnpm for the web app and Plugins. Native desktop distribution has ended.
 
-Start with the [in-app setup](docs/installation.md#start-in-the-app): open Redpact,
+Start with the [in-app setup](docs/installation.md): open Redpact,
 choose **Install Redpact** when the runtime is missing, then **Start Redpact**.
 The plugin bundles Node, npm and pnpm; managed tests additionally need Docker.
 
@@ -23,7 +23,7 @@ freshness and human acceptance.
 
 [Documentation](https://redpact.dev/en/docs/) · [Installation](docs/installation.md) · [Report an issue](https://github.com/wo658/redpact/issues)
 
-1. [Open Redpact in the app](docs/installation.md#start-in-the-app) and install/start its local runtime.
+1. [Open Redpact in the app](docs/installation.md) and install/start its local runtime.
 2. [Configure your actual project](docs/configuration.md).
 3. Ask the agent to write a failing test, implement the behavior and request managed
    checks through MCP. Use subagents for independent work when useful.
@@ -62,7 +62,7 @@ copyright; no separate CLA is required.
 관리하세요. 현재 구현은 **GPT / Codex App Page Plugin**이며, 공개 ChatGPT
 앱 디렉터리에 등록된 앱은 아닙니다. npm/pnpm 웹 앱과 Plugin 설치를 지원하며 네이티브 데스크톱 배포는 종료했습니다.
 
-[앱에서 시작하기](docs/installation.ko.md#start-in-the-app): Redpact를 열고 런타임이
+[앱에서 시작하기](docs/installation.ko.md): Redpact를 열고 런타임이
 없으면 **Install Redpact**, 설치 후에는 **Start Redpact**를 누르세요.
 플러그인은 Node·npm·pnpm을 포함하며, 관리형 테스트에는 Docker가 추가로 필요합니다.
 
@@ -73,7 +73,7 @@ Redpact는 Unit·Integration·Playwright 관리형 검증을 실행하고 입력
 
 [문서](https://redpact.dev/ko/docs/) · [설치](docs/installation.ko.md) · [이슈 제보](https://github.com/wo658/redpact/issues)
 
-1. [앱에서 Redpact를 열고](docs/installation.ko.md#start-in-the-app) 로컬 런타임을 설치·시작합니다.
+1. [앱에서 Redpact를 열고](docs/installation.ko.md) 로컬 런타임을 설치·시작합니다.
 2. [실제 프로젝트를 설정](docs/configuration.ko.md)합니다.
 3. 에이전트에게 실패하는 테스트를 먼저 확인하고 구현한 뒤 MCP로 관리형 검증을
    요청하게 합니다. 독립적인 작업은 필요에 따라 하위 에이전트가 나눠 맡습니다.

@@ -5,7 +5,7 @@ description: 프로젝트 의존성을 구성하고, 워크트리의 변경을 �
 
 # Redpact로 변경 검토하기
 
-GPT 대화 옆의 [Redpact 인앱 작업공간](installation.ko.md#start-in-the-app)으로 시작하세요. App Page Plugin을 설치하고 Apps in sidebar에서 Redpact를 열거나 npm/pnpm으로 웹 런타임을 설치하세요. 네이티브 데스크톱 배포는 종료했습니다. 전체 앱은 프로젝트·워크트리 탐색과 근거를 제공하고, 채팅 인라인 카드는 실행 승인과 결과를 보여줍니다.
+GPT 대화 옆의 [Redpact 인앱 작업공간](installation.ko.md)으로 시작하세요. App Page Plugin을 설치하고 Apps in sidebar에서 Redpact를 열거나 npm/pnpm으로 웹 런타임을 설치하세요. 네이티브 데스크톱 배포는 종료했습니다. 전체 앱은 프로젝트·워크트리 탐색과 근거를 제공하고, 채팅 인라인 카드는 실행 승인과 결과를 보여줍니다.
 
 Redpact는 에이전트가 만든 변경을 사람이 검토하는 로컬 개발 도구입니다. 프로젝트에 필요한 실행 환경을 정의하고, 작업 중인 워크트리의 코드로 테스트를 실행한 뒤, 변경사항·검증 의도·실행 결과·애플리케이션 화면을 연결해서 확인합니다.
 

@@ -9,8 +9,6 @@ Redpact's public source and runtime downloads are hosted at
 [wo658/redpact](https://github.com/wo658/redpact). The runtime package installs the
 CLI and bundled browser viewer. It does not install the Tauri desktop application.
 
-<a id="start-in-the-app"></a>
-
 ## Start in the app
 
 Redpact's primary experience is a full development workspace beside your GPT
@@ -163,8 +161,6 @@ plugin integrations. Ask the agent to call `configure describe` to verify tools.
 Execution approval cards require a compatible MCP Apps host. Plugin installation
 alone does not prove card support; an unavailable approval UI must not be bypassed.
 See [the interface contract](interfaces.md).
-
-<a id="local-redpact-app-page-experiment"></a>
 
 ## App Page Plugin packaging and behavior
 
