@@ -1,4 +1,5 @@
 import type { Environment } from "./environment.js"
+import type { ExecutionScope, ExecutionSelection } from "./execution-selection.js"
 import type { Settings, TestSelection } from "./settings.js"
 import type { ResourceLimit } from "./test-resources.js"
 export type PlaywrightSettings = NonNullable<Settings["playwright"]>
@@ -51,6 +52,7 @@ export type CaptureRun = {
   selection: TestSelection
   settingsDigest: string
   sourceDigest: string
+  executionSelection?: ExecutionSelection | null
   appDigest: string
   createdAt: string
   finishedAt?: string
@@ -114,7 +116,13 @@ export type CaptureWorkflow = {
     selection?: TestSelection,
     viewport?: { width: number; height: number },
     target?: string,
-    approved?: { settingsDigest: string; inputDigest: string; sourceDigest: string },
+    approved?: {
+      settingsDigest: string
+      inputDigest: string
+      sourceDigest: string
+      executionSelection?: ExecutionSelection
+    },
+    executionScope?: ExecutionScope,
   ): Promise<CaptureRun>
   cancel(id: string): Promise<CaptureRun>
   recover(): Promise<void>

@@ -1,4 +1,23 @@
 export const en = {
+  "Only the first 50 selected files are shown. Open the recorded run for the full list.":
+    "Only the first 50 selected files are shown. Open the recorded run for the full list.",
+  "The configured command discovers its own files; no exact file list is recorded.":
+    "The configured command discovers its own files; no exact file list is recorded.",
+  "Execution scope": "Execution scope",
+  "Shared default": "Shared default",
+  "All tests": "All tests",
+  "Changed tests": "Changed tests",
+  "Requested scope": "Requested scope",
+  "Resolved scope": "Resolved scope",
+  "Explicit tests": "Explicit tests",
+  "Helper or configuration changes selected all tests in this target.":
+    "Helper or configuration changes selected all tests in this target.",
+  "Comparison revision": "Comparison revision",
+  "Selected files": "Selected files",
+  "Run tests with the selected execution scope.": "Run tests with the selected execution scope.",
+  "Default execution scope (all or changed, all runners)":
+    "Default execution scope (all or changed, all runners)",
+
   "Agent plugins": "Agent plugins",
   "Redpact plugins": "Redpact plugins",
   "Codex CLI path": "Codex CLI path",

@@ -2,6 +2,11 @@
 import { Check, Minus, X } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { ExecutionProgress } from "./execution-progress"
+import {
+  ExecutionScopePicker,
+  ExecutionSelectionEvidence,
+  executionScopeOverride,
+} from "./execution-scope"
 import { EmptyState, Loading, Notice } from "./feedback"
 import { ListGroup, ListHeader, ListItem, ListItems } from "./kibo-ui/list"
 import { useLiveRevision } from "./live-updates"
@@ -104,12 +109,12 @@ export function TestObservation({
         key={worktreeId}
         api={api}
         actionsContainer={actionsContainer}
-        runCurrent={scope === "all" ? () => api.runIntegrationTests(worktreeId) : undefined}
+        runCurrent={(executionScope) => api.runIntegrationTests(worktreeId, executionScope)}
         submissionId={evidence?.submission.id}
         run={evidence?.run ?? null}
         unavailable={!data || Boolean(error || evidenceError) || evidenceWorktree !== worktreeId}
         onStarted={async (run) => {
-          if (scope === "all" && "submissionId" in run && typeof run.submissionId === "string") {
+          if ("submissionId" in run && typeof run.submissionId === "string") {
             const submission = await api.submission(run.submissionId)
             setEvidence({ submission, run })
           } else {
@@ -153,7 +158,7 @@ function IntegrationRunControls({
   actionsContainer,
   runCurrent,
 }: {
-  runCurrent?: () => Promise<TestRun>
+  runCurrent?: (executionScope?: "all" | "changed") => Promise<TestRun>
   api: Api
   submissionId?: string
   run: TestRun | null
@@ -162,6 +167,7 @@ function IntegrationRunControls({
   onStarted: (run: TestRun) => void | Promise<void>
 }) {
   const { t } = useTranslation()
+  const [executionScope, setExecutionScope] = useState("default")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState("")
   const [accepted, setAccepted] = useState<TestRun | null>(null)
@@ -181,7 +187,7 @@ function IntegrationRunControls({
     try {
       let next: TestRun
       if (runCurrent) {
-        next = await runCurrent()
+        next = await runCurrent(executionScopeOverride(executionScope))
       } else if (submissionId) {
         next = await api.startRun(submissionId)
       } else {
@@ -212,6 +218,13 @@ function IntegrationRunControls({
   )
   const controls = (
     <div className="flex items-center gap-2">
+      {runCurrent && (
+        <ExecutionScopePicker
+          value={executionScope}
+          onChange={setExecutionScope}
+          disabled={pending || active}
+        />
+      )}
       {runButton}
       {active && currentRun && <ExecutionProgress kind="integration" run={currentRun} compact />}
     </div>
@@ -366,6 +379,7 @@ export function TestEvidence({
             <TabsTrigger value="source">{t("Executed source")}</TabsTrigger>
           </TabsList>
           <TabsContent value="results" className="flex h-0 min-h-0 flex-col overflow-auto">
+            <ExecutionSelectionEvidence selection={submission.executionSelection} />
             <TestEvidenceResults submission={scopedSubmission} run={scopedRun} />
           </TabsContent>
           <TabsContent

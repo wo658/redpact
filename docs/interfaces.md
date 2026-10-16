@@ -24,14 +24,13 @@ normal preconditions even when called outside the viewer. See [architecture](arc
 | `get_workspace_status` | Absolute checkout `path`; read-only settings diagnostics, existing binding, pending approvals, active/recent executions and cleanup attention |
 | `get_review_context` | Execution `kind` and `id`; bounded failures, recorded evidence references, captured approval preview and relative viewer review path |
 | `configure` | `describe`, `inspect` or `validate` for an absolute execution `path`; returns schema, roots, diagnostics and optional plan |
-| `run_tests` | Absolute `path`, `kind: integration / unit / playwright`; Integration accepts optional `tests`, Unit uses the complete command, Playwright requires `target` and accepts `viewport` |
+| `run_tests` | Absolute `path`, `kind: integration / unit / playwright`; Integration accepts optional `tests`, Unit uses its command/file-command contract, Playwright requires `target` and accepts `viewport`; all accept optional `executionScope` |
 | `get_run` | `kind`, `id`, optional `detail: result / log / source / image`; state, captured evidence and cleanup |
 | `list_runs` | Absolute checkout `path`, optional `kind` and returned `before` cursor; up to 20 matching executions per page |
 | `get_run_artifact` | Playwright `id`, `artifactId`, optional `side`; owned PNG, video or trace up to 8 MiB |
 | `project_container` | Absolute observed project checkout `path`, `action: inspect / start / restart / stop`; existing main-checkout manual environment lifecycle |
 
-`run_tests` validates a strict discriminated union. Unit rejects file filters and arbitrary
-commands; Playwright rejects arbitrary case selection. All kinds use the same workflows
+`run_tests` validates a strict discriminated union. Unit rejects arbitrary per-request commands; Playwright rejects arbitrary case selection. All kinds accept `executionScope: all | changed`, applying the shared [selection contract](execution.md). All kinds use the same workflows
 as HTTP, fixed project settings and existing input capture. Configure never saves files,
 starts resources or grants approval. Call describe, edit shared files, then validate.
 

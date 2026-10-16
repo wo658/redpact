@@ -9,7 +9,7 @@ description: Test runtimes, evidence, manual containers, limits and cleanup.
 
 | Entry | Runtime and inputs | Result |
 | --- | --- | --- |
-| Unit | Project Dockerfile and complete configured command in a temporary container | Command status, exit code, stdout/stderr and cleanup status |
+| Unit | Project Dockerfile and configured command or exact file command in a temporary container | Command status, exit code, stdout/stderr and cleanup status |
 | Integration | Containerized Vitest against a fresh Testcontainers Compose application environment | Immutable submitted source, cases, steps and run/environment records |
 | Playwright | Containerized browser against a temporary application environment | Functional results or capture evidence, optional video/trace |
 | Container | Explicitly started manual project application environment | Inspection endpoints and lifecycle state; not test evidence |
@@ -17,11 +17,10 @@ description: Test runtimes, evidence, manual containers, limits and cleanup.
 Unit has no host-command fallback. Its Dockerfile must copy sources and dependencies
 into `/workspace`, provide `/bin/sh`, and install during build. `cwd` selects the
 command directory. Dockerfile ENTRYPOINT/CMD do not supply Redpact's supervisor.
-The selected source file does not filter the configured command. Results do not
+The selected source file in the viewer does not filter the configured command; execution scope uses the explicit contract below. Results do not
 invent per-case verdicts from an exit code.
 
-Integration uses the current project catalog when started from Project Tests, or
-the latest submitted bundle when started from worktree review. MCP `run_tests`
+Integration collects current checkout sources from Project Tests and worktree review. MCP `run_tests`
 collects fresh sources for the supplied path. Submission identity and current file
 contents must remain distinguishable in the viewer. [Test authoring](tests.md)
 describes supported source collection and assertions.
@@ -52,7 +51,7 @@ path through its entry above so the connected worktree retains its result and cl
 ## Approval and accepted inputs
 
 MCP execution under Ask creates a durable review before starting project code. Unit
-records the complete configured command and a digest of the inputs its container will
+records the command/file-command specification, execution selection and a digest of the inputs its container will
 copy. Playwright records the target, purpose, effective viewport, settings digest,
 application fingerprint and test-directory digest. Requests retain their captured policy
 when future defaults change. The same reviewed request can be approved in the chat
@@ -293,3 +292,46 @@ above; the public runtime client does not expose a resolved-model API. Archive b
 host `tar` command extracts runner outputs. Revisit these exceptions and the
 failed-start patch when upgrading Testcontainers. They are not full delegation of
 image deletion, log snapshots or bounded execution to dedicated library APIs.
+
+## Selecting all or changed tests
+
+Execution selection is independent of catalog `scope` and Playwright maintenance
+`scope`. `executionScope` overrides the [shared default](configuration.md). `all`
+selects the current Integration test directory, Unit file patterns or the selected
+Playwright target. A legacy Unit shell command without `fileCommand` discovers its
+own files; its record explicitly leaves that file list unknown.
+
+`changed` compares committed HEAD with the single merge-base of HEAD and the local
+`tracking.mainBranch`. It unions committed changes, staged changes, unstaged changes
+and nonignored untracked files. Index changes remain changes even when working
+content was restored. Renames include old and new paths, but only existing catalog
+test files execute; deleted tests do not execute. A missing main branch, unborn HEAD,
+missing/ambiguous merge-base or Git read failure rejects changed execution. There is
+no silent fallback when the comparison is unavailable.
+
+Changed helper/fixture files under the runner's test directories select all files in
+that runner/target. Unit patterns without a fixed directory prefix (such as
+`foo*.test.ts`) treat the project root as the helper directory and conservatively
+select all on non-test source changes. Other targets' declared test files do not count as helpers.
+Git-visible `.redpact/settings.json`, package manifests/locks, `.gitignore`, TypeScript
+configuration and Vitest/Vite/Playwright/Jest configuration at the project root and
+runner directory also select all. Records retain requested `changed`, resolved `all`
+and `supporting_inputs` rather than disguising this as a changed-only run.
+Implementation-source edits outside those directories do not infer affected tests;
+this is file selection, not dependency analysis. Choose `all` for a full regression.
+
+Integration's explicit `tests` list combines with `all` and is recorded as `explicit`;
+it conflicts with `changed`, including a shared changed default. Helpers remain in
+the immutable submission. Playwright always selects inside one declared target and
+keeps helpers in the captured source bundle. Unit uses the authored file-command
+contract. Zero selected tests rejects admission with “No tests selected”, starts no
+container and creates no passing execution.
+
+New submissions, Unit/Playwright runs and approvals retain requested/resolved scope,
+comparison revision, reason and selected files. Approval/result views display this
+selection. Unit and Playwright revalidate selection as well as existing source/settings
+fingerprints before admission; a changed base or selected file set requires a new
+request. Integration retains its immutable submitted sources. Historical records have
+unknown selection rather than an invented full-suite claim. Project and worktree
+Integration Run controls collect the current checkout; explicitly rerunning a recorded
+submission still uses that original bundle.

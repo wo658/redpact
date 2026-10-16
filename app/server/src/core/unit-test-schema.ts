@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { executionSelectionSchema } from "./execution-selection-schema.js"
 import { resourceLimitSchema } from "./test-resource-schema.js"
 
 const localPath = z
@@ -22,6 +23,23 @@ export const unitTestSettingsSchema = z.strictObject({
     .min(1)
     .max(10000)
     .refine((value) => value.trim().length > 0 && !value.includes("\0")),
+  fileCommand: z
+    .strictObject({
+      executable: z
+        .string()
+        .min(1)
+        .max(4096)
+        .refine((value) => !value.includes("\0")),
+      args: z
+        .array(
+          z
+            .string()
+            .max(10000)
+            .refine((value) => !value.includes("\0")),
+        )
+        .max(100),
+    })
+    .optional(),
   patterns: z.array(localPath).min(1).max(30),
 })
 export const unitRunSchema = z.strictObject({
@@ -31,6 +49,7 @@ export const unitRunSchema = z.strictObject({
   projectId: z.string(),
   projectRoot: z.string(),
   settings: unitTestSettingsSchema,
+  executionSelection: executionSelectionSchema.nullable().optional(),
   runtimeId: z.string().nullable(),
   containerId: z.string().nullable(),
   imageId: z.string().nullable(),

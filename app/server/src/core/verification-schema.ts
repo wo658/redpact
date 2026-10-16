@@ -1,6 +1,7 @@
 import { isAbsolute } from "node:path"
 import { z } from "zod"
 import { executionKind } from "./chat-context-schema.js"
+import { executionScopeSchema } from "./execution-selection-schema.js"
 import { captureInputSchema } from "./playwright-schema.js"
 import { name, projectPath } from "./settings-schema.js"
 
@@ -11,8 +12,11 @@ export const verificationPath = z
   .refine(isAbsolute, "Use an absolute checkout path")
 export { executionKind }
 export const executionIdentity = z.strictObject({ kind: executionKind, id: z.string().uuid() })
-export const unitExecutionInput = z.strictObject({ path: verificationPath })
-export const workspaceStatusInput = unitExecutionInput
+export const unitExecutionInput = z.strictObject({
+  path: verificationPath,
+  executionScope: executionScopeSchema.optional(),
+})
+export const workspaceStatusInput = z.strictObject({ path: verificationPath })
 export const reviewContextInput = executionIdentity
 export const playwrightExecutionInput = captureInputSchema.extend({
   path: verificationPath,
@@ -47,6 +51,7 @@ export const runTestsInput = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("integration").default("integration"),
     path: verificationPath,
+    executionScope: executionScopeSchema.optional(),
     tests: z.array(projectPath).min(1).max(50).optional(),
   }),
   unitExecutionInput.extend({ kind: z.literal("unit") }),

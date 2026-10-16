@@ -6,6 +6,7 @@ import { execa } from "execa"
 import { testResourceSchema } from "../../core/test-resource-schema.js"
 import type { ReadTestResources } from "../../core/types/test-resources.js"
 import type { UnitCommand, UnitRun } from "../../core/types/unit-tests.js"
+import { unitExecutionCommand } from "../../core/unit-execution-command.js"
 import { readProjectFile } from "../settings/bundle.js"
 import { snapshotInputs } from "./inputs.js"
 import { executeLimitedContainer } from "./limited-command.js"
@@ -102,17 +103,9 @@ export function createUnitContainer(
         const container = await owned(containerId, run)
         observe({ containerId, imageId: container.Image })
         signal.throwIfAborted()
-        const cwd = run.settings.cwd === "." ? "/workspace" : `/workspace/${run.settings.cwd}`
         return await executeLimitedContainer(
           containerId,
-          [
-            "/bin/sh",
-            "-c",
-            'cd "$1" && exec /bin/sh -c "$2"',
-            "redpact",
-            cwd,
-            run.settings.command,
-          ],
+          unitExecutionCommand(run.settings, run.executionSelection ?? undefined),
           signal,
           limits,
         )

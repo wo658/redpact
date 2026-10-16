@@ -132,3 +132,40 @@ Global Settings는 인스턴스를 별도로 제어합니다. `configure describ
 ```
 
 생략 시 위 기본값이 이후 관리되는 단위·통합·Playwright 실행에 적용됩니다. 메모리 허용 범위는 64–1048576 MiB, 시간은 1–86400초입니다. 개별 테스트 제한 시간과 별개이며 애플리케이션 컨테이너, 빌드, 셸에서 직접 실행한 테스트 명령을 제한하지 않습니다. [리소스 적용 범위](execution.md)를 참고하세요.
+
+## 기본 실행 범위
+
+`tests.executionScope`는 Integration만이 아니라 **Unit, Integration, Playwright**가
+공유하는 기본값입니다. `all`(생략 시 기본값) 또는 `changed`를 지정하며 실행 요청의
+`executionScope`가 우선합니다. 뷰어의 **실행 범위**에서 공유 기본값, 전체 테스트,
+변경 테스트를 고릅니다. 파일 카탈로그 필터 및 Playwright 대상의 유지관리 scope와는
+별개입니다. [선택 규칙](execution.md)을 확인하세요.
+
+`unitTests.fileCommand`가 없으면 기존 Unit 동작을 유지합니다. `all`은 `command`를
+그대로 실행하고 명령이 발견한 정확한 파일 목록을 주장하지 않습니다. `changed`는
+아래 명시적 파일 명령 계약이 필요하며 임의 셸 명령을 거부합니다.
+파일 명령 카탈로그는 두 범위 모두 Git 체크아웃이 필요합니다. Git이 없는 디렉터리
+프로젝트는 기존 `all` 명령을 계속 사용할 수 있습니다.
+`fileCommand`를
+설정하면 두 범위 모두 실행 파일과 인자 뒤에 정확한 `/workspace/...` 절대 테스트
+경로를 전달하며 작업 디렉터리는 `unitTests.cwd`입니다. 실행 파일은 마지막의 파일
+인자를 받아 해당 파일만 실행해야 합니다. 이는 명령 문자열 분석이 아닌 작성자가
+선택하는 러너 계약입니다. Vitest처럼 파일 필터를 지원하는 러너를 사용하고 인자를
+무시하거나 다른 테스트 모음까지 실행하는 스크립트는 피하세요. 인자와 파일명은
+셸 코드로 삽입하지 않고 문자 그대로 전달합니다.
+
+```json
+{
+  "tests": { "executionScope": "all", "env": {} },
+  "unitTests": {
+    "dockerfile": "unit.Dockerfile",
+    "cwd": "app/server",
+    "command": "pnpm test",
+    "patterns": ["app/server/test/*.test.ts"],
+    "fileCommand": { "executable": "pnpm", "args": ["exec", "vitest", "run", "--"] }
+  }
+}
+```
+
+설치·빌드 준비는 Unit 이미지에서 수행하세요. `fileCommand`는 해당 실행의
+`command`를 대체하며 기존 셸 명령의 준비 단계를 먼저 실행하지 않습니다.

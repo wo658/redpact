@@ -17,7 +17,7 @@ description: 테스트 런타임, 실행 증거, 수동 컨테이너, 제한과 
 Unit에는 호스트 명령 fallback이 없습니다. Dockerfile은 소스와 의존성을 `/workspace`에
 복사하고 `/bin/sh`를 제공하며 빌드 중 설치해야 합니다. `cwd`는 명령 디렉터리를
 선택합니다. Dockerfile ENTRYPOINT/CMD가 Redpact supervisor를 제공하지 않습니다.
-선택된 소스 파일은 실행 명령을 필터링하지 않으며 종료 코드로 개별 케이스 판정을 만들지 않습니다.
+뷰어에서 선택된 소스 파일은 실행 명령을 필터링하지 않으며 실행 범위는 아래 명시적 계약을 사용합니다. 종료 코드로 개별 케이스 판정을 만들지 않습니다.
 
 프로젝트 Tests의 Integration은 현재 전체 프로젝트 목록을, 워크트리 검토에서는
 가장 최근 제출 묶음을 실행합니다. MCP `run_tests`는 주어진 경로의 새 소스를 수집합니다.
@@ -25,7 +25,7 @@ Unit에는 호스트 명령 fallback이 없습니다. Dockerfile은 소스와 �
 [테스트 작성](tests.md)을 참고하세요.
 
 세 항목은 서로 다른 실행 계약입니다. MCP `run_tests`는 Integration 제출만 실행합니다.
-Unit 실행은 Unit 탭 또는 `run_tests` (`kind: "unit"`)에서 시작해 설정된 전체 명령을 실행하며, 종료 상태를 Integration 케이스
+Unit 실행은 Unit 탭 또는 `run_tests` (`kind: "unit"`)에서 시작해 설정된 명령 또는 파일 명령을 실행하며, 종료 상태를 Integration 케이스
 결과로 취급하지 않습니다. Playwright 실행은 Playwright UI/API 또는 `run_tests` (`kind: "playwright"`)에서 선언된 기능 또는 캡처
 target을 선택해 시작합니다. 스크린샷, UI Review 산출물, 실행 기록과 정리는 MCP 제출이 아닌
 해당 Playwright 실행에 남습니다. 승인 제한, 기록된 증거 조회와 공개 수명주기 경계는
@@ -272,3 +272,42 @@ Compose 입력 해석은 위 캡처 계약을 위해 `docker compose config`를 
 Testcontainers 업그레이드 시 이러한 예외와 시작 실패 패치를 재평가합니다.
 이미지 삭제, 로그 스냅샷, 출력 상한을 둔 실행을 라이브러리 전용 API에 완전히
 위임한 것으로 간주하지 않습니다.
+
+## 전체 또는 변경 테스트 선택
+
+실행 범위는 카탈로그 `scope`, Playwright 유지관리 `scope`와 별개입니다.
+`executionScope`가 [공유 기본값](configuration.md)을 재정의합니다. `all`은 현재
+Integration 디렉터리, Unit 파일 패턴 또는 선택한 Playwright 대상 전체를 고릅니다.
+`fileCommand` 없는 기존 Unit 셸 명령은 파일을 직접 찾으며 기록은 정확한 파일 목록을
+알 수 없음을 명시합니다.
+
+`changed`는 HEAD와 로컬 `tracking.mainBranch`의 단일 merge-base를 비교 기준으로
+삼습니다. 커밋된 변경, staged/unstaged 변경, ignore되지 않은 신규 파일을 합칩니다.
+작업 파일을 복원했어도 인덱스 변경은 유지합니다. 이름 변경은 이전·새 경로를 포함하되
+현재 카탈로그에 존재하는 테스트 파일만 실행하며 삭제된 테스트는 실행하지 않습니다.
+메인 브랜치, 커밋된 HEAD 또는 유일한 merge-base가 없거나 Git 조회가 실패하면 변경
+실행을 거부합니다. 비교 불가 시 조용히 전체 실행으로 바꾸지 않습니다.
+
+러너 테스트 디렉터리의 헬퍼·fixture가 바뀌면 해당 러너/대상 전체를 선택합니다.
+고정 디렉터리 접두사가 없는 Unit 패턴(예: `foo*.test.ts`)은 프로젝트 루트를
+헬퍼 디렉터리로 취급하며 테스트 외 소스 변경 시 보수적으로 전체를 선택합니다.
+다른 대상에 선언된 테스트 파일은 헬퍼로 취급하지 않습니다. Git에 보이는
+`.redpact/settings.json`, 프로젝트 루트와 러너 디렉터리의 패키지 manifest/lock,
+`.gitignore`, TypeScript 설정, Vitest/Vite/Playwright/Jest 설정도 전체를 선택합니다.
+기록에는 요청 `changed`, 적용 `all`, 이유 `supporting_inputs`를 남겨 변경 테스트만
+실행한 것처럼 표시하지 않습니다. 해당 디렉터리 밖 구현 소스 변경으로 영향받는
+테스트를 추론하지 않습니다. 파일 선택 기능이며 의존성 분석이 아니므로 전체 회귀
+검증에는 `all`을 선택하세요.
+
+Integration의 명시적 `tests`는 `all`과 조합하며 `explicit`으로 기록합니다.
+공유 기본값을 포함한 `changed`와는 충돌합니다. 헬퍼는 불변 제출에 유지합니다.
+Playwright는 한 선언 대상 안에서만 선택하고 캡처한 소스에 헬퍼를 유지합니다.
+Unit은 작성한 파일 명령 계약을 사용합니다. 선택된 테스트가 없으면 “No tests selected”로
+실행 요청을 거부하고 컨테이너나 통과 기록을 만들지 않습니다.
+
+새 제출, Unit/Playwright 실행과 승인에는 요청·적용 범위, 비교 커밋, 이유, 선택 파일을
+기록하고 승인·결과 화면에 표시합니다. Unit/Playwright는 실행 직전 기존 소스·설정
+fingerprint와 함께 선택을 재검증합니다. 비교 기준이나 파일 목록이 달라지면 새 요청이
+필요합니다. Integration은 불변 제출 소스를 유지합니다. 과거 기록은 전체 검증이라고
+추정하지 않고 선택을 알 수 없는 상태로 둡니다. 프로젝트와 워크트리 Integration 실행
+컨트롤은 현재 체크아웃을 수집하며, 기록된 제출을 명시적으로 재실행하면 원래 번들을 씁니다.

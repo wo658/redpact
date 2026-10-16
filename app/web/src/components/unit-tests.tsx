@@ -3,6 +3,11 @@ import { createPortal } from "react-dom"
 import { useTranslation } from "react-i18next"
 import type { Api, UnitInspection, UnitRun } from "@/lib/api"
 import { ExecutionProgress } from "./execution-progress"
+import {
+  ExecutionScopePicker,
+  ExecutionSelectionEvidence,
+  executionScopeOverride,
+} from "./execution-scope"
 import { EmptyState, Loading, Notice } from "./feedback"
 import { useLiveRevision } from "./live-updates"
 import { ResultRow } from "./result-row"
@@ -47,6 +52,7 @@ export function UnitTests({
   const [path, setPath] = useState("")
   const [runId, setRunId] = useState("")
   const [view, setView] = useState("files")
+  const [executionScope, setExecutionScope] = useState("default")
   const [pending, setPending] = useState(false)
   const [refresh, setRefresh] = useState(0)
   const [error, setError] = useState("")
@@ -82,7 +88,7 @@ export function UnitTests({
     }
     setPending(true)
     try {
-      const result = await api.runUnitTests(worktreeId)
+      const result = await api.runUnitTests(worktreeId, executionScopeOverride(executionScope))
       setRunId(result.id)
       setView("results")
       setData((previous) =>
@@ -106,7 +112,7 @@ export function UnitTests({
     <Button
       size="toolbar"
       variant="ghost"
-      title={t("Runs the configured command in full.")}
+      title={t("Run tests with the selected execution scope.")}
       disabled={pending || Boolean(running) || Boolean(error) || !data?.settings}
       onClick={() => void action()}
     >
@@ -115,6 +121,11 @@ export function UnitTests({
   )
   const controls = (
     <div className="flex items-center gap-2">
+      <ExecutionScopePicker
+        value={executionScope}
+        onChange={setExecutionScope}
+        disabled={pending || Boolean(running)}
+      />
       {runButton}
       {running && <ExecutionProgress kind="unit" run={running} compact />}
     </div>
@@ -238,6 +249,7 @@ export function UnitTests({
                       </>
                     }
                   >
+                    <ExecutionSelectionEvidence selection={run.executionSelection} />
                     <ExecutionProgress kind="unit" run={run} />
                     {run.cleanup?.error && <Notice error>{run.cleanup.error}</Notice>}
                     {run.error && <Notice error>{run.error}</Notice>}

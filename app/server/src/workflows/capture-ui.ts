@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto"
 import { setTimeout as delay } from "node:timers/promises"
+import { isDeepStrictEqual } from "node:util"
 import { problem } from "../core/problems.js"
+import type { ExecutionScopeService } from "../core/types/execution-scope.js"
+import type { ExecutionScope, ExecutionSelection } from "../core/types/execution-selection.js"
 import type {
   CaptureBaselineCleanup,
   CaptureRun,
@@ -22,6 +25,7 @@ export function createCaptureWorkflow(deps: {
   worktrees: WorktreeService
   environments: EnvironmentService
   stopEnvironment: StopEnvironment
+  executionScopes?: ExecutionScopeService
 }): CaptureWorkflow {
   const active = new Map<string, { controller: AbortController; task: Promise<void> }>()
   let closing = false
@@ -190,7 +194,13 @@ export function createCaptureWorkflow(deps: {
       _selection?: TestSelection,
       viewport?: { width: number; height: number },
       targetName?: string,
-      approved?: { settingsDigest: string; inputDigest: string; sourceDigest: string },
+      approved?: {
+        settingsDigest: string
+        inputDigest: string
+        sourceDigest: string
+        executionSelection?: ExecutionSelection
+      },
+      executionScope?: ExecutionScope,
     ) {
       const run = await deps.worktrees.exclusive(async () => {
         if (closing) {
@@ -229,6 +239,20 @@ export function createCaptureWorkflow(deps: {
         if (result.plan && !result.plan.activeServices.some((s) => s === settings.service)) {
           problem("invalid_input", "Playwright target service is not selected")
         }
+        const executionSelection = await deps.executionScopes?.resolve(worktreeId, {
+          kind: "playwright",
+          target: selectedTarget,
+          executionScope: executionScope ?? approved?.executionSelection?.requested,
+        })
+        if (
+          approved?.executionSelection &&
+          !isDeepStrictEqual(executionSelection, approved.executionSelection)
+        ) {
+          problem(
+            "configuration_error",
+            "Execution selection changed during review; request a new execution",
+          )
+        }
         const git = await target.git.inspect()
         const id = randomUUID()
         const appDigest = await deps.environments.fingerprint(worktreeId, selected, result.digest)
@@ -264,6 +288,7 @@ export function createCaptureWorkflow(deps: {
           selection: selected,
           settingsDigest: result.digest,
           sourceDigest,
+          ...(executionSelection ? { executionSelection } : {}),
           appDigest,
           createdAt: new Date().toISOString(),
           state: "queued",

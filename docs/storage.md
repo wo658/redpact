@@ -172,3 +172,9 @@ Implementation: [storage adapters](../app/server/src/adapters/storage),
 
 Migration implementation: [workflow](../app/server/src/workflows/runtime-migrations.ts),
 [file adapter](../app/server/src/adapters/storage/migrations.ts).
+
+Migration `003-execution-selection` adds an explicit unknown (`null`) selection to
+historical submissions, Unit/Playwright runs and their execution reviews. It preserves
+original bytes in the existing ordered-migration backups, validates records before
+replacement and retries interrupted changes. It never guesses historical file sets or
+changes verdicts. New records capture the selection contract in [execution](execution.md).

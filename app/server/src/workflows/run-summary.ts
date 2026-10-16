@@ -1,4 +1,5 @@
 import { boundedText } from "../core/chat-context.js"
+import { summarizeExecutionSelection } from "../core/execution-selection.js"
 import { problem } from "../core/problems.js"
 import type { CaptureRun } from "../core/types/playwright.js"
 import { getReviewContext } from "./chat-context.js"
@@ -56,6 +57,7 @@ export function getRunSummary(services: Services, input: Identity) {
   if (!context.executionId) {
     return {
       ...base,
+      executionSelection: preview?.executionSelection ?? null,
       identity: {
         settingsDigest: preview?.settingsDigest,
         inputDigest: preview?.inputDigest,
@@ -76,6 +78,7 @@ export function getRunSummary(services: Services, input: Identity) {
         sourceDigest: submission.digest,
         settingsDigest: run.settings?.digest,
       },
+      executionSelection: summarizeExecutionSelection(submission.executionSelection),
       caseCount: run.result?.cases.length ?? 0,
       artifacts: [],
       artifactCount: 0,
@@ -88,6 +91,7 @@ export function getRunSummary(services: Services, input: Identity) {
     return {
       ...base,
       identity: { inputDigest: run.inputDigest },
+      executionSelection: summarizeExecutionSelection(run.executionSelection),
       exitCode: run.exitCode,
       artifacts: [],
       artifactCount: 0,
@@ -101,6 +105,7 @@ export function getRunSummary(services: Services, input: Identity) {
   return {
     ...base,
     ...artifacts,
+    executionSelection: summarizeExecutionSelection(run.executionSelection),
     truncated: base.truncated || artifacts.artifactCount > artifacts.artifacts.length,
     identity: {
       sourceDigest: run.sourceDigest,

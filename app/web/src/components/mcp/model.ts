@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { executionSelectionSchema } from "../../../../server/src/core/execution-selection-schema"
 
 const selection = z.object({
   services: z.array(z.string()),
@@ -37,6 +38,7 @@ const submission = z.object({
 })
 const executionSpecification = z.object({
   command: z.string().optional(),
+  fileCommand: z.object({ executable: z.string(), args: z.array(z.string()) }).optional(),
   dockerfile: z.string().optional(),
   cwd: z.string().optional(),
   target: z.string().optional(),
@@ -57,6 +59,7 @@ export const snapshotSchema = z.object({
       settingsDigest: z.string().optional(),
       inputDigest: z.string().optional(),
       sourceDigest: z.string().optional(),
+      executionSelection: executionSelectionSchema.nullish(),
       specification: executionSpecification.optional(),
     })
     .optional(),
@@ -80,6 +83,7 @@ export const snapshotSchema = z.object({
       inputDigest: z.string(),
       sourceDigest: z.string().optional(),
       error: z.string().optional(),
+      executionSelection: executionSelectionSchema.nullish(),
       specification: executionSpecification,
     })
     .optional(),

@@ -23,14 +23,14 @@ HTTP와 MCP는 같은 애플리케이션 workflow로 진입하고 실행·설정
 | `get_workspace_status` | 절대 체크아웃 `path`; 읽기 전용 설정 진단, 기존 연결, 승인 대기, 활성·최근 실행과 정리 문제 |
 | `get_review_context` | 실행 `kind`와 `id`; 제한된 실패 정보, 기록된 근거 참조, 캡처된 승인 미리보기와 상대 뷰어 검토 경로 |
 | `configure` | 절대 실행 `path`의 `describe`, `inspect`, `validate`. 스키마, 루트, 진단과 선택적 계획 반환 |
-| `run_tests` | 절대 `path`, `kind: integration / unit / playwright`; Integration은 선택적 `tests`, Unit은 전체 명령, Playwright는 필수 `target`과 선택적 `viewport` 사용 |
+| `run_tests` | 절대 `path`, `kind: integration / unit / playwright`; Integration은 선택적 `tests`, Unit은 명령/파일 명령 계약, Playwright는 필수 `target`과 선택적 `viewport` 사용; 모두 선택적 `executionScope` 지원 |
 | `get_run` | `kind`, `id`, 선택적 `detail: result / log / source / image`로 상태·기록된 증거·정리 조회 |
 | `list_runs` | 체크아웃 절대 `path`, 선택적 `kind`와 반환 커서 `before`; 종류에 맞는 실행을 페이지당 최대 20개 조회 |
 | `get_run_artifact` | Playwright `id`, `artifactId`, 선택적 `side`; 해당 실행 소유 PNG·영상·trace를 최대 8 MiB까지 조회 |
 | `project_container` | 관찰된 프로젝트 체크아웃의 절대 `path`, `action: inspect / start / restart / stop`; 기존 메인 체크아웃 수동 환경 수명주기 |
 
 `run_tests`는 엄격한 discriminated union으로 종류별 입력을 검증합니다. Unit은 파일
-필터와 임의 명령을 거부하고 Playwright는 임의 케이스 선택을 거부합니다. 모든 종류는
+임의 요청별 명령을 거부하고 Playwright는 임의 케이스 선택을 거부합니다. 모든 종류는 `executionScope: all | changed`에 공통 [선택 계약](execution.md)을 적용합니다. 모든 종류는
 HTTP와 같은 워크플로, 고정 프로젝트 설정과 기존 입력 캡처를 사용합니다. Configure는
 파일 저장·리소스 시작·승인을 하지 않습니다. describe 후 공유 파일을 편집하고 validate하세요.
 

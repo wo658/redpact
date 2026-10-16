@@ -245,3 +245,56 @@ test("검토한 단위 명령이 바뀌면 실행 등록 전 승인을 거부한
   expect(execute).not.toHaveBeenCalled()
   await service.close()
 })
+
+test("execution selection is retained and changed files require a configured file command", async () => {
+  const f = fixture()
+  const selection = {
+    requested: "changed" as const,
+    resolved: "changed" as const,
+    baseRevision: "a".repeat(40),
+    files: ["unit/a.test.ts"],
+    reason: "changed_files" as const,
+  }
+  const executionScopes = { resolve: vi.fn(async () => selection) }
+  const unsupported = createUnitTests({ ...f.deps, executionScopes })
+  await expect(unsupported.start("wt", undefined, "changed")).rejects.toThrow("fileCommand")
+  expect(f.execute).not.toHaveBeenCalled()
+  const config = { ...f.config, fileCommand: { executable: "vitest", args: ["run"] } }
+  const service = createUnitTests({
+    ...f.deps,
+    executionScopes,
+    settings: {
+      project: async () => ({ ...(await f.deps.settings.project()), value: { unitTests: config } }),
+    },
+  })
+  const run = await service.start("wt", undefined, "changed")
+  expect(run.executionSelection).toEqual(selection)
+  expect(executionScopes.resolve).toHaveBeenLastCalledWith("wt", {
+    kind: "unit",
+    executionScope: "changed",
+  })
+  await service.cancel(run.id)
+})
+
+test("approval does not execute when the Git selection changes", async () => {
+  const f = fixture()
+  const selection = {
+    requested: "changed" as const,
+    resolved: "changed" as const,
+    baseRevision: "a".repeat(40),
+    files: ["unit/a.test.ts"],
+    reason: "changed_files" as const,
+  }
+  const config = { ...f.config, fileCommand: { executable: "vitest", args: ["run"] } }
+  const service = createUnitTests({
+    ...f.deps,
+    executionScopes: { resolve: async () => ({ ...selection, baseRevision: "b".repeat(40) }) },
+    settings: {
+      project: async () => ({ ...(await f.deps.settings.project()), value: { unitTests: config } }),
+    },
+  })
+  await expect(
+    service.start("wt", { settings: config, inputDigest: "same", executionSelection: selection }),
+  ).rejects.toThrow("selection changed")
+  expect(f.execute).not.toHaveBeenCalled()
+})

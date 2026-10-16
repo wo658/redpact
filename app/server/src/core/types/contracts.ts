@@ -1,4 +1,5 @@
 import type { Environment } from "./environment.js"
+import type { ExecutionSelection } from "./execution-selection.js"
 import type { GitSnapshot } from "./git.js"
 import type { WorktreeSelection } from "./settings.js"
 import type { WorkStart } from "./start-work.js"
@@ -51,6 +52,7 @@ export type WorkItem = {
   worktreeId?: string
 }
 export type Submission = {
+  executionSelection?: ExecutionSelection | null
   projectId?: string
   worktreeId?: string
   projectRoot?: string

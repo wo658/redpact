@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto"
 import { link, lstat, mkdir, open, readdir, readFile, rename, unlink } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { z } from "zod"
+import { executionReviewRecordSchema } from "../../core/execution-review-schema.js"
+import { captureRunSchema } from "../../core/playwright-schema.js"
 import type { RuntimeMigrationFiles } from "../../core/types/runtime-migrations.js"
+import { unitRunSchema } from "../../core/unit-test-schema.js"
+import { submissionSchema } from "./files.js"
 
 async function readOptional(path: string): Promise<string | undefined> {
   try {
@@ -47,6 +51,79 @@ export function createRuntimeMigrationFiles(root: string): RuntimeMigrationFiles
     join(root, ".migrations", "backups", migration, "environments", `${id}.json`)
   const journal = join(root, ".migrations", "completed.json")
   return {
+    async executionSelections(migration) {
+      const files = []
+      for (const family of [
+        "submissions",
+        "unit-runs",
+        "playwright-runs",
+        "execution-reviews",
+      ] as const) {
+        const directory = join(root, family)
+        let entries: string[]
+        try {
+          entries = await readdir(directory)
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+            continue
+          }
+          throw error
+        }
+        for (const name of entries.sort().filter((name) => name.endsWith(".json"))) {
+          const id = name.slice(0, -5)
+          const source = await readOptional(join(directory, name))
+          if (source === undefined) {
+            throw new Error(`Record disappeared during migration: ${family}/${name}`)
+          }
+          files.push({
+            family,
+            id,
+            source,
+            backup: await readOptional(
+              join(root, ".migrations", "backups", migration, family, name),
+            ),
+          })
+        }
+      }
+      return files
+    },
+    validateExecutionSelection(file, source) {
+      const value = JSON.parse(source)
+      let record: { id: string }
+      if (file.family === "submissions") {
+        record = z.strictObject({ version: z.literal(1), data: submissionSchema }).parse(value).data
+      } else if (file.family === "unit-runs") {
+        record = unitRunSchema.parse(value)
+      } else if (file.family === "playwright-runs") {
+        record = captureRunSchema.parse(value)
+      } else {
+        record = executionReviewRecordSchema.parse(value)
+      }
+      if (record.id !== file.id) {
+        throw new Error(`Execution migration identity mismatch: ${file.family}/${file.id}`)
+      }
+    },
+    async backupExecutionSelection(migration, file) {
+      if (file.backup !== undefined) {
+        return
+      }
+      const path = join(root, ".migrations", "backups", migration, file.family, `${file.id}.json`)
+      await mkdir(dirname(path), { recursive: true, mode: 0o700 })
+      const temporary = `${path}.${randomUUID()}.tmp`
+      await atomicWrite(temporary, file.source)
+      try {
+        await link(temporary, path)
+      } finally {
+        await unlink(temporary)
+      }
+    },
+    async replaceExecutionSelection(file, source) {
+      const path = join(root, file.family, `${file.id}.json`)
+      if ((await readOptional(path)) !== file.source) {
+        throw new Error(`Execution record changed during migration: ${file.family}/${file.id}`)
+      }
+      await atomicWrite(path, source)
+    },
     async environmentValues(id) {
       if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) {
         throw new Error("Invalid environment migration identity")

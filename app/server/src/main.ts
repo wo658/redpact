@@ -31,6 +31,7 @@ import { readProjectFile } from "./adapters/settings/bundle.js"
 import { createSettingsFiles } from "./adapters/settings/editor-files.js"
 import { createSettingsService, readJsonSettings } from "./adapters/settings/json.js"
 import { preferenceFiles } from "./adapters/settings/preferences.js"
+import { createExecutionScopeFiles } from "./adapters/sources/execution-scope.js"
 import { createLocalFiles } from "./adapters/sources/local.js"
 import { catalogPaths, createUnitTestFiles } from "./adapters/sources/unit-tests.js"
 import { createCaptureStore } from "./adapters/storage/captures.js"
@@ -56,6 +57,7 @@ import { createDirectoryPicker } from "./workflows/directory-picker.js"
 import { createEnvironments } from "./workflows/environments.js"
 import { createExecuteTests } from "./workflows/execute-tests.js"
 import { createExecutionReviews } from "./workflows/execution-reviews.js"
+import { createExecutionScopes } from "./workflows/execution-scope.js"
 import { createGitService } from "./workflows/git.js"
 import { createIntegrationTests } from "./workflows/integration-tests.js"
 import { createMergeService } from "./workflows/merge.js"
@@ -240,7 +242,13 @@ const command = new Command()
         settings,
       })
       await environments.recover()
+      const executionScopes = createExecutionScopes({
+        worktrees,
+        projects: projectSettings,
+        files: createExecutionScopeFiles(),
+      })
       captureWorkflow = createCaptureWorkflow({
+        executionScopes,
         captures,
         runner: createCaptureRunner(directory, instance.id, readTestResources),
         baseline: createCaptureBaselineCleanup(directory),
@@ -259,8 +267,15 @@ const command = new Command()
         projectRoot: settings.projectRoot,
       })
       const localFiles = createLocalFiles(worktrees.settingsForPath)
-      const runFiles = createRunFiles({ files: localFiles, worktrees, submissions, executeTests })
+      const runFiles = createRunFiles({
+        files: localFiles,
+        worktrees,
+        submissions,
+        executeTests,
+        executionScopes,
+      })
       const collect = createCollectTests({
+        executionScopes,
         files: localFiles,
         worktrees,
         submissions,
@@ -308,6 +323,7 @@ const command = new Command()
           readJsonSettings(root, undefined, { file: join(root, ".redpact/settings.json"), source }),
       })
       const unitTests = createUnitTests({
+        executionScopes,
         worktrees,
         projects: projectSettings,
         settings: settingsEditor,
@@ -316,6 +332,7 @@ const command = new Command()
         store: unitStore,
       })
       const executionReviews = createExecutionReviews({
+        executionScopes,
         store: createExecutionReviewStore(directory),
         worktrees,
         units: unitTests,
@@ -433,6 +450,7 @@ const command = new Command()
         localFiles,
         runFiles,
         runWorktreeTests: createRunWorktreeTests({
+          executionScopes,
           files: localFiles,
           worktrees,
           submissions,

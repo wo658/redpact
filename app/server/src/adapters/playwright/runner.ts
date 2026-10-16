@@ -133,6 +133,15 @@ export function createCaptureRunner(
           video: run.settings.video ? { mode: "on", size: run.settings.viewport } : "off",
         },
       }
+      let configurationSource = `module.exports=${JSON.stringify(config)}`
+      if (run.executionSelection) {
+        const patterns = run.executionSelection.files.map((path) => {
+          const relative = path.slice(run.settings.directory.length + 1)
+          const absolute = `/review/tests/${relative}`
+          return `^${absolute.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`
+        })
+        configurationSource += `;module.exports.projects=module.exports.projects.map(p=>p.name===${JSON.stringify(run.target)}?{...p,testMatch:${JSON.stringify(patterns)}.map(s=>new RegExp(s))}:p)`
+      }
       observe({ runtimeId, platform: "linux", state: "running" })
       let worker = new URL("./worker.js", import.meta.url)
       if (!existsSync(worker)) {
@@ -142,7 +151,7 @@ export function createCaptureRunner(
         input: JSON.stringify({
           assets: dirname(fileURLToPath(import.meta.url)),
           tests: join(inputs(run.id), "tests"),
-          config: `module.exports=${JSON.stringify(config)}`,
+          config: configurationSource,
           ownerId,
           id: run.id,
           side,

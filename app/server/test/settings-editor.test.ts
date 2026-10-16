@@ -24,6 +24,7 @@ test("설정 조회는 기본값과 외부 수정 진단을 반환하고 파일�
     await writeFile(file, "{}")
     expect((await settings.project("project")).value?.tests).toEqual({
       directory: "integration",
+      executionScope: "all",
       timeoutMs: 10000,
       env: {},
     })
@@ -108,7 +109,12 @@ test("editor preserves omitted defaults, rejects invalid Compose and detects age
       validateProject: (path, text) => readJsonSettings(path, undefined, { file, source: text }),
     })
     const initial = await editor.project("project")
-    expect(initial.value?.tests).toEqual({ directory: "integration", timeoutMs: 10000, env: {} })
+    expect(initial.value?.tests).toEqual({
+      directory: "integration",
+      timeoutMs: 10000,
+      env: {},
+      executionScope: "all",
+    })
     expect(await readFile(file, "utf8")).toBe(source)
     await expect(
       editor.saveProject("project", {
