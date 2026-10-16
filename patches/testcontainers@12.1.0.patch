@@ -1,8 +1,99 @@
+diff --git a/build/container-runtime/clients/client.d.ts b/build/container-runtime/clients/client.d.ts
+index 74b58836af8cbfa6148275139887168f865c1fd3..60a215c34c14d2eff4fe1a51382ba72dc107afd1 100644
+--- a/build/container-runtime/clients/client.d.ts
++++ b/build/container-runtime/clients/client.d.ts
+@@ -9,6 +9,8 @@ export declare class ContainerRuntimeClient {
+     readonly container: ContainerClient;
+     readonly image: ImageClient;
+     readonly network: NetworkClient;
++    readonly volume: import("./volume/volume-client").DockerVolumeClient;
++    inspect(): Promise<{ id: string; memoryLimit: boolean; swapLimit: boolean }>;
+     constructor(info: Info, compose: ComposeClient, container: ContainerClient, image: ImageClient, network: NetworkClient);
+ }
+ export declare function getContainerRuntimeClient(): Promise<ContainerRuntimeClient>;
+diff --git a/build/container-runtime/clients/client.js b/build/container-runtime/clients/client.js
+index 1b63addacc056d9da10ff64d6b96032bdc1dc79f..7aef222fa1690329d3a02139189acb0e741e1929 100644
+--- a/build/container-runtime/clients/client.js
++++ b/build/container-runtime/clients/client.js
+@@ -19,6 +19,7 @@ const resolve_host_1 = require("../utils/resolve-host");
+ const compose_client_1 = require("./compose/compose-client");
+ const docker_container_client_1 = require("./container/docker-container-client");
+ const docker_image_client_1 = require("./image/docker-image-client");
++const { DockerVolumeClient } = require("./volume/volume-client");
+ const docker_network_client_1 = require("./network/docker-network-client");
+ class ContainerRuntimeClient {
+     info;
+@@ -26,12 +27,17 @@ class ContainerRuntimeClient {
+     container;
+     image;
+     network;
++    async inspect() {
++        const value = await this.container.dockerode.info();
++        return { id: value.ID, memoryLimit: value.MemoryLimit, swapLimit: value.SwapLimit };
++    }
+     constructor(info, compose, container, image, network) {
+         this.info = info;
+         this.compose = compose;
+         this.container = container;
+         this.image = image;
+         this.network = network;
++        this.volume = new DockerVolumeClient(container.dockerode);
+     }
+ }
+ exports.ContainerRuntimeClient = ContainerRuntimeClient;
+@@ -102,6 +108,10 @@ async function initStrategy(strategy) {
+     const containerRuntimeInfo = {
+         host,
+         hostIps,
++        id: dockerodeInfo.ID,
++        socketPath: dockerodeOptions.socketPath,
++        memoryLimit: dockerodeInfo.MemoryLimit,
++        swapLimit: dockerodeInfo.SwapLimit,
+         remoteSocketPath: remoteContainerRuntimeSocketPath,
+         indexServerAddress: indexServerAddress,
+         serverVersion: dockerodeInfo.ServerVersion,
+diff --git a/build/container-runtime/clients/compose/compose-client.d.ts b/build/container-runtime/clients/compose/compose-client.d.ts
+index e7f928383f8bc847c139c69c30cbb0cb43859522..89e03d3a19095eb6cdba04135daeba05b4362c6a 100644
+--- a/build/container-runtime/clients/compose/compose-client.d.ts
++++ b/build/container-runtime/clients/compose/compose-client.d.ts
+@@ -1,5 +1,6 @@
+ import { ComposeDownOptions, ComposeOptions } from "./types";
+ export interface ComposeClient {
++    config(options: ComposeOptions & { signal?: AbortSignal; timeout?: number; maxBuffer?: number }): Promise<unknown>;
+     up(options: ComposeOptions, services?: Array<string>): Promise<void>;
+     pull(options: ComposeOptions, services?: Array<string>): Promise<void>;
+     stop(options: ComposeOptions): Promise<void>;
 diff --git a/build/container-runtime/clients/compose/compose-client.js b/build/container-runtime/clients/compose/compose-client.js
-index 39eb48ed2f51da762e8a334de1a2e79251916592..5ff4b3775e802e8d24d1481d57e1ddc9960d2377 100644
+index 39eb48ed2f51da762e8a334de1a2e79251916592..b83e4d8756fe834b433b586003d439b0bfbac9fa 100644
 --- a/build/container-runtime/clients/compose/compose-client.js
 +++ b/build/container-runtime/clients/compose/compose-client.js
-@@ -36,7 +36,7 @@ class DockerComposeClient {
+@@ -20,6 +20,25 @@ class DockerComposeClient {
+     constructor(environment) {
+         this.environment = environment;
+     }
++    async config(options) {
++        const { promisify } = require("util");
++        const { execFile } = require("child_process");
++        const files = Array.isArray(options.files) ? options.files : [options.files];
++        const result = await promisify(execFile)("docker", [
++            "compose", "--project-name", options.projectName,
++            ...files.flatMap(file => ["-f", file]),
++            ...(options.composeOptions ?? []),
++            "config", "--format", "json", ...(options.commandOptions ?? []),
++        ], {
++            cwd: options.filePath,
++            env: { ...this.environment, ...options.environment },
++            signal: options.signal,
++            timeout: options.timeout ?? 30000,
++            maxBuffer: options.maxBuffer ?? 4 * 1024 * 1024,
++            encoding: "utf8",
++        });
++        return JSON.parse(result.stdout);
++    }
+     async up(options, services) {
+         try {
+             if (services) {
+@@ -36,7 +55,7 @@ class DockerComposeClient {
              await handleAndRethrow(err, async (error) => {
                  try {
                      common_1.log.error(`Failed to up Compose environment: ${error.message}`);
@@ -11,8 +102,434 @@ index 39eb48ed2f51da762e8a334de1a2e79251916592..5ff4b3775e802e8d24d1481d57e1ddc9
                  }
                  catch {
                      common_1.log.error(`Failed to down Compose environment after failed up`);
+@@ -85,6 +104,7 @@ class DockerComposeClient {
+     }
+ }
+ class MissingComposeClient {
++    config() { throw new Error("Compose is not installed"); }
+     constructor() { }
+     up() {
+         throw new Error("Compose is not installed");
+diff --git a/build/container-runtime/clients/container/container-client.d.ts b/build/container-runtime/clients/container/container-client.d.ts
+index 43912db35b2689047a3326f06dafba0ddaa16850..7e8577f36c3dbb1c1135a7effeaec70e2d4a9977 100644
+--- a/build/container-runtime/clients/container/container-client.d.ts
++++ b/build/container-runtime/clients/container/container-client.d.ts
+@@ -10,7 +10,8 @@ export interface ContainerClient {
+     }): Promise<Container | undefined>;
+     fetchArchive(container: Container, path: string): Promise<NodeJS.ReadableStream>;
+     putArchive(container: Dockerode.Container, stream: Readable, path: string, options?: CopyToContainerOptions): Promise<void>;
+-    list(): Promise<ContainerInfo[]>;
++    list(options?: Dockerode.ContainerListOptions): Promise<ContainerInfo[]>;
++    update(container: Container, options: Dockerode.ContainerUpdateOptions): Promise<void>;
+     create(opts: ContainerCreateOptions): Promise<Container>;
+     start(container: Container): Promise<void>;
+     inspect(container: Container): Promise<ContainerInspectInfo>;
+@@ -24,7 +25,7 @@ export interface ContainerClient {
+         timeout: number;
+     }): Promise<void>;
+     commit(container: Container, opts: ContainerCommitOptions): Promise<string>;
+-    events(container: Container, eventNames: string[]): Promise<Readable>;
++    events(container: Container, eventNames: string[], options?: { since?: number; until?: number }): Promise<Readable>;
+     remove(container: Container, opts?: {
+         removeVolumes: boolean;
+     }): Promise<void>;
+diff --git a/build/container-runtime/clients/container/docker-container-client.d.ts b/build/container-runtime/clients/container/docker-container-client.d.ts
+index 988af773baca253549f3880647a7b6dab2029e8d..f9305a5a1e5ad61ccd90fab84abcd0a70ccfd99c 100644
+--- a/build/container-runtime/clients/container/docker-container-client.d.ts
++++ b/build/container-runtime/clients/container/docker-container-client.d.ts
+@@ -12,7 +12,8 @@ export declare class DockerContainerClient implements ContainerClient {
+     } | undefined): Promise<Container | undefined>;
+     fetchArchive(container: Container, path: string): Promise<NodeJS.ReadableStream>;
+     putArchive(container: Dockerode.Container, stream: Readable, path: string, options?: CopyToContainerOptions): Promise<void>;
+-    list(): Promise<ContainerInfo[]>;
++    list(options?: Dockerode.ContainerListOptions): Promise<ContainerInfo[]>;
++    update(container: Container, options: Dockerode.ContainerUpdateOptions): Promise<void>;
+     create(opts: ContainerCreateOptions): Promise<Container>;
+     start(container: Container): Promise<void>;
+     inspect(container: Dockerode.Container): Promise<ContainerInspectInfo>;
+@@ -29,7 +30,7 @@ export declare class DockerContainerClient implements ContainerClient {
+     remove(container: Container, opts?: {
+         removeVolumes: boolean;
+     }): Promise<void>;
+-    events(container: Container, eventNames: string[]): Promise<Readable>;
++    events(container: Container, eventNames: string[], options?: { since?: number; until?: number }): Promise<Readable>;
+     protected demuxStream(containerId: string, stream: Readable): Promise<Readable>;
+     connectToNetwork(container: Container, network: Network, networkAliases: string[]): Promise<void>;
+ }
+diff --git a/build/container-runtime/clients/container/docker-container-client.js b/build/container-runtime/clients/container/docker-container-client.js
+index 8760cfb32b8bdcf6ab4e3bdbbe15978bf108330f..2af2220d360c230816a8a07fc45a000c3002ee63 100644
+--- a/build/container-runtime/clients/container/docker-container-client.js
++++ b/build/container-runtime/clients/container/docker-container-client.js
+@@ -75,10 +75,10 @@ class DockerContainerClient {
+             throw err;
+         }
+     }
+-    async list() {
++    async list(options) {
+         try {
+             common_1.log.debug(`Listing containers...`);
+-            const containers = await this.dockerode.listContainers();
++            const containers = await this.dockerode.listContainers(options);
+             common_1.log.debug(`Listed containers`);
+             return containers;
+         }
+@@ -87,6 +87,7 @@ class DockerContainerClient {
+             throw err;
+         }
+     }
++    async update(container, options) { await container.update(options); }
+     async create(opts) {
+         try {
+             common_1.log.debug(`Creating container for image "${opts.Image}"...`);
+@@ -153,31 +154,13 @@ class DockerContainerClient {
+             throw err;
+         }
+     }
+-    logs(container, opts) {
+-        common_1.log.debug(`Fetching container logs...`, { containerId: container.id });
+-        const proxyStream = new stream_1.PassThrough();
+-        proxyStream.setEncoding("utf8");
+-        container
+-            .logs({
+-            follow: true,
+-            stdout: true,
+-            stderr: true,
+-            tail: opts?.tail ?? -1,
+-            since: opts?.since ?? 0,
+-        })
+-            .then(async (stream) => {
+-            const actualLogStream = stream;
+-            actualLogStream.socket?.unref();
+-            const demuxedStream = await this.demuxStream(container.id, actualLogStream);
+-            demuxedStream.pipe(proxyStream);
+-            demuxedStream.on("error", (err) => proxyStream.emit("error", err));
+-            demuxedStream.on("end", () => proxyStream.end());
+-        })
+-            .catch((err) => {
+-            common_1.log.error(`Failed to fetch container logs: ${err}`, { containerId: container.id });
+-            proxyStream.end();
+-        });
+-        return Promise.resolve(proxyStream);
++    async logs(container, opts) {
++        const result = await container.logs({ follow: true, stdout: true, stderr: true, tail: -1, since: 0, ...opts });
++        const source = Buffer.isBuffer(result) ? stream_1.Readable.from([result]) : result;
++        source.socket?.unref();
++        const inspection = await this.inspect(container);
++        if (inspection.Config.Tty) return source;
++        return this.demuxStream(container.id, source);
+     }
+     async exec(container, command, opts) {
+         const execOptions = {
+@@ -194,6 +177,16 @@ class DockerContainerClient {
+         if (opts?.user !== undefined) {
+             execOptions.User = opts.user;
+         }
++        const sizes = new Map();
++        let truncated = false;
++        const append = (chunks, chunk) => {
++            const bytes = Buffer.from(chunk);
++            const size = sizes.get(chunks) ?? 0;
++            const remaining = Math.max(0, (opts?.maxOutputBytes ?? Infinity) - size);
++            truncated ||= bytes.length > remaining;
++            if (remaining > 0) chunks.push(bytes.subarray(0, remaining));
++            sizes.set(chunks, size + Math.min(bytes.length, remaining));
++        };
+         const outputChunks = [];
+         const stdoutChunks = [];
+         const stderrChunks = [];
+@@ -202,14 +195,18 @@ class DockerContainerClient {
+                 common_1.log.debug(`Execing container with command "${command.join(" ")}"...`, { containerId: container.id });
+             }
+             const exec = await container.exec(execOptions);
++            opts?.signal?.throwIfAborted();
+             const stream = await exec.start({ stdin: true, Detach: false, Tty: false });
++            let finish;
++            const cancel = () => { stream.destroy(); finish?.(); };
++            opts?.signal?.addEventListener("abort", cancel, { once: true });
+             const stdoutStream = new stream_1.PassThrough();
+             const stderrStream = new stream_1.PassThrough();
+             this.dockerode.modem.demuxStream(stream, stdoutStream, stderrStream);
+             const processStream = (stream, chunks) => {
+                 stream.on("data", (chunk) => {
+-                    chunks.push(chunk.toString());
+-                    outputChunks.push(chunk.toString());
++                    append(chunks, chunk);
++                    append(outputChunks, chunk);
+                     if (opts?.log && common_1.execLog.enabled()) {
+                         common_1.execLog.trace(chunk.toString(), { containerId: container.id });
+                     }
+@@ -219,32 +216,39 @@ class DockerContainerClient {
+             processStream(stderrStream, stderrChunks);
+             try {
+                 await new Promise((res, rej) => {
++                    finish = res;
+                     stream.on("end", res);
++                    stream.on("close", res);
+                     stream.on("error", rej);
++                    if (opts?.signal?.aborted) cancel();
+                 });
+                 stdoutStream.end();
+                 stderrStream.end();
+                 await Promise.all([(0, promises_1.finished)(stdoutStream), (0, promises_1.finished)(stderrStream)]);
+             }
+             finally {
++                opts?.signal?.removeEventListener("abort", cancel);
+                 stream.destroy();
+             }
+             const inspectResult = await exec.inspect();
+             const exitCode = inspectResult.ExitCode ?? -1;
+-            const output = outputChunks.join("");
+-            const stdout = stdoutChunks.join("");
+-            const stderr = stderrChunks.join("");
++            const output = Buffer.concat(outputChunks).toString();
++            const stdout = Buffer.concat(stdoutChunks).toString();
++            const stderr = Buffer.concat(stderrChunks).toString();
+             if (opts?.log) {
+                 common_1.log.debug(`Execed container with command "${command.join(" ")}"...`, { containerId: container.id });
+             }
+-            return { output, stdout, stderr, exitCode };
++            return { output, stdout, stderr, exitCode, truncated };
+         }
+         catch (err) {
+-            common_1.log.error(`Failed to exec container with command "${command.join(" ")}": ${err}: ${outputChunks.join("")}`, {
++            common_1.log.error(`Failed to exec container with command "${command.join(" ")}": ${err}: ${Buffer.concat(outputChunks).toString()}`, {
+                 containerId: container.id,
+             });
+             throw err;
+         }
++        finally {
++            opts?.onOutput?.({ stdout: Buffer.concat(stdoutChunks).toString(), stderr: Buffer.concat(stderrChunks).toString(), truncated });
++        }
+     }
+     async restart(container, opts) {
+         try {
+@@ -280,9 +284,10 @@ class DockerContainerClient {
+             throw err;
+         }
+     }
+-    async events(container, eventNames) {
++    async events(container, eventNames, options = {}) {
+         common_1.log.debug(`Fetching event stream...`, { containerId: container.id });
+         const stream = (await this.dockerode.getEvents({
++            ...options,
+             filters: {
+                 type: ["container"],
+                 container: [container.id],
+@@ -298,6 +303,7 @@ class DockerContainerClient {
+             const demuxedStream = new stream_1.PassThrough({ autoDestroy: true, encoding: "utf-8" });
+             this.dockerode.modem.demuxStream(stream, demuxedStream, demuxedStream);
+             stream.on("end", () => demuxedStream.end());
++            stream.on("error", (error) => demuxedStream.destroy(error));
+             demuxedStream.on("close", () => {
+                 if (!stream.destroyed) {
+                     stream.destroy();
+diff --git a/build/container-runtime/clients/container/types.d.ts b/build/container-runtime/clients/container/types.d.ts
+index 3f5415ae2c525d518adbb855acb37035f88316b6..0b165b0628e97e9b4967fc1344783cda97442866 100644
+--- a/build/container-runtime/clients/container/types.d.ts
++++ b/build/container-runtime/clients/container/types.d.ts
+@@ -2,12 +2,16 @@ export type Environment = {
+     [key in string]: string;
+ };
+ export type ExecOptions = {
++    signal?: AbortSignal;
++    onOutput?: (output: { stdout: string; stderr: string; truncated: boolean }) => void;
++    maxOutputBytes?: number;
+     workingDir: string;
+     user: string;
+     env: Environment;
+     log: boolean;
+ };
+ export type ExecResult = {
++    truncated?: boolean;
+     output: string;
+     stdout: string;
+     stderr: string;
+diff --git a/build/container-runtime/clients/image/docker-image-client.d.ts b/build/container-runtime/clients/image/docker-image-client.d.ts
+index a41dd99d15b8eaa94f50699e66d132ebfa1a536e..eef8d15a4f05c53701318bbf87072a585f66b3ce 100644
+--- a/build/container-runtime/clients/image/docker-image-client.d.ts
++++ b/build/container-runtime/clients/image/docker-image-client.d.ts
+@@ -11,6 +11,7 @@ export declare class DockerImageClient implements ImageClient {
+     private createTarPackOptions;
+     private listContextEntries;
+     private normalizePathForDockerIgnore;
++    remove(imageName: ImageName): Promise<void>;
+     inspect(imageName: ImageName): Promise<ImageInspectInfo>;
+     exists(imageName: ImageName): Promise<boolean>;
+     pull(imageName: ImageName, opts?: {
+diff --git a/build/container-runtime/clients/image/docker-image-client.js b/build/container-runtime/clients/image/docker-image-client.js
+index 1cb09e340430aa8dbaa36f79d7ae1c13c3278fff..50ff785c2a098ec620d5f9430be5c3ae9ef00ef7 100644
+--- a/build/container-runtime/clients/image/docker-image-client.js
++++ b/build/container-runtime/clients/image/docker-image-client.js
+@@ -26,20 +26,20 @@ class DockerImageClient {
+             common_1.log.debug(`Building image "${opts.t}" with context "${context}"...`);
+             const tarPackOptions = await this.createTarPackOptions(context, opts.dockerfile ?? "Dockerfile");
+             const tarStream = tar_fs_1.default.pack(context, tarPackOptions);
+-            await new Promise((resolve) => {
+-                this.dockerode
+-                    .buildImage(tarStream, opts)
+-                    .then((stream) => (0, byline_1.default)(stream))
+-                    .then((stream) => {
+-                    stream.setEncoding("utf-8");
+-                    stream.on("data", (line) => {
+-                        if (common_1.buildLog.enabled()) {
+-                            common_1.buildLog.trace(line, { imageName: opts.t });
+-                        }
+-                    });
+-                    stream.on("end", () => resolve());
+-                });
+-            });
++            const stream = await this.dockerode.buildImage(tarStream, opts);
++            try {
++                const lines = (0, byline_1.default)(stream);
++                tarStream.once("error", (error) => lines.destroy(error));
++                stream.once("error", (error) => lines.destroy(error));
++                for await (const line of lines) {
++                    const event = JSON.parse(line.toString());
++                    if (event.error || event.errorDetail) throw new Error(event.errorDetail?.message ?? event.error);
++                    if (common_1.buildLog.enabled()) common_1.buildLog.trace(line.toString(), { imageName: opts.t });
++                }
++            } finally {
++                tarStream.destroy();
++                stream.destroy();
++            }
+             common_1.log.debug(`Built image "${opts.t}" with context "${context}"`);
+         }
+         catch (err) {
+@@ -48,7 +48,8 @@ class DockerImageClient {
+         }
+     }
+     async createTarPackOptions(context, dockerfileName) {
+-        const dockerIgnoreFilePath = path_1.default.join(context, ".dockerignore");
++        const specific = path_1.default.resolve(context, `${dockerfileName}.dockerignore`);
++        const dockerIgnoreFilePath = (0, fs_1.existsSync)(specific) ? specific : path_1.default.join(context, ".dockerignore");
+         if (!(0, fs_1.existsSync)(dockerIgnoreFilePath)) {
+             return {};
+         }
+@@ -88,6 +89,10 @@ class DockerImageClient {
+     normalizePathForDockerIgnore(aPath) {
+         return aPath.replace(/\\/gu, "/");
+     }
++    async remove(imageName) {
++        await this.dockerode.getImage(imageName.string).remove({ force: false });
++        this.existingImages.delete(imageName.string);
++    }
+     async inspect(imageName) {
+         try {
+             common_1.log.debug(`Inspecting image: "${imageName.string}"...`);
+diff --git a/build/container-runtime/clients/image/image-client.d.ts b/build/container-runtime/clients/image/image-client.d.ts
+index 35052461d1f05c7f4a89ad31c01149990331da78..f8ab9e886273f122142a2ee65cd1cfd36adef79e 100644
+--- a/build/container-runtime/clients/image/image-client.d.ts
++++ b/build/container-runtime/clients/image/image-client.d.ts
+@@ -6,6 +6,7 @@ export interface ImageClient {
+         force: boolean;
+         platform: string | undefined;
+     }): Promise<void>;
++    remove(imageName: ImageName): Promise<void>;
+     inspect(imageName: ImageName): Promise<ImageInspectInfo>;
+     exists(imageName: ImageName): Promise<boolean>;
+ }
+diff --git a/build/container-runtime/clients/network/docker-network-client.d.ts b/build/container-runtime/clients/network/docker-network-client.d.ts
+index c5ac6724f91b473ec10780c76b283fba7c0e8cc2..208d96dbca1f10db513e132859de9f4af690db15 100644
+--- a/build/container-runtime/clients/network/docker-network-client.d.ts
++++ b/build/container-runtime/clients/network/docker-network-client.d.ts
+@@ -3,6 +3,8 @@ import { NetworkClient } from "./network-client";
+ export declare class DockerNetworkClient implements NetworkClient {
+     protected readonly dockerode: Dockerode;
+     constructor(dockerode: Dockerode);
++    list(options?: { filters?: Record<string, string[]> }): Promise<import("dockerode").NetworkInspectInfo[]>;
++    inspect(network: Network): Promise<import("dockerode").NetworkInspectInfo>;
+     getById(id: string): Network;
+     create(opts: NetworkCreateOptions): Promise<Network>;
+     remove(network: Dockerode.Network): Promise<void>;
+diff --git a/build/container-runtime/clients/network/docker-network-client.js b/build/container-runtime/clients/network/docker-network-client.js
+index db0cc78ecc4b4741a896252ee0598c38708aa230..0c5b564b2b97c8baa2baa63e724a38f07991e9e1 100644
+--- a/build/container-runtime/clients/network/docker-network-client.js
++++ b/build/container-runtime/clients/network/docker-network-client.js
+@@ -7,6 +7,8 @@ class DockerNetworkClient {
+     constructor(dockerode) {
+         this.dockerode = dockerode;
+     }
++    async list(options) { return this.dockerode.listNetworks(options); }
++    async inspect(network) { return network.inspect(); }
+     getById(id) {
+         try {
+             common_1.log.debug(`Getting network by ID...`);
+diff --git a/build/container-runtime/clients/network/network-client.d.ts b/build/container-runtime/clients/network/network-client.d.ts
+index 89b271a58d29bd84573166844512f6e29f7f8089..862389f357dc9f9c674a67d6458759fa23116f5c 100644
+--- a/build/container-runtime/clients/network/network-client.d.ts
++++ b/build/container-runtime/clients/network/network-client.d.ts
+@@ -1,5 +1,7 @@
+ import { Network, NetworkCreateOptions } from "dockerode";
+ export interface NetworkClient {
++    list(options?: { filters?: Record<string, string[]> }): Promise<import("dockerode").NetworkInspectInfo[]>;
++    inspect(network: Network): Promise<import("dockerode").NetworkInspectInfo>;
+     getById(id: string): Network;
+     create(opts: NetworkCreateOptions): Promise<Network>;
+     remove(network: Network): Promise<void>;
+diff --git a/build/container-runtime/clients/types.d.ts b/build/container-runtime/clients/types.d.ts
+index de8b8f82c4f97cccd9dd9d9271ba50847cfe2604..d009af0552892f574b7fdc049d3a8f0d25b79cf5 100644
+--- a/build/container-runtime/clients/types.d.ts
++++ b/build/container-runtime/clients/types.d.ts
+@@ -8,6 +8,10 @@ export type NodeInfo = {
+     platform: string;
+ };
+ export type ContainerRuntimeInfo = {
++    id: string;
++    socketPath?: string;
++    memoryLimit: boolean;
++    swapLimit: boolean;
+     host: string;
+     hostIps: HostIp[];
+     remoteSocketPath: string;
+diff --git a/build/container-runtime/clients/volume/volume-client.d.ts b/build/container-runtime/clients/volume/volume-client.d.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..66844d3188595421fcc6152d623dd7f05839a660
+--- /dev/null
++++ b/build/container-runtime/clients/volume/volume-client.d.ts
+@@ -0,0 +1,7 @@
++import Dockerode from "dockerode";
++export declare class DockerVolumeClient {
++    constructor(dockerode: Dockerode);
++    list(options?: { filters?: Record<string, string[]> }): Promise<Dockerode.VolumeInspectInfo[]>;
++    inspect(name: string): Promise<Dockerode.VolumeInspectInfo>;
++    remove(name: string): Promise<void>;
++}
+diff --git a/build/container-runtime/clients/volume/volume-client.js b/build/container-runtime/clients/volume/volume-client.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..e070129852b3b3b136b048757195f79869c37715
+--- /dev/null
++++ b/build/container-runtime/clients/volume/volume-client.js
+@@ -0,0 +1,8 @@
++"use strict";
++class DockerVolumeClient {
++    constructor(dockerode) { this.dockerode = dockerode; }
++    async list(options) { return (await this.dockerode.listVolumes(options)).Volumes ?? []; }
++    async inspect(name) { return this.dockerode.getVolume(name).inspect(); }
++    async remove(name) { await this.dockerode.getVolume(name).remove(); }
++}
++exports.DockerVolumeClient = DockerVolumeClient;
+diff --git a/build/container-runtime/index.d.ts b/build/container-runtime/index.d.ts
+index d0332c0b5499893cad16470bcd16576e502df1c3..4e885fc0e28f810eed8d304c392293121e412672 100644
+--- a/build/container-runtime/index.d.ts
++++ b/build/container-runtime/index.d.ts
+@@ -4,3 +4,5 @@ export { parseComposeContainerName } from "./clients/compose/parse-compose-conta
+ export { ComposeDownOptions, ComposeExecutableOptions, ComposeOptions } from "./clients/compose/types";
+ export { HostIp } from "./clients/types";
+ export { ImageName } from "./image-name";
++
++export { getComposeClient } from "./clients/compose/compose-client";
+diff --git a/build/container-runtime/index.js b/build/container-runtime/index.js
+index 01e0b5e6f74cf5561c4b53d9b0617eaaea9b5182..6868d11dd21fd31dff24a3340aff1120ebdc3ce6 100644
+--- a/build/container-runtime/index.js
++++ b/build/container-runtime/index.js
+@@ -10,3 +10,5 @@ var parse_compose_container_name_1 = require("./clients/compose/parse-compose-co
+ Object.defineProperty(exports, "parseComposeContainerName", { enumerable: true, get: function () { return parse_compose_container_name_1.parseComposeContainerName; } });
+ var image_name_1 = require("./image-name");
+ Object.defineProperty(exports, "ImageName", { enumerable: true, get: function () { return image_name_1.ImageName; } });
++
++exports.getComposeClient = require("./clients/compose/compose-client").getComposeClient;
 diff --git a/build/docker-compose-environment/docker-compose-environment.js b/build/docker-compose-environment/docker-compose-environment.js
-index e81d0cc1f0f12fc48190f5d92c0340e9840efa02..b8d016ac7e243e0aef380c635259af5762b1b517 100644
+index e81d0cc1f0f12fc48190f5d92c0340e9840efa02..f75994da80ba91ecdcc77012340ab8703d79bee4 100644
 --- a/build/docker-compose-environment/docker-compose-environment.js
 +++ b/build/docker-compose-environment/docker-compose-environment.js
 @@ -90,6 +90,7 @@ class DockerComposeEnvironment {
@@ -23,7 +540,12 @@ index e81d0cc1f0f12fc48190f5d92c0340e9840efa02..b8d016ac7e243e0aef380c635259af57
              filePath: this.composeFilePath,
              files: this.composeFiles,
              projectName: this.projectName,
-@@ -147,7 +148,7 @@ class DockerComposeEnvironment {
+@@ -143,11 +144,11 @@ class DockerComposeEnvironment {
+                     .on("err", (data) => common_1.containerLog.error(`${containerName}: ${data.trim()}`));
+             }
+             try {
+-                await (0, wait_for_container_1.waitForContainer)(client, container, waitStrategy, boundPorts);
++                await (0, wait_for_container_1.waitForContainer)(client, container, waitStrategy, boundPorts, undefined, this.autoCleanup);
              }
              catch (err) {
                  try {
@@ -32,3 +554,120 @@ index e81d0cc1f0f12fc48190f5d92c0340e9840efa02..b8d016ac7e243e0aef380c635259af57
                  }
                  catch {
                      common_1.log.warn(`Failed to stop DockerCompose environment after failed up`);
+diff --git a/build/generic-container/generic-container-builder.d.ts b/build/generic-container/generic-container-builder.d.ts
+index 454b2a33812ed6515c7bca6dd6dd0dafb70e0ab7..9ff26d07c9d6e9d6a3704b37a2739a45ff14f6a2 100644
+--- a/build/generic-container/generic-container-builder.d.ts
++++ b/build/generic-container/generic-container-builder.d.ts
+@@ -16,6 +16,7 @@ export declare class GenericContainerBuilder {
+     private target?;
+     private platform?;
+     constructor(context: string, dockerfileName: string, uuid?: Uuid);
++    withLabels(labels: Record<string, string>): this;
+     withBuildArgs(buildArgs: BuildArgs): GenericContainerBuilder;
+     withPullPolicy(pullPolicy: ImagePullPolicy): this;
+     withCache(cache: boolean): this;
+diff --git a/build/generic-container/generic-container-builder.js b/build/generic-container/generic-container-builder.js
+index 158d37d66c6598b2e22bfdd5cef036dd9a309eb1..372fed1285adee3e46e3dda75b9c84b04b90edb8 100644
+--- a/build/generic-container/generic-container-builder.js
++++ b/build/generic-container/generic-container-builder.js
+@@ -17,6 +17,8 @@ class GenericContainerBuilder {
+     dockerfileName;
+     uuid;
+     buildArgs = {};
++    labels = {};
++    withLabels(labels) { this.labels = { ...this.labels, ...labels }; return this; }
+     pullPolicy = pull_policy_1.PullPolicy.defaultPolicy();
+     cache = true;
+     buildkit = false;
+@@ -53,12 +55,12 @@ class GenericContainerBuilder {
+     }
+     async build(image = `localhost/${this.uuid.nextUuid()}:${this.uuid.nextUuid()}`, options = { deleteOnExit: true }) {
+         const client = await (0, container_runtime_1.getContainerRuntimeClient)();
+-        const reaper = await (0, reaper_1.getReaper)(client);
++        const reaper = options.deleteOnExit ? await (0, reaper_1.getReaper)(client) : undefined;
+         const imageName = container_runtime_1.ImageName.fromString(image);
+         const dockerfile = path_1.default.resolve(this.context, this.dockerfileName);
+         const imageNames = await (0, dockerfile_parser_1.getDockerfileImages)(dockerfile, this.buildArgs);
+         const registryConfig = await this.getRegistryConfig(client.info.containerRuntime.indexServerAddress, imageNames);
+-        const labels = (0, labels_1.createLabels)();
++        const labels = { ...(0, labels_1.createLabels)(), ...this.labels };
+         if (options.deleteOnExit) {
+             labels[labels_1.LABEL_TESTCONTAINERS_SESSION_ID] = reaper.sessionId;
+         }
+@@ -79,11 +81,8 @@ class GenericContainerBuilder {
+             buildOptions.pull = true;
+         }
+         await client.image.build(this.context, buildOptions);
+-        const container = new generic_container_1.GenericContainer(imageName.string);
+-        if (!(await client.image.exists(imageName))) {
+-            throw new Error("Failed to build image");
+-        }
+-        return Promise.resolve(container);
++        const built = await client.image.inspect(imageName);
++        return new generic_container_1.GenericContainer(built.Id);
+     }
+     async getRegistryConfig(indexServerAddress, imageNames) {
+         const authConfigs = [];
+diff --git a/build/generic-container/generic-container.js b/build/generic-container/generic-container.js
+index 926ae16d691493cb1a47bac0919d27fb36aa5a7f..bf1057d7a28a77b197ab31b1ec2db508783dec60 100644
+--- a/build/generic-container/generic-container.js
++++ b/build/generic-container/generic-container.js
+@@ -123,7 +123,7 @@ class GenericContainer {
+         if (this.startupTimeoutMs !== undefined) {
+             waitStrategy.withStartupTimeout(this.startupTimeoutMs);
+         }
+-        await (0, wait_for_container_1.waitForContainer)(client, container, waitStrategy, boundPorts);
++        await (0, wait_for_container_1.waitForContainer)(client, container, waitStrategy, boundPorts, undefined, this.autoCleanup);
+         return new started_generic_container_1.StartedGenericContainer(container, client.info.containerRuntime.host, inspectResult, boundPorts, inspectResult.Name, waitStrategy, this.autoRemove);
+     }
+     async startContainer(client) {
+@@ -169,7 +169,7 @@ class GenericContainer {
+         if (this.startupTimeoutMs !== undefined) {
+             waitStrategy.withStartupTimeout(this.startupTimeoutMs);
+         }
+-        await (0, wait_for_container_1.waitForContainer)(client, container, waitStrategy, boundPorts);
++        await (0, wait_for_container_1.waitForContainer)(client, container, waitStrategy, boundPorts, undefined, this.autoCleanup);
+         const startedContainer = new started_generic_container_1.StartedGenericContainer(container, client.info.containerRuntime.host, inspectResult, boundPorts, inspectResult.Name, waitStrategy, this.autoRemove);
+         if (this.containerStarted) {
+             await this.containerStarted(startedContainer, mappedInspectResult, false);
+diff --git a/build/index.d.ts b/build/index.d.ts
+index e207bad80b20c7f97aabd9d9959221f0b43f43da..a34a36b5bca9b045beed2af22bf84839a00d1695 100644
+--- a/build/index.d.ts
++++ b/build/index.d.ts
+@@ -24,3 +24,5 @@ export { StartupCheckStrategy, StartupStatus } from "./wait-strategies/startup-c
+ export { Wait } from "./wait-strategies/wait";
+ export { waitForContainer } from "./wait-strategies/wait-for-container";
+ export { WaitStrategy } from "./wait-strategies/wait-strategy";
++
++export { getComposeClient } from "./container-runtime/clients/compose/compose-client";
+diff --git a/build/index.js b/build/index.js
+index cbd866b3f973fcd0d7a1eebcf85da4537d4b464c..c559b235a6fb62e8a846c16be42463424c41640a 100644
+--- a/build/index.js
++++ b/build/index.js
+@@ -54,3 +54,5 @@ var wait_1 = require("./wait-strategies/wait");
+ Object.defineProperty(exports, "Wait", { enumerable: true, get: function () { return wait_1.Wait; } });
+ var wait_for_container_1 = require("./wait-strategies/wait-for-container");
+ Object.defineProperty(exports, "waitForContainer", { enumerable: true, get: function () { return wait_for_container_1.waitForContainer; } });
++
++exports.getComposeClient = require("./container-runtime/clients/compose/compose-client").getComposeClient;
+diff --git a/build/wait-strategies/wait-for-container.js b/build/wait-strategies/wait-for-container.js
+index 365cc6e1ad2c514af105bbe66c267c7d226f3552..8a66ce9a8bd2ededbac4f5806a13bcdcb6bfb3fa 100644
+--- a/build/wait-strategies/wait-for-container.js
++++ b/build/wait-strategies/wait-for-container.js
+@@ -2,7 +2,7 @@
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.waitForContainer = void 0;
+ const common_1 = require("../common");
+-const waitForContainer = async (client, container, waitStrategy, boundPorts, startTime) => {
++const waitForContainer = async (client, container, waitStrategy, boundPorts, startTime, autoCleanup = true) => {
+     common_1.log.debug(`Waiting for container to be ready...`, { containerId: container.id });
+     try {
+         await waitStrategy.waitUntilReady(container, boundPorts, startTime);
+@@ -10,6 +10,7 @@ const waitForContainer = async (client, container, waitStrategy, boundPorts, sta
+     }
+     catch (err) {
+         common_1.log.error(`Container failed to be ready: ${err}`, { containerId: container.id });
++        if (!autoCleanup) throw err;
+         try {
+             await client.container.stop(container, { timeout: 0 });
+             await client.container.remove(container, { removeVolumes: true });

@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { isDeepStrictEqual } from "node:util"
 import { execa } from "execa"
+import { getComposeClient } from "testcontainers"
 import { parse, stringify } from "yaml"
 import { environmentRedactions, runnerServiceHost } from "../../core/runner-environment.js"
 import { testSelectionSchema } from "../../core/settings-schema.js"
@@ -47,11 +48,9 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
       return (await containersWithLabels(filters.label)).map((item) => item.Id)
     }
     if (kind === "network") {
-      return (await client.container.dockerode.listNetworks({ filters })).map((item) => item.Id)
+      return (await client.network.list({ filters })).map((item) => item.Id)
     }
-    return ((await client.container.dockerode.listVolumes({ filters })).Volumes ?? []).map(
-      (item) => item.Name,
-    )
+    return (await client.volume.list({ filters })).map((item) => item.Name)
   }
   async function inspect(record: Environment): Promise<EnvironmentObservation> {
     const runtimeId = await runtime(record)
@@ -64,10 +63,10 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         const item = kind === "container" ? await inspectContainer(id) : null
         let metadata: { Labels?: Record<string, string> } | null = null
         if (kind === "network") {
-          metadata = await client.network.getById(id).inspect()
+          metadata = await client.network.inspect(client.network.getById(id))
         }
         if (kind === "volume") {
-          metadata = await client.container.dockerode.getVolume(id).inspect()
+          metadata = await client.volume.inspect(id)
         }
         const labels = item ? item.Config.Labels : metadata?.Labels
         if (
@@ -164,36 +163,20 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         const host = await runtimeSocket()
         update({ runtimeId: await runtime(record) })
         const files = selection.files
-        const flags = [
-          "compose",
-          "--project-name",
-          record.projectName,
-          "--project-directory",
-          dirname(join(record.target.projectRoot, record.settings.environment.compose.files[0])),
-          ...files.flatMap((file) => ["-f", join(stage, file)]),
-          ...record.settings.environment.compose.profiles.flatMap((profile) => [
-            "--profile",
-            profile,
-          ]),
-        ]
         const env = minimalEnvironment()
-        const config = await execa(
-          "docker",
-          [...flags, "--profile", "*", "config", "--format", "json"],
-          {
-            cwd: record.target.projectRoot,
-            env,
-            extendEnv: false,
-            cancelSignal: signal,
-            timeout: 30000,
-            maxBuffer: 4 * 1024 * 1024,
-            reject: false,
-          },
-        )
-        if (config.exitCode !== 0) {
-          throw new Error(config.stderr || "Compose configuration could not be resolved")
-        }
-        const model: EffectiveCompose = JSON.parse(config.stdout)
+        const compose = await getComposeClient(env)
+        const model = (await compose.config({
+          filePath: record.target.projectRoot,
+          files: files.map((file) => join(stage, file)),
+          projectName: record.projectName,
+          composeOptions: [
+            "--project-directory",
+            dirname(join(record.target.projectRoot, record.settings.environment.compose.files[0])),
+            "--profile",
+            "*",
+          ],
+          signal,
+        })) as EffectiveCompose
         model.services = Object.fromEntries(
           Object.entries(model.services).filter(([name]) =>
             record.plan.activeServices.includes(name),
@@ -319,26 +302,33 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         if (!existsSync(worker)) {
           worker = new URL("./compose-worker.ts", import.meta.url)
         }
-        const child = execa(process.execPath, [fileURLToPath(worker)], {
-          cwd: stage,
-          detached: true,
-          ipc: true,
-          env: { ...env, DOCKER_HOST: host },
-          extendEnv: false,
-          input: JSON.stringify({
-            directory: stage,
-            files: [resolvedFile, overrideFile],
-            services: record.plan.activeServices,
-            profiles: record.settings.environment.compose.profiles,
-            projectName: record.projectName,
-            timeoutMs: record.settings.environment.timeoutMs,
-          }),
-          cancelSignal: signal,
-          forceKillAfterDelay: 2000,
-          timeout: record.settings.environment.timeoutMs,
-          reject: false,
-          maxBuffer: 1024 * 1024,
-        })
+        const child = execa(
+          process.execPath,
+          [
+            ...(worker.pathname.endsWith(".ts") ? ["--import", import.meta.resolve("tsx")] : []),
+            fileURLToPath(worker),
+          ],
+          {
+            cwd: stage,
+            detached: true,
+            ipc: true,
+            env: { ...env, DOCKER_HOST: host },
+            extendEnv: false,
+            input: JSON.stringify({
+              directory: stage,
+              files: [resolvedFile, overrideFile],
+              services: record.plan.activeServices,
+              profiles: record.settings.environment.compose.profiles,
+              projectName: record.projectName,
+              timeoutMs: record.settings.environment.timeoutMs,
+            }),
+            cancelSignal: signal,
+            forceKillAfterDelay: 2000,
+            timeout: record.settings.environment.timeoutMs,
+            reject: false,
+            maxBuffer: 1024 * 1024,
+          },
+        )
         try {
           const result = await child
           await writeFile(join(root, "preparation.log"), redact(result.stderr), { mode: 0o600 })
@@ -369,7 +359,7 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
             if (!currentImages.has(image)) {
               const built = await inspectImage(image)
               const client = await runtimeClient()
-              const users = await client.container.dockerode.listContainers({
+              const users = await client.container.list({
                 all: true,
                 filters: { ancestor: [image] },
               })
@@ -455,7 +445,7 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
               if (resource.kind === "network") {
                 await client.network.remove(client.network.getById(resource.id))
               } else {
-                await client.container.dockerode.getVolume(resource.id).remove()
+                await client.volume.remove(resource.id)
               }
             } catch (error) {
               if ((error as { statusCode?: number }).statusCode !== 404) {

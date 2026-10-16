@@ -42,7 +42,7 @@ dockerTest.each([
       expect(container.HostConfig.Memory).toBe(64 * 1024 * 1024)
       expect(container.HostConfig.MemorySwap).toBe(container.HostConfig.Memory)
       if (error) {
-        expect(result.outcome).toBe("execution_error")
+        expect(result.outcome, JSON.stringify(result)).toBe("execution_error")
         expect(result.error).toContain(error)
         expect(container.State.Running).toBe(false)
         expect(result.resourceLimit).toMatchObject({
