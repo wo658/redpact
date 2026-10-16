@@ -15,7 +15,7 @@ description: 공유 시각 규칙, 내비게이션, 실시간 증거와 접근�
 범위별 실시간 변경과 바이너리 결과물에 앱 전용 MCP 연결을 사용합니다. 폰트와 아이콘은
 인라인으로 포함하며 중첩 iframe이나 브라우저 네트워크 권한이 필요하지 않습니다.
 독립 Web·Desktop 진입점은 HTTP와 기본 SSE를 유지합니다. 수명주기, 접근 경계,
-크기 제한과 호스트 검증은 [App Page 설치 계약](installation.md#로컬-redpact-app-page-실험)을 따릅니다.
+크기 제한과 호스트 검증은 [App Page 설치 계약](installation.md)을 따릅니다.
 
 ## 전체 앱과 채팅 인라인 화면
 
