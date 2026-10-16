@@ -110,7 +110,7 @@ test("채팅 상태 조회는 등록 없이 진단하고 실제 실행의 검토
       expect(review.evidence).toContainEqual(
         expect.objectContaining({
           type: "log",
-          tool: "get_execution",
+          tool: "get_run",
           arguments: { kind: "unit", id: execution, detail: "log" },
         }),
       )

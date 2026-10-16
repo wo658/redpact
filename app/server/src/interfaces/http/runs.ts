@@ -150,20 +150,4 @@ export function runRoutes(runs: RunQueries, executeTests: ExecuteTests) {
       }),
       (c) => c.json(runs.get(c.req.param("id"))),
     )
-    .post(
-      "/:id/cancel",
-      describeRoute({
-        operationId: "cancelRun",
-        summary: "Cancel a test run",
-        tags: ["Runs"],
-        description:
-          "Requests cancellation and returns current state. Cleanup follows the accepted retention policy; terminal runs retain their verdict.",
-        responses: {
-          ...localErrors,
-          ...notFound,
-          202: jsonResponse(runResponse, "Cancel a test run response."),
-        },
-      }),
-      (c) => c.json(executeTests.cancel(c.req.param("id")), 202),
-    )
 }

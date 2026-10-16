@@ -194,7 +194,7 @@ function EnvironmentRemoval({
       setBusy(false)
     }
   }
-  if (environment.state === "stopped") {
+  if (environment.state === "stopped" || environment.lifecycle !== "manual") {
     return null
   }
   return (

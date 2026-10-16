@@ -103,11 +103,7 @@ export function playwrightRoutes(
     .get("/playwright-runs/:id", docs("readPlaywright", "Read a captured execution"), (c) =>
       c.json(captures.get(c.req.param("id"))),
     )
-    .post(
-      "/playwright-runs/:id/cancel",
-      docs("cancelPlaywright", "Cancel capture or retry resource cleanup"),
-      async (c) => c.json(await workflow.cancel(c.req.param("id"))),
-    )
+
     .get(
       "/playwright-runs/:id/:side/artifacts/:artifact",
       zValidator("param", z.object({ side: z.enum(["before", "after"]) })),

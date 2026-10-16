@@ -451,8 +451,6 @@ export function createApi(fetcher: typeof fetch = viewerFetch) {
         revision,
         ...(subject ? { subject } : {}),
       }),
-    cancelExecutionReview: (kind: ExecutionSummary["kind"], id: string) =>
-      request<unknown>(`/execution-reviews/${kind}/${encodeURIComponent(id)}/cancel`, {}),
     testContainer: (projectId: string, signal?: AbortSignal) =>
       request<TestContainerInspection>(
         `/projects/${encodeURIComponent(projectId)}/test-container`,
@@ -515,8 +513,6 @@ export function createApi(fetcher: typeof fetch = viewerFetch) {
       ),
     runUnitTests: (id: string) =>
       request<UnitRun>(`/worktrees/${encodeURIComponent(id)}/unit-tests/run`, {}),
-    cancelUnitRun: (id: string) =>
-      request<UnitRun>(`/unit-runs/${encodeURIComponent(id)}/cancel`, {}),
     projectConfiguration: (id: string, signal?: AbortSignal) =>
       request<SettingsDocument>(
         `/projects/${encodeURIComponent(id)}/configuration`,
@@ -741,8 +737,6 @@ export function createApi(fetcher: typeof fetch = viewerFetch) {
         `/worktrees/${encodeURIComponent(id)}/playwright/cleanup-worktree`,
         {},
       ),
-    cancelPlaywright: (id: string) =>
-      request<CaptureRun>(`/playwright-runs/${encodeURIComponent(id)}/cancel`, {}),
     captureArtifact: (id: string, side: "before" | "after", artifact: string) =>
       viewerUrl(
         `/api/playwright-runs/${encodeURIComponent(id)}/${side}/artifacts/${encodeURIComponent(artifact)}`,

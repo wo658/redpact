@@ -49,16 +49,16 @@ or green observations honestly. [Test authoring](tests.md) owns runtime details.
 
 | Evidence | MCP entry |
 | --- | --- |
-| Complete configured Unit command | `run_unit_tests` |
+| Complete configured Unit command | `run_tests` (`kind: "unit"`) |
 | Public API and persistence scenarios | `run_tests` |
-| Actual browser interactions | `run_playwright` with a functional target |
-| Recorded application screens | `run_playwright` with a capture target |
+| Actual browser interactions | `run_tests` (`kind: "playwright"`) with a functional target |
+| Recorded application screens | `run_tests` (`kind: "playwright"`) with a capture target |
 
 Each request uses the exact worktree path and shared fixed configuration. Unit,
 Integration and Playwright remain distinct runtimes and evidence contracts.
 Under Ask, a human approves through the supported App card or connected execution
 review. The agent may
-explain or cancel the request; it cannot approve it or change policy to continue.
+explain the pending request; it cannot approve it or change policy to continue.
 Approval is tied to the reviewed inputs and does not accept the resulting code.
 See [interfaces](interfaces.md) for admission and client requirements.
 

@@ -138,34 +138,41 @@ export function createCaptureRunner(
       if (!existsSync(worker)) {
         worker = new URL("./worker.ts", import.meta.url)
       }
-      const child = execa(process.execPath, [fileURLToPath(worker)], {
-        input: JSON.stringify({
-          assets: dirname(fileURLToPath(import.meta.url)),
-          tests: join(inputs(run.id), "tests"),
-          config: `module.exports=${JSON.stringify(config)}`,
-          ownerId,
-          id: run.id,
-          side,
-          network: await runnerNetwork(environment.projectName, ownerId, environment.id),
-          environment: {
-            ...environment.settings.tests.env,
-            REDPACT_CONNECTIONS_FILE: "/review/connections.json",
-          },
-          connections: runnerConnections(environment),
-          redactions,
-          uiLanguage: run.settings.uiLanguage,
-          limits,
-        }),
-        ipc: true,
-        detached: true,
-        env: { ...minimalEnvironment(), DOCKER_HOST: await runtimeSocket() },
-        extendEnv: false,
-        cancelSignal: signal,
-        forceKillAfterDelay: 2000,
-        timeout: 900000,
-        reject: false,
-        maxBuffer: 1024 * 1024,
-      })
+      const child = execa(
+        process.execPath,
+        [
+          ...(worker.pathname.endsWith(".ts") ? ["--import", import.meta.resolve("tsx")] : []),
+          fileURLToPath(worker),
+        ],
+        {
+          input: JSON.stringify({
+            assets: dirname(fileURLToPath(import.meta.url)),
+            tests: join(inputs(run.id), "tests"),
+            config: `module.exports=${JSON.stringify(config)}`,
+            ownerId,
+            id: run.id,
+            side,
+            network: await runnerNetwork(environment.projectName, ownerId, environment.id),
+            environment: {
+              ...environment.settings.tests.env,
+              REDPACT_CONNECTIONS_FILE: "/review/connections.json",
+            },
+            connections: runnerConnections(environment),
+            redactions,
+            uiLanguage: run.settings.uiLanguage,
+            limits,
+          }),
+          ipc: true,
+          detached: true,
+          env: { ...minimalEnvironment(), DOCKER_HOST: await runtimeSocket() },
+          extendEnv: false,
+          cancelSignal: signal,
+          forceKillAfterDelay: 2000,
+          timeout: 900000,
+          reject: false,
+          maxBuffer: 1024 * 1024,
+        },
+      )
       let id: string
       try {
         const result = await child

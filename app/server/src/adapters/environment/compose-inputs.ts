@@ -17,7 +17,7 @@ import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import { dirname, isAbsolute, join, relative, resolve } from "node:path"
 import type { Ignore } from "@balena/dockerignore"
-import { execa } from "execa"
+import { getComposeClient } from "testcontainers"
 import type { Environment } from "../../core/types/environment.js"
 import { minimalEnvironment } from "../process/environment.js"
 import type { EffectiveCompose } from "./compose-model.js"
@@ -35,30 +35,18 @@ async function resolveInputs(root: string, inputs: Inputs) {
   const temporary = await mkdtemp(join(tmpdir(), "redpact-compose-config-"))
   try {
     const selected = await stageSelection(temporary, inputs, root)
-    const result = await execa(
-      "docker",
-      [
-        "compose",
-        "--project-name",
-        "redpact-input-inspection",
+    const client = await getComposeClient(minimalEnvironment())
+    const model = (await client.config({
+      filePath: root,
+      files: selected.files.map((file) => join(temporary, file)),
+      projectName: "redpact-input-inspection",
+      composeOptions: [
         "--project-directory",
         dirname(join(root, inputs.settings.environment.compose.files[0])),
-        ...selected.files.flatMap((file) => ["-f", join(temporary, file)]),
         "--profile",
         "*",
-        "config",
-        "--format",
-        "json",
       ],
-      {
-        cwd: root,
-        env: minimalEnvironment(),
-        extendEnv: false,
-        timeout: 30000,
-        maxBuffer: 4 * 1024 * 1024,
-      },
-    )
-    const model: EffectiveCompose = JSON.parse(result.stdout)
+    })) as EffectiveCompose
     model.services = Object.fromEntries(
       Object.entries(model.services).filter(([name]) => inputs.plan.activeServices.includes(name)),
     )

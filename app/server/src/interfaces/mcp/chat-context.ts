@@ -19,7 +19,7 @@ export function registerChatContextTools(server: McpServer, services: Services) 
     "get_review_context",
     {
       description:
-        "Read a bounded review summary for an execution or pending approval request by kind and ID: recorded failure classification, cleanup, immutable evidence retrieval references and a relative viewer reviewPath scoped to this record. Open reviewPath against the connected Redpact viewer origin. Never changes results or records human acceptance; current-code freshness stays unknown until separately established. Detailed evidence remains available through get_execution.",
+        "Read a bounded review summary for an execution or pending approval request by kind and ID: recorded failure classification, cleanup, immutable evidence retrieval references and a relative viewer reviewPath scoped to this record. Open reviewPath against the connected Redpact viewer origin. Never changes results or records human acceptance; current-code freshness stays unknown until separately established. Detailed evidence remains available through get_run.",
       inputSchema: reviewContextInput,
       annotations: readOnly,
     },

@@ -1,4 +1,5 @@
 import { DockerComposeEnvironment } from "testcontainers"
+import { ServiceWait } from "./service-wait.js"
 
 process.once("disconnect", () => {
   // A parent crash must not leave a detached Compose CLI creating resources after recovery.
@@ -21,6 +22,7 @@ try {
     .withProjectName(spec.projectName)
     .withProfiles(...spec.profiles)
     .withAutoCleanup(false)
+    .withDefaultWaitStrategy(new ServiceWait())
     .withStartupTimeout(spec.timeoutMs)
     .withBuild()
     .up(spec.services)

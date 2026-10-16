@@ -319,27 +319,22 @@ function ExecutionReviewActions({
     approval?.state === "awaiting_approval" ||
     approval?.state === "awaiting_environment_approval" ||
     approval?.state === "awaiting_test_approval"
-  const active = !["finished", "cancelled", "rejected", "failed", "interrupted"].includes(
-    context.state,
-  )
-  if (!awaiting && !active && context.cleanup.state !== "failed") {
+  if (!awaiting) {
     return null
   }
-  async function act(approve: boolean) {
+  async function act() {
     if (pending) {
       return
     }
     setPending(true)
     setError("")
     try {
-      if (approve && approval) {
+      if (approval) {
         let subject: "environment" | "tests" | undefined
         if (context.kind === "integration") {
           subject = approval.environmentApproved ? "tests" : "environment"
         }
         await api.approveExecutionReview(context.kind, context.id, approval.revision, subject)
-      } else {
-        await api.cancelExecutionReview(context.kind, context.id)
       }
       onChange()
     } catch (cause) {
@@ -366,13 +361,10 @@ function ExecutionReviewActions({
       )}
       <div className="flex flex-wrap gap-2">
         {awaiting && (
-          <Button disabled={pending || stale || !approval?.preview} onClick={() => void act(true)}>
+          <Button disabled={pending || stale || !approval?.preview} onClick={() => void act()}>
             {approvalLabel}
           </Button>
         )}
-        <Button variant="outline" disabled={pending} onClick={() => void act(false)}>
-          {t(context.cleanup.state === "failed" ? "Retry container cleanup" : "Cancel request")}
-        </Button>
       </div>
       {error && <Notice error>{error}</Notice>}
     </section>

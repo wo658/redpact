@@ -34,10 +34,10 @@ Polling and text replies do not approve execution. If neither approval interface
 accessible, retain the pending request and explain that remaining blocker.
 
 Use `get_review_context` for a compact result, failure and evidence references, then
-`get_execution` for the required recorded log, source or image. Return the provided
+`get_run` for the required recorded log, source or image. Return the provided
 review path on the same connected viewer origin; do not infer a new server or claim
-the result is fresh when freshness is unknown. Use `list_executions` for older attempts
-and `cancel_execution` for a specific request/run and its supported cleanup retry.
+the result is fresh when freshness is unknown. Use `list_runs` for older attempts
+and report cleanup failures with their execution identity. Public test cancellation is unavailable.
 
 ## Managed execution boundary
 
@@ -50,11 +50,11 @@ be reported as local-only.
 
 | Test type | Required connected entry point | Evidence owner |
 | --- | --- | --- |
-| Integration | MCP `run_tests`, then `get_run` | Integration submission and run |
-| Playwright functional or capture | MCP `run_playwright` with a declared target, then `get_execution` | Playwright run, recorded artifacts and cleanup |
-| Unit | MCP `run_unit_tests`, then `get_execution` | Whole configured command, output and cleanup |
+| Integration | MCP `run_tests` with `kind: "integration"`, then `get_run` | Integration submission and run |
+| Playwright functional or capture | MCP `run_tests` (`kind: "playwright"`) with a declared target, then `get_run` | Playwright run, recorded artifacts and cleanup |
+| Unit | MCP `run_tests` (`kind: "unit"`), then `get_run` | Whole configured command, output and cleanup |
 
-MCP `run_tests` is Integration-only: never use it for Unit or Playwright files.
+MCP `run_tests` selects Integration, Unit or Playwright through `kind`. Unit runs the full configured command; Playwright requires a declared target. Omitted kind remains Integration for compatibility.
 Likewise, do not describe a direct Docker run as a Redpact run or recreate its
 records manually. If the required Redpact endpoint, settings or approval is
 unavailable, finish independent work and report the connected-evidence gap.

@@ -124,17 +124,14 @@ function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureRev
       setPending(false)
     }
   }
-  async function execute(cancel = false) {
+  async function execute() {
     if (!worktreeId) {
       return
     }
     setPending(true)
     setError("")
     try {
-      const next =
-        cancel && activeRun
-          ? await api.cancelPlaywright(activeRun.id)
-          : await api.runPlaywright(worktreeId, viewport, target)
+      const next = await api.runPlaywright(worktreeId, viewport, target)
       setSelectedRun(next.id)
       setData((value) =>
         value ? { ...value, runs: [next, ...value.runs.filter((r) => r.id !== next.id)] } : value,
@@ -186,16 +183,6 @@ function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureRev
               onClick={() => void cleanupWorktree()}
             >
               {t("Clean up worktree code")}
-            </Button>
-          )}
-          {activeRun && (
-            <Button
-              size="toolbar"
-              variant="outline"
-              disabled={pending}
-              onClick={() => void execute(true)}
-            >
-              {t(activeRun.cleanupError ? "Retry cleanup" : "Cancel")}
             </Button>
           )}
         </>

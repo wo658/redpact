@@ -112,17 +112,17 @@ test("MCP가 선택한 워크트리를 확인하고 테스트 결과 카드를 �
     }>("tools/list", {})
     expect(tools.tools.map((tool) => tool.name)).toEqual(
       expect.arrayContaining([
-        "run_unit_tests",
-        "run_playwright",
-        "list_executions",
-        "get_execution",
-        "cancel_execution",
+        "run_tests",
+        "project_container",
+        "list_runs",
+        "get_run",
+        "get_run_artifact",
       ]),
     )
     const history = await rpc<{ structuredContent: { worktreeId: string; items: unknown[] } }>(
       "tools/call",
       {
-        name: "list_executions",
+        name: "list_runs",
         arguments: { path: checkout },
       },
     )

@@ -15,10 +15,10 @@ additional request may authorize those actions separately.
 Map requested behavior to available evidence and identify missing, failed, blocked,
 or possibly outdated checks. Compare captured identity with current source where
 available; unit command records and captured application views cannot prove source freshness.
-Start with `get_workspace_status` for the exact checkout and `list_executions` for
+Start with `get_workspace_status` for the exact checkout and `list_runs` for
 older attempts. Use `get_review_context` for one execution's bounded failures,
 evidence references and relative review path. Resolve that path against the connected
-viewer origin; retrieve recorded source/log/image with `get_execution` as needed.
+viewer origin; retrieve recorded source/log/image with `get_run` as needed.
 Use the evidence already present and identify unavailable data. Review is a human
 handoff, not a new persisted approval state or a promise of fresh verification.
 

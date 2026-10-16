@@ -42,3 +42,20 @@ export const executionReadInput = executionIdentity
       })
     }
   })
+
+export const runTestsInput = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("integration").default("integration"),
+    path: verificationPath,
+    tests: z.array(projectPath).min(1).max(50).optional(),
+  }),
+  unitExecutionInput.extend({ kind: z.literal("unit") }),
+  playwrightExecutionInput.extend({ kind: z.literal("playwright") }),
+])
+export const getRunInput = z.union([z.strictObject({ id: z.string().uuid() }), executionReadInput])
+export const artifactInput = z.strictObject({
+  kind: z.literal("playwright"),
+  id: z.string().uuid(),
+  artifactId: z.string().uuid(),
+  side: z.enum(["before", "after"]).default("after"),
+})

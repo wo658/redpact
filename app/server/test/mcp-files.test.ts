@@ -140,9 +140,9 @@ test("run_tests discovers a directory, snapshots files and prepares an environme
   await expect.poll(() => runs.get(reused.structuredContent.id).state).toBe("finished")
   expect(preparations).toBe(2)
   expect(runs.get(reused.structuredContent.id).environmentId).not.toBe(run.environmentId)
-  expect(
-    (await managementHttp(app, "stop_environment", { id: run.environmentId })).isError,
-  ).not.toBe(true)
+  expect((await managementHttp(app, "stop_environment", { id: run.environmentId })).isError).toBe(
+    true,
+  )
 })
 test("cancellation during preparation finishes the run without invoking the runner", async () => {
   preparation = async (signal) =>
@@ -157,7 +157,8 @@ test("cancellation during preparation finishes the run without invoking the runn
   expect(result.isError).not.toBe(true)
   const id = result.structuredContent.id
   await expect.poll(() => preparations).toBe(1)
-  expect((await managementHttp(app, "cancel_run", { id })).isError).not.toBe(true)
+  expect((await app.request(`/api/runs/${id}/cancel`, { method: "POST" })).status).toBe(404)
+  runs.cancel(id)
   await expect.poll(() => runs.get(id).result?.outcome).toBe("cancelled")
   expect(executions).toBe(0)
 })
@@ -208,7 +209,7 @@ test("cancellation racing reservation releases the acquired environment", async 
   expect(result.isError).not.toBe(true)
   const id = result.structuredContent.id
   await expect.poll(() => entered).toBe(true)
-  await managementHttp(app, "cancel_run", { id })
+  runs.cancel(id)
   release()
   await expect.poll(() => runs.core.activeIds().length).toBe(0)
   expect(runs.get(id).result?.outcome).toBe("cancelled")
@@ -233,7 +234,7 @@ test("preparation failure preserves environment evidence without claiming an ass
   expect(executions).toBe(0)
 })
 
-test("explicit environment stop cancels its queued preparation run", async () => {
+test("public environment stop rejects test ownership while internal shutdown cleans preparation", async () => {
   preparation = async (signal) =>
     new Promise<void>((resolve) => {
       if (signal.aborted) {
@@ -248,10 +249,10 @@ test("explicit environment stop cancels its queued preparation run", async () =>
   await expect.poll(() => runs.get(id).environmentId).toBeDefined()
   const environmentId = runs.get(id).environmentId
   const stopped = await managementHttp(app, "stop_environment", { id: environmentId })
-  expect(stopped.isError).not.toBe(true)
+  expect(stopped.isError).toBe(true)
+  await runs.stopEnvironment(environmentId!)
   await runs.stopEnvironment.idle()
   expect(runs.get(id).result?.outcome).toBe("cancelled")
-  expect(stopped.structuredContent.id).toBe(environmentId)
   expect((await mcp("get_run", { id })).structuredContent.environment.state).toBe("stopped")
   expect(executions).toBe(0)
 })

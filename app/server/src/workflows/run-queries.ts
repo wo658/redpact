@@ -97,8 +97,8 @@ export function createRunQueries(
         cleanupCount: cleanup.length,
       }
     },
-    listForWorktree(worktreeId: string, before?: string) {
-      const all = allForWorktree(worktreeId)
+    listForWorktree(worktreeId: string, before?: string, kind?: ExecutionSummary["kind"]) {
+      const all = allForWorktree(worktreeId).filter((item) => !kind || item.kind === kind)
       const index = before ? all.findIndex((item) => key(item) === before) : -1
       if (before && index < 0) {
         problem("invalid_input", "Invalid run cursor")

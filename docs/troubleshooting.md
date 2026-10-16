@@ -34,9 +34,9 @@ For rejected requests, check the intended local hostname and whether a browser p
 ## A request remains pending
 
 Ask requests remain pending until a person uses a supported MCP App or opens the
-exact connected review. Unit/Playwright use `get_execution`; Integration also supports
+exact connected review. Unit/Playwright use `get_run`; Integration also supports
 `get_run`. Polling and textual agreement do not approve. If neither human interface
-is available, report the limitation and keep the request pending or cancel it.
+is available, report the limitation and keep the request pending.
 Stale revision or changed reviewed inputs require a refreshed review or a new request,
 not approval of different settings. [Interfaces](interfaces.md) defines these checks.
 
@@ -93,7 +93,7 @@ New Playwright runs execute the selected checkout once without a comparison base
 
 ## Cleanup failed after execution
 
-Read cleanup status separately from test outcome. Use supported web controls for cancellation, cleanup retries, then verify the resulting state. Run evidence remains retained.
+Read cleanup status separately from test outcome. Tests retain automatic cleanup and internal recovery; report cleanup errors with the execution ID. Public cancellation and test-environment stop are unavailable. Manual Container controls apply only to manual resources. Run evidence remains retained.
 
 Worktree Playwright draft cleanup is explicit and can refuse active, edited, or unrecorded files. Preserve those files and resolve the reported condition instead of force-deleting them. Successful draft cleanup retains recorded sources and artifacts.
 

@@ -81,6 +81,6 @@ test("프로젝트 공용 단위 컨테이너 설정을 사용하고 Docker 부�
     const listed = await http<{ runs: Run[] }>(`/api/worktrees/${worktree.body.id}/unit-tests`)
     expect(listed.body.runs.map((run) => run.id)).toContain(started.body.id)
     const retry = await http<Run>(`/api/unit-runs/${started.body.id}/cancel`, "POST")
-    expect(retry.body).toEqual(result)
+    expect(retry.status).toBe(404)
   })
 }, 60000)

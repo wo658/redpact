@@ -24,49 +24,71 @@ normal preconditions even when called outside the viewer. See [architecture](arc
 | `get_workspace_status` | Absolute checkout `path`; read-only settings diagnostics, existing binding, pending approvals, active/recent executions and cleanup attention |
 | `get_review_context` | Execution `kind` and `id`; bounded failures, recorded evidence references, captured approval preview and relative viewer review path |
 | `configure` | `describe`, `inspect` or `validate` for an absolute execution `path`; returns schema, roots, diagnostics and optional plan |
-| `run_tests` | Absolute `path`, optional exact `tests` paths; submits and executes Integration |
-| `get_run` | Returned execution or review `id`; reads state, results and environment cleanup |
-| `run_unit_tests` | Absolute existing checkout `path`; runs the complete configured Unit command |
-| `run_playwright` | Absolute existing checkout `path`, required declared `target`, optional `viewport` |
-| `list_executions` | Absolute checkout `path`, optional returned `before` cursor; retained history across all three execution types |
-| `get_execution` | `kind` and `id`; `detail` selects result, bounded log, captured test source or recorded PNG |
-| `cancel_execution` | `kind` and `id`; cancels the identified execution through its existing lifecycle |
+| `run_tests` | Absolute `path`, `kind: integration / unit / playwright`; Integration accepts optional `tests`, Unit uses the complete command, Playwright requires `target` and accepts `viewport` |
+| `get_run` | `kind`, `id`, optional `detail: result / log / source / image`; state, captured evidence and cleanup |
+| `list_runs` | Absolute checkout `path`, optional `kind` and returned `before` cursor; up to 20 matching executions per page |
+| `get_run_artifact` | Playwright `id`, `artifactId`, optional `side`; owned PNG, video or trace up to 8 MiB |
+| `project_container` | Absolute observed project checkout `path`, `action: inspect / start / restart / stop`; existing main-checkout manual environment lifecycle |
 
-Execution derives from the shared fixed project settings; `selection` is rejected.
-Configure does not save configuration, start containers or approve tests.
-Call describe, edit authored files with the host agent, then validate the same checkout.
-The host agent owns file editing and native Git operations. These tools do not create
-Git worktrees, accept arbitrary shell commands or expose independent container management.
-Execution workflows prepare and clean up their own temporary environments.
+`run_tests` validates a strict discriminated union. Unit rejects file filters and arbitrary
+commands; Playwright rejects arbitrary case selection. All kinds use the same workflows
+as HTTP, fixed project settings and existing input capture. Configure never saves files,
+starts resources or grants approval. Call describe, edit shared files, then validate.
 
-Use `list_executions` to find evidence for the same checkout, then `get_execution`
-with `kind: integration | unit | playwright` and its ID. Unobserved checkouts return
-empty history without registering a project. `detail: source` requires `sourcePath`
-and reads recorded Integration or Playwright test code, never the current file.
-Unit retains whole-command output instead. `detail: image` requires a Playwright
-`artifactId` and accepts `side: before | after` (default `after`); it returns PNG
-image content up to 8 MiB. Use the viewer for larger images, video and traces.
-Passing historical evidence does not establish current-code freshness or human acceptance.
+For compatibility, omitting `kind` in `run_tests` means Integration. An id-only
+`get_run` request (`{"id":"..."}`) preserves the existing full Integration run/review
+response. Explicit `kind` selects the bounded result contract for all three kinds:
+state, verdict, cleanup, captured `identity`, case count, up to 20 failures and 20
+artifact metadata entries, full `failureCount`/`artifactCount`/`evidenceCount`, and
+`truncated`. Messages and labels are capped at 2,048 characters. Raw case bodies,
+stdout/stderr and settings source are not copied into the default result. Follow
+`evidence`, artifact `retrieval`, or `reviewPath` for detail. Pending requests retain
+their approval card and never imply admission. Migrate old
+`run_unit_tests` / `run_playwright` calls to `run_tests` with the corresponding kind;
+`get_execution` becomes `get_run`, and `list_executions` becomes `list_runs`.
+The old tool names are no longer exposed.
 
-All three execution tools capture the instance approval policy when requested. Auto
-starts through the existing execution workflow. Ask returns an `awaiting_approval`
-review ID and an MCP App card without running project code. Integration retains its
-environment-then-tests approval; Unit and Playwright each approve one captured request.
-Models cannot grant approval or change policy. `get_execution` result accepts review
-IDs and refreshes Unit/Playwright cards. Pending reviews have no logs, source or images
-from an execution. After admission, Unit/Playwright review IDs resolve their recorded
-execution for evidence; Integration logs/source use the eventual run ID.
+```json
+{"kind":"unit","path":"/absolute/checkout"}
+{"kind":"integration","path":"/absolute/checkout","tests":["service.test.ts"]}
+{"kind":"playwright","path":"/absolute/checkout","target":"functional"}
+```
 
-`cancel_execution` accepts pending review IDs of all three kinds without approving them.
-Read result state after cancellation to distinguish test outcome from cleanup failure;
-Unit and Playwright retain their existing cleanup retry behavior.
+Use `list_runs` with the same checkout and kind filter for every cursor page.
+Existing unobserved checkouts return empty history without registration; nonexistent paths remain input errors. `get_run` with
+`detail: source` requires `sourcePath` and reads captured Integration/Playwright
+source; Unit retains whole-command output. `detail: log` limits output to 65,536
+characters and reports truncation. Existing execution-time secret masking remains.
+`detail: image` accepts an owned Playwright PNG. `get_run_artifact` checks run and
+side ownership before loading bytes; PNGs return images, video/trace return embedded
+resources. Larger artifacts remain in the viewer. Evidence is not source freshness
+or human acceptance.
 
-The configured startup default or an existing `worktreeId` can resolve a binding;
-prefer an explicit path when authoring. Discovery observes declared roots and native
-Git registrations without creating worktrees or running tests. Collection errors
-remain diagnostics. [Execution](execution.md) describes runtime boundaries.
+All kinds preserve the captured approval policy. Auto starts the existing workflow;
+Ask returns a review without running project code. Integration requires environment
+then tests approval; Unit and Playwright approve one captured request. Models cannot
+grant approval or change policy. Pending reviews have no execution evidence.
+After admission, Unit/Playwright review IDs resolve their run for evidence;
+Integration logs/source use the eventual run ID.
 
-The full app retains project connection and management, settings editors, directory and file browsing, Git navigation/actions, manual Container controls and host-plugin update APIs. MCP tools retain their narrower execution/configuration-inspection scope; restoring app controls does not expose Git mutations, settings writes or approval capabilities to the model. See [navigation](ux-navigation.md), [settings ownership](settings-reference.md) and [Git operations](git.md).
+Tests have no public cancellation tool, HTTP cancel endpoint, Viewer cancel action,
+or test-environment force-stop route. Timeouts, shutdown, failure recovery, retained
+evidence and automatic cleanup remain internal lifecycle responsibilities. Historical
+cancelled outcomes remain readable. Manual environment stop cannot cancel tests.
+
+`project_container` requires an observed connected project. Its path identifies the
+project; the existing configured main checkout supplies manual environment inputs,
+even when the path names a feature worktree. Inspect never starts anything. Start and
+restart use the existing shared configuration, input checks and concurrency gate;
+poll inspect for preparation state and failures. Stop targets only that project's
+manual environment. These explicit manual operations are separate from test approval
+and cannot supply a test environment, choose arbitrary Docker commands or delete
+unowned resources. Missing settings and unavailable checkouts remain diagnostics.
+
+The full app retains project management, settings, browsing, Git and manual Container
+controls. MCP does not expose Git mutation, settings writes or approval capabilities.
+See [execution](execution.md), [settings ownership](settings-reference.md) and
+[Git operations](git.md).
 
 ## Request approval and Apps
 
@@ -74,7 +96,7 @@ The bundled resources are `ui://redpact/environment.html` and
 `ui://redpact/tests.html`. They present response snapshots; they do not continuously
 poll or subscribe. The Environment card lists each dependency’s fixed kind once,
 without execution-time dependency choices. `get_run` refreshes an Integration snapshot;
-`get_execution` refreshes Unit/Playwright reviews. The connected viewer presents
+`get_run` refreshes Unit/Playwright reviews. The connected viewer presents
 execution history, detailed evidence and recovery controls.
 
 A new execution request captures the instance `approval` policy:
@@ -119,7 +141,7 @@ facts and diagnostics; it does not prescribe commands or preapprove work.
 `get_review_context` returns one execution or pending review with bounded failures,
 evidence references and a relative `reviewPath`. Resolve it against the same viewer
 origin; it contains no environment credentials or UI capabilities. Summaries return
-up to 20 failures/evidence references with counts; use `get_execution` for the retained
+up to 20 failures/evidence references with counts; use `get_run` for the retained
 detail. Freshness remains `unknown` until the relevant live inputs are actually compared,
 and human acceptance is `not_recorded`. Unit command failure is not automatically
 classified as an assertion failure.
@@ -135,14 +157,14 @@ when a cleanup error was recorded.
 
 The exact-record viewer uses `GET /api/review-context?kind=...&id=...`;
 `GET /api/workspace-status?path=...` is a read-only checkout observation API. Explicit viewer
-approval and cancellation use `/api/execution-reviews/:kind/:id/approve` and `/cancel`;
+approval uses `/api/execution-reviews/:kind/:id/approve`;
 approval checks the expected revision and the appropriate Integration subject.
 They keep the existing same-origin/local-host boundary. Model-facing tools never
 expose the viewer's approval operation. See [navigation](frontend.md).
 
 The worktree's `scope=evidence` event subscription includes Integration and
 Unit/Playwright review records, retained execution evidence and shared project settings.
-Chat-created requests and approval or cancellation changes refresh the connected
+Chat-created requests and approval changes refresh the connected
 review screen without receiving other worktrees' records. This scope requires an
 explicit worktree ID; retained evidence remains observable if its checkout is unavailable.
 

@@ -21,7 +21,7 @@ for (const width of [1280, 390]) {
           .getByRole("button", { name: "Toggle Sidebar", exact: true })
           .click()
       }
-      await expect(page.getByRole("button", { name: "Redpact", exact: true })).toBeVisible()
+      await expect(page.getByRole("button", { name: project.name, exact: true })).toBeVisible()
       for (const name of ["Container", "Tests", "Dependencies", "Project settings", "Settings"]) {
         await expect(page.getByRole("button", { name, exact: true })).toBeVisible()
       }

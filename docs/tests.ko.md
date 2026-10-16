@@ -9,10 +9,10 @@ description: 단위 테스트 명령, 통합 시나리오, 브라우저 테스�
 
 | 목적 | 테스트 유형 | 실행 진입점 | 기록되는 결과 |
 |---|---|---|---|
-| 기존 테스트 명령 실행 | Unit | MCP `run_unit_tests` 또는 앱의 Unit 컨트롤 | 명령 상태, 종료 코드, 출력 |
+| 기존 테스트 명령 실행 | Unit | MCP `run_tests` (`kind: "unit"`) 또는 앱의 Unit 컨트롤 | 명령 상태, 종료 코드, 출력 |
 | 공개 API와 의존성 검증 | Integration | MCP `run_tests` 또는 Integration 컨트롤 | 수집한 Vitest 소스, 케이스, 관찰된 단계 |
-| 브라우저 상호작용 검증 | Playwright, `purpose: "functional"` | MCP `run_playwright` 또는 Tests → Playwright 컨트롤 | 시나리오와 단계 판정, 진단 첨부 파일 |
-| 검토할 애플리케이션 상태 표시 | Playwright, `purpose: "capture"` | MCP `run_playwright` 또는 Tests → Playwright 컨트롤 | 이름이 있는 스크린샷, 소스, 실행 상세 |
+| 브라우저 상호작용 검증 | Playwright, `purpose: "functional"` | MCP `run_tests` (`kind: "playwright"`) 또는 Tests → Playwright 컨트롤 | 시나리오와 단계 판정, 진단 첨부 파일 |
+| 검토할 애플리케이션 상태 표시 | Playwright, `purpose: "capture"` | MCP `run_tests` (`kind: "playwright"`) 또는 Tests → Playwright 컨트롤 | 이름이 있는 스크린샷, 소스, 실행 상세 |
 
 스크린샷으로 화면의 모습을 확인할 수 있습니다. 어설션은 테스트가 실제로 확인하는 동작을 검증합니다. 기능 검증과 화면 검토가 모두 필요한 변경이라면 둘 다 남기세요.
 

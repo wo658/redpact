@@ -1,4 +1,3 @@
-import { execa } from "execa"
 import { GenericContainer, Wait } from "testcontainers"
 
 process.once("disconnect", () => {
@@ -15,23 +14,10 @@ for await (const chunk of process.stdin) {
 }
 const spec = JSON.parse(input)
 try {
-  await execa(
-    "docker",
-    [
-      "build",
-      "--tag",
-      spec.image,
-      "--label",
-      `io.redpact.owner=${spec.ownerId}`,
-      "--label",
-      `io.redpact.unit-run=${spec.id}`,
-      "--file",
-      spec.dockerfile,
-      ".",
-    ],
-    { cwd: spec.source, maxBuffer: 1024 * 1024 },
-  )
-  const image = new GenericContainer(spec.image)
+  const image = await GenericContainer.fromDockerfile(spec.source, spec.dockerfile)
+    .withBuildkit()
+    .withLabels({ "io.redpact.owner": spec.ownerId, "io.redpact.unit-run": spec.id })
+    .build(spec.image, { deleteOnExit: false })
   const container = await image
     .withLabels({ "io.redpact.owner": spec.ownerId, "io.redpact.unit-run": spec.id })
     .withResourcesQuota({ memory: spec.limits.memoryMiB / 1024 })
