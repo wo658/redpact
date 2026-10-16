@@ -158,3 +158,10 @@ private-secrets 파일을 만들거나 서버 환경변수 fallback을 읽지 �
 
 마이그레이션 구현: [워크플로](../app/server/src/workflows/runtime-migrations.ts),
 [파일 어댑터](../app/server/src/adapters/storage/migrations.ts).
+
+`004-manual-environment-scope` 마이그레이션은 기존 수동 환경에 `manualScope: "main"`을
+기록합니다. 이전 계약에서는 설정된 메인 체크아웃에서만 생성했기 때문입니다. 테스트 기록과
+과거 증거는 변경하지 않습니다. 새 수동 환경은 시작할 때 `main` 또는 `worktree`를 캡처하며
+이후 브랜치 변경으로 포트 정책을 바꾸지 않습니다. 원본 바이트와 중단 후 재시도는 위의
+순차 마이그레이션 규칙을 따릅니다. 수동 환경 소스와 생성된 `runtime/` 파일은 명시적
+teardown 성공 후 제거하며 서버 종료는 재연결에 필요한 소유권을 보존합니다.

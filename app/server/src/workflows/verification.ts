@@ -181,7 +181,7 @@ export async function projectContainer(
   const container =
     services.testContainer ??
     problem("settings_unsupported", "Manual container workflow is unavailable")
-  return container[action](checkout.projectId)
+  return container[action](checkout.projectId, checkout.worktreeId)
 }
 
 export async function readRunArtifact(

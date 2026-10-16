@@ -44,6 +44,16 @@ const evidence = z
   .max(20)
 export const dependencyDefinition = z
   .strictObject({
+    hostPorts: z
+      .array(
+        z.strictObject({
+          service: composeServiceName,
+          target: z.number().int().min(1).max(65535),
+          published: z.number().int().min(1).max(65535),
+        }),
+      )
+      .max(100)
+      .optional(),
     description: explanation.optional(),
     kind: z.enum(["isolated", "mock", "shared-local", "remote"]),
     services: names.default([]),
@@ -54,6 +64,25 @@ export const dependencyDefinition = z
     ).default({}),
   })
   .superRefine((dependency, ctx) => {
+    const targets = new Set<string>()
+    const published = new Set<number>()
+    for (const port of dependency.hostPorts ?? []) {
+      const key = `${port.service}:${port.target}`
+      if (
+        !dependency.services.includes(port.service) ||
+        targets.has(key) ||
+        published.has(port.published)
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["hostPorts"],
+          message:
+            "Host ports require owned dependency services and unique targets and published ports",
+        })
+      }
+      targets.add(key)
+      published.add(port.published)
+    }
     if (dependency.kind === "isolated" && !dependency.services.length) {
       ctx.addIssue({
         code: "custom",
@@ -153,6 +182,19 @@ export const settingsShape = z.strictObject({
 export const settingsSchema = settingsShape.superRefine(topologyIssues)
 type TopologySettings = z.infer<typeof settingsShape>
 function topologyIssues(settings: TopologySettings, ctx: z.RefinementCtx) {
+  const published = new Set<number>()
+  for (const [name, dependency] of Object.entries(settings.dependencies)) {
+    for (const port of dependency.hostPorts ?? []) {
+      if (published.has(port.published)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["dependencies", name, "hostPorts"],
+          message: "Duplicate dependency host port",
+        })
+      }
+      published.add(port.published)
+    }
+  }
   checkTestLocations(settings, ctx)
   const owners = applicationOwners(settings, ctx)
   checkDependencyOwnership(settings, owners, ctx)

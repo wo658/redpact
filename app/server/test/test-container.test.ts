@@ -124,7 +124,7 @@ test("기준 브랜치의 깨끗한 코드도 실행하고 수정·되돌리기�
   const restarted = await service.restart(projectId)
   await environments.idle()
   expect(restarted.environment?.id).not.toBe(first.environment?.id)
-  expect(restarted.environment?.projectName).toBe(first.environment?.projectName)
+  expect(restarted.environment?.projectName).not.toBe(first.environment?.projectName)
   expect(stops).toBe(1)
   expect(prepares).toBe(2)
   expect((await service.inspect(projectId)).changed).toBe(false)
@@ -142,7 +142,7 @@ test("기준 브랜치 체크아웃이 사라져도 기존 실행 종료는 가�
   expect(stops).toBe(1)
   await expect(service.start(projectId)).rejects.toThrow(/main branch/)
 })
-test("정리 실패 후 재실행을 막고 재시도와 서버 종료 시 자원을 정리한다", async () => {
+test("정리 실패 후 재실행을 막고 재시도하며 서버 종료는 수동 환경을 유지한다", async () => {
   await service.start(projectId)
   await environments.idle()
   stopFails = true
@@ -153,7 +153,7 @@ test("정리 실패 후 재실행을 막고 재시도와 서버 종료 시 자�
   await service.restart(projectId)
   await environments.idle()
   await service.close()
-  expect(environments.temporary()).toEqual([])
+  expect(environments.temporary()).toHaveLength(1)
   await expect(service.start(projectId)).rejects.toThrow(/shutting down/)
 })
 test("동시 실행 요청으로 중복 컨테이너를 만들지 않는다", async () => {
@@ -225,4 +225,78 @@ test("Compose 미리보기는 기준 브랜치 파일을 읽고 설정 밖 경�
     /configured Compose/,
   )
   expect(prepares).toBe(0)
+})
+
+test("워크트리 수동 환경은 서로 격리되고 서버 종료 후에도 명시적 종료까지 유지된다", async () => {
+  const branchRoot = join(root, "feature-checkout")
+  await git("worktree", "add", "-b", "feature", branchRoot)
+  await execa(
+    "git",
+    [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "feature",
+    ],
+    { cwd: branchRoot },
+  )
+  const feature = (await worktrees.listWorktrees(projectId)).find(
+    (item) => item.branch === "feature",
+  )!
+  const main = await service.start(projectId)
+  const other = await service.start(projectId, feature.id)
+  await environments.idle()
+  expect(other.target?.id).toBe(feature.id)
+  expect(other.environment?.id).not.toBe(main.environment?.id)
+  expect(other.environment?.projectName).not.toBe(main.environment?.projectName)
+  await service.close()
+  expect(stops).toBe(0)
+  expect(environments.temporary()).toHaveLength(2)
+})
+
+test("메인 생략 시작 중 명시적 메인 워크트리 종료는 같은 작업 잠금으로 거부한다", async () => {
+  const main = (await worktrees.listWorktrees(projectId)).find((item) => item.branch === "main")!
+  let release!: () => void
+  let entered!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const paused = new Promise<void>((resolve) => {
+    entered = resolve
+  })
+  let first = true
+  service = createTestContainer({
+    readFile: readProjectEntry,
+    worktrees: {
+      ...worktrees,
+      async resolve(id) {
+        if (first) {
+          first = false
+          entered()
+          await gate
+        }
+        return worktrees.resolve(id)
+      },
+    },
+    projects: worktrees.projects,
+    environments,
+    stopEnvironment,
+    fingerprint: (root) => snapshotInputs(root),
+  })
+  const starting = service.start(projectId)
+  await paused
+  try {
+    const stopped = await Promise.allSettled([service.stop(projectId, main.id)])
+    expect(stopped[0].status).toBe("rejected")
+  } finally {
+    release()
+    await starting
+  }
+  await environments.idle()
+  expect(prepares).toBe(1)
+  expect(stops).toBe(0)
 })

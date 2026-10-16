@@ -172,3 +172,11 @@ Implementation: [storage adapters](../app/server/src/adapters/storage),
 
 Migration implementation: [workflow](../app/server/src/workflows/runtime-migrations.ts),
 [file adapter](../app/server/src/adapters/storage/migrations.ts).
+
+Migration `004-manual-environment-scope` records `manualScope: "main"` on existing
+manual environments because the preceding contract only created them from the configured
+main checkout. Test records and historical evidence remain unchanged. New manual records
+capture `main` or `worktree` when started; later branch changes never retarget their port
+policy. Original bytes and interrupted retry follow the ordered migration rules above.
+Manual environment source and generated `runtime/` files are removed only after explicit
+successful teardown; server shutdown preserves their ownership for reconnection.

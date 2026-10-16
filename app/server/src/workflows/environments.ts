@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto"
+import { randomUUID } from "node:crypto"
 import { isDeepStrictEqual } from "node:util"
 import {
   assertEnvironmentReservation,
@@ -61,12 +61,16 @@ export function createEnvironments(deps: {
       if (["stopping", "stopped"].includes(latest.state)) {
         return latest
       }
-      const state = observedEnvironmentState(latest.state, observation.healthy)
+      const state =
+        latest.lifecycle === "manual" && latest.state === "unavailable" && observation.healthy
+          ? "ready"
+          : observedEnvironmentState(latest.state, observation.healthy)
       const change = {
         resources: observation.resources,
         endpoints: observation.endpoints,
         runtimeId: observation.runtimeId,
         state,
+        ...(state === "ready" && latest.state === "unavailable" ? { errors: [] } : {}),
       }
       if (
         Object.entries(change).every(([key, value]) =>
@@ -129,6 +133,7 @@ export function createEnvironments(deps: {
     selection: TestSelection,
     runId: string | null,
     expectedInputDigest?: string,
+    manualScope: "main" | "worktree" = "worktree",
   ) {
     if (closing) {
       problem("closing", "Server is shutting down")
@@ -160,11 +165,11 @@ export function createEnvironments(deps: {
         .some(
           (env) =>
             env.lifecycle === "manual" &&
-            env.target.projectId === resolved.worktree.projectId &&
+            env.target.worktreeId === worktreeId &&
             env.state !== "stopped",
         )
     ) {
-      problem("environment_conflict", "A Test Container already exists for this project")
+      problem("environment_conflict", "A manual environment already exists for this worktree")
     }
     const { validation, specification, plan, executionSettings, inputDigest } = await inputs(
       resolved,
@@ -188,10 +193,7 @@ export function createEnvironments(deps: {
         projectRoot: resolved.worktree.projectRoot,
         checkoutRoot: resolved.worktree.checkoutRoot,
       },
-      projectName:
-        runId === null
-          ? `redpact-${deps.ownerId}-${createHash("sha256").update(resolved.worktree.projectId).digest("hex").slice(0, 16)}`
-          : `redpact-${deps.ownerId}-${id}`,
+      projectName: `redpact-${deps.ownerId}-${id}`,
       settings: executionSettings,
       specification,
       selection,
@@ -201,6 +203,7 @@ export function createEnvironments(deps: {
       settingsDigest: expectedSettingsDigest,
       inputDigest,
       state: "preparing",
+      ...(runId === null ? { manualScope: manualScope } : {}),
       lifecycle: runId === null ? "manual" : "run",
       runIds: runId === null ? [] : [runId],
       resources: [],
@@ -224,12 +227,14 @@ export function createEnvironments(deps: {
         if (get(id).state !== "stopping") {
           save(id, { state: get(id).runId ? "in_use" : "ready" })
         }
-      } catch {
+      } catch (error) {
         if (get(id).state !== "stopping") {
           save(id, {
             state: "failed",
             errors: [
-              "Environment preparation failed; inspect preparation.log and retained resources",
+              error instanceof Error && error.message.startsWith("Fixed host port conflict")
+                ? error.message
+                : "Environment preparation failed; inspect preparation.log and retained resources",
             ],
           })
         }
@@ -261,6 +266,7 @@ export function createEnvironments(deps: {
       selection,
       runId,
       expectedInputDigest,
+      manualScope,
     ) {
       return deps.worktrees.exclusive(() =>
         prepare(
@@ -270,6 +276,7 @@ export function createEnvironments(deps: {
           selection,
           runId,
           expectedInputDigest,
+          manualScope,
         ),
       )
     },

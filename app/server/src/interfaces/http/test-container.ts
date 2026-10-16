@@ -29,7 +29,7 @@ export function testContainerRoutes(service: TestContainer) {
         ),
       },
     }),
-    async (c) => c.json(await service.inspect(c.req.param("id"))),
+    async (c) => c.json(await service.inspect(c.req.param("id"), c.req.query("worktreeId"))),
   )
   routes.get(
     "/:id/test-container/compose",
@@ -46,7 +46,13 @@ export function testContainerRoutes(service: TestContainer) {
     }),
     async (c) => {
       c.header("Cache-Control", "no-store")
-      return c.json(await service.composeSource(c.req.param("id"), c.req.query("path") ?? ""))
+      return c.json(
+        await service.composeSource(
+          c.req.param("id"),
+          c.req.query("path") ?? "",
+          c.req.query("worktreeId"),
+        ),
+      )
     },
   )
   for (const action of ["start", "restart", "stop"] as const) {
@@ -57,7 +63,7 @@ export function testContainerRoutes(service: TestContainer) {
         summary: `${action} the project's manual Test Container`,
         tags: ["Environments"],
         description:
-          "Uses the configured main branch checkout and fixed project settings. Restart waits for owned-resource removal before capturing current inputs. Stop remains available when the checkout is missing. Poll inspection for preparation state.",
+          "Uses the worktreeId query target, or the configured main checkout when omitted, with fixed project settings. Restart waits for owned-resource removal before capturing current inputs. Stop remains available when the checkout is missing. Poll inspection for preparation state.",
         responses: {
           ...localErrors,
           ...notFound,
@@ -66,7 +72,7 @@ export function testContainerRoutes(service: TestContainer) {
           202: jsonResponse(inspection, "Manual operation accepted."),
         },
       }),
-      async (c) => c.json(await service[action](c.req.param("id")), 202),
+      async (c) => c.json(await service[action](c.req.param("id"), c.req.query("worktreeId")), 202),
     )
   }
   return routes

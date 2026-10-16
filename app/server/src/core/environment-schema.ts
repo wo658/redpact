@@ -43,6 +43,7 @@ export const environmentSchema = z
     ]),
     runtimeId: z.string().optional(),
     runId: z.string().optional(),
+    manualScope: z.enum(["main", "worktree"]).optional(),
     lifecycle: z.enum(["run", "manual"]),
     runIds: z.array(z.string().uuid()),
     resources: z.array(
