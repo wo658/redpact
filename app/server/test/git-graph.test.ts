@@ -184,3 +184,54 @@ test("커밋 diff는 전체 SHA만 허용하고 없는 커밋을 명시적으로
     (await app().request(`/api/projects/project/git/commits/${"a".repeat(40)}/diff`)).status,
   ).toBe(404)
 })
+
+test("4MiB를 넘는 커밋도 메타데이터와 파일 목록 및 명시적 생략 상태를 반환한다", async () => {
+  const base = commit("base")
+  await writeFile(join(dir, "large.txt"), "large changed line\n".repeat(260000))
+  await writeFile(join(dir, "small.txt"), "small change\n")
+  git("add", ".")
+  const revision = commit("large commit")
+  const response = await app().request(`/api/projects/project/git/commits/${revision}/diff`)
+  expect(response.status).toBe(200)
+  expect(await response.json()).toMatchObject({
+    available: true,
+    revision,
+    baseRevision: base,
+    patch: "",
+    patchOmitted: "size_limit",
+    changedPaths: ["large.txt", "small.txt"],
+    omitted: [expect.stringContaining("4 MiB")],
+  })
+  const history = await page()
+  expect(history.commits[0]).toMatchObject({ oid: revision, message: "large commit" })
+})
+
+test("파일 경로 목록도 4MiB를 넘는 실제 커밋은 HTTP 200으로 메타데이터와 별도 제한을 반환한다", async () => {
+  const base = commit("base")
+  const blob = execFileSync("git", ["-C", dir, "hash-object", "-w", "--stdin"], {
+    input: "content\n",
+    encoding: "utf8",
+  }).trim()
+  const entries = Array.from(
+    { length: 18000 },
+    (_, index) => `100644 blob ${blob}\t${String(index).padStart(5, "0")}-${"x".repeat(240)}.txt\n`,
+  ).join("")
+  const tree = execFileSync("git", ["-C", dir, "mktree"], {
+    input: entries,
+    encoding: "utf8",
+  }).trim()
+  const revision = git("commit-tree", tree, "-p", base, "-m", "Large file list")
+  const response = await app().request(`/api/projects/project/git/commits/${revision}/diff`)
+  expect(response.status).toBe(200)
+  const result = await response.json()
+  expect(result).toMatchObject({
+    available: true,
+    revision,
+    baseRevision: base,
+    patch: "",
+    patchOmitted: "size_limit",
+    changedPathsOmitted: "size_limit",
+    omitted: [expect.stringContaining("Only commit metadata")],
+  })
+  expect(result).not.toHaveProperty("changedPaths")
+})

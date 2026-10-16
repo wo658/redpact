@@ -33,6 +33,9 @@ export const commitDiff = z.object({
   baseRevision: oid.optional(),
   patch: z.string(),
   omitted: z.array(z.string()),
+  patchOmitted: z.literal("size_limit").optional(),
+  changedPaths: z.array(z.string()).optional(),
+  changedPathsOmitted: z.literal("size_limit").optional(),
 })
 
 export const imagePath = z

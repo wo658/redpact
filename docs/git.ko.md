@@ -76,6 +76,14 @@ tag fetch나 로컬 브랜치·index·파일 변경은 하지 않습니다. comm
 직렬화하고 원격 누락, 사용 중 상태, 부분 실패를 보고합니다. 성공·실패 뒤 모두 목록을
 갱신합니다. 이 툴바에는 Pull과 Push가 없습니다.
 
+커밋 패치는 4 MiB로 제한됩니다. 이를 초과하면 HTTP 200과 함께
+`patchOmitted: "size_limit"`, 빈 `patch`, `changedPaths` 목록과 명시적인
+`omitted` 진단을 반환합니다. Git Graph는 커밋 메타데이터를 유지하며 크기 제한 안내와
+파일 경로를 표시합니다. 잘린 내용을 완전한 diff로 표시하지 않습니다.
+파일 이름 응답에도 별도의 4 MiB Git 출력 제한이 적용됩니다. 이 제한도 초과하면
+HTTP 200 응답은 커밋 식별 정보와 `changedPathsOmitted: "size_limit"`, 별도 진단을
+유지하며 부분 파일 목록을 반환하거나 표시하지 않습니다.
+
 ## 관리되는 워크트리 생성
 
 `POST /api/work-starts`는 `requestId`, `projectId`, `intent`, `baseRef`, `branch`와 절대

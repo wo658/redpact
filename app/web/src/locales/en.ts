@@ -1,4 +1,8 @@
 export const en = {
+  "Patch and file list exceed their 4 MiB display limits. Only commit metadata is shown.":
+    "Patch and file list exceed their 4 MiB display limits. Only commit metadata is shown.",
+  "Patch exceeds the 4 MiB display limit. Only changed file paths are shown.":
+    "Patch exceeds the 4 MiB display limit. Only changed file paths are shown.",
   "Agent plugins": "Agent plugins",
   "Redpact plugins": "Redpact plugins",
   "Codex CLI path": "Codex CLI path",
