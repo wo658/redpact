@@ -9,9 +9,19 @@ export function createIntegrationTests(deps: {
   worktrees: Pick<WorktreeService, "resolve">
   projects: Pick<ProjectSettingsService, "tracking">
   settings: Pick<SettingsEditor, "project">
-  files: Pick<UnitTestFiles, "catalog">
+  files: Pick<UnitTestFiles, "catalog" | "source">
 }): IntegrationTestsService {
+  const patterns = ["**/*.ts", "**/*.js", "**/*.json", "**/pnpm-lock.yaml"]
   return {
+    async source(id, path) {
+      const target = await deps.worktrees.resolve(id)
+      const document = await deps.settings.project(target.worktree.projectId)
+      if (document.issues.length) {
+        problem("invalid_input", document.issues.join("\n"))
+      }
+      const directory = settingsSchema.parse(document.value ?? {}).tests.directory
+      return deps.files.source(target.worktree.projectRoot, path, patterns, directory)
+    },
     async inspect(id, scope = "changed") {
       const target = await deps.worktrees.resolve(id)
       const document = await deps.settings.project(target.worktree.projectId)
@@ -26,11 +36,11 @@ export function createIntegrationTests(deps: {
           const tracking = await deps.projects.tracking(target.worktree.projectId)
           base = await target.git.mergeBase(tracking.mainBranch)
         }
-        // Filter the literal directory before source limits, without treating it as a glob.
+        // The configured directory is literal, not a glob.
         catalog = await deps.files.catalog(
           target.worktree.projectRoot,
           base,
-          ["**/*.ts", "**/*.js", "**/*.json", "**/pnpm-lock.yaml"],
+          patterns,
           directory,
           scope,
         )

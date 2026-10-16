@@ -21,14 +21,13 @@ export async function readCommitDiff(root: string, oid: string): Promise<GitDiff
     .trim()
     .split(" ")
     .filter(Boolean)
-  const patch = await readGit(root, [
+  const args = [
     "-c",
     "core.quotePath=false",
     "diff-tree",
     "--root",
     "--no-commit-id",
     "-r",
-    "-p",
     "--no-ext-diff",
     "--no-textconv",
     "--no-color",
@@ -37,12 +36,39 @@ export async function readCommitDiff(root: string, oid: string): Promise<GitDiff
     "--dst-prefix=b/",
     ...(parents[0] ? [parents[0], oid] : [oid]),
     "--",
-  ])
-  return {
+  ]
+  const metadata = {
     available: true,
     revision: oid,
     ...(parents[0] ? { baseRevision: parents[0] } : {}),
-    patch,
-    omitted: [],
+  }
+  try {
+    const patch = await readGit(root, [...args.slice(0, -1), "-p", "--"])
+    return { ...metadata, patch, omitted: [] }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") {
+      throw error
+    }
+  }
+  // Read names independently: a truncated patch cannot reliably describe all changed files.
+  const partial = { ...metadata, patch: "", patchOmitted: "size_limit" as const }
+  try {
+    const names = await readGit(root, [...args.slice(0, -1), "--name-only", "-z", "--"])
+    return {
+      ...partial,
+      changedPaths: names.split("\0").filter(Boolean),
+      omitted: ["Patch exceeds the 4 MiB display limit. Only changed file paths are shown."],
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") {
+      throw error
+    }
+    return {
+      ...partial,
+      changedPathsOmitted: "size_limit",
+      omitted: [
+        "Patch and file list exceed their 4 MiB display limits. Only commit metadata is shown.",
+      ],
+    }
   }
 }

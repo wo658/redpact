@@ -97,6 +97,11 @@ access must also satisfy the application's CORS and cookie rules.
 ## Runner declarations
 
 `tests.directory` defaults to `integration`; `tests.timeoutMs` defaults to 10000.
+The timeout accepts integers from 1 to 2147483647 milliseconds (Node's timer limit),
+including 180000 for three minutes. It supplies Vitest's default test and hook timeout;
+explicit test/hook timeouts can override that default. It does not cover container
+preparation or change the separate instance execution budget. See
+[limits and verdicts](execution.md#limits-and-verdicts).
 Unit uses its existing `unitTests` Dockerfile, complete command, cwd and patterns.
 Playwright requires an application `service`, `port` and named `targets` with purpose
 `functional` or `capture`, and scope `project` or `worktree`. Browser language is

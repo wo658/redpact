@@ -12,7 +12,7 @@ import { EmptyState, Loading, Notice } from "./feedback"
 import { useLiveRevision } from "./live-updates"
 import { ResultRow } from "./result-row"
 import { SearchPicker } from "./search-picker"
-import { TestCode } from "./test-code"
+import { SelectedTestSource } from "./selected-test-source"
 import { TestFileBrowser } from "./test-file-browser"
 import { Button } from "./ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/coss-tabs"
@@ -203,19 +203,15 @@ export function UnitTests({
                 {scope === "all" ? t("No unit test files.") : t("No changed unit test files.")}
               </EmptyState>
             ) : (
-              <>
-                {selected.source !== null ? (
-                  <TestCode
-                    api={api}
-                    worktreeId={worktreeId}
-                    scope={scope}
-                    baseRevision={data.catalog.baseRevision}
-                    source={{ path: selected.path, content: selected.source }}
-                  />
-                ) : (
-                  <Notice>{selected.issue}</Notice>
-                )}
-              </>
+              <SelectedTestSource
+                key={`${worktreeId}:${scope}:${selected.path}`}
+                api={api}
+                worktreeId={worktreeId}
+                kind="unit"
+                path={selected.path}
+                scope={scope}
+                catalog={data.catalog}
+              />
             )}
           </TabsContent>
           <TabsContent

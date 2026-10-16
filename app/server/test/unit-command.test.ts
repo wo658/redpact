@@ -39,7 +39,9 @@ test("변경 파일 목록은 추가와 수정을 포함하고 관련 없는 파
     "existing.test.ts",
     "nested/test_new.py",
   ])
-  expect(result.files[2].source).toBe("assert True")
+  expect(
+    (await createUnitTestFiles().source(root, result.files[2].path, ["**/test_*.py"])).source,
+  ).toBe("assert True")
 })
 test("execution directory rejects traversal and symlink escape", async () => {
   const { root } = await fixture()
@@ -141,7 +143,13 @@ test("project catalog includes unchanged sources and excludes ignored, deleted a
     "all",
   )
   expect(catalog.files.map((file) => file.path)).toEqual(["kept.test.ts", "new.test.ts"])
-  expect(catalog.files[0].source).toBe("unchanged source")
+  expect(
+    (
+      await createUnitTestFiles().source(join(root, "package"), catalog.files[0].path, [
+        "**/*.test.ts",
+      ])
+    ).source,
+  ).toBe("unchanged source")
   expect(catalog.baseRevision).toBeUndefined()
   expect(
     (await createUnitTestFiles().catalog(root, base, ["**/*.test.ts"])).files.map(
@@ -196,3 +204,49 @@ test.each([
   },
   6000,
 )
+
+test("200개를 넘는 목록은 소스 없이 모두 반환하고 선택한 마지막 파일만 읽는다", async () => {
+  const { root, base } = await fixture()
+  await Promise.all(
+    Array.from({ length: 210 }, (_, index) =>
+      writeFile(join(root, `large-${String(index).padStart(3, "0")}.test.ts`), "x".repeat(12000)),
+    ),
+  )
+  const adapter = createUnitTestFiles()
+  const catalog = await adapter.catalog(root, base, ["**/*.test.ts"])
+  expect(catalog.files).toHaveLength(210)
+  expect(catalog.files[209]).toEqual({ path: "large-209.test.ts" })
+  expect(catalog.diagnostics).toEqual([])
+  expect(await adapter.source(root, "large-209.test.ts", ["**/*.test.ts"])).toEqual({
+    path: "large-209.test.ts",
+    source: "x".repeat(12000),
+  })
+})
+
+test("선택 소스는 크기와 바이너리, 경로 및 설정 범위를 검증한다", async () => {
+  const { root } = await fixture()
+  const adapter = createUnitTestFiles()
+  await writeFile(join(root, "large.test.ts"), "x".repeat(200001))
+  await writeFile(join(root, "binary.test.ts"), "a\0b")
+  await writeFile(join(root, "other.txt"), "private")
+  await writeFile(join(root, ".gitignore"), "ignored.test.ts\n")
+  await writeFile(join(root, "ignored.test.ts"), "ignored")
+  await symlink(join(root, "existing.test.ts"), join(root, "linked.test.ts"))
+  for (const path of ["large.test.ts", "binary.test.ts", "linked.test.ts"]) {
+    expect(await adapter.source(root, path, ["**/*.test.ts"])).toMatchObject({
+      path,
+      source: null,
+      issue: expect.any(String),
+    })
+  }
+  for (const path of [
+    "../outside.test.ts",
+    "/outside.test.ts",
+    "other.txt",
+    "ignored.test.ts",
+    "existing.test.ts",
+  ]) {
+    await expect(adapter.source(root, path, ["**/*.test.ts"], "integration")).rejects.toThrow()
+  }
+  await expect(adapter.source(root, "ignored.test.ts", ["**/*.test.ts"])).rejects.toThrow()
+})

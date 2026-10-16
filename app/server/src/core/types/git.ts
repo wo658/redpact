@@ -67,6 +67,9 @@ export type GitDiff = {
   reason?: string
   patch: string
   omitted: string[]
+  patchOmitted?: "size_limit"
+  changedPaths?: string[]
+  changedPathsOmitted?: "size_limit"
 }
 
 export type BranchReview = {

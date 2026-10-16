@@ -43,9 +43,12 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/captures/execution-approval.spec.ts", purpose: "capture" },
       { path: "project/captures/execution-scope.spec.ts", purpose: "capture" },
       { path: "project/captures/integration-approval.spec.ts", purpose: "capture" },
+      { path: "project/captures/integration-timeout.spec.ts", purpose: "capture" },
+      { path: "project/captures/large-commit.spec.ts", purpose: "capture" },
       { path: "project/captures/mcp-app.spec.ts", purpose: "capture" },
       { path: "project/captures/problem-notice.spec.ts", purpose: "capture" },
       { path: "project/captures/result-rows.spec.ts", purpose: "capture" },
+      { path: "project/captures/test-catalog.spec.ts", purpose: "capture" },
       { path: "project/captures/word-wrap.spec.ts", purpose: "capture" },
       { path: "project/captures/workspace-history.spec.ts", purpose: "capture" },
       { path: "project/tests/capture-viewport.spec.ts", purpose: "functional" },
@@ -59,6 +62,8 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/tests/fixed-execution-settings.spec.ts", purpose: "functional" },
       { path: "project/tests/git-graph.spec.ts", purpose: "functional" },
       { path: "project/tests/header-location.spec.ts", purpose: "functional" },
+      { path: "project/tests/integration-timeout.spec.ts", purpose: "functional" },
+      { path: "project/tests/large-commit.spec.ts", purpose: "functional" },
       { path: "project/tests/material-icons.spec.ts", purpose: "functional" },
       { path: "project/tests/mcp-app.spec.ts", purpose: "functional" },
       { path: "project/tests/plugin-updates.spec.ts", purpose: "functional" },
@@ -70,6 +75,7 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/tests/screenshot-gallery.spec.ts", purpose: "functional" },
       { path: "project/tests/settings.spec.ts", purpose: "functional" },
       { path: "project/tests/sidebar-controls.spec.ts", purpose: "functional" },
+      { path: "project/tests/test-catalog.spec.ts", purpose: "functional" },
       { path: "project/tests/test-code-diff.spec.ts", purpose: "functional" },
       { path: "project/tests/viewers.spec.ts", purpose: "functional" },
       { path: "project/tests/window-controls.spec.ts", purpose: "functional" },
@@ -78,7 +84,7 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/tests/workspace-tabs.spec.ts", purpose: "functional" },
     ])
     expect(browserFiles.every((file) => file.scope === "project")).toBe(true)
-    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(28)
+    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(31)
     const files = await createLocalFiles().readTests(root, result.settings.tests.directory)
     const scenarios = files
       .filter((file) => file.path.endsWith(".test.ts"))

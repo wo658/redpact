@@ -1135,9 +1135,17 @@ test("review navigation uses text-only labels and preserves keyboard selection",
   const { WorktreeReview } = await server.ssrLoadModule("/src/components/worktree-review.tsx")
   const reads = []
   const api = {
+    testSource: async (id, _kind, path) =>
+      [
+        { path: "unit.ts", source: "test" },
+        { path: "tests/test.ts", source: "captured test" },
+      ].find((file) => file.path === path),
     unitTests: async () => ({
       settings: null,
-      catalog: { files: [{ path: "unit.ts", source: "test" }], diagnostics: [] },
+      catalog: {
+        files: [{ path: "unit.ts" }],
+        diagnostics: [],
+      },
       runs: [],
     }),
     playwright: async () => ({ settings: null, runs: [], error: "Capture unavailable" }),
@@ -1153,7 +1161,10 @@ test("review navigation uses text-only labels and preserves keyboard selection",
     },
     integrationTests: async () => ({
       directory: "tests",
-      catalog: { files: [{ path: "tests/test.ts", source: "captured test" }], diagnostics: [] },
+      catalog: {
+        files: [{ path: "tests/test.ts" }],
+        diagnostics: [],
+      },
     }),
     submissions: async () => ({ items: [], nextCursor: null }),
   }
@@ -1413,6 +1424,8 @@ test("project invalidations retain the active review tab during background list 
   let hiddenDiffSignal
   let evidenceReads = 0
   const api = {
+    testSource: async (id, _kind, path) =>
+      [{ path: "tests/test.ts", source: "captured test" }].find((file) => file.path === path),
     reviewContent: async () => ({
       preview: false,
       unit: false,
@@ -1442,7 +1455,10 @@ test("project invalidations retain the active review tab during background list 
     },
     integrationTests: async () => ({
       directory: "tests",
-      catalog: { files: [{ path: "tests/test.ts", source: "captured test" }], diagnostics: [] },
+      catalog: {
+        files: [{ path: "tests/test.ts" }],
+        diagnostics: [],
+      },
     }),
     submissions: async () => {
       evidenceReads++
@@ -1557,6 +1573,8 @@ test("Git read failures use Toasts, preserve the diff, and clear on recovery or 
   let failure = false
   let reads = 0
   const api = {
+    testSource: async (id, _kind, path) =>
+      [{ path: "tests/test.ts", source: "captured test" }].find((file) => file.path === path),
     gitDiff: async () => {
       reads++
       if (failure) {
@@ -1571,7 +1589,10 @@ test("Git read failures use Toasts, preserve the diff, and clear on recovery or 
     },
     integrationTests: async () => ({
       directory: "tests",
-      catalog: { files: [{ path: "tests/test.ts", source: "captured test" }], diagnostics: [] },
+      catalog: {
+        files: [{ path: "tests/test.ts" }],
+        diagnostics: [],
+      },
     }),
     submissions: async () => ({ items: [], nextCursor: null }),
   }
@@ -2507,6 +2528,8 @@ test("unit view browses added source but runs the whole configured command witho
     runs: [],
   }
   const api = {
+    testSource: async (id, _kind, path) =>
+      [...data.catalog.files].find((file) => file.path === path),
     gitDiff: async () => ({
       available: true,
       patch:
@@ -2775,6 +2798,10 @@ test("unit viewer separates source review from command history and preserves fil
     createElement(UnitTests, {
       worktreeId: "w1",
       api: {
+        testSource: async (id, _kind, path) =>
+          [{ path: "new.test.ts", source: "expect(actual).toBe(expected)" }].find(
+            (file) => file.path === path,
+          ),
         gitDiff: async () => ({
           available: true,
           patch:
@@ -2785,7 +2812,7 @@ test("unit viewer separates source review from command history and preserves fil
         unitTests: async () => ({
           settings,
           catalog: {
-            files: [{ path: "new.test.ts", source: "expect(actual).toBe(expected)" }],
+            files: [{ path: "new.test.ts" }],
             diagnostics: [],
           },
           runs: [
@@ -2827,6 +2854,11 @@ test("단위테스트 결과를 보는 동안에도 파일 목록에서 다른 �
     createElement(UnitTests, {
       worktreeId: "w",
       api: {
+        testSource: async (id, _kind, path) =>
+          [
+            { path: "one.test.ts", source: "first source" },
+            { path: "two.test.ts", source: "second source" },
+          ].find((file) => file.path === path),
         gitDiff: async () => ({
           available: true,
           patch:
@@ -2837,10 +2869,7 @@ test("단위테스트 결과를 보는 동안에도 파일 목록에서 다른 �
         unitTests: async () => ({
           settings: { cwd: ".", command: "pnpm test", patterns: ["*.test.ts"] },
           catalog: {
-            files: [
-              { path: "one.test.ts", source: "first source" },
-              { path: "two.test.ts", source: "second source" },
-            ],
+            files: [{ path: "one.test.ts" }, { path: "two.test.ts" }],
             diagnostics: [],
           },
           runs: [],
@@ -2863,6 +2892,11 @@ test("통합테스트는 변경 구간과 해당 파일의 실행 결과를 탐�
     createElement(TestObservation, {
       worktreeId: "w",
       api: {
+        testSource: async (id, _kind, path) =>
+          [
+            { path: "tests/one.test.ts", source: "current first" },
+            { path: "tests/two.test.ts", source: "current second" },
+          ].find((file) => file.path === path),
         gitDiff: async () => ({
           available: true,
           patch:
@@ -2873,10 +2907,7 @@ test("통합테스트는 변경 구간과 해당 파일의 실행 결과를 탐�
         integrationTests: async () => ({
           directory: "tests",
           catalog: {
-            files: [
-              { path: "tests/one.test.ts", source: "current first" },
-              { path: "tests/two.test.ts", source: "current second" },
-            ],
+            files: [{ path: "tests/one.test.ts" }, { path: "tests/two.test.ts" }],
             diagnostics: [],
           },
         }),
@@ -4797,11 +4828,19 @@ test("project Tests navigation browses and executes only the primary checkout", 
     patterns: ["**/*.test.ts"],
   }
   const api = {
+    testSource: async (id, _kind, path) =>
+      [
+        { path: `${id}.test.ts`, source: `${id} source` },
+        { path: "tests/saved.test.ts", source: "integration source" },
+      ].find((file) => file.path === path),
     unitTests: async (id, _signal, scope) => {
       calls.push([id, scope])
       return {
         settings,
-        catalog: { files: [{ path: `${id}.test.ts`, source: `${id} source` }], diagnostics: [] },
+        catalog: {
+          files: [{ path: `${id}.test.ts` }],
+          diagnostics: [],
+        },
         runs: [],
       }
     },
@@ -4825,7 +4864,7 @@ test("project Tests navigation browses and executes only the primary checkout", 
       return {
         directory: "tests",
         catalog: {
-          files: [{ path: "tests/saved.test.ts", source: "integration source" }],
+          files: [{ path: "tests/saved.test.ts" }],
           diagnostics: [],
         },
       }
@@ -5278,9 +5317,11 @@ for (const surface of [
         worktreeId: "w",
         scope: "all",
         api: {
+          testSource: async (id, _kind, path) =>
+            [{ path, source }].find((file) => file.path === path),
           unitTests: async () => ({
             settings: { command: "pnpm test", cwd: ".", patterns: ["*.test.ts"] },
-            catalog: { files: [{ path, source }], diagnostics: [] },
+            catalog: { files: [{ path }], diagnostics: [] },
             runs: [],
           }),
         },
@@ -5292,9 +5333,11 @@ for (const surface of [
         worktreeId: "w",
         scope: "all",
         api: {
+          testSource: async (id, _kind, path) =>
+            [{ path, source }].find((file) => file.path === path),
           integrationTests: async () => ({
             directory: ".",
-            catalog: { files: [{ path, source }], diagnostics: [] },
+            catalog: { files: [{ path }], diagnostics: [] },
           }),
           submissions: async () => ({ items: [] }),
         },
@@ -5740,6 +5783,8 @@ test("테스트 실행은 상단 툴바에만 표시되고 탭 전환 시 이전
       worktreeId: "minimal",
       initialTab: "unit",
       api: {
+        testSource: async (id, _kind, path) =>
+          [{ path: "unit.test.ts", source: "test" }].find((file) => file.path === path),
         gitDiff: async () => ({
           available: true,
           patch:
@@ -5753,7 +5798,10 @@ test("테스트 실행은 상단 툴바에만 표시되고 탭 전환 시 이전
             cwd: ".",
             patterns: [],
           },
-          catalog: { files: [{ path: "unit.test.ts", source: "test" }], diagnostics: [] },
+          catalog: {
+            files: [{ path: "unit.test.ts" }],
+            diagnostics: [],
+          },
           runs: [],
         }),
         integrationTests: async () => ({
@@ -6348,6 +6396,11 @@ test("새 리뷰 내용은 탭을 다시 표시하고 사라진 선택은 남은
   let hasUnit = false
   let hasTests = true
   const api = {
+    testSource: async (id, _kind, path) =>
+      [
+        ...(hasUnit ? [{ path: "unit.ts", source: "unit" }] : []),
+        ...(hasTests ? [{ path: "integration.ts", source: "integration" }] : []),
+      ].find((file) => file.path === path),
     reviewContent: async () => ({
       preview: false,
       unit: hasUnit,
@@ -6360,13 +6413,18 @@ test("새 리뷰 내용은 탭을 다시 표시하고 사라진 선택은 남은
     worktreePlaywrightCatalog: async () => ({ files: [], diagnostics: [] }),
     unitTests: async () => ({
       settings: null,
-      catalog: { files: hasUnit ? [{ path: "unit.ts", source: "unit" }] : [], diagnostics: [] },
+      catalog: {
+        files: (hasUnit ? [{ path: "unit.ts", source: "unit" }] : []).map(({ path }) => ({ path })),
+        diagnostics: [],
+      },
       runs: [],
     }),
     integrationTests: async () => ({
       directory: "tests",
       catalog: {
-        files: hasTests ? [{ path: "integration.ts", source: "integration" }] : [],
+        files: (hasTests ? [{ path: "integration.ts", source: "integration" }] : []).map(
+          ({ path }) => ({ path }),
+        ),
         diagnostics: [],
       },
     }),
@@ -6555,12 +6613,16 @@ test("워크트리 테스트 코드는 전체 코드 전환 없이 변경 구간
     createElement(UnitTests, {
       worktreeId: "w",
       api: {
+        testSource: async (id, _kind, path) =>
+          [{ path: "unit.test.ts", source: "// header\n// new\n" }].find(
+            (file) => file.path === path,
+          ),
         unitTests: async () => ({
           settings: { cwd: ".", command: "pnpm test", patterns: ["*.test.ts"] },
           catalog: {
             baseRevision: "base",
             diagnostics: [],
-            files: [{ path: "unit.test.ts", source: "// header\n// new\n" }],
+            files: [{ path: "unit.test.ts" }],
           },
           runs: [],
         }),
@@ -7041,4 +7103,48 @@ test("Windows 창 버튼은 연결 중에도 작동하고 최대화 상태를 �
     delete window.__TAURI__
     delete document.documentElement.dataset.desktop
   }
+})
+
+test("선택 소스는 늦은 성공과 오류 응답을 버리고 현재 파일만 표시한다", async () => {
+  const { act } = await import("@testing-library/react")
+  await i18n.changeLanguage("en")
+  const { UnitTests } = await server.ssrLoadModule("/src/components/unit-tests.tsx")
+  const pending = new Map()
+  const signals = new Map()
+  const api = {
+    unitTests: async () => ({
+      settings: { command: "pnpm test", patterns: ["*.test.ts"] },
+      catalog: { files: [{ path: "first.test.ts" }, { path: "last.test.ts" }], diagnostics: [] },
+      runs: [],
+    }),
+    testSource: (_id, _kind, path, signal) => {
+      signals.set(path, signal)
+      return new Promise((resolve, reject) => pending.set(path, { resolve, reject }))
+    },
+  }
+  render(createElement(UnitTests, { api, worktreeId: "w", scope: "all" }))
+  await waitFor(() => assert.ok(pending.has("first.test.ts")))
+  const user = userEvent.setup({ document })
+  await user.click(screen.getByRole("treeitem", { name: "last.test.ts", exact: true }))
+  await waitFor(() => assert.ok(pending.has("last.test.ts")))
+  assert.equal(signals.get("first.test.ts").aborted, true)
+  await act(async () =>
+    pending.get("last.test.ts").resolve({ path: "last.test.ts", source: "LATEST_SOURCE" }),
+  )
+  await screen.findByText("LATEST_SOURCE")
+  await act(async () =>
+    pending.get("first.test.ts").resolve({ path: "first.test.ts", source: "STALE_SOURCE" }),
+  )
+  assert.equal(screen.queryByText("STALE_SOURCE"), null)
+  assert.ok(screen.getByText("LATEST_SOURCE"))
+  await user.click(screen.getByRole("treeitem", { name: "first.test.ts", exact: true }))
+  await waitFor(() => assert.equal(signals.get("first.test.ts").aborted, false))
+  const stale = pending.get("first.test.ts")
+  await user.click(screen.getByRole("treeitem", { name: "last.test.ts", exact: true }))
+  await act(async () =>
+    pending.get("last.test.ts").resolve({ path: "last.test.ts", source: "LATEST_SOURCE" }),
+  )
+  await act(async () => stale.reject(new Error("STALE_ERROR")))
+  assert.equal(screen.queryByText("Error: STALE_ERROR"), null)
+  assert.ok(screen.getByText("LATEST_SOURCE"))
 })

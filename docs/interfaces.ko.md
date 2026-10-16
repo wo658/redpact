@@ -166,3 +166,14 @@ Bearer token은 필요 없습니다. 신뢰된 로컬 프로세스는 HTTP와 �
 [검토 workflow](../app/server/src/workflows/review-tests.ts).
 
 런타임 업데이트 상태와 명시적 확인·설치는 `GET /api/updates`, `POST /api/updates/check`, `POST /api/updates/install`을 사용합니다. 설치에는 발견된 버전과 일치하는 `{ version }`과 확인된 CLI 부모 프로세스가 필요합니다. 캐시의 `canInstall`, `busy`, `error`, `installError`는 기능 지원·작업·실패를 구분합니다. 조회는 설치하지 않습니다. 같은 출처·로컬 호스트 경계를 유지하고 임의 명령이나 레지스트리 URL을 받지 않습니다. [런타임 업데이트](installation.md)를 참고하세요.
+
+## 현재 테스트 목록과 소스
+
+`GET /api/worktrees/:id/unit-tests`와 `/integration-tests`는 메타데이터만 포함하는
+목록 항목(`path`)을 반환하며 `scope=all|changed`와 기본값 `changed`를 유지합니다.
+선택한 현재 소스 하나는 대응하는 `/unit-tests/source?path=...` 또는
+`/integration-tests/source?path=...` 엔드포인트로 읽습니다.
+디코딩한 경로는 설정된 Git 가시 테스트 목록에 속해야 합니다. 잘못된 선택은 400을,
+파일 미리보기 실패는 `{ path, source: null, issue }`를 반환합니다.
+읽기에 성공하면 `{ path, source }`를 반환합니다. 조회는 테스트를 실행하거나 기록된
+소스를 변경하지 않습니다. 미리보기 제한과 탐색은 [파일 탐색](frontend.md)을 참고하세요.
