@@ -121,17 +121,31 @@ leave resources until successful recovery.
 
 ## Manual Container
 
-Project Container uses the live checkout of the configured main branch, including
-uncommitted inputs; directory projects use their connected root. No substitute
-checkout is chosen when the required checkout is missing. The fixed shared project configuration supplies the services and dependencies. One manual environment per project stays alive until
-Stop, Restart or server shutdown. It has `lifecycle: "manual"` and no test run IDs;
-it cannot be reused by test execution.
+The project Container screen defaults to the configured main checkout. MCP `project_container`
+uses its actual `path` worktree; HTTP Container routes accept `worktreeId` to select one.
+Directory projects use their connected root. All targets use the fixed shared settings.
+Each worktree can own one manual environment, independent of test environments.
+It stays alive across tests, idle periods, agent completion and Redpact shutdown until
+explicit Stop or Restart. On server restart, ownership and observed Docker health are
+reconnected without recreating services or treating this as new test evidence.
+Interrupted preparations remain failed; interrupted stops retain cleanup ownership for retry.
+Docker unavailability is distinct from an explicit successful stop.
 
-Compose build images for a manual Container use a stable project-specific Compose name,
-so the latest tagged project image remains available between manual sessions. Temporary
-test environments use separate owned build tags and remove those tags after execution;
-Redpact preserves existing project image tags and unrelated Docker images. A manual
-restart removes a superseded image only when no other tags or containers reference it.
+Stop removes all owned containers, anonymous and dedicated named volumes, networks,
+environment build tags, source snapshots and generated runtime files. Preparation and
+service logs and historical environment records remain. Dedicated names use the environment
+UUID; authored nonexternal network/volume names and build image tags cannot collide with another
+worktree or overwrite an existing project tag. External volumes/networks, bind mounts,
+pulled base images and unrelated tags remain outside environment ownership.
+
+BuildKit's content-addressed internal cache and shared image layers remain shared Docker
+resources. Redpact does not prune them or promise that removing a tag frees every byte of
+its reported image size. Builds use an instance ownership label rather than a fresh
+per-environment image label so identical final layers remain reusable. Generated Compose
+files stay outside build contexts. A newly changed source can add shared cache; dedicated
+images/tags and runtime files are still removed. Explicit cache exports declared by the
+project remain project-managed shared resources. Cleanup failure is not stopped: retained
+ownership and diagnostics allow an explicit retry, and restart waits for successful teardown.
 
 Local edits show input changes but never hot-reload or restart the session. Restart
 removes old owned resources before capturing current inputs; failed cleanup blocks
@@ -145,11 +159,12 @@ any HTTP response proves reachability, not application health.
 Compose is the application execution definition. Redpact applies the configured
 service selection and explicit dependency environment bindings, records ownership,
 and adds runner connectivity where the service's network mode permits it. It does
-not impose a managed Compose subset: fixed host ports, host mounts, privileges,
+not impose a managed Compose subset: host mounts, privileges,
 custom container names, external resources, `env_file`, configs/secrets and advanced
-build options are not rejected as Redpact policy. Authored port publications and
-image tags are preserved. Concurrent executions may conflict when the Compose
-project deliberately uses fixed ports or names; the native error is retained.
+build options are not rejected as Redpact policy. Published ports use automatic host
+allocation except explicit main-manual dependency `hostPorts`; see [configuration](configuration.md).
+Build image tags and nonexternal network/volume names are environment-owned. Custom container names
+and other authored host resources can still conflict; native errors are retained.
 
 Compose/Testcontainers handle native configuration, build, startup and wait errors.
 A healthcheck is optional. When present, its reported health is observed; otherwise

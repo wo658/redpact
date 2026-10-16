@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util"
 import { Umzug } from "umzug"
+import { migrateManualEnvironmentScope } from "../core/manual-environment-migration.js"
 import {
   migrateEnvironmentSettings,
   migrateFlatEnvironmentValues,
@@ -12,6 +13,7 @@ import type { MigrationFile, RuntimeMigrationFiles } from "../core/types/runtime
 const migrations = [
   { name: "001-fixed-environment-settings", transform: migrateEnvironmentSettings },
   { name: "002-flat-environment-values", transform: migrateFlatEnvironmentValues },
+  { name: "004-manual-environment-scope", transform: migrateManualEnvironmentScope },
 ]
 const names = migrations.map(({ name }) => name)
 

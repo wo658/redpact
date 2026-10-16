@@ -23,6 +23,7 @@ test.each(["legacy", "resume"])(
     expect(JSON.parse(result.log ?? "null")).toEqual([
       "001-fixed-environment-settings",
       "002-flat-environment-values",
+      "004-manual-environment-scope",
     ])
     expect(result.second?.status).toBe(200)
     expect(result.unchangedAfterRestart).toBe(true)

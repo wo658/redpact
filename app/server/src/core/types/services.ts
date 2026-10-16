@@ -133,6 +133,7 @@ export type EnvironmentService = {
     selection: TestSelection,
     runId: string | null,
     expectedInputDigest?: string,
+    manualScope?: "main" | "worktree",
   ): Promise<Environment>
   abortPreparations(): void
   reserve(

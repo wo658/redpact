@@ -1,15 +1,17 @@
 import { createHash, randomUUID } from "node:crypto"
-import { mkdtemp, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, expect, test } from "vitest"
 import { createGitAdapter } from "../src/adapters/git/isomorphic.js"
 import { openStore } from "../src/adapters/storage/files.js"
+import { createRuntimeMigrationFiles } from "../src/adapters/storage/migrations.js"
 import { environmentSchema } from "../src/core/environment-schema.js"
 import { settingsSchema } from "../src/core/settings-schema.js"
 import type { EnvironmentAdapter, EnvironmentObservation } from "../src/core/types/environment.js"
 import { createEnvironments } from "../src/workflows/environments.js"
 import { createRuns } from "../src/workflows/runs.js"
+import { migrateRuntime } from "../src/workflows/runtime-migrations.js"
 import { createStopEnvironment } from "../src/workflows/stop-environment.js"
 import { createTestWorktrees as createWorktrees } from "./helpers/worktrees.js"
 
@@ -272,6 +274,9 @@ test("수동 확인 환경은 테스트 실행 ID 없이 준비하고 중복 실
     service.reserve(environment.id, worktreeId, randomUUID(), settingsDigest),
   ).rejects.toThrow()
   await stop.cleanupTemporary()
+  expect(service.get(environment.id).state).toBe("ready")
+  await stop(environment.id)
+  await stop.idle()
   expect(service.get(environment.id).state).toBe("stopped")
 })
 
@@ -327,4 +332,52 @@ test("이전 정리 완료 기록도 소유 네트워크가 남아 있으면 복
   await stop.cleanupTemporary()
   expect(stops).toBe(1)
   expect(service.get(env.id).state).toBe("stopped")
+})
+
+test("수동 환경 scope 마이그레이션은 원본 백업을 보존하고 중단 후 재시도한다", async () => {
+  const environment = await service.prepare(
+    worktreeId,
+    randomUUID(),
+    settingsDigest,
+    selection,
+    null,
+  )
+  await service.idle()
+  const legacy = { ...environment }
+  delete legacy.manualScope
+  const source = JSON.stringify({ version: 1, data: legacy })
+  const migrationRoot = join(root, "migration")
+  await mkdir(join(migrationRoot, "environments"), { recursive: true })
+  await mkdir(join(migrationRoot, ".migrations"), { recursive: true })
+  const path = join(migrationRoot, "environments", `${environment.id}.json`)
+  await writeFile(path, source)
+  await writeFile(
+    join(migrationRoot, ".migrations", "completed.json"),
+    JSON.stringify(["001-fixed-environment-settings", "002-flat-environment-values"]),
+  )
+  const files = createRuntimeMigrationFiles(migrationRoot)
+  await expect(
+    migrateRuntime({
+      ...files,
+      recordHistory: async () => {
+        throw new Error("interrupted")
+      },
+    }),
+  ).rejects.toThrow("interrupted")
+  expect(JSON.parse(await readFile(path, "utf8")).data.manualScope).toBe("main")
+  expect(
+    await readFile(
+      join(
+        migrationRoot,
+        ".migrations",
+        "backups",
+        "004-manual-environment-scope",
+        "environments",
+        `${environment.id}.json`,
+      ),
+      "utf8",
+    ),
+  ).toBe(source)
+  await migrateRuntime(files)
+  expect(((await files.history()) as string[]).at(-1)).toBe("004-manual-environment-scope")
 })

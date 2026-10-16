@@ -11,10 +11,10 @@ export type TestContainerInspection = {
 }
 export type TestContainer = {
   busy(projectId: string): boolean
-  composeSource(projectId: string, path: string): Promise<ProjectEntry>
-  inspect(projectId: string): Promise<TestContainerInspection>
-  start(projectId: string): Promise<TestContainerInspection>
-  restart(projectId: string): Promise<TestContainerInspection>
-  stop(projectId: string): Promise<TestContainerInspection>
+  composeSource(projectId: string, path: string, worktreeId?: string): Promise<ProjectEntry>
+  inspect(projectId: string, worktreeId?: string): Promise<TestContainerInspection>
+  start(projectId: string, worktreeId?: string): Promise<TestContainerInspection>
+  restart(projectId: string, worktreeId?: string): Promise<TestContainerInspection>
+  stop(projectId: string, worktreeId?: string): Promise<TestContainerInspection>
   close(): Promise<void>
 }

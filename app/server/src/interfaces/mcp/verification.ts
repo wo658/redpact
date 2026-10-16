@@ -272,7 +272,7 @@ export function registerVerificationTools(server: McpServer, services: Services)
     "project_container",
     {
       description:
-        "Inspect/start/restart/stop the observed project's manual Compose environment. path identifies the project; execution always uses its configured main checkout, never the supplied feature checkout. Stop only owns the manual environment and cannot stop test executions. Inspect is read-only; other actions are explicit manual lifecycle requests, independent of test approval.",
+        "Inspect/start/restart/stop the observed project's manual Compose environment. path identifies the actual worktree; each worktree owns its persistent manual environment until explicit stop. Stop only owns the manual environment and cannot stop test executions. Inspect is read-only; other actions are explicit manual lifecycle requests, independent of test approval.",
       inputSchema: z.strictObject({
         path: verificationPath,
         action: z.enum(["inspect", "start", "restart", "stop"]),

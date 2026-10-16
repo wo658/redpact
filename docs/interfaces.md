@@ -28,7 +28,7 @@ normal preconditions even when called outside the viewer. See [architecture](arc
 | `get_run` | `kind`, `id`, optional `detail: result / log / source / image`; state, captured evidence and cleanup |
 | `list_runs` | Absolute checkout `path`, optional `kind` and returned `before` cursor; up to 20 matching executions per page |
 | `get_run_artifact` | Playwright `id`, `artifactId`, optional `side`; owned PNG, video or trace up to 8 MiB |
-| `project_container` | Absolute observed project checkout `path`, `action: inspect / start / restart / stop`; existing main-checkout manual environment lifecycle |
+| `project_container` | Absolute observed project checkout `path`, `action: inspect / start / restart / stop`; selected worktree persistent manual environment lifecycle |
 
 `run_tests` validates a strict discriminated union. Unit rejects file filters and arbitrary
 commands; Playwright rejects arbitrary case selection. All kinds use the same workflows
@@ -76,14 +76,16 @@ or test-environment force-stop route. Timeouts, shutdown, failure recovery, reta
 evidence and automatic cleanup remain internal lifecycle responsibilities. Historical
 cancelled outcomes remain readable. Manual environment stop cannot cancel tests.
 
-`project_container` requires an observed connected project. Its path identifies the
-project; the existing configured main checkout supplies manual environment inputs,
-even when the path names a feature worktree. Inspect never starts anything. Start and
-restart use the existing shared configuration, input checks and concurrency gate;
-poll inspect for preparation state and failures. Stop targets only that project's
-manual environment. These explicit manual operations are separate from test approval
-and cannot supply a test environment, choose arbitrary Docker commands or delete
-unowned resources. Missing settings and unavailable checkouts remain diagnostics.
+`project_container` requires an observed connected project and uses the actual `path`
+worktree for inspect/start/restart/stop. Inspection never starts anything. Shared settings
+and input checks apply; poll inspect for preparation state and failures. Manual action
+admission is serialized per project, including omitted-main and explicit-worktree aliases. Stop targets only
+that worktree's manual environment and waits for owned teardown before completion.
+Manual environments survive server shutdown and reconnect on restart; they cannot supply
+test execution resources. HTTP `/api/projects/:id/test-container` and its action/compose
+routes accept optional `worktreeId`; omission retains the configured main-checkout default.
+A worktree from another project is rejected. No arbitrary Docker command or unowned resource
+deletion is exposed. Missing settings and unavailable checkouts remain diagnostics.
 
 The full app retains project management, settings, browsing, Git and manual Container
 controls. MCP does not expose Git mutation, settings writes or approval capabilities.

@@ -27,7 +27,7 @@ HTTP와 MCP는 같은 애플리케이션 workflow로 진입하고 실행·설정
 | `get_run` | `kind`, `id`, 선택적 `detail: result / log / source / image`로 상태·기록된 증거·정리 조회 |
 | `list_runs` | 체크아웃 절대 `path`, 선택적 `kind`와 반환 커서 `before`; 종류에 맞는 실행을 페이지당 최대 20개 조회 |
 | `get_run_artifact` | Playwright `id`, `artifactId`, 선택적 `side`; 해당 실행 소유 PNG·영상·trace를 최대 8 MiB까지 조회 |
-| `project_container` | 관찰된 프로젝트 체크아웃의 절대 `path`, `action: inspect / start / restart / stop`; 기존 메인 체크아웃 수동 환경 수명주기 |
+| `project_container` | 관찰된 프로젝트 체크아웃의 절대 `path`, `action: inspect / start / restart / stop`; 선택한 워크트리의 지속 수동 환경 수명주기 |
 
 `run_tests`는 엄격한 discriminated union으로 종류별 입력을 검증합니다. Unit은 파일
 필터와 임의 명령을 거부하고 Playwright는 임의 케이스 선택을 거부합니다. 모든 종류는
@@ -68,12 +68,15 @@ Integration 로그·소스는 실제 실행 ID를 사용합니다.
 노출하지 않습니다. timeout·서버 종료·실패 복구·증거 보존·자동 정리는 내부 수명주기로
 유지합니다. 과거 취소 결과는 계속 조회할 수 있습니다. 수동 환경 종료로 테스트를 취소할 수 없습니다.
 
-`project_container`는 관찰된 연결 프로젝트가 필요합니다. path는 프로젝트를 식별하며 기능
-워크트리를 가리켜도 기존 설정의 메인 체크아웃이 수동 환경 입력을 제공합니다. inspect는
-실행하지 않습니다. start·restart는 기존 공유 설정·입력 검사·동시성 제한을 사용하며 준비 상태와
-실패는 inspect로 조회합니다. stop은 해당 프로젝트의 수동 환경만 종료합니다. 명시적인 수동
-작업은 테스트 승인과 별개이며 테스트 환경 재사용·임의 Docker 명령·다른 리소스 삭제를 허용하지
-않습니다. 설정 누락과 체크아웃 문제는 진단으로 반환합니다.
+`project_container`는 관찰된 연결 프로젝트가 필요하며 실제 `path` 워크트리에서
+inspect/start/restart/stop을 수행합니다. 조회는 실행하지 않으며 공유 설정과 입력 검사를
+적용합니다. 준비 상태·실패는 inspect로 조회합니다. 수동 작업 접수는 프로젝트별로 직렬화하며
+메인 생략 요청과 명시적 워크트리 요청도 같은 잠금을 사용합니다. Stop은 해당 워크트리의 수동 환경만
+대상으로 하며 소유 리소스 teardown 완료 전에는 종료 완료가 아닙니다. 수동 환경은 서버
+종료 후 유지되고 재시작 시 재연결되며 테스트 실행 리소스로 재사용할 수 없습니다.
+HTTP `/api/projects/:id/test-container` 및 action/compose 경로는 선택적인 `worktreeId`를
+받습니다. 생략하면 설정된 메인 체크아웃을 사용하며 다른 프로젝트의 워크트리는 거부합니다.
+임의 Docker 명령이나 다른 리소스 삭제는 노출하지 않습니다. 설정 누락·체크아웃 문제는 진단입니다.
 
 전체 앱은 프로젝트 관리·설정·파일 탐색·Git·수동 Container 제어를 유지합니다. MCP는 Git 변경,
 설정 쓰기와 승인 기능을 모델에 노출하지 않습니다. [실행](execution.md),

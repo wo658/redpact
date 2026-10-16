@@ -135,3 +135,20 @@ Per-execution limits belong in that instance file:
 ```
 
 These omitted defaults apply to subsequent managed unit, integration, and Playwright executions. Memory allows 64–1048576 MiB; time allows 1–86400 seconds. They are separate from per-test timeouts and do not limit application containers, builds, or direct shell test commands. See [resource coverage](execution.md).
+
+## Main manual dependency host ports
+
+A managed dependency can declare `hostPorts`, for example
+`"hostPorts": [{ "service": "langfuse", "target": 3000, "published": 33181 }]`.
+The service must belong to that dependency and publish the target TCP port in Compose.
+Ports are integers from 1 to 65535; duplicate targets or host ports are invalid.
+Only a manual environment on the configured main checkout uses these fixed host ports.
+Feature worktrees and all test environments use automatic publications, as do services
+without a fixed declaration. Compose-authored host port numbers are replaced by this policy.
+Actual Docker bindings supply inspection endpoints. An occupied fixed port fails with
+its service/port and remediation; Redpact never silently chooses a fallback.
+
+Local clients can keep endpoint URLs and credentials in their own Git-ignored `.env`
+or environment variables, including a separate external Langfuse. Redpact does not
+read those client files or migrate existing dependency data. `shared-local` and `remote`
+dependencies cannot declare managed host ports.

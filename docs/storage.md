@@ -213,3 +213,11 @@ both processes cannot produce a final entry. Logs are retained without automatic
 archive them only while the instance is stopped. A live or reused PID is never reclaimed;
 invalid metadata and failed liveness probes report distinct refusal reasons. These logs
 provide future diagnosis; they do not establish the original cause of earlier shutdowns.
+
+Migration `004-manual-environment-scope` records `manualScope: "main"` on existing
+manual environments because the preceding contract only created them from the configured
+main checkout. Test records and historical evidence remain unchanged. New manual records
+capture `main` or `worktree` when started; later branch changes never retarget their port
+policy. Original bytes and interrupted retry follow the ordered migration rules above.
+Manual environment source and generated `runtime/` files are removed only after explicit
+successful teardown; server shutdown preserves their ownership for reconnection.
