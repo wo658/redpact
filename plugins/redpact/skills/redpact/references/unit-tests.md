@@ -52,8 +52,8 @@ Keep Unit patterns separate from `tests.directory`: managed Integration sources 
 to the Git-tracked root `integration/` directory, and validation rejects Unit patterns
 that include it. Do not place project tests beneath `.redpact`.
 
-Resolve the worktree on the same connected instance. Prefer MCP `run_unit_tests`
-with the absolute checkout path and `get_execution` with `kind: "unit"`. Under Ask,
+Resolve the worktree on the same connected instance. Prefer MCP `run_tests` (`kind: "unit"`)
+with the absolute checkout path and `get_run` with `kind: "unit"`. Under Ask,
 leave the returned approval request for a human; neither polling nor a text reply
 grants approval. If MCP Apps are unavailable, obtain its review path using
 `get_review_context` and direct the user to the same connected viewer for an explicit
@@ -65,10 +65,7 @@ Do not use a direct Docker or package command as a substitute for this connected
 Unit run; retain it only as explicitly labelled local evidence.
 When feasible use this path for both red and green; if red was only a focused local
 run, preserve its command, cwd, failing assertion and output and say so explicitly.
-Cancellation uses MCP `cancel_execution` with `kind: "unit"`, or
-`POST /api/unit-runs/:id/cancel`. MCP run_tests/get_run
-are managed integration operations and do not accept unit-run IDs. Never route
-integration work through unit commands to bypass a pending approval gate.
+Public test cancellation and forced environment stop are unavailable. Preserve automatic timeout, shutdown and recovery cleanup, and report retained failures with the execution identity.
 
 The Unit Test source list includes added, modified and renamed matching files against
 the configured Git comparison baseline, including untracked additions. Deleted sources

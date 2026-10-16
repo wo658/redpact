@@ -39,9 +39,4 @@ export function unitTestRoutes(service: UnitTestsService) {
     .get("/unit-runs/:id", docs("getUnitRun", "Read command output and exit status"), (c) =>
       c.json(service.get(c.req.param("id"))),
     )
-    .post(
-      "/unit-runs/:id/cancel",
-      docs("cancelUnitRun", "Cancel a unit command or retry its container cleanup"),
-      async (c) => c.json(await service.cancel(c.req.param("id"))),
-    )
 }

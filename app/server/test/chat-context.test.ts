@@ -241,7 +241,7 @@ test("세 실행 종류의 실패와 불변 증거 참조를 같은 검토 주�
     expect(context.evidence).toContainEqual(
       expect.objectContaining({
         type: "log",
-        tool: "get_execution",
+        tool: "get_run",
         arguments: { kind, id, detail: "log" },
       }),
     )
@@ -421,18 +421,16 @@ test("화면의 명시적 승인은 서버 내부 기능 키를 사용하고 오
   const cancelled = await app.request(`/api/execution-reviews/unit/${reviewId}/cancel`, {
     method: "POST",
   })
-  expect(cancelled.status).toBe(200)
-  expect((await cancelled.json()).approval.state).toBe("cancelled")
+  expect(cancelled.status).toBe(404)
 })
 
-test("이력의 실제 실행 ID도 기존 취소·정리 재시도 워크플로로 연결한다", async () => {
+test("이력의 실제 실행 ID로도 사용자 취소를 요청할 수 없다", async () => {
   const { app, services, id } = fixture()
   const cancel = vi.fn(async () => services.unitTests.get())
   Object.assign(services.unitTests, { cancel })
   const response = await app.request(`/api/execution-reviews/unit/${id}/cancel`, { method: "POST" })
-  expect(response.status).toBe(200)
-  expect(cancel).toHaveBeenCalledWith(id)
-  expect((await response.json()).executionId).toBe(id)
+  expect(response.status).toBe(404)
+  expect(cancel).not.toHaveBeenCalled()
 })
 
 test("입력이 바뀐 승인 요청은 사용자에게 다시 요청할 이유를 보존한 충돌로 반환한다", async () => {

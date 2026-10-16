@@ -88,8 +88,7 @@ Before reporting a connected integration result, compare the returned run target
 
 Redpact manages execution limits and removes temporary run environments automatically.
 MCP has no cancellation or environment-stop tools. Do not issue substitute HTTP
-cleanup requests. Report cleanup errors or requests for early termination and direct
-users to the web UI. Shared local infrastructure remains outside test environments.
+cleanup requests. Report cleanup errors with the execution identity; the web UI does not expose test cancellation either. Shared local infrastructure remains outside test environments.
 Preserve unrelated resources and execution history.
 
 ## Completion evidence

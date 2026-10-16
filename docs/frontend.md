@@ -22,7 +22,7 @@ for lifecycle, access boundaries, size limits and host verification requirements
 
 The standalone browser and Global App Page use the full management app: project/worktree navigation, files and diffs, Git, test catalogs, environments, dependencies, and project/global settings. Opening the app without a record restores normal project navigation or the connect-project screen.
 
-Inline MCP Apps use separately bundled request approval and result cards. They show the captured request, status and evidence for that conversation without embedding the full management navigation. They share the same runtime and evidence store. An exact `/?page=review&kind=unit|integration|playwright&id=<id>` link opens the recorded request or execution inside the full app. Record identity determines its worktree; current project selection cannot retarget it. Opening a link never requests a run. The linked review retains its worktree-bound history and explicit approval/cancellation controls.
+Inline MCP Apps use separately bundled request approval and result cards. They show the captured request, status and evidence for that conversation without embedding the full management navigation. They share the same runtime and evidence store. An exact `/?page=review&kind=unit|integration|playwright&id=<id>` link opens the recorded request or execution inside the full app. Record identity determines its worktree; current project selection cannot retarget it. Opening a link never requests a run. The linked review retains its worktree-bound history and explicit approval controls; test cancellation is not exposed.
 
 ## Components and visual rules
 

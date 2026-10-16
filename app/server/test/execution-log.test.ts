@@ -103,3 +103,13 @@ test("log live updates include only this worktree's unit and Playwright records"
     expect(scope.accepts(`/runtime/${kind}/other.json`)).toBe(false)
   }
 })
+
+test("종류 필터는 페이지 커서의 범위와 워크트리 소유권을 유지한다", () => {
+  const q = queries()
+  expect(q.listForWorktree("tree", undefined, "unit").items.map((item) => item.id)).toEqual([
+    "same",
+  ])
+  expect(q.listForWorktree("tree", "unit:same", "unit").items).toEqual([])
+  expect(() => q.listForWorktree("tree", "playwright:same", "unit")).toThrow("Invalid run cursor")
+  expect(() => q.listForWorktree("tree", "unit:hidden", "unit")).toThrow("Invalid run cursor")
+})

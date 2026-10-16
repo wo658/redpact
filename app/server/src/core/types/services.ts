@@ -105,6 +105,7 @@ export type RunQueries = {
   listForWorktree(
     worktreeId: string,
     before?: string,
+    kind?: ExecutionSummary["kind"],
   ): { items: ExecutionSummary[]; nextCursor: string | null }
   logs(id: string): Promise<RunLogs>
   list(

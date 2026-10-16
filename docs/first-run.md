@@ -109,7 +109,7 @@ Submit a new request after fixing the relevant inputs. Use `get_run` only to rea
 
 Each run prepares a temporary environment and removes its resources after execution. Recorded sources, results, and logs remain. Cleanup status is separate from the test verdict: a passing test can still require attention if resource removal fails.
 
-Every test execution gets its own environment; standalone test-environment preparation and reuse are unavailable. For manual inspection, Project Container explicitly starts a separate environment that cannot supply test runs. Independently managed services use shared-local or remote kinds. Users cancel runs or retry cleanup through app controls. MCP `cancel_execution` also cancels pending requests and active executions; read back the result and cleanup state.
+Every test execution gets its own environment; standalone test-environment preparation and reuse are unavailable. For manual inspection, Project Container explicitly starts a separate environment that cannot supply test runs. Independently managed services use shared-local or remote kinds. Tests clean up automatically and expose no public cancellation or forced environment stop. Read the result and cleanup state; report retained cleanup failures. Manual Container controls only manage manual resources.
 
 ## Move to your application
 
