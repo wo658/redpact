@@ -25,7 +25,7 @@ Do not repeatedly submit the same request just to obtain progress. Keep its retu
 
 ## The agent cannot connect
 
-Confirm the intended app or server is running and compare its address with the agent's MCP URL. The desktop plugin targets port 54321; a development server may use another port and data directory. Connecting to another instance can make valid runs appear missing in the viewer.
+Confirm the intended app or server is running and compare its address with the agent's MCP URL. HTTP agent Plugins target port 54321, and the App Page Plugin uses 54322; a development server may use another port and data directory. Connecting to another instance can make valid runs appear missing in the viewer.
 
 After updating a plugin connection, refresh the client or start a new agent task. Ask for `configure` with `action: "describe"` and the absolute project path. A skill installation alone does not start the server. Use the local HTTP MCP connection; a stdio bridge is not provided.
 

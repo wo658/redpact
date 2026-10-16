@@ -65,7 +65,7 @@ In Codex, use `$redpact` and `$redpact-init`. In Claude Code, use
 `/redpact:redpact` and `/redpact:redpact-init`; the same task modes apply.
 Use the plugin's configured MCP endpoint and the same instance for the viewer.
 The regular plugin defaults to port 54321 and does not install or start the runtime;
-start `redpact serve --port 54321` or launch the desktop app. The App Page package
+start `redpact serve --port 54321`. The App Page package
 bundles these same skills with its verification connection on port 54322 and manages
 runtime startup separately. Never switch instances just because a default is familiar.
 MCP Apps approval cards require a compatible host; the connected viewer provides the

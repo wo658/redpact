@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url"
 
 // Produce a platform-specific plugin; runtime downloads happen only at build time.
 if (process.platform !== "darwin" || process.arch !== "arm64") {
-  throw new Error("This experimental artifact currently targets macOS arm64 only")
+  throw new Error("This plugin artifact currently targets macOS arm64 only")
 }
 const target = fileURLToPath(
   new URL("dist/redpact-marketplace/plugins/redpact-app/", import.meta.url),
@@ -69,6 +69,12 @@ try {
     ],
     { stdio: "inherit" },
   )
+  // npm pack excludes nested node_modules; keep the self-contained pnpm CLI outside it.
+  await rm(join(target, "tooling/pnpm"), { recursive: true, force: true })
+  await cp(join(target, "tooling/node_modules/pnpm"), join(target, "tooling/pnpm"), {
+    recursive: true,
+  })
+  await rm(join(target, "tooling/node_modules"), { recursive: true, force: true })
   await writeFile(
     join(target, "runtime-artifact.json"),
     `${JSON.stringify({ platform: process.platform, arch: process.arch, node: version, nodeSha256: checksum, redpact: "installed on demand", pnpm: "11.2.2" }, null, 2)}\n`,

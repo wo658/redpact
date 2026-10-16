@@ -29,8 +29,8 @@ Open `http://127.0.0.1:54318` for the bundled viewer. No source checkout or sepa
 agent. Stop it with Ctrl+C. Use `redpact serve --help` for launch options.
 
 Connect your agent using Streamable HTTP at `http://127.0.0.1:54318/mcp`.
-Redpact defaults to loopback and requires no API token. The desktop app uses a separate
-instance, normally on port 54321; connect the viewer and agent to the same instance.
+Redpact defaults to loopback and requires no API token. HTTP agent Plugins use port 54321 and the App Page Plugin owns port 54322.
+Connect the viewer and agent to the same instance.
 
 Ask your agent to inspect your project with `configure describe`, author
 `.redpact/settings.json`, and call `configure validate`. Validation does not prepare

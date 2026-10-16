@@ -14,12 +14,13 @@ CLI and bundled browser viewer. It does not install the Tauri desktop applicatio
 ## Start in the app
 
 Redpact's primary experience is a full development workspace beside your GPT
-conversation. The current supported path is a local Codex Global App Page plugin
-for macOS Apple Silicon. This does not imply public ChatGPT app-directory
+conversation. In compatible GPT / Codex hosts, open Redpact from **Apps in sidebar**
+and continue directly to npm/pnpm installation. The App Page Plugin currently targets
+macOS Apple Silicon. This does not imply public ChatGPT app-directory
 availability or support in every host.
 
-1. Build and register the plugin using the [App Page setup](#local-redpact-app-page-experiment) below.
-2. Open **Redpact** in Codex.
+1. Install the public Plugin below.
+2. Open **Redpact** from **Apps in sidebar**.
 3. If the runtime is missing, click **Install Redpact**. Installation options let you choose npm or pnpm.
 4. Click **Start Redpact** and connect your project. An already running runtime opens the full app directly.
 
@@ -27,68 +28,18 @@ Opening or reconnecting the page does not install or start the runtime. Node, np
 and pnpm are bundled with the plugin. The global commands below install a separate
 browser/CLI runtime; they do not install the plugin or update its managed package.
 
-## Host the web viewer with Docker Compose
-
-From this source checkout, run:
-
-```sh
-docker compose up -d --build --wait
-```
-
-Open `http://127.0.0.1:54318`. The same container serves the built viewer, `/api`
-and `/mcp`; no Vite process or desktop app is needed. If that port is occupied,
-run `REDPACT_WEB_PORT=54328 docker compose up -d --build --wait` and open port
-54328 instead. Ports are published only on the host's loopback interface. The
-current local Host/Origin boundary does not support public-domain or LAN hosting;
-do not simply expose this unauthenticated development service publicly.
-
-Check the running service and installed version:
-
-```sh
-docker compose ps
-curl --fail http://127.0.0.1:54318/api/health
-curl --fail http://127.0.0.1:54318/api/updates
-docker compose exec redpact node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version"
-```
-
-`/api/updates` includes `currentVersion`. Change the curl port when using an
-override. Rebuild with the startup command after updating the checkout; container
-updates are managed through image replacement, not the viewer's package installer.
-`docker compose down` stops hosting while retaining the `redpact-data` volume;
-`docker compose down -v` also deletes that instance's settings and evidence.
-
-The default container starts with no connected projects and does not mount host
-repositories or the Docker socket. To browse a real project, explicitly bind-mount
-its checkout in a Compose override and connect its **container path** in the viewer.
-Keep any referenced worktrees and Git common directories accessible at their stored
-paths, and ensure the container's `node` user has the necessary permissions.
-This baseline hosts the viewer/API; it does not establish managed test execution,
-GitHub CLI authentication or managed worktree creation readiness. Managed tests need
-additional Docker access and consistent host/container bind paths. For a full local
-development runner, use the host-installed runtime described below.
-
 ## Choose an installation path
 
-| Path | What it installs | Requirements / limits |
+| Path | Includes | Requirements |
 | --- | --- | --- |
-| Codex in-app workspace | Full App Page, development/setup skills and runtime installer | Currently a local build for macOS Apple Silicon |
-| macOS desktop download | Native app, server, viewer and Node | macOS 13.5+, Apple Silicon or Intel; signed updates, without notarization |
-| Windows desktop download | Native app, server, viewer and Node | Windows x64 EXE; signed updates, without publisher code signing |
-| Linux desktop preview | Native app, server, viewer and Node | Ubuntu 22.04 x64 DEB; manual updates |
-| Homebrew custom tap | CLI formula or macOS desktop Cask | Select `--cask` for the desktop; desktop preview is not notarized |
-| Terminal installer | CLI and browser viewer under `~/.local` | macOS or Linux, Node 24+, npm, curl and SHA-256 utility |
-| GitHub release tarball with npm/pnpm | CLI and browser viewer | Node 24+ and npm or pnpm |
-| GitHub source checkout | Contributor build | Node 24+, pnpm; Rust for desktop |
-| Codex plugin | MCP connection and skills | Codex plus a running Redpact instance on port 54321 |
-| Claude Code plugin | MCP connection and skills | Claude Code plus the same running instance |
+| npm / pnpm | CLI and full web app | Node 24+, npm or pnpm |
+| GPT / Codex App Page Plugin | Sidebar app, runtime install/start and development skills | Currently macOS Apple Silicon, npm for Plugin installation and a compatible host |
+| Other agent plugins | Skills and HTTP MCP connection | A running npm/pnpm runtime |
 
-Managed execution additionally needs Docker with Compose. Git operations use native
-Git; managed worktree creation requires maintained Git 2.50+. Installation and MCP
-connectivity do not verify Docker readiness or client support for MCP Apps.
-The [npm installation matrix](development.md) covers Windows x64 with Node 24 and 26.
-ARM Windows/Linux, other Linux distributions and a Universal macOS installer remain
-unverified. The macOS app is not Apple notarized; the Windows app has no publisher
-code-signing certificate. Updater signatures are separate from OS code signing.
+Native Windows, Linux and macOS desktop apps, Homebrew and shell installers are no
+longer distributed. Existing releases are historical artifacts, not new installation
+paths. Source builds are for contributor verification. Managed tests require Docker
+Compose. See [development](development.md) for web/runtime OS verification coverage.
 
 ## Install a bundled runtime from source
 
@@ -106,129 +57,7 @@ redpact serve --project /absolute/path/to/your-project
 
 Replace the project path with your checkout. The command reads the package version from this checkout; `pnpm pack:runtime` also prints the generated tarball path. If pnpm reports that its global bin directory is missing, run `pnpm setup`, reopen your terminal, and retry the global installation from the Redpact checkout.
 
-Open `http://127.0.0.1:54318` for the bundled viewer and use `http://127.0.0.1:54318/mcp` for your agent. Keep the server running; Ctrl+C stops it. This installs the CLI and web viewer. For the native desktop app, follow the macOS build instructions below. Managed tests require Docker with Compose as described under Requirements.
-
-## macOS desktop download
-
-Download the matching package from the [current desktop release](https://github.com/wo658/redpact/releases/latest). Use the version shown on that release in these filenames:
-
-- Apple Silicon (M-series): `Redpact_<version>_aarch64.dmg`.
-- Intel: `Redpact_<version>_x64.zip`.
-
-Open the Apple Silicon DMG (or extract the Intel ZIP), drag **Redpact** to **Applications**, eject the disk image if used, then open
-Redpact. Node, the server and viewer are bundled; no terminal server command is needed.
-The first-launch MCP address is `http://127.0.0.1:54321/mcp`. Quit any other Redpact
-instance using that port before opening the desktop app.
-
-These builds are ad-hoc signed, **not Apple notarized**. Compare
-`shasum -a 256 <downloaded-file>` with the SHA-256 digest for that asset on GitHub.
-The current product release workflow does not attach a separate `SHA256SUMS` file;
-older preview releases provide one.
-If macOS blocks it, follow [Apple's app-specific Open Anyway instructions](https://support.apple.com/en-us/102445)
-in System Settings → Privacy & Security after checking the source. Do not disable
-Gatekeeper globally. A matching checksum confirms the release file, not Apple review.
-
-Current product releases check for signed updates at startup and every six hours; installation
-and restart require confirmation. Install this release manually once when upgrading
-from a preview or development build without a feed. Finish active work, quit Redpact
-and replace the app in Applications. To uninstall,
-quit and remove `Redpact.app`; settings and results remain in
-`~/Library/Application Support/dev.redpact.desktop/state`.
-See [desktop lifecycle and release boundaries](desktop.md).
-
-### Homebrew desktop Cask
-
-```sh
-brew tap wo658/redpact https://github.com/wo658/redpact.git
-brew install --cask wo658/redpact/redpact
-open /Applications/Redpact.app
-```
-
-The Cask currently installs the older 0.1.0 preview without an update feed. Use the
-direct download above for the current product release and signed updates. The Cask selects the matching
-Apple Silicon DMG or Intel ZIP and verifies its checksum.
-It has the same notarization and first-launch limitations as the direct download.
-Use `brew update` then `brew upgrade --cask wo658/redpact/redpact` after quitting
-Redpact to install a newer Cask version. Remove with
-`brew uninstall --cask wo658/redpact/redpact`; instance data is retained.
-If you previously installed the DMG manually, quit and move that app out of
-Applications before installing the Cask. Keep the old copy until launch succeeds.
-
-## Windows and Linux desktop downloads
-
-Windows uses the [current desktop release](https://github.com/wo658/redpact/releases/latest).
-Linux uses the [platform preview](https://github.com/wo658/redpact/releases/tag/desktop-platform-preview-v0.1.0).
-Node, the server and viewer are bundled. Quit other Redpact instances using port
-54321 before opening the app; its initial MCP endpoint is `http://127.0.0.1:54321/mcp`.
-
-### Windows x64
-
-Download `Redpact_<version>_x64-setup.exe` for the current release, run it and open
-Redpact from the Start menu.
-The installer provisions WebView2 when needed, so first installation may need
-network access. The installer has no publisher code signature; Windows SmartScreen
-may show a publisher warning. Verify the release source and compare
-`Get-FileHash <file> -Algorithm SHA256` with the asset's SHA-256 digest on GitHub.
-Native build, silent installation, app/server/viewer/MCP launch
-and uninstall are tested on the GitHub Windows Server 2022 runner. Windows 10/11
-interactive installation and SmartScreen approval are not covered by that check.
-
-Current Windows product releases support the same signed update checks and explicit
-install/restart confirmation as macOS. For manual replacement, quit Redpact before
-running a newer installer. Remove it through Windows Settings
-→ Apps. Instance settings/results are separate from the installation and remain
-under `%APPDATA%\dev.redpact.desktop\state`.
-
-### Ubuntu x64
-
-Download `Redpact_0.1.0_amd64.deb`, compare `sha256sum <file>` with `SHA256SUMS`, then:
-
-```sh
-sudo apt install ./Redpact_0.1.0_amd64.deb
-redpact-desktop
-```
-
-The package manager installs the required system libraries, including WebKitGTK.
-Native build, DEB installation, desktop/server/viewer/MCP launch under a virtual
-X display and package removal are tested on Ubuntu 22.04 x64. This does not establish
-compatibility with every Linux distribution, Wayland session or desktop environment.
-AppImage, RPM and ARM packages are not provided.
-
-For an update, quit Redpact and install the newer DEB with `apt install ./<file>`.
-Remove with `sudo apt remove redpact`; instance data stays in
-`${XDG_DATA_HOME:-$HOME/.local/share}/dev.redpact.desktop/state`.
-The Linux preview uses manual updates and retains the [desktop lifecycle](desktop.md).
-Installation checks do not prove managed Docker execution or every WebView interaction.
-
-## Homebrew
-
-```sh
-brew tap wo658/redpact https://github.com/wo658/redpact.git
-brew install wo658/redpact/redpact
-redpact serve --port 54321
-```
-
-Update with `brew update && brew upgrade wo658/redpact/redpact`. Remove the package
-with `brew uninstall wo658/redpact/redpact`; runtime state is separate and retained.
-This is the project's custom tap, not Homebrew core. Use the explicit repository URL
-when adding it because the source repository is named `redpact`, not `homebrew-redpact`.
-
-## Terminal installer
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/wo658/redpact/main/install.sh | sh
-export PATH="$HOME/.local/bin:$PATH"
-redpact serve --port 54321
-```
-
-The script downloads the pinned runtime release and checks `SHA256SUMS` before npm
-installation. It requires Node 24+ and npm already installed and does not use sudo.
-Save the PATH setting in your shell profile for future terminals. To inspect before
-running, download `install.sh`, read it, then run `sh install.sh`. An absolute custom
-prefix is supported with `sh install.sh --prefix /absolute/path`.
-Rerun the installer to install the release it currently selects. It refuses to replace
-an unrelated executable. Remove `<prefix>/bin/redpact` and `<prefix>/share/redpact`
-to uninstall this route; do not remove your runtime data directory unless intended.
+Open `http://127.0.0.1:54318` for the bundled viewer and use `http://127.0.0.1:54318/mcp` for your agent. Keep the server running; Ctrl+C stops it. This installs the CLI and web viewer. Managed tests require Docker with Compose as described under Requirements.
 
 ## Install or update with npm or pnpm
 
@@ -265,18 +94,21 @@ changes, follow the source-package build instructions above.
 
 ## Install an agent plugin
 
-First start `redpact serve --port 54321` and keep that terminal running. Open
-`http://127.0.0.1:54321` for the viewer. If the desktop already owns that port,
-connect to it instead of starting a second instance.
-
-Codex:
+The GPT / Codex public catalog installs the npm package `@wo658/redpact-plugin`.
+The host uses npm to install this Plugin, so npm must already be available.
 
 ```sh
 codex plugin marketplace add wo658/redpact
 codex plugin add redpact@redpact
 ```
 
-Start a new task, then use `$redpact-init` for project setup or `$redpact` for work.
+Restart the host and open **Apps in sidebar → Redpact**. Choose npm or pnpm in
+**Install Redpact**, then click **Start Redpact**. The Plugin includes Node, npm and
+pnpm for installation inside the app. This repository catalog does not establish
+review or listing in the public ChatGPT Plugin directory.
+
+For other agents, first start `redpact serve --port 54321` and keep it running.
+Open `http://127.0.0.1:54321` for the viewer.
 
 Claude Code:
 
@@ -286,9 +118,8 @@ claude plugin install redpact@redpact
 ```
 
 Start a new session, then use `/redpact:redpact-init` or `/redpact:redpact`.
-Both catalogs install the same self-contained skill and MCP files from the public
-GitHub repository. Plugin installation does not install or launch Redpact, install
-Docker, or grant test approval. These are project-hosted catalogs, not claims of
+The Claude Code catalog installs the HTTP plugin from this repository. That plugin
+does not install or launch Redpact. No Plugin installs Docker or grants test approval. These are project-hosted catalogs, not claims of
 listing in an OpenAI or Anthropic curated directory.
 
 ### Other agent marketplaces
@@ -325,7 +156,7 @@ Other MCP-capable clients can connect directly as described below. Redpact's in-
 plugin update controls currently support Codex and Claude Code only; other clients
 manage their own plugins.
 
-The plugin uses `http://127.0.0.1:54321/mcp`. To use a different instance, configure
+The HTTP plugins use `http://127.0.0.1:54321/mcp`; the App Page Plugin owns port 54322. To use a different instance, configure
 a direct HTTP MCP connection to its actual port instead of assuming the plugin
 follows it. Other clients may use that connection, but are not claimed as tested
 plugin integrations. Ask the agent to call `configure describe` to verify tools.
@@ -335,7 +166,7 @@ See [the interface contract](interfaces.md).
 
 <a id="local-redpact-app-page-experiment"></a>
 
-## Local Redpact App Page setup
+## App Page Plugin packaging and behavior
 
 [Redpact App](../examples/sidebar-app/README.md) is an independent local STDIO MCP
 App Page. Its macOS arm64 bootstrap bundles official Node 26.0.0, npm and pnpm 11.2.2,
@@ -354,7 +185,7 @@ cd examples/sidebar-app
 pnpm install --frozen-lockfile
 pnpm bundle:redpact
 codex plugin marketplace add "$PWD/dist/redpact-marketplace"
-codex plugin add redpact-app@redpact-app-local
+codex plugin add redpact@redpact
 ```
 
 `bundle:redpact` checks the official Node archive against its release SHA-256 list,
@@ -489,6 +320,12 @@ The installation and stopped screens share a centered logo, short state heading 
 
 ## Agent plugin updates
 
+Manage the public npm-sourced App Page Plugin through the host's Plugin controls,
+or run `codex plugin marketplace upgrade redpact` followed by
+`codex plugin add redpact@redpact`. The runtime update controls below support
+path-based HTTP Plugins and do not compare npm-source versions.
+
+
 Settings → Agent plugins checks installed Redpact plugins in Codex and Claude Code.
 Set **Codex CLI path** or **Claude Code CLI path** in instance settings when automatic
 executable detection fails; use an absolute executable path without arguments and
@@ -584,12 +421,12 @@ Next, open the Vite viewer and connect your application directory. Finally, call
 
 ## Keep instance addresses together
 
-| Component | Source-based example | Desktop default |
+| Component | Source-based example | App Page Plugin |
 |---|---|---|
-| Redpact API | `http://127.0.0.1:54318` | `http://127.0.0.1:54321` |
-| Agent MCP endpoint | `http://127.0.0.1:54318/mcp` | `http://127.0.0.1:54321/mcp` |
-| Viewer | Vite URL, proxying to the API above | Bundled desktop window |
-| Execution history | The explicit `--data-dir` directory | The desktop instance's own data directory |
+| Redpact API | `http://127.0.0.1:54318` | `http://127.0.0.1:54322` |
+| Agent MCP endpoint | `http://127.0.0.1:54318/mcp` | `http://127.0.0.1:54322/mcp` |
+| Viewer | Vite URL, proxying to the API above | Full web app in the sidebar |
+| Execution history | The explicit `--data-dir` directory | The Plugin instance’s own data directory |
 
 The public documentation preview on port `4310` is a separate reading site. It does not serve the project viewer or MCP endpoint. A working documentation page therefore does not confirm that the execution server is running.
 
@@ -616,29 +453,12 @@ Ask the agent to call `configure`, replacing the path:
 
 Receiving the settings schema and authoring guidance confirms connectivity. It does not confirm Docker readiness or execute tests.
 
-Connect the agent and viewer to the same instance. Results from one server do not appear in another server's history. The bundled local plugin targets the desktop default port `54321`; it does not automatically follow a development server on `54318`.
-
-## Optional macOS desktop build
-
-The desktop bundles the viewer, server, and Node runtime. Building it requires Rust stable and the platform's Tauri prerequisites in addition to Node and pnpm. macOS needs Xcode Command Line Tools; the bundled Node runtime requires macOS 13.5 or later. Windows and Linux build and installation verification is described above.
-
-From the Redpact checkout, run `pnpm desktop:dev` for development. For a personal macOS installation:
-
-```sh
-pnpm desktop:update
-```
-
-This builds the current checkout, installs `/Applications/Redpact.app`, launches it, and checks health. It can replace an existing installation, so finish active work first. This is an ad-hoc signed development build, not a notarized public release. It does not update the agent plugin configuration.
-
-The desktop owns a separate instance. Its first-launch MCP endpoint is `http://127.0.0.1:54321/mcp`; use the saved instance port if changed. Closing the window keeps the server available; quitting Redpact shuts it down. Development-server history does not automatically appear in the desktop.
-
-Continue with [your first project](first-project.md), or see [troubleshooting](troubleshooting.md).
+Connect the agent and viewer to the same instance. Results from one server do not appear in another server's history. HTTP Plugins target port `54321`, and the App Page Plugin uses `54322`; it does not automatically follow a development server on `54318`.
 
 ## Runtime updates
 
-Windows/macOS desktop apps and npm-installed browser viewers show **Update** in the
-sidebar only when a newer version is available. Manual **Check for updates** lives in
-Settings → Updates. Desktop installation uses the [signed native updater](desktop.md).
+npm-installed browser viewers show **Update** in the sidebar when a newer version
+is available. Manual **Check for updates** lives in Settings → Updates.
 
 The npm runtime queries the public `@wo658/redpact` registry dist-tags at startup and every
 six hours; browser polling reads the server cache. Stable installations follow
@@ -673,5 +493,5 @@ or startup leaves it unavailable, reopen/reinstall using the original manager.
 Automatic binary or data rollback is not provided. The parent owns only its child:
 close other instances using the same package before updating it. Stored settings and
 evidence remain outside the package and follow the current storage-format policy.
-Publishing npm versions and native releases remains a separate release operation;
+Publishing npm versions and Plugin packages remains a separate release operation;
 this feature neither publishes packages nor configures npm credentials.

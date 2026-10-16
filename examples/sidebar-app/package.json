@@ -10,7 +10,9 @@
     "start": "node dist/redpact-marketplace/plugins/redpact-app/dist/server.mjs",
     "preview": "node preview.mjs",
     "test:browser": "node test/redpact-browser.mjs",
-    "bundle:redpact": "node bundle-runtime.mjs && node build-redpact.mjs"
+    "bundle:redpact": "node bundle-runtime.mjs && node build-redpact.mjs",
+    "pack:plugin": "pnpm bundle:redpact && node pack-plugin.mjs",
+    "test:package": "node verify-plugin-package.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "1.7.5",

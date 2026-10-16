@@ -15,7 +15,7 @@ const installer = createInstaller({
   root: process.env.REDPACT_APP_INSTALL_DIR ?? join(homedir(), ".redpact", "app-page", "packages"),
   version: config.runtimeVersion,
   npm: fileURLToPath(new URL("../tooling/npm/bin/npm-cli.js", import.meta.url)),
-  pnpm: fileURLToPath(new URL("../tooling/node_modules/pnpm/bin/pnpm.cjs", import.meta.url)),
+  pnpm: fileURLToPath(new URL("../tooling/pnpm/bin/pnpm.cjs", import.meta.url)),
 })
 const runtime = localRuntime({
   installer,

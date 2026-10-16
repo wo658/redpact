@@ -6,6 +6,16 @@ Read `docs/architecture.md`, `docs/configuration.md`, and `docs/development.md`.
 The website content in `docs/` is the sole maintained product and implementation
 reference. Read the relevant feature page before changing its behavior.
 
+## Supported product scope
+
+Support only the standalone web app and the full web app embedded inside OpenAI
+through MCP. Keep one shared web UI and server runtime, with HTTP/SSE and MCP
+transport adapters. Inline MCP Apps approval/result cards remain separate surfaces.
+Native Windows, Linux and macOS desktop applications are excluded from future
+release support. Do not add native desktop release work or require desktop version
+synchronization for web/runtime releases. Cross-platform web/runtime verification
+remains required for supported hosts. See [product scope](docs/architecture.md).
+
 ## Documentation is part of completion
 
 - Update the owning `docs/*.md` page in the same change whenever behavior, defaults,
@@ -87,12 +97,9 @@ Treat a release as a verified product snapshot, not a version bump on every comm
 
 - Before preparing a release, inspect existing tags and published versions, choose
   the next version under that policy, and summarize changes since the prior release.
-- Keep the server and desktop product versions aligned in one release change:
-  `app/server/package.json`, `app/desktop/package.json`,
-  `app/desktop/src-tauri/tauri.conf.json`, `app/desktop/src-tauri/Cargo.toml`,
-  and the desktop package entry in `Cargo.lock`. The private workspace root's
-  placeholder version is not the product version. Version synchronization is
-  currently manual; do not assume a bump command updates every file.
+- Use `app/server/package.json` for the web/runtime product version. The private
+  workspace root version is not the product version. Native desktop manifests are
+  outside the supported release scope.
 - Complete required executable, affected acceptance, documentation and installed
   package checks before release. Record the exact commit, version, validation and
   remaining limitations. Explain incompatible settings/API/storage changes and any

@@ -1,4 +1,4 @@
-# Local Redpact App Page
+# Redpact App Page Plugin
 
 This package bundles the actual connected viewer and its App-only MCP bridge.
 The companion retains runtime installation, start/stop and recovery. The full app
@@ -10,6 +10,8 @@ supported host setup, trust boundaries and verification limitations.
 
 - `pnpm build` bundles `app/web/src/entries/sidebar.tsx` and `src/redpact/main.ts`.
 - `pnpm bundle:redpact` also supplies the contained Node/npm/pnpm tools.
+- `pnpm pack:plugin` creates the public `@wo658/redpact-plugin` npm tarball and provenance.
+- `pnpm test:package` verifies the extracted tarball, bundled tools and MCP resources.
 - `pnpm test` and `pnpm typecheck` check the companion.
 - `pnpm preview` runs the local MCP browser harness on port 4320.
 - `pnpm test:browser` verifies the source-built runtime and viewer through that harness.

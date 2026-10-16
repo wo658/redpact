@@ -47,29 +47,17 @@ test("다른 버전이나 prerelease 태그는 stable feed에 배포하지 않�
   }
 })
 
-test("제품 태그 하나가 macOS, Windows와 npm 공개를 함께 실행한다", async () => {
-  const workflow = await readFile(
-    new URL("../../../.github/workflows/desktop-release.yml", import.meta.url),
-    "utf8",
-  )
-  expect(workflow).toContain("tags: ['v*']")
-  expect(workflow).toContain("target: x86_64-pc-windows-msvc")
-  expect(workflow).toContain("id-token: write")
-  expect(workflow).toContain("node app/server/tools/publish-runtime.mjs")
-  const jobs = parse(workflow).jobs
-  for (const name of ["publish-desktop", "publish-npm"]) {
-    expect(jobs[name].needs).toEqual(expect.arrayContaining(["build", "verify-npm"]))
-  }
+test("네이티브 데스크톱 배포 workflow를 제공하지 않는다", async () => {
+  const { readdir } = await import("node:fs/promises")
+  const workflows = await readdir(new URL("../../../.github/workflows/", import.meta.url))
+  expect(workflows.filter((name) => name.startsWith("desktop-"))).toEqual([])
 })
 
 test("npm 게시 작업은 검증된 아티팩트를 받아 재빌드 없이 게시한다", async () => {
   const workflow = parse(
-    await readFile(
-      new URL("../../../.github/workflows/desktop-release.yml", import.meta.url),
-      "utf8",
-    ),
+    await readFile(new URL("../../../.github/workflows/npm-publish.yml", import.meta.url), "utf8"),
   )
-  const steps = workflow.jobs["publish-npm"].steps
+  const steps = workflow.jobs.publish.steps
   expect(
     steps.some((step: { uses?: string }) => step.uses === "actions/download-artifact@v4"),
   ).toBe(true)

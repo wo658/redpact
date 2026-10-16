@@ -7,8 +7,10 @@
     {
       "name": "redpact",
       "source": {
-        "source": "local",
-        "path": "./plugins/redpact"
+        "source": "npm",
+        "package": "@wo658/redpact-plugin",
+        "version": "0.6.0",
+        "registry": "https://registry.npmjs.org"
       },
       "policy": {
         "installation": "AVAILABLE",

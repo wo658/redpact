@@ -185,16 +185,11 @@ Redpact는 베타 기간에 `0.x.y` 제품 버전을 사용하고 사용자에�
 올리지 않습니다. 이 주기는 운영 정책이며 자동 일정은 아닙니다. 릴리스 노트는 변경,
 검증 결과, 알려진 제한과 필요한 사용자 조치를 영어·한국어로 설명합니다.
 
-서버와 데스크톱은 하나의 제품 릴리스 버전을 공유합니다. 각 패키지 manifest,
-Tauri 설정, Cargo manifest와 Cargo lock의 데스크톱 패키지 항목을 같은 릴리스 변경에서
-일치시키세요. 현재 버전 동기화는 수동이며 비공개 workspace 루트 버전은 제품 릴리스
-번호가 아닙니다.
-
-검증한 정확한 릴리스 커밋에 태그를 만드세요. 일반 PR/push CI는 그대로 유지하며,
-무거운 배포 검사는 stable `v<version>` 태그 또는 수동 릴리스 실행에서 수행합니다.
-제품 workflow는 **네이티브 데스크톱 설치 검사와 전체 npm 설치 matrix가 모두 성공할 때까지**
-GitHub Release를 Draft로 유지합니다. 두 공개 job 모두 이 검사를 우회할 수 없습니다.
-별도의 수동 npm workflow도 같은 npm 검증을 재사용합니다.
+지원 배포는 npm/pnpm 웹 런타임과 Plugin입니다. 제품 버전은
+`app/server/package.json`에서 관리하며 네이티브 데스크톱 manifest와 동기화하지 않습니다.
+데스크톱 릴리스 workflow는 제거했습니다. 검증한 커밋에 `v<version>` 태그를 만들고
+수동 [npm workflow](../.github/workflows/npm-publish.yml)를 실행하세요.
+태그 push 자체는 npm 게시를 시작하지 않습니다.
 
 [npm 검증 workflow](../.github/workflows/runtime-verification.yml)는 tarball을 한 번 만들고
 소스 커밋·버전·SHA-256을 기록해 Actions artifact로 보관합니다. Linux x64,
@@ -204,7 +199,7 @@ macOS ARM64/Intel, Windows x64에서 Node 24·26으로 같은 파일을 설치�
 검사합니다. Windows에서는 `.cmd` shim 대신 설치된 CLI JavaScript 진입점을 Node로
 실행합니다. 모든 Node 24+ 버전, Docker 실행, 레지스트리 다운로드 가용성을 보장하지 않습니다.
 
-모든 릴리스 검사가 통과한 뒤에만 Draft 데스크톱 Release를 공개하고 검증한 npm tarball을
+모든 런타임 릴리스 검사가 통과한 뒤에만 검증한 npm tarball을
 trusted publishing으로 게시합니다. npm job은 아티팩트 식별 정보를 다시 검사하며 재빌드하지
 않습니다. 검증 도중 candidate npm 버전을 게시하지 않습니다. 레지스트리 가용성은 게시 후
 확인해야 하며 GitHub와 npm 게시는 원자적 트랜잭션이 아닌 별도 작업입니다. 검사 실패 시
@@ -213,9 +208,7 @@ trusted publishing으로 게시합니다. npm job은 아티팩트 식별 정보�
 npm prerelease dist-tag를 자동 선택하지 않으므로 prerelease는 별도로 검토한 채널이 필요합니다.
 로컬 `publish:runtime`은 로컬 환경만 검사합니다. 전체 matrix 검증에는 Actions workflow를 사용하세요.
 
-제품 스냅샷과 stable 배포 태그는 `v<version>`입니다. Preview와 기존 아티팩트 검증
-workflow는 문서화된 곳에서 `desktop-preview-v<version>`,
-`desktop-platform-preview-v<version>`, `runtime-v<version>`을 유지합니다.
+제품 스냅샷 태그는 `v<version>`입니다. 기존 데스크톱 태그와 공개 자산은 변경하지 않습니다.
 
 ## 런타임 패키징과 업데이트
 
@@ -227,14 +220,12 @@ workflow는 문서화된 곳에서 `desktop-preview-v<version>`,
 | `pnpm local:update` | 기존 macOS 개발 LaunchAgent 설치 업데이트 |
 | `pnpm local:update:plugin` | 설치된 개인 Redpact Codex 플러그인 업데이트 |
 | `pnpm local:update:all` | 개발 서비스 후 플러그인. 별개의 순차 작업 |
-| `pnpm desktop:update` | 로컬 Tauri 앱 재빌드·교체 |
 | `pnpm publish:runtime --dry-run` | 빌드·설치 검증과 게시 없는 릴리스 검사 |
 | `pnpm publish:runtime` | npm 권한으로 검증한 패키지 게시 |
 
-빌드만으로 설치 런타임이 바뀌지 않습니다. 개발 서비스와 데스크톱 인스턴스는 별개입니다.
-플러그인은 54321 포트의 데스크톱 MCP에 연결하며 개발 서비스 업데이트가 그 연결을
-바꾸면 안 됩니다. 기본 서버 포트는 54318입니다. 플러그인·스키마 변경 후 새 클라이언트
-task·연결을 시작하세요.
+빌드만으로 설치 런타임이 바뀌지 않습니다. CLI 기본 포트는 54318, HTTP 에이전트
+Plugin 예시는 54321, App Page Plugin은 54322를 사용합니다. 각 인스턴스의 데이터와
+업데이트 소유권은 독립적입니다. Plugin·스키마 변경 후 호스트를 다시 연결하세요.
 
 패키지는 웹 에셋, MCP 리소스, 고지, 실행기 파일과 lockfile 증거를 포함합니다.
 설치 검증에서 번들 Testcontainers patch, AJV 보안 override를 포함한 고정 Umzug
@@ -255,27 +246,25 @@ Docker 리소스를 prune하지 않습니다. 이전 릴리스는 명시적으�
 
 구현: [런타임 패키징](../app/server/tools/pack-runtime.mjs),
 [로컬 updater](../app/server/tools/local-update.ts),
-[데스크톱 updater](../app/desktop/tools/local-update.ts),
 [릴리스 workflow](../.github/workflows/npm-publish.yml).
 
 ## 공개 설치 배포
 
-공개 저장소는 `install.sh`, `Formula/redpact.rb`, Codex 카탈로그
-`.agents/plugins/marketplace.json`, Claude Code 카탈로그
-`.claude-plugin/marketplace.json`을 소유합니다. Cursor 카탈로그
-`.cursor-plugin/marketplace.json`도 같은 `plugins/redpact`를 재사용하며 Copilot은
-Claude 형식의 카탈로그를 읽을 수 있습니다. 플러그인 변경 배포 시 세 매니페스트의
-버전을 함께 올립니다. 플러그인 버전은 서버·데스크톱 버전과 독립적이며 GitHub Release
-게시만으로 마켓플레이스 브랜치의 내용이 갱신되지는 않습니다. 사용자 명령과 미지원 경로는
-[설치 안내](installation.md)를 참고하세요.
+공개 배포 경로는 npm/pnpm 웹 런타임과 Plugin뿐입니다. Homebrew·셸 설치기 및
+네이티브 데스크톱 배포 workflow는 제거했습니다. 소스 빌드와 Docker Compose는
+기여자 개발 도구이며 추가 제품 배포 채널이 아닙니다.
 
-런타임 릴리스 전에는 `pnpm test:package`와 필수 실행 코드 검사를 수행합니다.
-검증한 바로 그 `dist/redpact-<version>.tgz`와 `SHA256SUMS`를 해당
-`runtime-v<version>` GitHub 릴리스에 올립니다. 설치기 버전, Formula URL·체크섬,
-설치 예제, 검증 workflow를 함께 갱신합니다. 기존 버전의 파일을 교체하지 않습니다.
-데스크톱 업데이터가 `releases/latest`를 사용하므로 런타임 릴리스는 latest로
-지정하지 않습니다.
-게시 후 `Public installation verification` workflow로 실제 공개 URL에서
-Linux x64, macOS arm64, macOS x64 설치를 수행하고 CLI·번들 뷰어·MCP를 확인합니다.
-Homebrew와 두 플러그인 클라이언트는 별도로 검증합니다. 이 검사는 Docker 실행이나
-각 클라이언트의 MCP Apps 카드 지원을 증명하지 않습니다.
+Codex 카탈로그 `.agents/plugins/marketplace.json`은 npm의 `@wo658/redpact-plugin`을
+고정 버전으로 설치합니다. Claude·Cursor 카탈로그는 기존 HTTP Plugin을 사용합니다.
+App Page Plugin 버전은 런타임 및 HTTP Plugin 버전과 독립적입니다.
+
+`examples/sidebar-app`에서 `pnpm pack:plugin`은 macOS arm64용 Node·npm·pnpm,
+전체 웹 뷰어, MCP companion과 스킬을 묶습니다. `pnpm test`, `pnpm typecheck`,
+`pnpm test:package`를 실행하고 npm·pnpm 실제 설치 브라우저 검사도 각각 실행하세요.
+`dist/plugin-artifact.json`은 소스 커밋·버전·tarball SHA-256을 기록합니다.
+검증한 tarball을 `npm publish <tarball> --access public`으로 게시한 뒤 레지스트리에서
+검증하고 카탈로그의 고정 버전을 갱신합니다. 게시된 버전은 교체하지 않습니다.
+Plugin 설치는 lifecycle script를 실행하지 않으며 런타임 설치·시작은 앱 안에서 명시적으로
+요청합니다. 호스트의 실제 사이드바 노출 검증은 브라우저 harness 검사와 별개입니다.
+
+사용자 명령, 호스트와 플랫폼 제약은 [설치 안내](installation.md)를 참고하세요.

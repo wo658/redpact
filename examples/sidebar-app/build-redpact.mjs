@@ -125,8 +125,8 @@ await writeFile(
   JSON.stringify(
     {
       $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-      name: "redpact-app",
-      version: "0.5.4",
+      name: "redpact",
+      version: "0.6.0",
       description:
         "Manage projects, environments and settings in the app, with separate chat approval and evidence cards.",
       author: { name: "Redpact contributors" },
@@ -175,11 +175,11 @@ await writeFile(
   new URL("marketplace.json", catalog),
   JSON.stringify(
     {
-      name: "redpact-app-local",
-      interface: { displayName: "Redpact App Local" },
+      name: "redpact",
+      interface: { displayName: "Redpact" },
       plugins: [
         {
-          name: "redpact-app",
+          name: "redpact",
           source: { source: "local", path: "./plugins/redpact-app" },
           policy: { installation: "AVAILABLE", authentication: "ON_INSTALL" },
           category: "Developer Tools",
@@ -191,3 +191,37 @@ await writeFile(
   ),
 )
 console.log(`Redpact App marketplace: ${fileURLToPath(new URL("dist/redpact-marketplace", root))}`)
+
+await cp(new URL("../../LICENSE", root), new URL("LICENSE", target))
+await writeFile(
+  new URL("package.json", target),
+  `${JSON.stringify(
+    {
+      name: "@wo658/redpact-plugin",
+      version: "0.6.0",
+      description: "Redpact sidebar app with explicit npm/pnpm runtime installation",
+      license: "Apache-2.0",
+      repository: {
+        type: "git",
+        url: "git+https://github.com/wo658/redpact.git",
+        directory: "examples/sidebar-app",
+      },
+      os: ["darwin"],
+      cpu: ["arm64"],
+      files: [
+        "plugin.json",
+        "mcp.json",
+        "assets",
+        "bin",
+        "dist",
+        "skills",
+        "tooling",
+        "runtime-artifact.json",
+        "LICENSE",
+      ],
+      publishConfig: { access: "public" },
+    },
+    null,
+    2,
+  )}\n`,
+)

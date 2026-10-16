@@ -201,16 +201,11 @@ for every commit or merely because a week elapsed. This cadence is policy, not a
 automated schedule. Release notes describe changes, verification, known limitations
 and required user actions in English and Korean.
 
-The server and desktop share one product release version. Keep their package
-manifests, Tauri configuration, Cargo manifest and the desktop package's Cargo lock
-entry aligned in the same release change. Synchronization is currently manual;
-the private workspace root version is not the product release number.
-
-Tag the exact verified release commit. Ordinary PR/push CI remains unchanged; the
-heavy distribution checks run on stable `v<version>` tags (or manual release dispatch).
-The product workflow keeps the GitHub Release in draft until **both** native desktop
-installation checks and the full npm installation matrix succeed. Neither publication
-job may bypass these gates. The standalone manual npm workflow reuses the npm gate.
+Supported distribution consists of the npm/pnpm web runtime and Plugins. The product
+version belongs to `app/server/package.json`; native desktop manifests do not require
+synchronization. Desktop release workflows have been removed. Tag the verified commit
+with `v<version>` and manually dispatch the [npm workflow](../.github/workflows/npm-publish.yml).
+Pushing a tag does not publish npm packages.
 
 The [npm verification workflow](../.github/workflows/runtime-verification.yml) builds
 one tarball, records its source commit, version and SHA-256, and retains it as an
@@ -221,8 +216,8 @@ and owned-process shutdown. Windows invokes the installed CLI JavaScript entry w
 Node rather than the `.cmd` shim. These checks do not prove every Node 24+ version,
 Docker execution, or registry download availability.
 
-Only after all release checks pass do the publication jobs expose the draft desktop
-release and publish the verified npm tarball through trusted publishing. The npm job
+Only after all runtime release checks pass does the npm job publish the verified
+tarball through trusted publishing. The npm job
 checks the artifact identity again and does not rebuild it. No candidate npm version
 is published during verification. Registry availability must be checked after posting;
 GitHub and npm publication are separate operations, not an atomic transaction. A failed
@@ -232,9 +227,7 @@ The publish script does not automatically select an npm prerelease dist-tag for
 `-beta.N`; prereleases require a separately reviewed channel. Local `publish:runtime`
 checks only the local environment; use the Actions workflow for the full matrix.
 
-The product snapshot and stable distribution tag is `v<version>`. Preview and legacy
-artifact verification workflows retain `desktop-preview-v<version>`,
-`desktop-platform-preview-v<version>` and `runtime-v<version>` where documented.
+The product snapshot tag is `v<version>`. Preserve historical desktop tags and published assets.
 
 ## Runtime packaging and updates
 
@@ -246,14 +239,12 @@ artifact verification workflows retain `desktop-preview-v<version>`,
 | `pnpm local:update` | Update the existing macOS development LaunchAgent installation |
 | `pnpm local:update:plugin` | Update the installed personal Redpact Codex plugin |
 | `pnpm local:update:all` | Development service, then plugin; separate sequential operations |
-| `pnpm desktop:update` | Rebuild and replace the locally installed Tauri desktop app |
 | `pnpm publish:runtime --dry-run` | Build/install-test and inspect a release without publication |
 | `pnpm publish:runtime` | Publish the verified package with npm authorization |
 
-Builds alone do not update the installed runtime. The development service and desktop
-instance are separate. The plugin targets the desktop MCP endpoint on port 54321;
-a development-service update must not rewrite that connection. The default server
-port is 54318. Start a fresh client task/connection after plugin/schema changes.
+Builds alone do not update installed runtimes. The CLI defaults to port 54318,
+HTTP agent plugin examples use 54321, and the App Page Plugin uses 54322. Instance
+data and update ownership remain separate. Reconnect the host after Plugin/schema changes.
 
 The runtime package includes web assets, MCP resources, notices, runner files and
 lockfile evidence. Preserve the bundled Testcontainers patch, locked Umzug graph (including the AJV
@@ -275,27 +266,26 @@ a clean commit; it does not replace test verification or update the desktop app.
 
 Implementation: [runtime packaging](../app/server/tools/pack-runtime.mjs),
 [local updater](../app/server/tools/local-update.ts),
-[desktop updater](../app/desktop/tools/local-update.ts),
 [release workflow](../.github/workflows/npm-publish.yml).
 
 ## Public installation distribution
 
-The public repository owns `install.sh`, `Formula/redpact.rb`, the Codex catalog at
-`.agents/plugins/marketplace.json` and the Claude Code catalog at
-`.claude-plugin/marketplace.json`. The Cursor catalog at `.cursor-plugin/marketplace.json` also reuses
-`plugins/redpact`; Copilot can read the Claude-format catalog. Keep the three
-plugin manifest versions aligned when publishing plugin changes. Plugin versions
-are independent of the server/desktop version, and publishing a GitHub Release
-does not replace the marketplace branch snapshot.
-See [installation](installation.md) for user commands and unsupported paths.
+Public distribution supports only the npm/pnpm web runtime and Plugins. Homebrew,
+shell installers and native desktop distribution workflows have been removed.
+Source builds and Docker Compose are contributor tools, not additional product channels.
 
-For a runtime release, run `pnpm test:package` and the required executable checks.
-Upload that exact `dist/redpact-<version>.tgz` and its `SHA256SUMS` to the matching
-`runtime-v<version>` GitHub release. Update the installer version, Formula URL and
-checksum, installation examples and verification workflow together. Never replace
-an existing version's artifact. Mark runtime releases as not latest, because the
-desktop updater's `releases/latest` endpoint belongs to desktop releases.
-After publication, run the `Public installation verification` workflow to install
-from the real public URL on Linux x64, macOS arm64 and macOS x64, then check the CLI,
-bundled viewer and MCP. Verify Homebrew and both plugin clients separately; these
-checks do not prove Docker execution or MCP Apps card support in each client.
+The Codex catalog `.agents/plugins/marketplace.json` installs a pinned version of
+`@wo658/redpact-plugin` from npm. Claude and Cursor catalogs retain their HTTP Plugin.
+App Page Plugin versions are independent of runtime and HTTP Plugin versions.
+
+In `examples/sidebar-app`, `pnpm pack:plugin` bundles macOS arm64 Node, npm, pnpm,
+the full web viewer, MCP companion and skills. Run `pnpm test`, `pnpm typecheck`,
+`pnpm test:package`, and the actual installation browser checks for npm and pnpm.
+`dist/plugin-artifact.json` records the source commit, version and tarball SHA-256.
+Publish that verified tarball with `npm publish <tarball> --access public`, verify
+registry installation, then update the catalog pin. Never replace a published version.
+Plugin installation runs no lifecycle scripts; runtime install/start remain explicit
+in-app actions. Actual sidebar discovery in the host is a separate check from the
+browser harness.
+
+See [installation](installation.md) for user commands, host and platform limitations.
