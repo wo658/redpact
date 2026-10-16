@@ -145,7 +145,7 @@ export const settingsShape = z.strictObject({
   tests: z
     .strictObject({
       directory: projectPath.default("integration"),
-      timeoutMs: z.number().int().min(1).max(60000).default(10000),
+      timeoutMs: z.number().int().min(1).max(2147483647).default(10000),
       env: bounded(variableName, z.string().max(10000), 100).default({}),
     })
     .default({ directory: "integration", timeoutMs: 10000, env: {} }),

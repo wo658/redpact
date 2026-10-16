@@ -95,6 +95,10 @@ URL과 포트도 `"APP_URL": "http://app.redpact.test:3000"`처럼 문자열로 
 ## 러너 선언
 
 `tests.directory`의 기본값은 `integration`, `tests.timeoutMs`는 10000입니다.
+허용 범위는 Node 타이머 한계인 1–2147483647밀리초 정수이며, 3분을 뜻하는
+180000도 사용할 수 있습니다. Vitest 테스트와 hook의 기본 제한으로 적용되며,
+테스트/hook에 명시한 timeout으로 재정의할 수 있습니다. 컨테이너 준비 시간이나
+별도 인스턴스 실행 예산은 바꾸지 않습니다. [제한과 판정](execution.md)을 참고하세요.
 Unit은 기존 `unitTests`의 Dockerfile, 전체 명령, cwd와 패턴을 사용합니다.
 Playwright는 앱 `service`, `port`, 이름 있는 `targets`가 필요하며 purpose는
 `functional` 또는 `capture`, scope는 `project` 또는 `worktree`입니다.

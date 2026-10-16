@@ -42,6 +42,7 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/captures/desktop-update.spec.ts", purpose: "capture" },
       { path: "project/captures/execution-approval.spec.ts", purpose: "capture" },
       { path: "project/captures/integration-approval.spec.ts", purpose: "capture" },
+      { path: "project/captures/integration-timeout.spec.ts", purpose: "capture" },
       { path: "project/captures/large-commit.spec.ts", purpose: "capture" },
       { path: "project/captures/mcp-app.spec.ts", purpose: "capture" },
       { path: "project/captures/problem-notice.spec.ts", purpose: "capture" },
@@ -58,6 +59,7 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/tests/fixed-execution-settings.spec.ts", purpose: "functional" },
       { path: "project/tests/git-graph.spec.ts", purpose: "functional" },
       { path: "project/tests/header-location.spec.ts", purpose: "functional" },
+      { path: "project/tests/integration-timeout.spec.ts", purpose: "functional" },
       { path: "project/tests/large-commit.spec.ts", purpose: "functional" },
       { path: "project/tests/material-icons.spec.ts", purpose: "functional" },
       { path: "project/tests/mcp-app.spec.ts", purpose: "functional" },
@@ -78,7 +80,7 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/tests/workspace-tabs.spec.ts", purpose: "functional" },
     ])
     expect(browserFiles.every((file) => file.scope === "project")).toBe(true)
-    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(28)
+    expect(browserFiles.filter((file) => file.target === "functional")).toHaveLength(29)
     const files = await createLocalFiles().readTests(root, result.settings.tests.directory)
     const scenarios = files
       .filter((file) => file.path.endsWith(".test.ts"))

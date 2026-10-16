@@ -37,34 +37,61 @@ function observedSteps(test) {
   return [...steps.values()]
 }
 
+function timeoutMessage(error, duration, steps = []) {
+  const message = error.message ?? ""
+  const timeout = /^(Test|Hook) timed out in (\d+)ms\./.exec(message)
+  if (!timeout) {
+    return message
+  }
+  const stage = timeout[1].toLowerCase()
+  const interrupted = steps.findLast((step) => step.state === "interrupted")
+  const elapsed = Number.isFinite(duration) ? `${Math.round(duration)}ms` : "unavailable"
+  const step = interrupted ? `; step=${interrupted.name}` : ""
+  const diagnostic = `${message}\nIntegration timeout: limit=${timeout[2]}ms; elapsed=${elapsed}; stage=${stage}${step}. Check tests.timeoutMs or the explicit test/hook timeout; the instance testResources.timeoutSeconds budget is separate.`
+  process.stderr.write(`${diagnostic}\n`)
+  return diagnostic
+}
+
 export default class RedpactReporter {
   onTestRunEnd(modules, errors, reason) {
     const cases = modules.flatMap((module) =>
       [...module.children.allTests()].map((test) => {
         const result = test.result()
+        const steps = observedSteps(test)
         return {
-          steps: observedSteps(test),
+          steps,
           name: test.fullName,
           file: module.moduleId,
           state: result.state,
           errors: (result.errors ?? []).map((error) => ({
             name: error.name ?? "Error",
-            message: error.message ?? "",
+            message: timeoutMessage(error, test.diagnostic()?.duration, steps),
             stack: error.stack,
           })),
         }
       }),
     )
-    const collectionErrors = modules.flatMap((module) =>
-      module.errors().map((error) => error.message),
-    )
+    const collectionErrors = []
+    const executionErrors = errors.map((error) => error.message)
+    for (const module of modules) {
+      for (const suite of [module, ...module.children.allSuites()]) {
+        for (const error of suite.errors()) {
+          const message = timeoutMessage(error, module.diagnostic().duration)
+          if (/^Hook timed out in \d+ms\./.test(error.message ?? "")) {
+            executionErrors.push(message)
+          } else {
+            collectionErrors.push(message)
+          }
+        }
+      }
+    }
     writeFileSync(
       process.env.REDPACT_REPORT,
       JSON.stringify(
         {
           cases,
           collectionErrors,
-          errors: errors.map((error) => error.message),
+          errors: executionErrors,
           reason,
         },
         (_key, value) =>
