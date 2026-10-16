@@ -1,5 +1,6 @@
 import type { z } from "zod"
 import type { executionReviewRecordSchema } from "../execution-review-schema.js"
+import type { ExecutionScope } from "./execution-selection.js"
 import type { CaptureRun } from "./playwright.js"
 import type { UnitRun } from "./unit-tests.js"
 
@@ -11,6 +12,7 @@ export type ExecutionReviewView = {
 export type ExecutionReviewInput = {
   kind: "unit" | "playwright"
   path: string
+  executionScope?: ExecutionScope
   target?: string
   viewport?: { width: number; height: number }
 }

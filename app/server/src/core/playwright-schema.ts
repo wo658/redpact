@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { executionScopeSchema, executionSelectionSchema } from "./execution-selection-schema.js"
 import { name, settingsSchema, testSelectionSchema } from "./settings-schema.js"
 import { resourceLimitSchema } from "./test-resource-schema.js"
 export const captureArtifactSchema = z.strictObject({
@@ -70,6 +71,7 @@ export const captureRunSchema = z.strictObject({
   selection: testSelectionSchema,
   settingsDigest: z.string(),
   sourceDigest: z.string(),
+  executionSelection: executionSelectionSchema.nullable().optional(),
   appDigest: z.string(),
   createdAt: z.string(),
   finishedAt: z.string().optional(),
@@ -82,6 +84,7 @@ export const captureRunSchema = z.strictObject({
 })
 
 export const captureInputSchema = z.strictObject({
+  executionScope: executionScopeSchema.optional(),
   target: name.optional(),
   viewport: z
     .strictObject({

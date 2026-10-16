@@ -2,6 +2,7 @@ import type { ChangeWatcher } from "../core/types/changes.js"
 import type { Run } from "../core/types/contracts.js"
 import type { DirectoryPicker } from "../core/types/directory-picker.js"
 import type { ExecutionReviews } from "../core/types/execution-reviews.js"
+import type { ExecutionScope } from "../core/types/execution-selection.js"
 import type { GitService } from "../core/types/git.js"
 import type { ProjectGraph } from "../core/types/git-graph.js"
 import type { IntegrationTestsService } from "../core/types/integration-tests.js"
@@ -54,8 +55,13 @@ export type Services = {
   reviews?: ReviewTests
   observation?: { settingsPath: string; issues: { path: string; message: string }[] }
   localFiles?: LocalFiles
-  runWorktreeTests?: (worktreeId: string) => Promise<Run>
-  runFiles?: (input: { path: string; tests?: string[]; selection?: TestSelection }) => Promise<Run>
+  runWorktreeTests?: (worktreeId: string, executionScope?: ExecutionScope) => Promise<Run>
+  runFiles?: (input: {
+    path: string
+    tests?: string[]
+    selection?: TestSelection
+    executionScope?: ExecutionScope
+  }) => Promise<Run>
   changes?: ChangeWatcher
   dataDirectory?: string
   environments?: EnvironmentService

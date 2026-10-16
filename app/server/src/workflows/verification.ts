@@ -1,5 +1,6 @@
 import type { z } from "zod"
 import { problem } from "../core/problems.js"
+import type { ExecutionScope } from "../core/types/execution-selection.js"
 import type { executionReadInput, playwrightExecutionInput } from "../core/verification-schema.js"
 import type { Services } from "./services.js"
 
@@ -12,17 +13,21 @@ async function executionCheckout(services: Services, path: string) {
   const project = await service.connect(path)
   return service.ensure(project.id, path)
 }
-export async function runUnitVerification(services: Services, path: string) {
+export async function runUnitVerification(
+  services: Services,
+  path: string,
+  executionScope?: ExecutionScope,
+) {
   if (services.reviews?.policy() === "ask") {
     const reviews =
       services.executionReviews ??
       problem("settings_unsupported", "Execution approval is unavailable")
-    return reviews.request({ kind: "unit", path })
+    return reviews.request({ kind: "unit", path, executionScope })
   }
   const units =
     services.unitTests ?? problem("settings_unsupported", "Unit execution is unavailable")
   const checkout = await executionCheckout(services, path)
-  return { kind: "unit" as const, run: await units.start(checkout.id) }
+  return { kind: "unit" as const, run: await units.start(checkout.id, undefined, executionScope) }
 }
 export async function runPlaywrightVerification(
   services: Services,
@@ -40,7 +45,14 @@ export async function runPlaywrightVerification(
   const checkout = await executionCheckout(services, input.path)
   return {
     kind: "playwright" as const,
-    run: await captures.start(checkout.id, undefined, input.viewport, input.target),
+    run: await captures.start(
+      checkout.id,
+      undefined,
+      input.viewport,
+      input.target,
+      undefined,
+      input.executionScope,
+    ),
   }
 }
 export async function listExecutions(

@@ -175,6 +175,7 @@ export function executionSnapshot(
         error: unit.error ?? undefined,
         inputDigest: unit.inputDigest ?? undefined,
         specification: unit.settings,
+        executionSelection: unit.executionSelection,
         cleanup: unit.cleanup?.state,
       },
     }
@@ -196,6 +197,7 @@ export function executionSnapshot(
       settingsDigest: playwright.settingsDigest,
       inputDigest: playwright.appDigest,
       sourceDigest: playwright.sourceDigest,
+      executionSelection: playwright.executionSelection,
       specification: {
         target: playwright.target,
         purpose: playwright.purpose,

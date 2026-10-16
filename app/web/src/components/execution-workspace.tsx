@@ -13,6 +13,7 @@ import type {
 import { useRefreshRequest } from "@/lib/use-refresh-request"
 import { navigateReviewLink } from "@/lib/workspace-history"
 import { ExecutionProgress } from "./execution-progress"
+import { ExecutionSelectionEvidence } from "./execution-scope"
 import { Loading, Notice } from "./feedback"
 import { LiveUpdates, useLiveRevision } from "./live-updates"
 import { TestEvidence } from "./test-observation"
@@ -233,6 +234,11 @@ function RecordedEvidence({ api, context }: { api: Api; context: ReviewContext }
           </section>
         ) : null,
       )}
+      <ExecutionSelectionEvidence
+        selection={
+          unit?.executionSelection ?? capture?.executionSelection ?? submission?.executionSelection
+        }
+      />
       {unit && !logs.stdout && !logs.stderr && <p>{t("No output recorded.")}</p>}
       {capture && <ExecutionProgress kind="playwright" run={capture} />}
       {capture &&
@@ -394,6 +400,7 @@ function ApprovalPreviewContent({
   return (
     <section className="flex min-w-0 flex-col gap-3" aria-label={t("Requested execution")}>
       <h2 className="text-base font-semibold">{t("Requested execution")}</h2>
+      <ExecutionSelectionEvidence selection={preview.executionSelection} />
       <dl className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
         {fields
           .filter(([, value]) => value !== undefined)

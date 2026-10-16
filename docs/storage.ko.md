@@ -184,6 +184,11 @@ private-secrets 파일을 만들거나 서버 환경변수 fallback을 읽지 �
 마이그레이션 구현: [워크플로](../app/server/src/workflows/runtime-migrations.ts),
 [파일 어댑터](../app/server/src/adapters/storage/migrations.ts).
 
+`003-execution-selection` 마이그레이션은 과거 제출, Unit/Playwright 실행과 실행 검토에
+선택을 알 수 없음(`null`)을 명시합니다. 기존 순서형 마이그레이션 백업에 원본 바이트를
+보존하고 교체 전에 기록을 검증하며 중단된 변경을 재시도합니다. 과거 파일 목록을
+추정하거나 결과를 변경하지 않습니다. 새 기록은 [실행](execution.md)의 선택 계약을 담습니다.
+
 인스턴스 데이터 디렉터리의 `runtime-lifecycle.jsonl`에 부모 연결과 독립적으로
 런타임 진단을 동기식 추가 기록합니다. PID/시각, 시작 요청·완료·실패, 종료 원인
 (`manual`, `update`, `parent_disconnect`, `SIGINT`, `SIGTERM`, `server_error`),

@@ -2,6 +2,7 @@ import { zValidator } from "@hono/zod-validator"
 import { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
+import { executionScopeSchema } from "../../core/execution-selection-schema.js"
 import type { UnitTestsService } from "../../core/types/unit-tests.js"
 import { unitRunSchema } from "../../core/unit-test-schema.js"
 import { conflict, inputErrors, jsonResponse, localErrors, notFound } from "./docs/metadata.js"
@@ -34,7 +35,11 @@ export function unitTestRoutes(service: UnitTestsService) {
     .post(
       "/worktrees/:id/unit-tests/run",
       docs("runUnitCommand", "Run the configured whole command in a fresh worktree container"),
-      async (c) => c.json(await service.start(c.req.param("id"))),
+      zValidator("json", z.strictObject({ executionScope: executionScopeSchema.optional() })),
+      async (c) =>
+        c.json(
+          await service.start(c.req.param("id"), undefined, c.req.valid("json").executionScope),
+        ),
     )
     .get("/unit-runs/:id", docs("getUnitRun", "Read command output and exit status"), (c) =>
       c.json(service.get(c.req.param("id"))),

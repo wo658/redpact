@@ -1,4 +1,5 @@
 import type { ReviewContext } from "../../../server/src/core/types/chat-context"
+import type { ExecutionSelection } from "../../../server/src/core/types/execution-selection"
 
 export type { ReviewContext } from "../../../server/src/core/types/chat-context"
 
@@ -65,6 +66,7 @@ export type PlaywrightFile = {
   scope?: "worktree" | "project"
 }
 export type CaptureRun = {
+  executionSelection?: ExecutionSelection | null
   target: string
   purpose: "capture" | "functional"
   scope?: "worktree" | "project"
@@ -155,6 +157,7 @@ export type MergeInspection = {
 }
 
 export type UnitRun = {
+  executionSelection?: ExecutionSelection | null
   resourceLimit?: ResourceLimit
   projectRoot: string
   id: string
@@ -293,6 +296,7 @@ export type SubmissionSummary = {
   createdAt: string
 }
 export type TestSubmission = {
+  executionSelection?: ExecutionSelection | null
   id: string
   digest: string
   files: { path: string; source: string }[]
@@ -511,8 +515,8 @@ export function createApi(fetcher: typeof fetch = viewerFetch) {
         undefined,
         signal,
       ),
-    runUnitTests: (id: string) =>
-      request<UnitRun>(`/worktrees/${encodeURIComponent(id)}/unit-tests/run`, {}),
+    runUnitTests: (id: string, executionScope?: "all" | "changed") =>
+      request<UnitRun>(`/worktrees/${encodeURIComponent(id)}/unit-tests/run`, { executionScope }),
     projectConfiguration: (id: string, signal?: AbortSignal) =>
       request<SettingsDocument>(
         `/projects/${encodeURIComponent(id)}/configuration`,
@@ -626,10 +630,10 @@ export function createApi(fetcher: typeof fetch = viewerFetch) {
         undefined,
         signal,
       ),
-    runIntegrationTests: (worktreeId: string) =>
+    runIntegrationTests: (worktreeId: string, executionScope?: "all" | "changed") =>
       request<TestRun & { submissionId: string }>(
         `/worktrees/${encodeURIComponent(worktreeId)}/integration-tests/run`,
-        {},
+        { executionScope },
       ),
     integrationTests: (
       worktreeId: string,
@@ -727,10 +731,16 @@ export function createApi(fetcher: typeof fetch = viewerFetch) {
         inputDigest?: string
         error?: string
       }>(`/worktrees/${encodeURIComponent(id)}/playwright`, undefined, signal),
-    runPlaywright: (id: string, viewport?: { width: number; height: number }, target?: string) =>
+    runPlaywright: (
+      id: string,
+      viewport?: { width: number; height: number },
+      target?: string,
+      executionScope?: "all" | "changed",
+    ) =>
       request<CaptureRun>(`/worktrees/${encodeURIComponent(id)}/playwright/run`, {
         viewport,
         target,
+        executionScope,
       }),
     cleanupPlaywrightWorktree: (id: string) =>
       request<{ cleaned: boolean }>(

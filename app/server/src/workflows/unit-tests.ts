@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto"
 import { isDeepStrictEqual } from "node:util"
 import { problem } from "../core/problems.js"
+import type { ExecutionScopeService } from "../core/types/execution-scope.js"
 import type { GitService } from "../core/types/git.js"
 import type { ProjectSettingsService } from "../core/types/services.js"
 import type { SettingsEditor } from "../core/types/settings-editor.js"
@@ -12,6 +13,7 @@ import type {
   UnitTestFiles,
   UnitTestsService,
 } from "../core/types/unit-tests.js"
+import { unitExecutionCommand } from "../core/unit-execution-command.js"
 import { unitTestSettingsSchema } from "../core/unit-test-schema.js"
 
 export function createUnitTests(deps: {
@@ -26,6 +28,7 @@ export function createUnitTests(deps: {
   files: UnitTestFiles
   command: UnitCommand
   store: UnitRunStore
+  executionScopes?: ExecutionScopeService
 }): UnitTestsService {
   const active = new Map<string, { abort: AbortController; done: Promise<void> }>()
   const starting = new Set<string>()
@@ -146,15 +149,24 @@ export function createUnitTests(deps: {
         .slice(0, 50)
       return { settings, catalog, runs }
     },
-    async preview(id) {
+    async preview(id, executionScope) {
       const { target, settings } = await configured(id)
       if (!settings || !deps.command.fingerprint) {
         problem("invalid_input", "Configure unitTests and input capture before execution")
       }
       await deps.files.directory(target.worktree.projectRoot, settings.cwd)
-      return { settings, inputDigest: await deps.command.fingerprint(target.worktree.projectRoot) }
+      const executionSelection = await deps.executionScopes?.resolve(id, {
+        kind: "unit",
+        executionScope,
+      })
+      unitExecutionCommand(settings, executionSelection)
+      return {
+        settings,
+        inputDigest: await deps.command.fingerprint(target.worktree.projectRoot),
+        ...(executionSelection ? { executionSelection } : {}),
+      }
     },
-    async start(id, approved) {
+    async start(id, approved, executionScope) {
       await recovery
       if (closing) {
         problem("closing", "Server is shutting down")
@@ -177,6 +189,20 @@ export function createUnitTests(deps: {
             "Unit settings changed during review; request a new execution",
           )
         }
+        const executionSelection = await deps.executionScopes?.resolve(id, {
+          kind: "unit",
+          executionScope: executionScope ?? approved?.executionSelection?.requested,
+        })
+        unitExecutionCommand(settings, executionSelection)
+        if (
+          approved?.executionSelection &&
+          !isDeepStrictEqual(executionSelection, approved.executionSelection)
+        ) {
+          problem(
+            "configuration_error",
+            "Execution selection changed during review; request a new execution",
+          )
+        }
         await deps.files.directory(target.worktree.projectRoot, settings.cwd)
         if (closing) {
           problem("closing", "Server is shutting down")
@@ -188,6 +214,7 @@ export function createUnitTests(deps: {
           projectId: target.worktree.projectId,
           projectRoot: target.worktree.projectRoot,
           settings,
+          ...(executionSelection ? { executionSelection } : {}),
           runtimeId: null,
           containerId: null,
           imageId: null,

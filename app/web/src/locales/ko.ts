@@ -1,6 +1,25 @@
 import type { en } from "./en"
 
 export const ko = {
+  "Only the first 50 selected files are shown. Open the recorded run for the full list.":
+    "선택 파일의 처음 50개만 표시합니다. 전체 목록은 기록된 실행에서 확인하세요.",
+  "The configured command discovers its own files; no exact file list is recorded.":
+    "설정된 명령이 직접 파일을 찾으므로 정확한 실행 파일 목록은 기록되지 않습니다.",
+  "Execution scope": "실행 범위",
+  "Shared default": "공유 기본값",
+  "All tests": "전체 테스트",
+  "Changed tests": "변경 테스트",
+  "Requested scope": "요청 범위",
+  "Resolved scope": "적용 범위",
+  "Explicit tests": "명시한 테스트",
+  "Helper or configuration changes selected all tests in this target.":
+    "헬퍼 또는 설정 변경으로 이 대상의 전체 테스트를 선택했습니다.",
+  "Comparison revision": "비교 기준 커밋",
+  "Selected files": "선택된 파일",
+  "Run tests with the selected execution scope.": "선택한 실행 범위로 테스트를 실행합니다.",
+  "Default execution scope (all or changed, all runners)":
+    "기본 실행 범위 (all 또는 changed, 모든 러너)",
+
   "Agent plugins": "에이전트 플러그인",
   "Redpact plugins": "Redpact 플러그인",
   "Codex CLI path": "Codex CLI 경로",

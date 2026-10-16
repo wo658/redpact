@@ -10,6 +10,7 @@ import {
   unitReviewContext,
   unknownFreshness,
 } from "../core/chat-context.js"
+import { summarizeExecutionSelection } from "../core/execution-selection.js"
 import { problem } from "../core/problems.js"
 import type { ReviewContext, WorkspaceStatus } from "../core/types/chat-context.js"
 import type { CaptureRun } from "../core/types/playwright.js"
@@ -148,6 +149,9 @@ function integrationContext(services: Services, id: string): ReviewContext {
     preview: {
       settingsDigest: review.settingsDigest,
       sourceDigest: submission.digest,
+      ...(submission.executionSelection
+        ? { executionSelection: summarizeExecutionSelection(submission.executionSelection) }
+        : {}),
       services: review.selection.services.slice(0, 50),
       serviceCount: review.selection.services.length,
       dependencies: Object.entries(review.dependencies ?? {})
@@ -223,10 +227,18 @@ function otherExecutionContext(services: Services, input: Identity): ReviewConte
     preview: {
       settingsDigest: review.settingsDigest,
       inputDigest: review.inputDigest,
+      ...(review.executionSelection
+        ? { executionSelection: summarizeExecutionSelection(review.executionSelection) }
+        : {}),
       ...(review.sourceDigest ? { sourceDigest: review.sourceDigest } : {}),
       ...("command" in review.specification
         ? {
-            command: review.specification.command,
+            command: review.specification.fileCommand
+              ? JSON.stringify([
+                  review.specification.fileCommand.executable,
+                  ...review.specification.fileCommand.args,
+                ])
+              : review.specification.command,
             cwd: review.specification.cwd,
             dockerfile: review.specification.dockerfile,
           }

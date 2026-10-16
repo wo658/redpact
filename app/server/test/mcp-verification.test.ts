@@ -135,7 +135,7 @@ test("Unit과 Playwright는 요청한 기존 체크아웃의 동일 실행 워�
   expect(unit.isError).not.toBe(true)
   expect(unit._meta?.redpact).toMatchObject({ kind: "execution", execution: { kind: "unit" } })
   expect(services.worktrees.ensure).toHaveBeenCalledWith("project", "/repo/feature")
-  expect(services.unitTests.start).toHaveBeenCalledWith(worktreeId)
+  expect(services.unitTests.start).toHaveBeenCalledWith(worktreeId, undefined, undefined)
   const viewport = { width: 390, height: 844 }
   const playwright = await call("run_tests", {
     kind: "playwright",
@@ -153,6 +153,8 @@ test("Unit과 Playwright는 요청한 기존 체크아웃의 동일 실행 워�
     undefined,
     viewport,
     "functional",
+    undefined,
+    undefined,
   )
   expect(
     (await call("run_tests", { kind: "unit", path: "/repo/feature", command: "arbitrary" }))

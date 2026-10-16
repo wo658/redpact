@@ -1,5 +1,6 @@
 import { matchesGlob } from "node:path"
 import { z } from "zod"
+import { executionScopeSchema } from "./execution-selection-schema.js"
 import { composeServiceName, variableName } from "./settings-values.js"
 import { unitTestSettingsSchema } from "./unit-test-schema.js"
 export const name = z.string().regex(/^[a-z][a-z0-9-]{0,63}$/)
@@ -174,10 +175,11 @@ export const settingsShape = z.strictObject({
   tests: z
     .strictObject({
       directory: projectPath.default("integration"),
+      executionScope: executionScopeSchema.default("all"),
       timeoutMs: z.number().int().min(1).max(60000).default(10000),
       env: bounded(variableName, z.string().max(10000), 100).default({}),
     })
-    .default({ directory: "integration", timeoutMs: 10000, env: {} }),
+    .default({ directory: "integration", timeoutMs: 10000, env: {}, executionScope: "all" }),
 })
 export const settingsSchema = settingsShape.superRefine(topologyIssues)
 type TopologySettings = z.infer<typeof settingsShape>

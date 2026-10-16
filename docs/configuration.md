@@ -152,3 +152,38 @@ Local clients can keep endpoint URLs and credentials in their own Git-ignored `.
 or environment variables, including a separate external Langfuse. Redpact does not
 read those client files or migrate existing dependency data. `shared-local` and `remote`
 dependencies cannot declare managed host ports.
+
+## Default execution scope
+
+`tests.executionScope` is the shared default for **Unit, Integration and Playwright**,
+not just Integration. It accepts `all` (the omitted default) or `changed`.
+An execution request's `executionScope` overrides it. The viewer's **Execution scope**
+control offers Shared default, All tests and Changed tests; catalog filters and
+Playwright target maintenance scope remain separate. See [selection rules](execution.md).
+
+Unit commands retain their existing behavior when `unitTests.fileCommand` is absent:
+`all` runs `command` unchanged, with no claim about its discovered file list. `changed`
+requires the explicit file-command contract below and rejects an arbitrary shell command.
+The file-command catalog currently requires a Git checkout in both scopes; a directory-only
+project can retain its legacy `all` command. Opting into `fileCommand` makes both scopes run its executable and arguments followed by
+exact absolute `/workspace/...` test paths, with `unitTests.cwd` as the working directory.
+The executable must accept trailing file arguments and run exactly those files. This is
+an authored runner contract, not command-string inspection. Use a runner such as Vitest
+that supports file filters; avoid scripts that discard arguments or independently run
+other suites. Arguments and filenames are passed literally, never interpolated into shell code.
+
+```json
+{
+  "tests": { "executionScope": "all", "env": {} },
+  "unitTests": {
+    "dockerfile": "unit.Dockerfile",
+    "cwd": "app/server",
+    "command": "pnpm test",
+    "patterns": ["app/server/test/*.test.ts"],
+    "fileCommand": { "executable": "pnpm", "args": ["exec", "vitest", "run", "--"] }
+  }
+}
+```
+
+Install/build prerequisites in the Unit image; `fileCommand` replaces `command` for an
+opted-in execution and does not run its shell preparation steps first.
