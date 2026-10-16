@@ -293,3 +293,38 @@ test("승인 이후 입력 변경은 환경 등록과 컨테이너 준비 전에
   expect(preparations).toBe(0)
   expect(service.list(worktreeId)).toEqual([])
 })
+
+test("정리 실패 후 실제 잔여 네트워크와 재시도 원인을 기록한다", async () => {
+  const env = await prepare()
+  adapter.stop = async () => {
+    throw new Error("network retained-network: active endpoints; retry Stop")
+  }
+  adapter.inspect = async () => ({
+    ...observation,
+    resources: [{ kind: "network", id: "retained-network" }],
+  })
+  await stop(env.id)
+  await stop.idle()
+  expect(service.get(env.id)).toMatchObject({
+    state: "stop_failed",
+    resources: [{ kind: "network", id: "retained-network" }],
+    errors: ["network retained-network: active endpoints; retry Stop"],
+  })
+})
+
+test("이전 정리 완료 기록도 소유 네트워크가 남아 있으면 복구 정리에 포함한다", async () => {
+  const env = await prepare()
+  storage.store.saveEnvironment({ ...env, state: "stopped", runtimeId: "runtime" })
+  adapter.inspect = async () => ({
+    ...observation,
+    resources: [{ kind: "network", id: "legacy-network" }],
+  })
+  await service.recover()
+  expect(service.get(env.id)).toMatchObject({
+    state: "stop_failed",
+    resources: [{ kind: "network", id: "legacy-network" }],
+  })
+  await stop.cleanupTemporary()
+  expect(stops).toBe(1)
+  expect(service.get(env.id).state).toBe("stopped")
+})
