@@ -3,7 +3,7 @@ import type { FileData } from "react-diff-view"
 import { useTranslation } from "react-i18next"
 import type { Api, GitDiff } from "@/lib/api"
 import { ChangedFileList } from "./changed-file-list"
-import { EmptyState, Loading } from "./feedback"
+import { EmptyState, Loading, Notice } from "./feedback"
 import { FileDiff } from "./image-diff"
 import { Button } from "./ui/button"
 import { toast } from "./ui/toast"
@@ -96,7 +96,27 @@ export function CommitChanges({
           </Button>
         </div>
       )}
-      {!loading && !failed && !files.length && (
+      {!loading && !failed && comparison?.patchOmitted === "size_limit" && (
+        <div className="min-h-0 overflow-auto p-3">
+          <Notice>
+            {comparison.changedPathsOmitted
+              ? t(
+                  "Patch and file list exceed their 4 MiB display limits. Only commit metadata is shown.",
+                )
+              : t("Patch exceeds the 4 MiB display limit. Only changed file paths are shown.")}
+          </Notice>
+          {!comparison.changedPathsOmitted && (
+            <ul aria-label={t("Changed files")} className="mt-3 space-y-1 text-sm">
+              {comparison.changedPaths?.map((name) => (
+                <li key={name} className="break-all font-mono">
+                  {name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {!loading && !failed && !comparison?.patchOmitted && !files.length && (
         <EmptyState>{t("No changes in this comparison.")}</EmptyState>
       )}
       {!loading && !failed && files.length > 0 && (

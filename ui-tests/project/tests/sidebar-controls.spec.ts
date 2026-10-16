@@ -10,9 +10,11 @@ test.use({
 })
 
 test("macOS 신호등 옆에서 사이드바를 닫고 다시 연다", async ({ page, request }) => {
-  expect(
-    (await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })).ok(),
-  ).toBeTruthy()
+  const response = await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })
+  expect(response.ok()).toBeTruthy()
+  const project = await response.json()
+  expect(project.location.kind).toBe("git")
+  await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
   await page.addInitScript(() => {
     const observer = new MutationObserver(() => {
       if (document.documentElement) {
@@ -69,9 +71,11 @@ test("macOS 신호등 옆에서 사이드바를 닫고 다시 연다", async ({ 
 })
 
 test("Worktrees 전체 영역에서 표시 옵션을 드러내고 메뉴를 유지한다", async ({ page, request }) => {
-  expect(
-    (await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })).ok(),
-  ).toBeTruthy()
+  const response = await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })
+  expect(response.ok()).toBeTruthy()
+  const project = await response.json()
+  expect(project.location.kind).toBe("git")
+  await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
   await openApp(page, "en")
   if ((page.viewportSize()?.width ?? 1920) < 768) {
     await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()

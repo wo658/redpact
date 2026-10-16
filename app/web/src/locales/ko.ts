@@ -1,6 +1,10 @@
 import type { en } from "./en"
 
 export const ko = {
+  "Patch and file list exceed their 4 MiB display limits. Only commit metadata is shown.":
+    "패치와 파일 목록이 각각 표시 제한인 4 MiB를 초과했습니다. 커밋 메타데이터만 표시합니다.",
+  "Patch exceeds the 4 MiB display limit. Only changed file paths are shown.":
+    "패치가 표시 제한인 4 MiB를 초과했습니다. 변경된 파일 경로만 표시합니다.",
   "Agent plugins": "에이전트 플러그인",
   "Redpact plugins": "Redpact 플러그인",
   "Codex CLI path": "Codex CLI 경로",
