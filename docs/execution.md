@@ -20,17 +20,17 @@ command directory. Dockerfile ENTRYPOINT/CMD do not supply Redpact's supervisor.
 The selected source file in the viewer does not filter the configured command; execution scope uses the explicit contract below. Results do not
 invent per-case verdicts from an exit code.
 
-Integration collects current checkout sources from Project Tests and worktree review. MCP `run_tests`
+Integration collects current checkout sources from Project Tests and worktree review. `redpact tests run --kind integration`
 collects fresh sources for the supplied path. Submission identity and current file
 contents must remain distinguishable in the viewer. [Test authoring](tests.md)
 describes supported source collection and assertions.
 
-The three entries are separate execution contracts. MCP `run_tests` admits only
-Integration submissions. Unit runs start from the Unit tab or `run_tests` (`kind: "unit"`) and execute the complete
+The three entries are separate execution contracts. `redpact tests run --kind integration` admits only
+Integration submissions. Unit runs start from the Unit tab or `redpact tests run --kind unit` and execute the complete
 configured command; their exit status is not an Integration case result. Playwright
 runs start by selecting a declared functional or capture target in the Playwright
-UI/API or `run_tests` (`kind: "playwright"`). Their screenshots, UI-review artifacts, execution record and cleanup stay
-with that Playwright run rather than an MCP submission. See [MCP interfaces](interfaces.md)
+UI/API or `redpact tests run --kind playwright`. Their screenshots, UI-review artifacts, execution record and cleanup stay
+with that Playwright run rather than an Integration submission. See [MCP interfaces](interfaces.md)
 for approval limits, recorded evidence lookup and public lifecycle boundaries.
 
 The viewer presents a common progress strip for all three run types in their
@@ -123,7 +123,7 @@ leave resources until successful recovery.
 
 ## Manual Container
 
-The project Container screen defaults to the configured main checkout. MCP `project_container`
+The project Container screen defaults to the configured main checkout. `redpact environment`
 uses its actual `path` worktree; HTTP Container routes accept `worktreeId` to select one.
 Directory projects use their connected root. All targets use the fixed shared settings.
 Each worktree can own one manual environment, independent of test environments.

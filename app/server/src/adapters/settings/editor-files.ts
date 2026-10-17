@@ -17,6 +17,30 @@ export function createSettingsFiles(): SettingsFiles {
       throw error
     }
   }
+  async function preserveBackup(
+    root: string,
+    path: string,
+    source: string,
+    revision: string | null,
+  ) {
+    const backupPath = `${path}.repair-${revision}.bak`
+    try {
+      const backup = await open(join(root, backupPath), "wx", 0o600)
+      try {
+        await backup.writeFile(source)
+        await backup.sync()
+      } finally {
+        await backup.close()
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+        throw error
+      }
+      if ((await read(root, backupPath)).source !== source) {
+        throw new Error("Existing settings repair backup does not match the original")
+      }
+    }
+  }
   return {
     read,
     async write(root, path, input) {
@@ -38,11 +62,15 @@ export function createSettingsFiles(): SettingsFiles {
             } finally {
               await file.close()
             }
-            if ((await read(root, path)).revision !== input.revision) {
+            const original = await read(root, path)
+            if (original.revision !== input.revision) {
               throw Object.assign(
                 new Error("Settings changed since loading. Reload before saving."),
                 { code: "environment_conflict" },
               )
+            }
+            if (input.backup && original.source !== null) {
+              await preserveBackup(root, path, original.source, original.revision)
             }
             await rename(temporary, target)
           } finally {

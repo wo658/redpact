@@ -33,8 +33,11 @@ import type { SettingsEditor } from "../core/types/settings-editor.js"
 import type { TestContainer } from "../core/types/test-container.js"
 import type { UnitTestsService } from "../core/types/unit-tests.js"
 import type { Updates } from "../core/types/updates.js"
+import type { SettingsAgent } from "./settings-agent.js"
 
 export type Services = {
+  runtimeControl?: { stop(): void }
+  settingsAgent?: SettingsAgent
   executionReviews?: ExecutionReviews
   pluginUpdates?: PluginUpdates
   updates?: Updates

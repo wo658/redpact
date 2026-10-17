@@ -90,6 +90,59 @@ export function createAppServer(options: {
       ],
     }),
   )
+  for (const operation of ["status", "start", "stop"] as const) {
+    const names = {
+      status: "get_redpact_status",
+      start: "start_redpact_runtime",
+      stop: "stop_redpact_runtime",
+    }
+    const descriptions = {
+      status:
+        "Read the configured Redpact runtime status without starting it. Use the Redpact CLI for projects, settings, execution and evidence.",
+      start:
+        "Start the installed, configured Redpact runtime owned by this plugin. Does not install packages, run tests or grant approval.",
+      stop: "Gracefully stop only the Redpact runtime owned by this plugin session. A server owned by another session cannot be stopped.",
+    }
+    registerTool(
+      names[operation],
+      {
+        description: descriptions[operation],
+        inputSchema: {},
+        annotations: {
+          readOnlyHint: operation === "status",
+          destructiveHint: operation === "stop",
+          openWorldHint: false,
+          idempotentHint: true,
+        },
+        _meta: {},
+      },
+      async () => {
+        try {
+          const status = await options.runtime[operation]()
+          const result = {
+            state: status.state,
+            origin: status.origin,
+            message: status.message,
+            owned: status.owned,
+          }
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify(result) }],
+            structuredContent: result,
+          }
+        } catch {
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text" as const,
+                text: `Unable to ${operation} the configured Redpact runtime. Open the Redpact App to inspect lifecycle diagnostics. No ownership restrictions were bypassed.`,
+              },
+            ],
+          }
+        }
+      },
+    )
+  }
   registerTool(
     "redpact_viewer_request",
     {

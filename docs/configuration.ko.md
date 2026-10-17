@@ -10,8 +10,11 @@ description: 관리 서비스, 외부 연결과 테스트 러너가 사용하는
 설정을 공유해도 실행 자원은 공유하지 않습니다. 각 실행은 자신의 앱 컨테이너,
 의존성 컨테이너와 네트워크를 생성하고 제거합니다.
 
-절대 실행 경로로 `configure describe`를 호출해 생성된 스키마를 확인합니다.
-공유 설정을 편집한 다음 같은 경로로 `configure validate`를 호출합니다. 검증은
+`redpact settings describe --scope project --path /absolute/checkout`으로 생성된 스키마를
+확인하고 `settings get`으로 작성된 값과 revision을 조회합니다. `settings patch`로 부분
+수정한 다음 같은 scope와 경로로 `settings validate`를 실행합니다. 에이전트는 프로젝트나
+인스턴스 JSON 파일을 직접 읽거나 편집하지 않습니다. 공유 파일은 저장 형식으로 유지하며,
+부분 수정과 복구는 [설정 소유권](settings-reference.md)을 참고하세요. 검증은
 고정 실행 계획을 반환하지만 컨테이너를 시작하거나 준비 상태·승인을 입증하지 않습니다.
 
 ## 고정 실행 계획
@@ -71,7 +74,7 @@ URL과 포트도 `"APP_URL": "http://app.redpact.test:3000"`처럼 문자열로 
 관리 서비스는 실행 네트워크에서 `<service>.redpact.test` DNS 별칭을 사용하며
 호스트 공개 포트는 별도의 점검용 연결입니다.
 
-값은 공유 `.redpact/settings.json`에 JSON key-value 문자열로 저장합니다.
+값은 CLI 설정 패치로 전달하거나 GUI 편집기로 저장합니다.
 앱 값은 Dependencies에서, `tests.env`는 프로젝트 설정에서 key와 value 필드로
 편집합니다. 별도 인증 정보 저장소, 입력 카드, API는 없습니다. 빈 문자열, 공백,
 `=`, `$`는 원문 그대로 유지하며 JSON `\n`은 줄바꿈입니다. dotenv 파싱, 셸 확장,
@@ -116,15 +119,15 @@ Playwright는 앱 `service`, `port`, 이름 있는 `targets`가 필요하며 pur
 적용하며 프로젝트 설정은 자동으로 다시 쓰지 않습니다.
 
 모드 카탈로그, 실행 시 선택, Integration 기본값 파일과 워크트리 의존성 overlay는
-제거됐습니다. 기존 설정을 고정 시작 서비스와 의존성 정의로 직접 다시 작성해야 합니다.
+제거됐습니다. 기존 설정은 CLI 패치로 고정 시작 서비스와 의존성 정의에 맞게 수정해야 합니다.
 이전 형식 리더나 자동 마이그레이션은 없습니다. 이전 선택·overlay 파일은 실행 계획에
 영향을 주지 않습니다. 파일 소유권과 캡처 입력은 [설정 소유권](settings-reference.md)을 봅니다.
 
 ## 인스턴스 설정
 
-Global Settings는 인스턴스를 별도로 제어합니다. `configure describe`는 해당 설정 파일의 위치를 알려줍니다. 인스턴스의 `projects`에는 관찰할 절대 디렉터리를 나열합니다. `server.port`는 다시 시작한 뒤 적용됩니다. 선택적인 `github.cliPath`는 GitHub CLI 실행 파일의 절대 경로를 지정합니다.
+Global Settings는 인스턴스를 별도로 제어합니다. `redpact settings describe|get|patch|validate --scope instance`로도 접근할 수 있습니다. 인스턴스의 `projects`에는 관찰할 절대 디렉터리를 나열합니다. `server.port`는 다시 시작한 뒤 적용됩니다. 선택적인 `github.cliPath`는 GitHub CLI 실행 파일의 절대 경로를 지정합니다.
 
-실행별 제한은 인스턴스 파일에 둡니다.
+실행별 제한은 인스턴스 설정에 둡니다.
 
 ```json
 {

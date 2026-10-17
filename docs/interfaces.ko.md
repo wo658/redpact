@@ -16,7 +16,96 @@ HTTP와 MCP는 같은 애플리케이션 workflow로 진입하고 실행·설정
 코드를 실행하지 않습니다. 명시적 변경 라우트는 뷰어 밖에서 호출해도 해당 사전조건을
 검사합니다. [아키텍처](architecture.md)를 참고하세요.
 
-## 모델에 노출되는 도구
+## 에이전트 CLI
+
+`redpact`는 Redpact가 소유한 상태·설정·관리형 실행·기록된 증거를 다루는 에이전트
+인터페이스입니다. 로컬 HTTP로 실행 중인 서버의 공통 workflow를 호출하며 명령마다 별도
+저장 writer나 실행 엔진을 시작하지 않습니다. 모델용 MCP는 수명 주기와 앱 열기로 제한하며 기존 작업 도구는 App 전용으로 유지합니다.
+일반 파일 탐색과 Git 작업은 제외하며 기존 파일 도구와 네이티브 `git`/`gh`를 사용합니다.
+
+연결된 인스턴스는 `--server http://127.0.0.1:54321` 또는 `REDPACT_SERVER_URL`로
+지정합니다. 둘 다 없으면 독립 실행 기본값 `http://127.0.0.1:54318`을 사용합니다.
+App Page 인스턴스는 일반적으로 54322를 사용합니다. CLI는 다른 포트를 탐색하지 않습니다.
+`--path`는 현재 디렉터리를 기준으로 해석하며 생략하면 현재 디렉터리를 사용합니다.
+자동화에서는 절대 체크아웃 경로를 쓰세요. GUI에서 선택한 프로젝트는 영향을 주지 않습니다.
+조회만으로 프로젝트를 자동 연결하지 않습니다. 기록 명령은 현재 디렉터리와 무관하게 저장된
+`--kind`와 `--id`로 대상을 지정합니다.
+
+| 명령 | 용도 |
+| --- | --- |
+| `runtime status/start/stop`, 기존 `serve` | 로컬 런타임 조회·시작·종료 또는 foreground/supervised 서버 실행 |
+| `projects list/connect/show/rename/disconnect/reconnect` | Redpact 프로젝트 연결 관리. 기록 변경은 `--project ID` 사용 |
+| `workspace status --path PATH`, `workspace list --project ID` | 체크아웃 식별·진단·승인·실행과 관찰된 체크아웃 확인 |
+| `settings describe/get/patch/validate/repair --scope project\|instance` | [revision 기반 계약](settings-reference.md)으로 설정 조회·수정 |
+| `dependencies inspect --path PATH` | 고정 의존성 구성 확인 |
+| `environment inspect/start/restart/stop --path PATH` | 선택한 체크아웃의 수동 환경 관리 |
+| `environments list --path PATH`, `show/stop --id ID` | 기록된 자원 확인. 수동 소유 자원만 종료 |
+| `tests list --kind KIND --path PATH`, `tests targets --path PATH` | 현재 테스트와 선언된 Playwright 대상 탐색 |
+| `tests run --kind KIND --path PATH` | 승인 경계를 거쳐 캡처된 입력 제출 |
+| `submissions list --path PATH`, `show/run --id ID` | 보존된 Integration 제출 조회·재실행 |
+| `runs list --path PATH`, `show/context/wait/logs/source/artifacts/artifact --kind KIND --id ID` | 기록된 결과와 증거 확인 |
+| `updates status/check/install --version VERSION` | 런타임 업데이트 상태·새 버전 확인과 명시적 설치 |
+| `plugins status/check/install --agent codex\|claude --version VERSION` | 에이전트 플러그인 업데이트 상태·새 버전 확인과 명시적 설치 |
+| `open`, `open --path PATH` 또는 `open --kind KIND --id ID` | 같은 인스턴스의 전체 앱·체크아웃 이력 또는 정확한 기록 검토 열기 |
+
+명령별 옵션은 `--help`로 확인하세요. 업데이트 명령의 `--version`은 `install`에서만,
+`--agent`는 플러그인 설치에서만 필수입니다. `projects list --state connected|disconnected|all`의
+기본값은 connected입니다. 카탈로그의 `tests list --scope all|changed`는 Unit/Integration에만
+적용되고 기존 서버 카탈로그 기본값을 유지하며 실행 범위를 선택하지 않습니다.
+`tests run --execution-scope all|changed`는 공통 실행 기본값을 재정의합니다.
+`--kind`는 `unit`, `integration`, `playwright`입니다. Integration만 반복된
+`--test RELATIVE_PATH`를 허용합니다. Playwright는 `--target NAME`이 필수이며
+`--viewport WIDTHxHEIGHT`을 선택할 수 있습니다. 크기는 예를 들어 `1280x720`이며 너비 320–3840, 높이 240–2160을 허용합니다.
+종류에 맞지 않는 옵션은 무시하지 않고 거부합니다.
+
+`runs source`는 현재 작업 파일이 아닌 캡처된 `--file CAPTURED_PATH`가 필수입니다.
+`runs logs`는 제한된 출력과 잘림 정보를 반환합니다. `runs artifacts`는 메타데이터를,
+`runs artifact --artifact ID --output FILE [--side before|after]`는 해당 Playwright
+실행 소유 아티팩트를 지정한 새 파일에 저장합니다. 기존 파일은 덮어쓰지 않습니다. `runs list`, `submissions list`,
+`runs artifacts`는 반환된 `--before` 커서를 받습니다. 페이지 간 대상과 필터를 유지하세요.
+기존 서버의 소유권과 크기 제한을 그대로 적용합니다.
+
+`--json`은 stdout에 버전이 있는 문서 하나를 출력합니다.
+`{ "version": 1, "ok": true, "data": ... }` 또는
+`{ "version": 1, "ok": false, "error": { "code": ..., "message": ... } }`이며
+오류에 구조화된 상세가 포함될 수 있습니다. 대화형 입력은 요구하지 않습니다.
+`--json`이 없어도 성공 결과는 같은 envelope를 읽기 쉽게 출력합니다.
+
+`--wait` 없는 제출은 접수 상태와 식별자를 반환하며 종료 코드 0이 테스트 통과를 뜻하지
+않습니다. `tests run`, `submissions run`, `runs wait`는 `--wait-timeout SECONDS`를
+지원하고 기본값은 600초입니다. 최종 결과·사람의 승인 필요·클라이언트 제한 시간에 대기가
+끝납니다. 시간 초과나 클라이언트 중단은 서버 실행을 취소하지 않습니다. 승인 필요 상태는
+즉시 반환하며 검토 URL을 열어 사람이 조작해야 합니다. CLI는 요청 승인이나 승인 정책
+변경을 수행할 수 없습니다.
+
+| 종료 코드 | 의미 |
+| --- | --- |
+| `0` | 비동기 제출 접수를 포함해 요청 작업 성공 |
+| `1` | 전송 또는 서버 작업 실패 |
+| `2` | 잘못된 명령·입력·설정 또는 없는 기록 |
+| `3` | 대기 중 실행 실패 관찰 |
+| `4` | 대기 중 사람의 승인 필요 |
+| `5` | 클라이언트 대기 시간 초과 |
+| `6` | revision 또는 실행 허용 조건 충돌 |
+| `7` | 대기 중 확인이 필요한 자원 정리 실패 관찰 |
+
+정리 실패가 실행 실패보다 우선하며 두 사실은 결과에 함께 남습니다. 실패한 과거 실행도
+`runs show`로 조회에 성공하면 종료 코드는 0입니다. 공개 테스트 취소·테스트 환경 강제
+종료·증거 삭제는 추가하지 않습니다.
+
+## 모델용 MCP와 App 전용 전송
+
+런타임 HTTP MCP는 `redpact_status`, `stop_redpact_server`, `open_redpact`만 모델에
+노출합니다. `open_redpact`는 같은 인스턴스의 뷰어 URL을 반환하며 테스트를 실행하지 않습니다.
+중지된 프로세스는 HTTP 요청을 받을 수 없으므로 HTTP MCP로 시작할 수 없습니다.
+App Page companion은 자신이 소유한 런타임의 `get_redpact_status`,
+`start_redpact_runtime`, `stop_redpact_runtime`과 기존 `open_redpact_app`을 제공합니다.
+수명 주기 모델 도구는 App 전용 capability token을 요구하거나 반환하지 않습니다.
+
+아래 작업 도구 7개는 전체 앱 통신을 위해 App 전용 visibility로 유지합니다.
+에이전트 작업은 위 CLI를 사용하며 숨겨진 도구를 호출하지 않습니다. 원시 `tools/list`에
+App 전용 도구가 포함될 수 있으며 호스트가 visibility 메타데이터에 따라 모델 목록에서
+제외해야 합니다. App 전용 도구의 존재는 모델 호출이나 사람의 승인 대행을 허용하지 않습니다.
 
 | 도구 | 계약 |
 | --- | --- |
@@ -27,12 +116,11 @@ HTTP와 MCP는 같은 애플리케이션 workflow로 진입하고 실행·설정
 | `get_run` | `kind`, `id`, 선택적 `detail: result / log / source / image`로 상태·기록된 증거·정리 조회 |
 | `list_runs` | 체크아웃 절대 `path`, 선택적 `kind`와 반환 커서 `before`; 종류에 맞는 실행을 페이지당 최대 20개 조회 |
 | `get_run_artifact` | Playwright `id`, `artifactId`, 선택적 `side`; 해당 실행 소유 PNG·영상·trace를 최대 8 MiB까지 조회 |
-| `project_container` | 관찰된 프로젝트 체크아웃의 절대 `path`, `action: inspect / start / restart / stop`; 선택한 워크트리의 지속 수동 환경 수명주기 |
 
 `run_tests`는 엄격한 discriminated union으로 종류별 입력을 검증합니다. Unit은 파일
 임의 요청별 명령을 거부하고 Playwright는 임의 케이스 선택을 거부합니다. 모든 종류는 `executionScope: all | changed`에 공통 [선택 계약](execution.md)을 적용합니다. 모든 종류는
 HTTP와 같은 워크플로, 고정 프로젝트 설정과 기존 입력 캡처를 사용합니다. Configure는
-파일 저장·리소스 시작·승인을 하지 않습니다. describe 후 공유 파일을 편집하고 validate하세요.
+파일 저장·리소스 시작·승인을 하지 않습니다. 에이전트 설정은 CLI describe/get/patch/validate로 접근하며 파일을 직접 읽거나 수정하지 않습니다.
 
 호환성을 위해 `run_tests`에서 `kind`를 생략하면 Integration입니다. id-only `get_run`
 요청(`{"id":"..."}`)은 기존 전체 Integration 실행·검토 응답을 유지합니다. 명시적인 `kind`는
@@ -40,9 +128,10 @@ HTTP와 같은 워크플로, 고정 프로젝트 설정과 기존 입력 캡처�
 최대 20개 실패 및 20개 산출물 메타데이터, 전체 `failureCount`/`artifactCount`/`evidenceCount`,
 `truncated`를 반환합니다. 메시지와 라벨은 2,048자로 제한합니다. 기본 결과에 원시 케이스 본문,
 stdout/stderr와 설정 원문을 복제하지 않습니다. `evidence`, 산출물 `retrieval`, `reviewPath`로
-상세를 확인하세요. 대기 요청은 승인 상태와 웹 검토 경로를 유지하며 실행 수락을 의미하지 않습니다. 기존 `run_unit_tests` / `run_playwright`는
-해당 kind를 지정한 `run_tests`로, `get_execution`은 `get_run`으로,
-`list_executions`는 `list_runs`로 변경하세요. 이전 도구 이름은 노출하지 않습니다.
+상세를 확인하세요. 대기 요청은 승인 상태와 웹 검토 경로를 유지하며 실행 수락을 의미하지 않습니다. App 전송 통합에서 기존 `run_unit_tests` / `run_playwright`는
+해당 kind를 지정한 `run_tests`에, `get_execution`은 `get_run`에,
+`list_executions`는 `list_runs`에 대응합니다. 이전 도구 이름은 노출하지 않습니다.
+에이전트는 이 App 전용 도구 대신 CLI 명령을 사용합니다.
 
 ```json
 {"kind":"unit","path":"/absolute/checkout"}
@@ -68,8 +157,9 @@ Integration 로그·소스는 실제 실행 ID를 사용합니다.
 노출하지 않습니다. timeout·서버 종료·실패 복구·증거 보존·자동 정리는 내부 수명주기로
 유지합니다. 과거 취소 결과는 계속 조회할 수 있습니다. 수동 환경 종료로 테스트를 취소할 수 없습니다.
 
-`project_container`는 관찰된 연결 프로젝트가 필요하며 실제 `path` 워크트리에서
-inspect/start/restart/stop을 수행합니다. 조회는 실행하지 않으며 공유 설정과 입력 검사를
+`redpact environment inspect/start/restart/stop --path PATH`는 관찰된 연결 프로젝트가
+필요하며 실제 체크아웃에서 동작합니다. CLI는 공통 HTTP 수동 환경 workflow를 호출하며
+`project_container` MCP 도구는 없습니다. 조회는 실행하지 않으며 공유 설정과 입력 검사를
 적용합니다. 준비 상태·실패는 inspect로 조회합니다. 수동 작업 접수는 프로젝트별로 직렬화하며
 메인 생략 요청과 명시적 워크트리 요청도 같은 잠금을 사용합니다. Stop은 해당 워크트리의 수동 환경만
 대상으로 하며 소유 리소스 teardown 완료 전에는 종료 완료가 아닙니다. 수동 환경은 서버
@@ -84,9 +174,10 @@ HTTP `/api/projects/:id/test-container` 및 action/compose 경로는 선택적�
 
 ## 웹 뷰어에서 요청 승인
 
-런타임 MCP는 텍스트와 구조화된 결과를 반환하며 실행 요청과 요약에 `reviewPath`를
-포함합니다. 같은 연결된 뷰어 출처를 기준으로 경로를 여세요. 채팅 인라인 카드,
-HTML App 리소스, 승인 도구나 UI capability는 노출하지 않습니다.
+CLI 실행 요청과 요약은 `reviewPath`를 포함한 구조화된 결과를 반환하며 App 전용
+작업 MCP 응답도 같은 기록의 검토 식별자를 사용합니다. 같은 연결된 뷰어 출처를
+기준으로 경로를 여세요. 런타임 MCP는 채팅 인라인 카드, 등록된 HTML App 리소스,
+승인 도구나 UI capability를 노출하지 않습니다.
 사이드바 App Page는 별도의 전체 앱 화면으로 유지합니다.
 
 새 실행 요청은 인스턴스 `approval` 정책을 캡처합니다.
@@ -112,16 +203,16 @@ Auto로 바꿀 수 없습니다. 뷰어를 사용할 수 없으면 요청을 대
 뷰어 동작은 같은 workflow와 아래의 신뢰된 로컬 HTTP 경계를 유지합니다.
 영속 검토 복구는 [저장소](storage.md)에서 설명합니다.
 
-## 대화 맥락
+## CLI 대화 맥락
 
-`get_workspace_status`는 지정한 체크아웃을 등록하거나 코드를 실행하지 않고 조회합니다.
+`redpact workspace status`는 지정한 체크아웃을 등록하거나 코드를 실행하지 않고 조회합니다.
 공유 설정 루트와 진단, 이미 관찰된 연결, 승인 대기와 제한된 실행 요약을 반환합니다.
 활성 실행과 미완료 정리는 최근 이력 페이지와 별도로 조회합니다. 상태는 관찰한 사실과 진단을 보고하며 명령을 지시하거나 작업을 미리 승인하지 않습니다.
 
-`get_review_context`는 실행 또는 대기 요청 하나의 제한된 실패 정보, 근거 참조와 상대
+`redpact runs context`는 실행 또는 대기 요청 하나의 제한된 실패 정보, 근거 참조와 상대
 `reviewPath`를 반환합니다. 같은 뷰어 출처와 결합해서 사용하며 환경 인증 값이나 UI
 capability는 포함하지 않습니다. 실패·근거 참조를 각각 최대 20개와 전체 개수로 반환하고,
-보존된 상세는 `get_run`으로 확인합니다. 관련 현재 입력을 실제로 비교하기 전에는
+보존된 상세는 CLI의 `runs logs/source/artifact`와 뷰어에서 확인합니다. 관련 현재 입력을 실제로 비교하기 전에는
 최신성이 `unknown`이며 사람의 수락은 `not_recorded`입니다. Unit 명령 실패를 자동으로
 assertion 실패로 분류하지 않습니다.
 

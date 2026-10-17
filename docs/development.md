@@ -42,7 +42,7 @@ list the same page IDs. Use relative Markdown links between pages; the renderer 
 the selected language. Links beginning `../` open repository source on GitHub and
 may lag unpushed local edits. Use stable shared heading anchors for cross-locale links,
 or link the page when heading IDs differ. Do not maintain copied HTTP/JSON schemas;
-link the generated API or `configure describe` and document semantics here.
+link the generated API or `redpact settings describe --scope project` and document semantics here.
 
 ## Local setup and checks
 

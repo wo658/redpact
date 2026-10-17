@@ -126,7 +126,7 @@ function fixture() {
     const body = await response.json()
     return body.result ?? { isError: true, error: body.error }
   }
-  return { services, call, id, worktreeId, artifactId }
+  return { services, app, call, id, worktreeId, artifactId }
 }
 
 test("Unit과 Playwright는 요청한 기존 체크아웃의 동일 실행 워크플로를 사용한다", async () => {
@@ -294,8 +294,8 @@ test("종류별 옵션은 다른 실행 종류에 전달되지 않는다", async
   expect(services.captureWorkflow.start).not.toHaveBeenCalled()
 })
 
-test("수동 환경 작업은 관찰된 프로젝트만 선택하고 테스트 실행에는 접근하지 않는다", async () => {
-  const { call, services, worktreeId } = fixture()
+test("수동 환경 작업은 CLI HTTP로 관찰된 프로젝트만 선택하고 MCP에서는 거부한다", async () => {
+  const { app, call, services, worktreeId } = fixture()
   const testContainer = Object.fromEntries(
     ["inspect", "start", "restart", "stop"].map((action) => [
       action,
@@ -308,14 +308,22 @@ test("수동 환경 작업은 관찰된 프로젝트만 선택하고 테스트 �
   )
   Object.assign(services, { testContainer })
   for (const action of ["inspect", "start", "restart", "stop"]) {
-    const result = await call("project_container", { path: "/repo/feature", action })
-    expect(result.isError).not.toBe(true)
-    expect(result.structuredContent.target.projectRoot).toBe("/repo/feature")
+    expect((await call("project_container", { path: "/repo/feature", action })).isError).toBe(true)
+    const response = await app.request("/api/agent/environment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: "/repo/feature", action }),
+    })
+    expect(response.status).toBe(200)
+    expect((await response.json()).target.projectRoot).toBe("/repo/feature")
     expect(testContainer[action]).toHaveBeenCalledWith("project", worktreeId)
   }
-  expect((await call("project_container", { path: "/unknown", action: "start" })).isError).toBe(
-    true,
-  )
+  const unknown = await app.request("/api/agent/environment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path: "/unknown", action: "start" }),
+  })
+  expect(unknown.status).toBe(404)
   expect(services.worktrees.connect).not.toHaveBeenCalled()
   expect(services.unitTests.cancel).not.toHaveBeenCalled()
   expect(services.captureWorkflow.cancel).not.toHaveBeenCalled()

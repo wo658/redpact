@@ -3,6 +3,7 @@ import { bodyLimit } from "hono/body-limit"
 import { HTTPException } from "hono/http-exception"
 import { secureHeaders } from "hono/secure-headers"
 import { describeRoute } from "hono-openapi"
+import { agentVerificationRoutes } from "./interfaces/http/agent-verification.js"
 import { approvalPolicyRoutes } from "./interfaces/http/approval-policy.js"
 import { chatContextRoutes } from "./interfaces/http/chat-context.js"
 import { directoryPickerRoutes } from "./interfaces/http/directory-picker.js"
@@ -31,6 +32,7 @@ import { projectSettingsRoutes } from "./interfaces/http/project-settings.js"
 import { pullRequestRoutes } from "./interfaces/http/pull-requests.js"
 import { reviewContentRoutes } from "./interfaces/http/review-content.js"
 import { runRoutes } from "./interfaces/http/runs.js"
+import { settingsAgentRoutes } from "./interfaces/http/settings-agent.js"
 import { settingsEditorRoutes } from "./interfaces/http/settings-editor.js"
 import { submissionRoutes } from "./interfaces/http/submissions.js"
 import { testContainerRoutes } from "./interfaces/http/test-container.js"
@@ -151,6 +153,10 @@ export function createApp(services: Services, options: { uiDirectory?: string } 
       playwrightRoutes(services.captures, services.captureWorkflow, services.playwrightCatalog),
     )
   }
+  if (services.settingsAgent) {
+    app.route("/api/agent/settings", settingsAgentRoutes(services.settingsAgent))
+  }
+  app.route("/api/agent", agentVerificationRoutes(services))
   app.route("/api", chatContextRoutes(services))
   app.route("/api", directoryPickerRoutes(services.directoryPicker))
   if (services.integrationTests) {

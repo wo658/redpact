@@ -163,7 +163,7 @@ test("unit-only configuration guidance requires its runtime container without in
   const description = (await configure("describe")).structuredContent
   expect(description.nextSteps.join(" ")).toContain("For managed integration")
   expect(description.specification.workflow.join(" ")).toContain("Preserve existing")
-  for (const tool of ["kind=unit", "kind=playwright", "get_run"]) {
+  for (const tool of ["--kind unit", "playwright", "redpact runs show"]) {
     expect(description.specification.workflow.join(" ")).toContain(tool)
   }
 })

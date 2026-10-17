@@ -73,3 +73,26 @@ export function createRunWorktreeTests(deps: Parameters<typeof createCollectTest
     return runFiles({ path: target.worktree.projectRoot, selection, executionScope })
   }
 }
+
+export async function collectExistingSubmission(
+  deps: Pick<Parameters<typeof createCollectTests>[0], "worktrees" | "submissions">,
+  id: string,
+) {
+  const submission = deps.submissions.get(id)
+  if (!submission.worktreeId || !submission.projectRoot) {
+    problem("worktree_unavailable", "Submission has no execution checkout identity")
+  }
+  const target = await deps.worktrees.resolve(submission.worktreeId)
+  if (target.worktree.projectRoot !== submission.projectRoot) {
+    problem("project_mismatch", "Submission checkout identity changed")
+  }
+  const selection = await deps.worktrees.getSelection(submission.worktreeId)
+  if (!selection) {
+    problem("configuration_error", "Configure fixed root services before execution")
+  }
+  const settings = await target.settings.read(selection)
+  if (!settings.valid || !settings.settings) {
+    problem("configuration_error", "Submission checkout settings are invalid")
+  }
+  return { submission, settings, selection }
+}

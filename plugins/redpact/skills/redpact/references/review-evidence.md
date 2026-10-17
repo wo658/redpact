@@ -15,10 +15,10 @@ additional request may authorize those actions separately.
 Map requested behavior to available evidence and identify missing, failed, blocked,
 or possibly outdated checks. Compare captured identity with current source where
 available; unit command records and captured application views cannot prove source freshness.
-Start with `get_workspace_status` for the exact checkout and `list_runs` for
-older attempts. Use `get_review_context` for one execution's bounded failures,
+Start with `redpact workspace status` for the exact checkout and `redpact runs list` for
+older attempts. Use `redpact runs context` for one execution's bounded failures,
 evidence references and relative review path. Resolve that path against the connected
-viewer origin; retrieve recorded source/log/image with `get_run` as needed.
+viewer origin; retrieve recorded source/log/image with `redpact runs source/logs/artifact` as needed.
 Use the evidence already present and identify unavailable data. Review is a human
 handoff, not a new persisted approval state or a promise of fresh verification.
 
@@ -53,10 +53,10 @@ Keep these claims distinct:
 Briefly explain omitted evidence when its relevance is not obvious. A capability
 gap may leave registration or review incomplete even when local checks pass.
 
-MCP results are snapshots; request fresh results for changed state. Unit, Integration
+CLI results are snapshots; request fresh results for changed state. Unit, Integration
 and Playwright approval authorize only the captured execution, not acceptance of code.
-Use the returned `reviewPath` or `get_review_context` with the request kind and ID,
+Use the returned `reviewPath` or `redpact runs context` with the request kind and ID,
 and link that path on the same connected viewer origin. The user inspects the captured
 request and explicitly approves there; do not submit approval on their behalf.
 Neither a text reply nor opening the page records approval. If the viewer is unavailable,
-preserve the pending request and report the gap.
+preserve the pending request and report the gap. There are no inline approval or result cards.

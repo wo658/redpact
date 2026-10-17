@@ -147,7 +147,15 @@ test("MCP는 웹 검토로 안내하고 두 번의 웹 승인 후에만 실행�
       )
       .map((tool: { name: string }) => tool.name)
       .sort(),
-  ).toEqual([])
+  ).toEqual([
+    "configure",
+    "get_review_context",
+    "get_run",
+    "get_run_artifact",
+    "get_workspace_status",
+    "list_runs",
+    "run_tests",
+  ])
   let result = await call("run_tests", { path: root })
   expect(result.structuredContent.state).toBe("awaiting_approval")
   const id = result.structuredContent.id
@@ -163,7 +171,7 @@ test("MCP는 웹 검토로 안내하고 두 번의 웹 승인 후에만 실행�
     (
       await call("review_action", {
         id,
-        token: "x".repeat(64),
+        token,
         revision: 0,
         subject: "environment",
       })

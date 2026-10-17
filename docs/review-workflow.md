@@ -29,7 +29,7 @@ flowchart TD
 > Use Redpact and return the actual execution references.
 
 The agent resolves or creates the worktree with host Git tools and reads
-`get_workspace_status` for that absolute checkout. It uses `configure` when shared
+`redpact workspace status --path PATH` for that absolute checkout. It uses `redpact settings describe/get/patch/validate --scope project` when shared
 settings need inspection or validation. Status inspection never starts tests.
 Independent subagents can own API, UI and documentation work with explicit file
 boundaries; their coordinator verifies the integrated checkout.
@@ -49,10 +49,10 @@ or green observations honestly. [Test authoring](tests.md) owns runtime details.
 
 | Evidence | MCP entry |
 | --- | --- |
-| Complete configured Unit command | `run_tests` (`kind: "unit"`) |
-| Public API and persistence scenarios | `run_tests` |
-| Actual browser interactions | `run_tests` (`kind: "playwright"`) with a functional target |
-| Recorded application screens | `run_tests` (`kind: "playwright"`) with a capture target |
+| Complete configured Unit command | `redpact tests run --kind unit` |
+| Public API and persistence scenarios | `redpact tests run --kind integration` |
+| Actual browser interactions | `redpact tests run --kind playwright --target TARGET` with a functional target |
+| Recorded application screens | `redpact tests run --kind playwright --target TARGET` with a capture target |
 
 Each request uses the exact worktree path and shared fixed configuration. Unit,
 Integration and Playwright remain distinct runtimes and evidence contracts.
@@ -63,7 +63,7 @@ See [interfaces](interfaces.md) for admission and client requirements.
 
 ## 4. Open the evidence that needs attention
 
-The agent reads progress and terminal state, uses `get_review_context` for bounded
+The agent reads progress and terminal state, uses `redpact runs context --kind integration --id ID` for bounded
 failure details and evidence references, and links the recorded execution in the same
 viewer instance. Open that exact execution to inspect results, captured source,
 logs and screenshots. Its history stays bound to the recorded worktree. The full app also provides project/worktree navigation, test catalogs, environments and settings. Chat MCP returns structured evidence and review links.
@@ -90,19 +90,20 @@ with [reading results](results.md) to interpret each kind of evidence.
 ## Try the included scenario
 
 With Docker and a connected runtime, use the absolute `examples/order-desk` path.
-Call `configure describe`, then `configure validate`; preserve its supplied fixed
-`app` / `payments: mock` settings. Submit `run_tests` with:
+Call `redpact settings describe --scope project`, then `redpact settings validate --scope project`; preserve its supplied fixed
+`app` / `payments: mock` settings. Submit `redpact tests run --kind integration` with:
 
-```json
-{ "path": "/absolute/path/to/redpact/examples/order-desk", "tests": ["http.test.js"] }
+```sh
+redpact tests run --kind integration \
+  --path /absolute/path/to/redpact/examples/order-desk --test http.test.js --json
 ```
 
 The path is relative to that example's configured `tests` directory. The scenario
 checks HTTP 200 and a response containing `quantity: 1` and `totalCents: 250`; its
 local fixture supplies the managed service connection. This verifies one mocked
 checkout response, not real-provider compatibility, restart persistence or browser behavior.
-Follow the returned identity with `get_run`, including any human approval stages,
-then use `get_review_context` to open the exact result. Compare the returned ID,
+Follow the returned identity with `redpact runs show --kind integration --id ID`, including any human approval stages,
+then use `redpact runs context --kind integration --id ID` to open the exact result. Compare the returned ID,
 checkout, captured source, outcome and cleanup. An ID is not a passing result.
 
 The example also supports `REDPACT_URL=http://127.0.0.1:54318 node examples/order-desk/tools/review.mjs http`.

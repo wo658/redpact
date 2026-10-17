@@ -52,9 +52,14 @@ export function createSettingsEditor(deps: {
       return read(await deps.projects.root(id), ".redpact/settings.json", settingsSchema)
     },
     async saveProject(id, input) {
-      const root = await deps.projects.root(id)
+      return this.saveProjectAt(await deps.projects.root(id), input)
+    },
+    async projectAt(root) {
+      return read(root, ".redpact/settings.json", settingsSchema)
+    },
+    async saveProjectAt(root, input, executionRoot = root) {
       validate(input.source, settingsSchema)
-      const validation = await deps.validateProject(root, input.source)
+      const validation = await deps.validateProject(executionRoot, input.source)
       if (!validation.valid) {
         throw Object.assign(new Error("Project settings are invalid"), {
           code: "settings_invalid",

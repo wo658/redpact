@@ -22,42 +22,36 @@ description: 포함된 HTTP 시나리오를 실행하고 기록된 결과를 확
 
 예제 설정은 `compose.yaml`을 참조하고 `payments`의 고정 `mock` 의존성을 정의하며 테스트에 서비스 연결을 제공합니다. `tests/http.test.js`는 결제 요청이 HTTP 200과 함께 `quantity: 1`, `totalCents: 250`을 반환하는지 검증합니다. 로컬 픽스처가 관리형 서비스 주소를 확인하므로 할당된 호스트 포트를 추측할 필요가 없습니다.
 
-예제 경로와 `action: "describe"`로 `configure`를 호출한 뒤 검증하세요.
+같은 인스턴스에서 CLI로 예제 설정을 조회하고 검증하세요.
 
-```json
-{
-  "action": "validate",
-  "path": "/absolute/path/to/redpact/examples/order-desk"
-}
+```sh
+redpact settings describe --scope project --path /absolute/path/to/redpact/examples/order-desk
+redpact settings validate --scope project --path /absolute/path/to/redpact/examples/order-desk
 ```
 
 제공된 파일에 이미 예제 설정이 들어 있습니다. 일반적인 템플릿으로 덮어쓰지 마세요.
 
 ## 시나리오 시작
 
-MCP `run_tests` 도구를 호출하세요.
+CLI로 실행을 제출하세요.
 
-```json
-{
-  "path": "/absolute/path/to/redpact/examples/order-desk",
-  "tests": ["http.test.js"]
-}
+```sh
+redpact tests run --kind integration \
+  --path /absolute/path/to/redpact/examples/order-desk --test http.test.js --json
 ```
 
 테스트 경로는 설정된 테스트 디렉터리를 기준으로 한 상대 경로이며, 기본 디렉터리는 `integration`입니다. 이 예제는 `tests`로 설정되어 있습니다. 이 시나리오를 명시하면 다른 소스 묶음을 명시적으로 지정해야 하는 별도의 예제 테스트가 함께 실행되는 일을 피할 수 있습니다.
 
 Redpact는 요청을 기록하고 식별자를 반환합니다. 반환된 상태가 `awaiting_approval`이면 검토 대기 중인 요청으로, 아직 실행이 시작되지 않았습니다. 연결된 클라이언트에서 제공하는 제어를 따르거나, 클라이언트가 이를 표시하지 못한다면 [문제 해결](troubleshooting.md)을 확인하세요. 반복해서 상태를 조회해도 요청이 승인되지는 않습니다.
 
-Redpact는 요청 접수 시 승인 대기에 들어가기 전에 Integration 테스트 소스를 수집해 보존합니다. 실행이 허용되면 해당 테스트로 실행할 환경을 준비합니다. 검토 중 테스트 파일을 편집해도 기존 제출은 바뀌지 않으므로 변경을 포함하려면 새 요청을 제출하세요. 대기 상태에 준비 과정이 포함될 수 있습니다. ID를 받았다고 테스트가 통과한 것은 아닙니다. `run_tests`를 다시 호출하면 새 요청이 만들어집니다. 접수된 요청은 `get_run`으로 추적하세요.
+Redpact는 요청 접수 시 승인 대기에 들어가기 전에 Integration 테스트 소스를 수집해 보존합니다. 실행이 허용되면 해당 테스트로 실행할 환경을 준비합니다. 검토 중 테스트 파일을 편집해도 기존 제출은 바뀌지 않으므로 변경을 포함하려면 새 요청을 제출하세요. 대기 상태에 준비 과정이 포함될 수 있습니다. ID를 받았다고 테스트가 통과한 것은 아닙니다. `redpact tests run`를 다시 호출하면 새 요청이 만들어집니다. 접수된 요청은 `redpact runs show`으로 추적하세요.
 
 ## 결과 읽기
 
-반환된 ID로 `get_run`을 호출하세요.
+반환된 ID로 CLI 결과를 조회하세요.
 
-```json
-{
-  "id": "RETURNED_RUN_ID"
-}
+```sh
+redpact runs show --kind integration --id RETURNED_RUN_ID --json
 ```
 
 실행이 최종 상태에 도달할 때까지 확인하세요. 시나리오 결과, 진단, 환경 정리 상태를 살펴봅니다. 예제의 기대 결과는 결제 시나리오 통과입니다. 이 안내 자체가 사용자의 컴퓨터에서 통과했다는 근거는 아닙니다.
@@ -103,7 +97,7 @@ expect(await response.json()).toMatchObject({ quantity: 1, totalCents: 250 })
 
 첫 시도가 실패하면 ID를 남겨 두고 보고된 원인을 수정하세요. 헬퍼가 누락됐다면 소스 번들을, 이미지 빌드가 실패했다면 애플리케이션 빌드를 수정해야 합니다. 응답이 예상과 다르면 단언과 실제 동작을 조사해야 합니다.
 
-관련 입력을 고친 뒤에는 새 요청을 제출하세요. `get_run`은 기존 요청을 읽는 도구이며 테스트를 재실행하거나 수정된 파일을 반영하지 않습니다. 새 기록의 소스와 결과를 원래 실패와 비교하세요. 새 실행은 현재 애플리케이션과 설정 입력으로 새 환경을 준비합니다.
+관련 입력을 고친 뒤에는 새 요청을 제출하세요. `redpact runs show`은 기존 요청을 읽는 도구이며 테스트를 재실행하거나 수정된 파일을 반영하지 않습니다. 새 기록의 소스와 결과를 원래 실패와 비교하세요. 새 실행은 현재 애플리케이션과 설정 입력으로 새 환경을 준비합니다.
 
 ## 환경 수명
 

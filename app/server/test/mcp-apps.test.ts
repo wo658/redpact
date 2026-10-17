@@ -25,11 +25,13 @@ test("런타임 MCP는 채팅 카드와 승인 도구를 노출하지 않는다"
     "get_run_artifact",
     "get_workspace_status",
     "list_runs",
-    "project_container",
+    "open_redpact",
+    "redpact_status",
     "run_tests",
+    "stop_redpact_server",
   ])
   for (const tool of result.tools) {
-    expect(tool._meta?.ui).toBeUndefined()
+    expect(tool._meta?.ui?.resourceUri).toBeUndefined()
   }
   const resources = await rpc("resources/list")
   expect(resources.result?.resources ?? []).toEqual([])

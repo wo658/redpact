@@ -10,30 +10,32 @@ no installed browser or Playwright test runtime.
 ## Run through the connected Redpact
 
 1. Use the absolute checkout being developed. Keep that path throughout setup,
-   `run_tests`, result lookup, and viewer verification; do not move the tests to an
+   `redpact tests run --kind integration`, result lookup, and viewer verification; do not move the tests to an
    example, clone, or a second server just to make execution work.
-2. Call `configure describe` and `configure inspect` with that path. Read the live
-   schema and the returned `rulesRoot`, `projectRoot`, and observation settings path.
-3. Merge the values from `e2e/settings.example.json` into the one
-   `<rulesRoot>/.redpact/settings.json`, preserving unrelated settings and test env.
+2. Call `redpact settings describe` and `redpact settings get` with
+   `--scope project --path /absolute/checkout`. Read the live schema, roots and revision.
+3. Apply the values from `e2e/settings.example.json` using `redpact settings patch`
+   with that scope/path and `--revision REVISION --patch-stdin` (or `--create` for
+   absent settings). Preserve unrelated settings and test env. Do not read or edit
+   project/runtime JSON files directly.
    This file is a setup example, not a second runtime settings format. Linked
    checkout overrides are unsupported. Compose/test paths resolve in the execution
    checkout, so that checkout must contain this directory.
-4. Ensure the primary project is in the connected instance's observed `projects`.
-   Preserve other entries and approval policy. Verify the project root and selected
-   checkout through that same instance's `/api/projects` and worktrees
-   endpoints.
-5. Call `configure validate` with the checkout path. The discovered bundle must include
-   `target.ts`, `worktree-evidence.test.ts`, `chat-context.test.ts`, and `host-boundaries.test.ts`.
-6. Call `run_tests` with that same path and
-   `tests: ["worktree-evidence.test.ts", "chat-context.test.ts", "host-boundaries.test.ts"]`.
+4. Use `redpact projects connect --path /absolute/checkout` if the primary project
+   is not connected. Preserve other entries and approval policy. Verify the binding
+   with `redpact workspace status --path /absolute/checkout` on that same instance.
+5. Call `redpact settings validate --scope project` with the checkout path. The discovered bundle must include
+   `target.ts`, `worktree-evidence.test.ts`, `chat-context.test.ts`, `host-boundaries.test.ts`,
+   and `agent-cli.test.ts`.
+6. Call `redpact tests run --kind integration --path /absolute/checkout` with
+   `--test worktree-evidence.test.ts --test chat-context.test.ts --test host-boundaries.test.ts --test agent-cli.test.ts`.
    Honor any Ask approval. Use a fresh
-   environment after application changes. Read `get_run` until terminal.
-7. Verify `run.target.projectRoot` is the requested checkout. On the connected
-   server, `/api/submissions?worktreeId=<run.target.worktreeId>` must contain
-   `run.submissionId`, and `/api/runs?submissionId=<run.submissionId>` must contain
-   the run. Open that execution's `reviewPath` in the connected viewer, or use
-   `/?page=history&worktree=<run.target.worktreeId>` for its checkout's recorded history.
+   environment after application changes. Read `redpact runs show --kind integration --id ID` until terminal.
+7. In the CLI envelope's `data`, verify `path` is the requested checkout and
+   `worktreeId` matches its observed binding. `redpact submissions list --path PATH`
+   must contain `identity.submissionId`, and `redpact runs list --path PATH` must
+   contain the execution. Open its `reviewPath` in the connected viewer, or use
+   `redpact open --kind integration --id ID` for that exact execution.
    Confirm the recorded submission. Report run and environment IDs, actual case
    results, and that server's origin.
 
@@ -71,7 +73,7 @@ Retained environments can be inspected in the Environment screen or through its 
 
 Keep chat-context and approval checks alongside the full application coverage. Verify captured inputs, both Integration approval gates, Unit/Playwright request approval, stale-input rejection, cancellation non-exposure and live updates. Verify that runtime MCP advertises no inline card resources or approval tools.
 
-Use `run_tests` (`kind: "playwright"`) with the actual checkout and the declared functional or capture target. Target patterns are relative to `ui-tests`. Capture completion alone is not visual approval: inspect desktop/mobile images and identify seeded record fixtures as fixtures, not application execution evidence. The companion's real MCP bridge needs its own lifecycle checks.
+Use `redpact tests run --kind playwright` with the actual checkout and the declared functional or capture target. Target patterns are relative to `ui-tests`. Capture completion alone is not visual approval: inspect desktop/mobile images and identify seeded record fixtures as fixtures, not application execution evidence. The companion's real MCP bridge needs its own lifecycle checks.
 
 The native runner checks described in [development](../docs/development.md) cover actual capture collection, delayed/path attachments, crops, high-DPI pages and artifact persistence. They do not create a connected Integration submission.
 
