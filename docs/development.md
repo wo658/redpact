@@ -158,6 +158,9 @@ commits never satisfy the check.
 
 Both `/en/docs/` and `/ko/docs/` must also return successful HTML responses. CI then
 records requested/deployed SHAs and the production marker URL in its job summary.
+To audit a publication, open the deployment job summary and compare its deployed SHA
+with the live `/docs-source.json`; later deployments may advance the live marker.
+
 These checks confirm production source identity and route availability, not visual
 layout or translation quality. Deployment jobs remain serialized, including their
 verification, and each hook requests current main rather than an older pinned source.
