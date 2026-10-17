@@ -123,6 +123,22 @@ test("waiting maps completed failure and cleanup failure separately", async () =
     ).toBe(code)
   }
 })
+test("Integration 정리 실패는 테스트 성공과 실패보다 우선하는 종료 코드를 반환한다", async () => {
+  for (const outcome of ["passed", "failed"]) {
+    const record = {
+      kind: "integration",
+      id: "run",
+      state: "finished",
+      outcome,
+      cleanup: { state: "stop_failed", issues: ["Container removal failed"] },
+    }
+    const h = harness([record])
+    expect(
+      await runAgentCli(["runs", "wait", "--kind", "integration", "--id", "run", "--json"], h.io),
+    ).toBe(7)
+    expect(JSON.parse(h.output.join("")).data).toEqual(record)
+  }
+})
 test("client deadline never cancels server execution", async () => {
   const h = harness([
     { kind: "unit", id: "run", state: "running" },

@@ -312,7 +312,7 @@ export async function runAgentCli(args: string[], io: CliIO): Promise<number> {
         )
       ) {
         exit = current.outcome === "passed" ? 0 : 3
-        if (cleanup?.state === "failed") {
+        if (cleanup?.state === "failed" || cleanup?.state === "stop_failed") {
           exit = 7
         }
         return current
