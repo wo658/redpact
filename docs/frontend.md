@@ -24,6 +24,33 @@ The standalone browser and Global App Page use the full management app: project/
 
 Chat MCP returns text and structured evidence with web review paths; it does not render inline cards. An exact `/?page=review&kind=unit|integration|playwright&id=<id>` link opens the recorded request or execution inside the full app. Record identity determines its worktree; current project selection cannot retarget it. Opening a link never requests a run. The linked review retains its worktree-bound history and explicit approval controls; test cancellation is not exposed.
 
+## File Viewer Git filter
+
+**Settings → Preferences → Show Git-tracked files only** defaults off. This browser-local
+preference applies to every File Viewer tab and project on the same origin. It is saved
+in browser storage and survives reloads; changes also update other open browser tabs.
+If storage is unavailable, the choice remains usable for the current session. It is not
+a project execution setting. File Viewer has no separate filter control.
+
+When checked, the viewer reads the displayed project's checkout Git index and lists
+tracked files plus their parent directories. Modified tracked files, newly staged
+files and force-added ignored files remain eligible. Untracked files and folders
+containing only untracked files disappear. Existing file safety rules still apply:
+Git metadata, symbolic links and non-regular files are excluded; deleted files are
+not reconstructed from the index. When unchecked, normal filesystem browsing resumes,
+including eligible untracked and ignored files under the existing visibility rules.
+
+Changing the filter clears the selected preview. Live refresh rechecks tracking;
+a file removed from the index cannot retain its old preview while filtering is on.
+Collapsing a parent folder alone does not discard a valid selected file. An empty
+filtered directory shows an explicit empty state. Non-Git projects and Git read
+failures show a diagnostic instead of an unfiltered fallback or stale tree/preview;
+Retry remains available. Turning the preference off in Settings restores ordinary browsing.
+
+The project-file HTTP read accepts optional `trackedOnly=true|false` (default false)
+for both directory listings and file previews; other values are rejected. A filtered
+read of an untracked file is rejected. See the generated HTTP API for its schema.
+
 ## Test file browsing
 
 Unit and Integration lists return file paths separately from selected-file source.

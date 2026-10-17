@@ -7016,3 +7016,146 @@ test("변경 Unit 실행이 거절되어도 전체 범위로 전환해 다시 �
   await user.click(run)
   await waitFor(() => assert.deepEqual(calls, ["changed", "all"]))
 })
+
+test("Settings의 Git 추적 설정은 숨겨진 선택을 지우고 다시 열어도 유지된다", async () => {
+  await i18n.changeLanguage("en")
+  const { ProjectFileViewer } = await server.ssrLoadModule(
+    "/src/components/project-file-viewer.tsx",
+  )
+  localStorage.removeItem("redpact:tracked-files-only")
+  const { GlobalSettings } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  const reads = []
+  const api = {
+    projectFile: async (_id, path, _signal, trackedOnly) => {
+      reads.push({ path, trackedOnly })
+      if (!path) {
+        return {
+          kind: "directory",
+          path,
+          entries: trackedOnly ? [] : [{ name: "local.txt", kind: "file" }],
+        }
+      }
+      return { kind: "text", path, content: "private draft" }
+    },
+  }
+  const view = render(
+    createElement(
+      "div",
+      null,
+      createElement(GlobalSettings, { api }),
+      createElement(ProjectFileViewer, { api, projectId: "project" }),
+    ),
+  )
+  await userEvent.click(await screen.findByRole("treeitem", { name: "local.txt" }))
+  await waitFor(() =>
+    assert.equal(document.querySelector(".diff-code")?.textContent, "private draft"),
+  )
+  const toggle = screen.getByRole("switch", { name: "Show Git-tracked files only" })
+  assert.equal(toggle.getAttribute("aria-checked"), "false")
+  await userEvent.click(toggle)
+  assert.equal(document.querySelector(".diff-code"), null)
+  assert.ok(await screen.findByText("No Git-tracked files to display."))
+  assert.equal(screen.queryByRole("treeitem", { name: "local.txt" }), null)
+  assert.ok(reads.some((read) => read.path === "" && read.trackedOnly === true))
+  assert.equal(
+    reads.some((read) => read.path === "local.txt" && read.trackedOnly === true),
+    false,
+  )
+  view.unmount()
+  render(
+    createElement(
+      "div",
+      null,
+      createElement(GlobalSettings, { api }),
+      createElement(ProjectFileViewer, { api, projectId: "project" }),
+    ),
+  )
+  assert.equal(
+    screen
+      .getByRole("switch", { name: "Show Git-tracked files only" })
+      .getAttribute("aria-checked"),
+    "true",
+  )
+  assert.equal(screen.queryByRole("checkbox", { name: "Show Git-tracked files only" }), null)
+  assert.ok(await screen.findByText("No Git-tracked files to display."))
+  assert.equal(localStorage.getItem("redpact:tracked-files-only"), "true")
+  await userEvent.click(screen.getByRole("switch", { name: "Show Git-tracked files only" }))
+  assert.ok(await screen.findByRole("treeitem", { name: "local.txt" }))
+})
+
+test("Git 추적 목록 오류는 전체 파일로 대체하지 않고 재시도나 필터 해제를 허용한다", async () => {
+  await i18n.changeLanguage("en")
+  const { ProjectFileViewer } = await server.ssrLoadModule(
+    "/src/components/project-file-viewer.tsx",
+  )
+  localStorage.removeItem("redpact:tracked-files-only")
+  const { GlobalSettings } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  let failing = true
+  const api = {
+    projectFile: async (_id, path, _signal, trackedOnly) => {
+      if (trackedOnly && failing) {
+        throw new Error("Git index unavailable")
+      }
+      return { kind: "directory", path, entries: [{ name: "readme.md", kind: "file" }] }
+    },
+  }
+  render(
+    createElement(
+      "div",
+      null,
+      createElement(GlobalSettings, { api }),
+      createElement(ProjectFileViewer, { api, projectId: "project" }),
+    ),
+  )
+  assert.ok(await screen.findByRole("treeitem", { name: "readme.md" }))
+  const toggle = screen.getByRole("switch", { name: "Show Git-tracked files only" })
+  await userEvent.click(toggle)
+  assert.ok(await screen.findByText("Git index unavailable"))
+  assert.equal(screen.queryByRole("treeitem", { name: "readme.md" }), null)
+  failing = false
+  await userEvent.click(screen.getByRole("button", { name: "Retry" }))
+  assert.ok(await screen.findByRole("treeitem", { name: "readme.md" }))
+  await userEvent.click(toggle)
+  assert.equal(toggle.getAttribute("aria-checked"), "false")
+})
+
+test("필터된 선택 파일 읽기가 실패하면 선택 표시와 미리보기를 숨기고 오류를 유지한다", async () => {
+  await i18n.changeLanguage("en")
+  const { ProjectFileViewer } = await server.ssrLoadModule(
+    "/src/components/project-file-viewer.tsx",
+  )
+  localStorage.removeItem("redpact:tracked-files-only")
+  const { GlobalSettings } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  let fail = true
+  const api = {
+    projectFile: async (_id, path) => {
+      if (!path) {
+        return { kind: "directory", path, entries: [{ name: "tracked.txt", kind: "file" }] }
+      }
+      if (fail) {
+        throw new Error("Tracked file is no longer available")
+      }
+      return { kind: "text", path, content: "restored" }
+    },
+  }
+  render(
+    createElement(
+      "div",
+      null,
+      createElement(GlobalSettings, { api }),
+      createElement(ProjectFileViewer, { api, projectId: "project" }),
+    ),
+  )
+  await screen.findByRole("treeitem", { name: "tracked.txt" })
+  await userEvent.click(screen.getByRole("switch", { name: "Show Git-tracked files only" }))
+  await userEvent.click(await screen.findByRole("treeitem", { name: "tracked.txt" }))
+  assert.ok(await screen.findByText("Tracked file is no longer available"))
+  assert.ok(document.querySelector('code[title="tracked.txt"]') === null)
+  assert.equal(
+    screen.getByRole("treeitem", { name: "tracked.txt" }).getAttribute("aria-selected"),
+    "false",
+  )
+  fail = false
+  await userEvent.click(screen.getByRole("button", { name: "Retry" }))
+  await waitFor(() => assert.equal(document.querySelector(".diff-code")?.textContent, "restored"))
+})

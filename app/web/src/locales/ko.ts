@@ -1,6 +1,10 @@
 import type { en } from "./en"
 
 export const ko = {
+  "Apply to all File Viewer tabs in this browser.":
+    "이 브라우저의 모든 File Viewer 탭에 적용합니다.",
+  "Show Git-tracked files only": "Git 추적 파일만 표시",
+  "No Git-tracked files to display.": "표시할 Git 추적 파일이 없습니다.",
   "Only the first 50 selected files are shown. Open the recorded run for the full list.":
     "선택 파일의 처음 50개만 표시합니다. 전체 목록은 기록된 실행에서 확인하세요.",
   "The configured command discovers its own files; no exact file list is recorded.":

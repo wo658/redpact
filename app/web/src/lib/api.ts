@@ -476,9 +476,9 @@ export function createApi(fetcher: typeof fetch = viewerFetch) {
         `/projects/${encodeURIComponent(projectId)}/test-container/${action}`,
         {},
       ),
-    projectFile: (projectId: string, path: string, signal?: AbortSignal) =>
+    projectFile: (projectId: string, path: string, signal?: AbortSignal, trackedOnly = false) =>
       request<ProjectEntry>(
-        `/projects/${encodeURIComponent(projectId)}/files?${new URLSearchParams({ path })}`,
+        `/projects/${encodeURIComponent(projectId)}/files?${new URLSearchParams({ path, ...(trackedOnly ? { trackedOnly: "true" } : {}) })}`,
         undefined,
         signal,
       ),

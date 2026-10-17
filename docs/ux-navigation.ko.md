@@ -152,6 +152,7 @@ Redpact
 │       ├── Preferences [섹션]
 │       │   ├── Theme: Light / Dark / System
 │       │   ├── Word wrap
+│       │   ├── Git 추적 파일만 표시 [스위치; 브라우저 로컬]
 │       │   └── Language
 │       ├── Integrations [섹션]
 │       │   └── GitHub connection check

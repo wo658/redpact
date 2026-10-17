@@ -153,6 +153,7 @@ Redpact
 │       ├── Preferences [section]
 │       │   ├── Theme: Light / Dark / System
 │       │   ├── Word wrap
+│       │   ├── Show Git-tracked files only [switch; browser-local]
 │       │   └── Language
 │       ├── Integrations [section]
 │       │   └── GitHub connection check

@@ -14,6 +14,7 @@ import {
 import { Activity, useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { AppShortcuts } from "@/components/app-shortcuts"
+import { useTrackedFilesOnly } from "@/lib/tracked-files-only"
 import { useRefreshRequest } from "@/lib/use-refresh-request"
 import { cn } from "@/lib/utils"
 import { useWordWrap } from "@/lib/word-wrap"
@@ -836,6 +837,7 @@ export function WorktreePanel({
 export function GlobalSettings({ api }: { api: Api }) {
   const { t } = useTranslation()
   const [wordWrap, setWordWrap] = useWordWrap()
+  const [trackedOnly, setTrackedOnly] = useTrackedFilesOnly()
   return (
     <div className="flex min-w-0 flex-col gap-8">
       <UpdateSettings />
@@ -844,6 +846,16 @@ export function GlobalSettings({ api }: { api: Api }) {
         <ThemeSettings />
         <SettingsRow title={t("Word wrap")}>
           <Switch aria-label={t("Word wrap")} checked={wordWrap} onCheckedChange={setWordWrap} />
+        </SettingsRow>
+        <SettingsRow
+          title={t("Show Git-tracked files only")}
+          description={t("Apply to all File Viewer tabs in this browser.")}
+        >
+          <Switch
+            aria-label={t("Show Git-tracked files only")}
+            checked={trackedOnly}
+            onCheckedChange={setTrackedOnly}
+          />
         </SettingsRow>
         <SettingsRow title={t("Language")}>
           <LanguageSelector />

@@ -1,4 +1,8 @@
 export const en = {
+  "Apply to all File Viewer tabs in this browser.":
+    "Apply to all File Viewer tabs in this browser.",
+  "Show Git-tracked files only": "Show Git-tracked files only",
+  "No Git-tracked files to display.": "No Git-tracked files to display.",
   "Only the first 50 selected files are shown. Open the recorded run for the full list.":
     "Only the first 50 selected files are shown. Open the recorded run for the full list.",
   "The configured command discovers its own files; no exact file list is recorded.":
