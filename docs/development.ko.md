@@ -269,7 +269,9 @@ OSS 소스를 비공개로 만드는 설정이 아닙니다. 게시에는 새 �
 pack·preview는 게시, Git push, release tag 생성을 하지 않습니다.
 
 로컬 업데이트는 고유 릴리스를 준비하고 전환 전 smoke test와 활성 작업 검사를 수행합니다.
-이전 코드를 보존하고 실패 시 rollback을 검증합니다. Rollback은 코드 복원이며 런타임
+이전 코드를 보존하고 실패 시 rollback을 검증합니다. 후보 검증은 HTTP 상태와 패키지 UI 검사에
+더해 읽기 전용 MCP `redpact_status` 도구를 요구합니다. 복원한 이전 설치를 검증할 때만
+`redpact_status`가 없으면 기존 `configure describe` 확인을 허용합니다. Rollback은 코드 복원이며 런타임
 데이터 호환성 복원이 아닙니다. 살아 있거나 불명확한 writer lock을 제거하거나 관계없는
 Docker 리소스를 prune하지 않습니다. 이전 릴리스는 명시적으로 관리할 때까지 남습니다.
 선택적 `redpact.autoUpdate` Git 설정은 깨끗한 커밋 뒤 서비스·플러그인 업데이트를 호출할

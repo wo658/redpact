@@ -295,7 +295,10 @@ private. Publishing needs a fresh package version and registry authorization;
 packing or previewing does not publish, push Git or create a release tag.
 
 Local updates stage a unique release, smoke-test it before switching, check active
-work, preserve prior code and verify rollback on failure. Rollback restores code,
+work, preserve prior code and verify rollback on failure. Candidate checks require the
+read-only MCP `redpact_status` tool alongside HTTP health and packaged UI checks. Only
+verification of a restored previous installation permits the legacy `configure describe`
+probe when `redpact_status` is absent. Rollback restores code,
 not runtime data compatibility. Never remove a live/unknown writer lock or prune
 unrelated Docker resources. Old releases remain until explicitly managed.
 The opt-in `redpact.autoUpdate` Git setting can invoke service/plugin updates after
