@@ -20,15 +20,25 @@ test("수동 환경 조회는 요청한 워크트리에 귀속되고 고정 포�
   const project = await step("실제 프로젝트와 기능 워크트리를 연결한다", async () => {
     const response = await http<{ id: string }>("/api/projects", "POST", { path: paths.main })
     expect(response.status).toBe(201)
+    const linked = await http<{ id: string }>(
+      `/api/projects/${response.body.id}/worktrees`,
+      "POST",
+      {
+        path: paths.feature,
+      },
+    )
+    expect(linked.status).toBe(201)
     return response.body
   })
   await step("MCP는 기능 체크아웃을 메인으로 대체하지 않는다", async () => {
     const response = await rpc<{
+      isError?: boolean
       structuredContent: { target: { id: string; projectRoot: string }; environment: unknown }
     }>("tools/call", {
       name: "project_container",
       arguments: { path: paths.feature, action: "inspect" },
     })
+    expect(response.isError).not.toBe(true)
     expect(response.structuredContent.target.projectRoot).toBe(paths.feature)
     expect(response.structuredContent.environment).toBeNull()
     const httpView = await http<{ target: { id: string; projectRoot: string } }>(
