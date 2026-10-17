@@ -178,7 +178,9 @@ Redpact
 
 - Project display options start with every available item visible. Hiding an item
   preserves the current page and active work. Worktrees and global Settings remain
-  accessible. Visibility is remembered per project in browser storage.
+  accessible. Visibility is remembered per project in browser storage. The display-options
+  button has no numeric badge; its accessible name and tooltip retain the hidden-item
+  count. Use the menu checkboxes or **Show all** to restore hidden items.
 - Worktree review hides confirmed-empty tabs. Errors, diagnostics, active execution
   and cleanup remain reachable. If the selected tab disappears, the first available
   tab opens; no available content produces one empty state.

@@ -1,7 +1,6 @@
 import { SlidersHorizontal } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import {
   DropdownMenu,
@@ -103,15 +102,6 @@ export function ProjectMenuOptions({
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
-      {count > 0 && (
-        <Badge
-          variant="secondary"
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-1 -top-1 px-1"
-        >
-          {count}
-        </Badge>
-      )}
     </div>
   )
 }
