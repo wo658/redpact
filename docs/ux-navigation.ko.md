@@ -83,7 +83,6 @@ Redpact
 │   │   │       └── Playwright 실행 제어 [작업]
 │   │   │
 │   │   ├── File Viewer [페이지]
-│   │   │   ├── Git 추적 파일만 표시 [체크박스]
 │   │   │   └── 파일 트리 → 선택한 파일 소스 또는 이미지 미리보기
 │   │   │       └── SVG Preview / Source [탭]
 │   │   ├── Git Graph [페이지; Git 프로젝트]
@@ -153,6 +152,7 @@ Redpact
 │       ├── Preferences [섹션]
 │       │   ├── Theme: Light / Dark / System
 │       │   ├── Word wrap
+│       │   ├── Git 추적 파일만 표시 [스위치; 브라우저 로컬]
 │       │   └── Language
 │       ├── Integrations [섹션]
 │       │   └── GitHub connection check

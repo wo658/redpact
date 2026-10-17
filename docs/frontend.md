@@ -26,9 +26,11 @@ Inline MCP Apps use separately bundled request approval and result cards. They s
 
 ## File Viewer Git filter
 
-**Show Git-tracked files only** starts unchecked. Its value belongs to the current
-File Viewer component in a workspace tab; it is not saved in browser storage or
-project settings and resets when the view is remounted or the page reloads.
+**Settings → Preferences → Show Git-tracked files only** defaults off. This browser-local
+preference applies to every File Viewer tab and project on the same origin. It is saved
+in browser storage and survives reloads; changes also update other open browser tabs.
+If storage is unavailable, the choice remains usable for the current session. It is not
+a project execution setting. File Viewer has no separate filter control.
 
 When checked, the viewer reads the displayed project's checkout Git index and lists
 tracked files plus their parent directories. Modified tracked files, newly staged
@@ -43,7 +45,7 @@ a file removed from the index cannot retain its old preview while filtering is o
 Collapsing a parent folder alone does not discard a valid selected file. An empty
 filtered directory shows an explicit empty state. Non-Git projects and Git read
 failures show a diagnostic instead of an unfiltered fallback or stale tree/preview;
-Retry and the checkbox remain available. Unchecking restores ordinary browsing.
+Retry remains available. Turning the preference off in Settings restores ordinary browsing.
 
 The project-file HTTP read accepts optional `trackedOnly=true|false` (default false)
 for both directory listings and file previews; other values are rejected. A filtered

@@ -47,13 +47,13 @@ export async function prepareTrackedFiles(
   return path
 }
 
-export async function openTrackedFiles(page: Page) {
-  const navigation = page.getByRole("button", { name: "File Viewer", exact: true })
+async function openNavigation(page: Page, name: "File Viewer" | "Settings") {
+  const navigation = page.getByRole("button", { name, exact: true })
   const toggle = page.getByRole("button", { name: "사이드바 전환", exact: true })
   const mobile = (page.viewportSize()?.width ?? 1920) < 768
   if (mobile) {
-    await expect(toggle).toBeVisible()
     if (!(await page.locator('[data-slot="sidebar"][data-mobile="true"]').isVisible())) {
+      await expect(toggle).toBeVisible()
       await toggle.click()
     }
   } else {
@@ -67,7 +67,31 @@ export async function openTrackedFiles(page: Page) {
   await expect(navigation).toBeInViewport()
   await navigation.click()
   await page.keyboard.press("Escape")
-  await expect(page.getByRole("checkbox", { name: trackedFilterLabel, exact: true })).toBeVisible()
+  if (mobile) {
+    await expect(page.locator('[data-slot="sidebar"][data-mobile="true"]')).toBeHidden()
+  }
+}
+
+export async function openTrackedFiles(page: Page) {
+  await openNavigation(page, "File Viewer")
+  await expect(page.getByRole("checkbox", { name: trackedFilterLabel, exact: true })).toHaveCount(0)
+  await expect(page.getByRole("switch", { name: trackedFilterLabel, exact: true })).toHaveCount(0)
+}
+
+export async function openTrackedSettings(page: Page) {
+  await openNavigation(page, "Settings")
+  const toggle = page.getByRole("switch", { name: trackedFilterLabel, exact: true })
+  await expect(toggle).toBeVisible()
+  return toggle
+}
+
+export async function setTrackedOnly(page: Page, enabled: boolean) {
+  const toggle = await openTrackedSettings(page)
+  if ((await toggle.getAttribute("aria-checked")) !== String(enabled)) {
+    await toggle.click()
+  }
+  await expect(toggle).toHaveAttribute("aria-checked", String(enabled))
+  await openTrackedFiles(page)
 }
 
 export async function changeTracking(path: string, action: "add" | "remove" | "break" | "restore") {

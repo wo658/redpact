@@ -1,6 +1,7 @@
-import { useCallback, useId, useState } from "react"
+import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 import type { Api } from "@/lib/api"
+import { useTrackedFilesOnly } from "@/lib/tracked-files-only"
 import { useRefreshRequest } from "@/lib/use-refresh-request"
 import type { ProjectEntry } from "../../../server/src/core/types/project-files"
 import { FileList, type FileListEntry } from "./changed-file-list"
@@ -9,8 +10,6 @@ import { FileContent } from "./file-content"
 import { FileIcon } from "./file-icon"
 import { useLiveRevision } from "./live-updates"
 import { Button } from "./ui/button"
-import { Checkbox } from "./ui/checkbox"
-import { Field, FieldGroup, FieldLabel } from "./ui/field"
 import "@/locales"
 
 function listEntries(directory: ProjectEntry): FileListEntry[] {
@@ -51,10 +50,28 @@ async function readExpandedFolders(
 }
 
 export function ProjectFileViewer({ api, projectId }: { api: Api; projectId: string }) {
+  const [trackedOnly] = useTrackedFilesOnly()
+  return (
+    <FilteredProjectFiles
+      key={`${projectId}:${trackedOnly}`}
+      api={api}
+      projectId={projectId}
+      trackedOnly={trackedOnly}
+    />
+  )
+}
+
+function FilteredProjectFiles({
+  api,
+  projectId,
+  trackedOnly,
+}: {
+  api: Api
+  projectId: string
+  trackedOnly: boolean
+}) {
   const { t } = useTranslation()
   const revision = useLiveRevision()
-  const filterId = useId()
-  const [trackedOnly, setTrackedOnly] = useState(false)
   const [expandedPaths, setExpandedPaths] = useState<string[]>([])
   const [selected, setSelected] = useState("")
   const [entries, setEntries] = useState<FileListEntry[] | null>(null)
@@ -107,22 +124,6 @@ export function ProjectFileViewer({ api, projectId }: { api: Api; projectId: str
   const displayedSelection = trackedOnly && error && !preview ? "" : selected
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-      <FieldGroup className="shrink-0 border-b px-3 py-2">
-        <Field orientation="horizontal">
-          <Checkbox
-            id={filterId}
-            checked={trackedOnly}
-            onCheckedChange={(checked) => {
-              setTrackedOnly(checked)
-              setSelected("")
-              setPreview(null)
-              setEntries(null)
-              setError("")
-            }}
-          />
-          <FieldLabel htmlFor={filterId}>{t("Show Git-tracked files only")}</FieldLabel>
-        </Field>
-      </FieldGroup>
       {error && (
         <Notice error>
           {error}
