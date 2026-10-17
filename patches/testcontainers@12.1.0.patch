@@ -370,7 +370,7 @@ diff --git a/build/container-runtime/clients/image/docker-image-client.js b/buil
 index 1cb09e340430aa8dbaa36f79d7ae1c13c3278fff..50ff785c2a098ec620d5f9430be5c3ae9ef00ef7 100644
 --- a/build/container-runtime/clients/image/docker-image-client.js
 +++ b/build/container-runtime/clients/image/docker-image-client.js
-@@ -26,20 +26,20 @@ class DockerImageClient {
+@@ -26,20 +26,28 @@ class DockerImageClient {
              common_1.log.debug(`Building image "${opts.t}" with context "${context}"...`);
              const tarPackOptions = await this.createTarPackOptions(context, opts.dockerfile ?? "Dockerfile");
              const tarStream = tar_fs_1.default.pack(context, tarPackOptions);
@@ -388,10 +388,17 @@ index 1cb09e340430aa8dbaa36f79d7ae1c13c3278fff..50ff785c2a098ec620d5f9430be5c3ae
 -                    stream.on("end", () => resolve());
 -                });
 -            });
-+            const stream = await this.dockerode.buildImage(tarStream, opts);
++            let stream;
++            let tarError;
++            const tarClosed = new Promise((resolve) => tarStream.once("close", resolve));
++            tarStream.once("error", (error) => {
++                tarError = error;
++                stream?.destroy(error);
++            });
 +            try {
++                stream = await this.dockerode.buildImage(tarStream, opts);
++                if (tarError) throw tarError;
 +                const lines = (0, byline_1.default)(stream);
-+                tarStream.once("error", (error) => lines.destroy(error));
 +                stream.once("error", (error) => lines.destroy(error));
 +                for await (const line of lines) {
 +                    const event = JSON.parse(line.toString());
@@ -400,7 +407,8 @@ index 1cb09e340430aa8dbaa36f79d7ae1c13c3278fff..50ff785c2a098ec620d5f9430be5c3ae
 +                }
 +            } finally {
 +                tarStream.destroy();
-+                stream.destroy();
++                stream?.destroy();
++                await tarClosed;
 +            }
              common_1.log.debug(`Built image "${opts.t}" with context "${context}"`);
          }

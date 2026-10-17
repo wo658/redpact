@@ -333,7 +333,7 @@ The patch extends existing library clients where the pinned release lacks APIs.
 It adds network ownership labels and a Compose callback before failed-start cleanup
 so logs can be collected before resources disappear. It also isolates worker Ryuk
 sessions without changing the library's default reuse behavior for other callers.
-It propagates build-stream failures even when an earlier image tag exists, returns
+It closes build-context streams before returning, including when the Docker build API rejects before returning a response. It propagates build-stream failures even when an earlier image tag exists, returns
 an inspected image ID after building, and honors `autoCleanup: false` inside failed
 container waits. Finite log snapshots propagate retrieval errors and handle TTY and
 multiplexed stdout/stderr. Exec supports cancellation and bounded output; the runtime
