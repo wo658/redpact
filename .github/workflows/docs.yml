@@ -46,11 +46,17 @@ jobs:
       github.repository == 'wo658/redpact' && github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 12
     concurrency:
       group: documentation-deploy-hook
       cancel-in-progress: false
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - name: Request a website build from current public main
         env:
           DEPLOY_HOOK: ${{ secrets.REDPACT_DOCS_DEPLOY_HOOK }}
@@ -67,5 +73,7 @@ jobs:
             throw new Error("Website deployment request failed; retry this workflow");
           }
           if (!response.ok) throw new Error(`Website deployment request returned HTTP ${response.status}`);
-          console.log("Website deployment requested. Confirm completion in Vercel and the deployed /docs-source.json.");
+          console.log("Website deployment requested; waiting for production verification.");
           JS
+      - name: Confirm production source and bilingual documentation
+        run: node tools/docs/publication.mjs

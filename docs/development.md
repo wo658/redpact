@@ -146,11 +146,30 @@ content is copied into the website repository. The build logs and deployed
 `/docs-source.json` record the actual source commit. A newer main commit may be
 included when changes arrive before the build fetches its source.
 
-A successful hook request is not publication confirmation: check the Vercel result
-and the deployed source commit. Failed fetches, validation or builds do not publish
-the new output. A missing hook secret fails the publication job explicitly. A
-maintainer can set `REDPACT_DOCS_COMMIT` to a full SHA in the website build environment
-for reproducible builds or a temporary pin; remove it to resume main tracking.
+A successful hook request is not publication confirmation. The same deployment job
+runs `node tools/docs/publication.mjs` without installing dependencies. It polls the
+production `/docs-source.json` with cache-busting requests, up to 30 observations
+10 seconds apart with an approximately eight-minute deadline and ten-second HTTP
+timeouts. The entire job has a twelve-minute limit. The marker must identify this
+repository and main, with either the requested SHA or a descendant reachable from
+current public main. Git ancestry checks allow a newer main build to include several
+consecutive updates without falsely failing an older request. Unrelated or older
+commits never satisfy the check.
+
+Both `/en/docs/` and `/ko/docs/` must also return successful HTML responses. CI then
+records requested/deployed SHAs and the production marker URL in its job summary.
+These checks confirm production source identity and route availability, not visual
+layout or translation quality. Deployment jobs remain serialized, including their
+verification, and each hook requests current main rather than an older pinned source.
+This does not prevent a later external deployment or manual rollback.
+
+A stale marker, failed fetch or unavailable language route is retried within the
+bound; exhaustion fails CI with the last observed problem. A missing hook secret
+or failed hook request fails explicitly. Retry failed jobs or manually dispatch the
+workflow on main after fixing the Vercel failure. A maintainer can set
+`REDPACT_DOCS_COMMIT` to a full SHA in the website build environment for reproducible
+builds or a temporary pin; remove it to resume main tracking. A pin older than the
+requested commit will fail publication verification.
 
 ## Documentation preview
 
