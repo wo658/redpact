@@ -88,7 +88,7 @@ test("잘못된 소스는 거부하고 제출한 소스는 그대로 보존한�
   })
 }, 30000)
 
-test("MCP가 선택한 워크트리와 구조화된 실행 이력을 제공한다", async (context) => {
+test("앱 전용 MCP가 선택한 워크트리와 구조화된 실행 이력을 제공한다", async (context) => {
   const step = createSteps(context)
   await step("MCP에서 실행 경로와 공유 설정 유효성 확인", async () => {
     const inspected = await rpc<{
@@ -108,16 +108,10 @@ test("MCP가 선택한 워크트리와 구조화된 실행 이력을 제공한�
   })
   await step("MCP 이력 조회가 채팅 카드 없이 유지되는지 확인", async () => {
     const tools = await rpc<{
-      tools: { name: string; _meta?: { ui?: { resourceUri: string } } }[]
+      tools: { name: string; _meta?: { ui?: { resourceUri?: string; visibility?: string[] } } }[]
     }>("tools/list", {})
     expect(tools.tools.map((tool) => tool.name)).toEqual(
-      expect.arrayContaining([
-        "run_tests",
-        "project_container",
-        "list_runs",
-        "get_run",
-        "get_run_artifact",
-      ]),
+      expect.arrayContaining(["run_tests", "list_runs", "get_run", "get_run_artifact"]),
     )
     const history = await rpc<{ structuredContent: { worktreeId: string; items: unknown[] } }>(
       "tools/call",
@@ -128,7 +122,19 @@ test("MCP가 선택한 워크트리와 구조화된 실행 이력을 제공한�
     )
     expect(history.structuredContent.worktreeId).toBe(worktreeId)
     expect(Array.isArray(history.structuredContent.items)).toBe(true)
-    expect(tools.tools.every((tool) => !tool._meta?.ui)).toBe(true)
+    expect(tools.tools.every((tool) => !tool._meta?.ui?.resourceUri)).toBe(true)
+    expect(tools.tools.map((tool) => tool.name)).not.toContain("project_container")
+    const modelTools = tools.tools.filter(
+      (tool) => !tool._meta?.ui?.visibility || tool._meta.ui.visibility.includes("model"),
+    )
+    expect(modelTools.map((tool) => tool.name).sort()).toEqual([
+      "open_redpact",
+      "redpact_status",
+      "stop_redpact_server",
+    ])
+    expect(tools.tools.find((tool) => tool.name === "list_runs")?._meta?.ui?.visibility).toEqual([
+      "app",
+    ])
   })
 }, 30000)
 
