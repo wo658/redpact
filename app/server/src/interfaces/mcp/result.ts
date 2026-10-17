@@ -1,5 +1,7 @@
 import { publicSettings } from "../../core/settings.js"
 import type { SettingsResult } from "../../core/types/settings.js"
+export const uiMeta = () => ({ ui: { visibility: ["app"] } })
+
 export const readOnly = {
   readOnlyHint: true,
   destructiveHint: false,

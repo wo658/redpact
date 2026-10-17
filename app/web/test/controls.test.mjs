@@ -6795,55 +6795,59 @@ test("커밋·브랜치 이미지 뷰어가 비교 리비전과 이름 변경 �
   assert.ok(document.querySelector(".diff-code-delete"))
 })
 
-test("새 버전이 있을 때 사이드바 하단에 Update를 표시하고 네이티브 설치를 요청한다", async () => {
+test("새 버전은 사이드바에 표시되고 설치 전 확인창을 연다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
+  const originalFetch = globalThis.fetch
   const calls = []
-  window.__TAURI__ = {
-    core: {
-      invoke: async (command) => {
-        calls.push(command)
-        return { version: "0.2.0", busy: false }
-      },
-    },
+  globalThis.fetch = async (url, options) => {
+    if (!String(url).includes("/api/updates")) {
+      return originalFetch(url, options)
+    }
+    calls.push([String(url), options?.method])
+    return new Response(JSON.stringify({ version: "0.2.0", busy: false, canInstall: true }))
   }
   try {
     render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
     const update = await screen.findByRole("button", { name: "Update to 0.2.0" })
     assert.ok(update.closest('[data-slot="sidebar-footer"]'))
     await userEvent.click(update)
-    await waitFor(() => assert.ok(calls.includes("desktop_install_update")))
+    assert.ok(await screen.findByRole("button", { name: "Install and restart" }))
+    assert.ok(calls.some(([url, method]) => url.endsWith("/api/updates") && method === "GET"))
+    assert.ok(calls.every(([url]) => !url.endsWith("/install")))
   } finally {
-    delete window.__TAURI__
+    globalThis.fetch = originalFetch
   }
 })
 
-test("새 버전이 없으면 Update를 숨기고 설정 안에서만 수동 확인한다", async () => {
+test("새 버전이 없으면 Update를 숨기고 설정에서 HTTP로 수동 확인한다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  const props = { api: sampleApi(), initialProjects: [project] }
-  const view = render(createElement(ProjectManager, props))
-  assert.equal(screen.queryByRole("button", { name: /Update/ }), null)
-  view.unmount()
-  let checked = false
-  window.__TAURI__ = {
-    core: {
-      invoke: async () => {
-        checked = true
-        return { version: null, busy: false }
-      },
-    },
+  const originalFetch = globalThis.fetch
+  const calls = []
+  globalThis.fetch = async (url, options) => {
+    if (!String(url).includes("/api/updates")) {
+      return originalFetch(url, options)
+    }
+    calls.push([String(url), options?.method])
+    return new Response(JSON.stringify({ version: null, busy: false }))
   }
   try {
-    render(createElement(ProjectManager, props))
-    await waitFor(() => assert.equal(checked, true))
+    render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
+    await waitFor(() => assert.ok(calls.length > 0))
+    assert.equal(screen.queryByRole("button", { name: /Update to/ }), null)
     assert.equal(screen.queryByRole("button", { name: "Check for updates" }), null)
     await userEvent.click(screen.getByRole("button", { name: "Settings", exact: true }))
-    assert.ok(screen.getByRole("button", { name: "Check for updates" }))
+    await userEvent.click(screen.getByRole("button", { name: "Check for updates" }))
+    await waitFor(() =>
+      assert.ok(
+        calls.some(([url, method]) => url.endsWith("/api/updates/check") && method === "POST"),
+      ),
+    )
   } finally {
-    delete window.__TAURI__
+    globalThis.fetch = originalFetch
   }
 })
 
@@ -6851,59 +6855,42 @@ test("업데이트 작업 중에는 중복 설치 요청을 막는다", async ()
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
+  const originalFetch = globalThis.fetch
   const calls = []
-  window.__TAURI__ = {
-    core: {
-      invoke: async (command) => {
-        calls.push(command)
-        return { version: "0.2.0", busy: true }
-      },
-    },
+  globalThis.fetch = async (url) => {
+    if (!String(url).includes("/api/updates")) {
+      return originalFetch(url)
+    }
+    calls.push(String(url))
+    return new Response(JSON.stringify({ version: "0.2.0", busy: true }))
   }
   try {
     render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
     const update = await screen.findByRole("button", { name: "Update to 0.2.0" })
     assert.equal(update.disabled, true)
     await userEvent.click(update)
-    assert.deepEqual(calls, ["desktop_update_status"])
+    assert.ok(calls.every((url) => !url.endsWith("/install")))
   } finally {
-    delete window.__TAURI__
+    globalThis.fetch = originalFetch
   }
 })
 
-test("사이드바 하단 한 줄에 아이콘 설정과 GitHub·Star·업데이트 확인을 모은다", async () => {
+test("사이드바 하단에 설정과 안전한 브라우저 GitHub 링크를 표시한다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-  const calls = []
-  window.__TAURI__ = {
-    core: {
-      invoke: async (command) => {
-        calls.push(command)
-        return { version: null, busy: false }
-      },
-    },
+  render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
+  const shortcuts = within(screen.getByRole("group", { name: "App shortcuts" }))
+  const settings = shortcuts.getByRole("button", { name: "Settings", exact: true })
+  assert.equal(settings.textContent, "")
+  for (const name of ["GitHub repository", "Star on GitHub"]) {
+    const link = shortcuts.getByRole("link", { name })
+    assert.equal(link.getAttribute("href"), "https://github.com/wo658/redpact")
+    assert.equal(link.getAttribute("target"), "_blank")
+    assert.equal(link.getAttribute("rel"), "noopener noreferrer")
   }
-  try {
-    render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
-    const shortcuts = within(screen.getByRole("group", { name: "App shortcuts" }))
-    const settings = shortcuts.getByRole("button", { name: "Settings", exact: true })
-    assert.equal(settings.textContent, "")
-    const repository = shortcuts.getByRole("link", { name: "GitHub repository" })
-    const star = shortcuts.getByRole("link", { name: "Star on GitHub" })
-    assert.equal(repository.getAttribute("href"), "https://github.com/wo658/redpact")
-    assert.equal(star.getAttribute("href"), "https://github.com/wo658/redpact")
-    await userEvent.click(repository)
-    await userEvent.click(star)
-    assert.equal(calls.filter((command) => command === "desktop_open_repository").length, 2)
-    assert.equal(shortcuts.queryByRole("button", { name: "Check for updates" }), null)
-    await userEvent.click(settings)
-    await userEvent.click(screen.getByRole("button", { name: "Check for updates" }))
-    await waitFor(() => assert.ok(calls.includes("desktop_check_update")))
-    assert.equal(settings.getAttribute("aria-current"), "page")
-  } finally {
-    delete window.__TAURI__
-  }
+  await userEvent.click(settings)
+  assert.equal(settings.getAttribute("aria-current"), "page")
 })
 
 test("브라우저 방문 기록으로 메뉴와 작업공간 탭을 복원하고 새 이동은 앞으로 기록을 지운다", async () => {
@@ -6934,77 +6921,18 @@ test("브라우저 방문 기록으로 메뉴와 작업공간 탭을 복원하�
   assert.ok(screen.getByRole("combobox", { name: "Main branch" }))
 })
 
-for (const platform of ["macos", "windows"]) {
-  test(`${platform} 앞뒤 버튼은 브라우저 방문 기록을 직접 이동한다`, async () => {
-    await i18n.changeLanguage("en")
-    document.documentElement.dataset.desktop = platform
-    try {
-      const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
-      const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
-      render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
-      const toggle = screen.getByRole("button", { name: "Toggle Sidebar", exact: true })
-      const back = screen.getByRole("button", { name: "Go back", exact: true })
-      assert.equal(
-        toggle.closest(".native-sidebar-toolbar"),
-        back.closest(".native-sidebar-toolbar"),
-      )
-      assert.ok(back.closest(".native-sidebar-toolbar"))
-      assert.equal(back.closest(".app-header"), null)
-      const user = userEvent.setup({ document })
-      await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
-      const firstTab = window.history.state.redpactWorkspace.id
-      await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
-      const secondTab = window.history.state.redpactWorkspace.id
-      await user.click(screen.getByRole("button", { name: "Go back", exact: true }))
-      await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, firstTab))
-      await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
-      await user.click(screen.getByRole("button", { name: "Go forward", exact: true }))
-      await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, secondTab))
-    } finally {
-      delete document.documentElement.dataset.desktop
-    }
-  })
-}
-
-test("Windows 창 버튼은 연결 중에도 작동하고 최대화 상태를 반영한다", async () => {
+test("브라우저 화면은 외부 속성이 있어도 네이티브 창 컨트롤을 노출하지 않는다", async () => {
   await i18n.changeLanguage("en")
   document.documentElement.dataset.desktop = "windows"
   const originalFetch = globalThis.fetch
   globalThis.fetch = () => new Promise(() => {})
-  const calls = []
-  let maximized = false
-  window.__TAURI__ = {
-    window: {
-      getCurrentWindow: () => ({
-        isMaximized: async () => maximized,
-        minimize: async () => {
-          calls.push("minimize")
-        },
-        toggleMaximize: async () => {
-          calls.push("toggle")
-          maximized = !maximized
-        },
-        close: async () => {
-          calls.push("close")
-        },
-      }),
-    },
-  }
   try {
     const { default: App } = await server.ssrLoadModule("/src/App.tsx")
     render(createElement(App))
-    const user = userEvent.setup({ document })
-    await user.click(screen.getByRole("button", { name: "Minimize window", exact: true }))
-    await user.click(screen.getByRole("button", { name: "Maximize window", exact: true }))
-    await user.click(await screen.findByRole("button", { name: "Restore window", exact: true }))
-    await user.click(screen.getByRole("button", { name: "Close window", exact: true }))
-    assert.deepEqual(calls, ["minimize", "toggle", "toggle", "close"])
-    maximized = true
-    window.dispatchEvent(new Event("resize"))
-    await screen.findByRole("button", { name: "Restore window", exact: true })
+    assert.ok(screen.queryByRole("button", { name: "Minimize window" }) === null)
+    assert.ok(screen.queryByRole("button", { name: "Close window" }) === null)
   } finally {
     globalThis.fetch = originalFetch
-    delete window.__TAURI__
     delete document.documentElement.dataset.desktop
   }
 })
@@ -7087,4 +7015,147 @@ test("변경 Unit 실행이 거절되어도 전체 범위로 전환해 다시 �
   assert.equal(run.disabled, false, "거절된 요청 때문에 전체 실행이 잠기면 안 된다")
   await user.click(run)
   await waitFor(() => assert.deepEqual(calls, ["changed", "all"]))
+})
+
+test("Settings의 Git 추적 설정은 숨겨진 선택을 지우고 다시 열어도 유지된다", async () => {
+  await i18n.changeLanguage("en")
+  const { ProjectFileViewer } = await server.ssrLoadModule(
+    "/src/components/project-file-viewer.tsx",
+  )
+  localStorage.removeItem("redpact:tracked-files-only")
+  const { GlobalSettings } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  const reads = []
+  const api = {
+    projectFile: async (_id, path, _signal, trackedOnly) => {
+      reads.push({ path, trackedOnly })
+      if (!path) {
+        return {
+          kind: "directory",
+          path,
+          entries: trackedOnly ? [] : [{ name: "local.txt", kind: "file" }],
+        }
+      }
+      return { kind: "text", path, content: "private draft" }
+    },
+  }
+  const view = render(
+    createElement(
+      "div",
+      null,
+      createElement(GlobalSettings, { api }),
+      createElement(ProjectFileViewer, { api, projectId: "project" }),
+    ),
+  )
+  await userEvent.click(await screen.findByRole("treeitem", { name: "local.txt" }))
+  await waitFor(() =>
+    assert.equal(document.querySelector(".diff-code")?.textContent, "private draft"),
+  )
+  const toggle = screen.getByRole("switch", { name: "Show Git-tracked files only" })
+  assert.equal(toggle.getAttribute("aria-checked"), "false")
+  await userEvent.click(toggle)
+  assert.equal(document.querySelector(".diff-code"), null)
+  assert.ok(await screen.findByText("No Git-tracked files to display."))
+  assert.equal(screen.queryByRole("treeitem", { name: "local.txt" }), null)
+  assert.ok(reads.some((read) => read.path === "" && read.trackedOnly === true))
+  assert.equal(
+    reads.some((read) => read.path === "local.txt" && read.trackedOnly === true),
+    false,
+  )
+  view.unmount()
+  render(
+    createElement(
+      "div",
+      null,
+      createElement(GlobalSettings, { api }),
+      createElement(ProjectFileViewer, { api, projectId: "project" }),
+    ),
+  )
+  assert.equal(
+    screen
+      .getByRole("switch", { name: "Show Git-tracked files only" })
+      .getAttribute("aria-checked"),
+    "true",
+  )
+  assert.equal(screen.queryByRole("checkbox", { name: "Show Git-tracked files only" }), null)
+  assert.ok(await screen.findByText("No Git-tracked files to display."))
+  assert.equal(localStorage.getItem("redpact:tracked-files-only"), "true")
+  await userEvent.click(screen.getByRole("switch", { name: "Show Git-tracked files only" }))
+  assert.ok(await screen.findByRole("treeitem", { name: "local.txt" }))
+})
+
+test("Git 추적 목록 오류는 전체 파일로 대체하지 않고 재시도나 필터 해제를 허용한다", async () => {
+  await i18n.changeLanguage("en")
+  const { ProjectFileViewer } = await server.ssrLoadModule(
+    "/src/components/project-file-viewer.tsx",
+  )
+  localStorage.removeItem("redpact:tracked-files-only")
+  const { GlobalSettings } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  let failing = true
+  const api = {
+    projectFile: async (_id, path, _signal, trackedOnly) => {
+      if (trackedOnly && failing) {
+        throw new Error("Git index unavailable")
+      }
+      return { kind: "directory", path, entries: [{ name: "readme.md", kind: "file" }] }
+    },
+  }
+  render(
+    createElement(
+      "div",
+      null,
+      createElement(GlobalSettings, { api }),
+      createElement(ProjectFileViewer, { api, projectId: "project" }),
+    ),
+  )
+  assert.ok(await screen.findByRole("treeitem", { name: "readme.md" }))
+  const toggle = screen.getByRole("switch", { name: "Show Git-tracked files only" })
+  await userEvent.click(toggle)
+  assert.ok(await screen.findByText("Git index unavailable"))
+  assert.equal(screen.queryByRole("treeitem", { name: "readme.md" }), null)
+  failing = false
+  await userEvent.click(screen.getByRole("button", { name: "Retry" }))
+  assert.ok(await screen.findByRole("treeitem", { name: "readme.md" }))
+  await userEvent.click(toggle)
+  assert.equal(toggle.getAttribute("aria-checked"), "false")
+})
+
+test("필터된 선택 파일 읽기가 실패하면 선택 표시와 미리보기를 숨기고 오류를 유지한다", async () => {
+  await i18n.changeLanguage("en")
+  const { ProjectFileViewer } = await server.ssrLoadModule(
+    "/src/components/project-file-viewer.tsx",
+  )
+  localStorage.removeItem("redpact:tracked-files-only")
+  const { GlobalSettings } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  let fail = true
+  const api = {
+    projectFile: async (_id, path) => {
+      if (!path) {
+        return { kind: "directory", path, entries: [{ name: "tracked.txt", kind: "file" }] }
+      }
+      if (fail) {
+        throw new Error("Tracked file is no longer available")
+      }
+      return { kind: "text", path, content: "restored" }
+    },
+  }
+  render(
+    createElement(
+      "div",
+      null,
+      createElement(GlobalSettings, { api }),
+      createElement(ProjectFileViewer, { api, projectId: "project" }),
+    ),
+  )
+  await screen.findByRole("treeitem", { name: "tracked.txt" })
+  await userEvent.click(screen.getByRole("switch", { name: "Show Git-tracked files only" }))
+  await userEvent.click(await screen.findByRole("treeitem", { name: "tracked.txt" }))
+  assert.ok(await screen.findByText("Tracked file is no longer available"))
+  assert.ok(document.querySelector('code[title="tracked.txt"]') === null)
+  assert.equal(
+    screen.getByRole("treeitem", { name: "tracked.txt" }).getAttribute("aria-selected"),
+    "false",
+  )
+  fail = false
+  await userEvent.click(screen.getByRole("button", { name: "Retry" }))
+  await waitFor(() => assert.equal(document.querySelector(".diff-code")?.textContent, "restored"))
 })

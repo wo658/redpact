@@ -14,7 +14,7 @@ The local Sidebar App renders the same connected React viewer after explicit run
 startup; installation and stopped states stay in an isolated companion shell. Its
 bundled entry uses an App-only MCP transport for API reads/writes, scoped live changes
 and binary artifacts. Fonts and icons are inline; no nested iframe or browser network
-permission is required. Standalone and desktop entries retain HTTP and native SSE.
+permission is required. The standalone entry retains HTTP and native SSE.
 See the [App Page installation contract](installation.md)
 for lifecycle, access boundaries, size limits and host verification requirements.
 
@@ -23,6 +23,33 @@ for lifecycle, access boundaries, size limits and host verification requirements
 The standalone browser and Global App Page use the full management app: project/worktree navigation, files and diffs, Git, test catalogs, environments, dependencies, and project/global settings. Opening the app without a record restores normal project navigation or the connect-project screen.
 
 Chat MCP returns text and structured evidence with web review paths; it does not render inline cards. An exact `/?page=review&kind=unit|integration|playwright&id=<id>` link opens the recorded request or execution inside the full app. Record identity determines its worktree; current project selection cannot retarget it. Opening a link never requests a run. The linked review retains its worktree-bound history and explicit approval controls; test cancellation is not exposed.
+
+## File Viewer Git filter
+
+**Settings → Preferences → Show Git-tracked files only** defaults off. This browser-local
+preference applies to every File Viewer tab and project on the same origin. It is saved
+in browser storage and survives reloads; changes also update other open browser tabs.
+If storage is unavailable, the choice remains usable for the current session. It is not
+a project execution setting. File Viewer has no separate filter control.
+
+When checked, the viewer reads the displayed project's checkout Git index and lists
+tracked files plus their parent directories. Modified tracked files, newly staged
+files and force-added ignored files remain eligible. Untracked files and folders
+containing only untracked files disappear. Existing file safety rules still apply:
+Git metadata, symbolic links and non-regular files are excluded; deleted files are
+not reconstructed from the index. When unchecked, normal filesystem browsing resumes,
+including eligible untracked and ignored files under the existing visibility rules.
+
+Changing the filter clears the selected preview. Live refresh rechecks tracking;
+a file removed from the index cannot retain its old preview while filtering is on.
+Collapsing a parent folder alone does not discard a valid selected file. An empty
+filtered directory shows an explicit empty state. Non-Git projects and Git read
+failures show a diagnostic instead of an unfiltered fallback or stale tree/preview;
+Retry remains available. Turning the preference off in Settings restores ordinary browsing.
+
+The project-file HTTP read accepts optional `trackedOnly=true|false` (default false)
+for both directory listings and file previews; other values are rejected. A filtered
+read of an untracked file is rejected. See the generated HTTP API for its schema.
 
 ## Test file browsing
 
@@ -110,8 +137,7 @@ preview never executes project code.
 
 ## Layout and reading width
 
-The app header owns open-workspace tabs and native drag space outside the rounded content
-frame. Workspace tabs show `Project / Sidebar page`, including `Project / Worktrees` for
+The app header owns open-workspace tabs outside the rounded content frame. Workspace tabs show `Project / Sidebar page`, including `Project / Worktrees` for
 worktree or branch review. Worktree names, branch paths and nested sections are intentionally
 omitted. The same label appears in the tooltip and accessible name, including the close action.
 Sidebar navigation and browser history update the location; nested detail selections remain
@@ -120,41 +146,25 @@ The project uses at most 40% of the label, leaving the remaining width for the s
 both truncate independently. Tabs use left-aligned icons, a subtle outline. The selected tab uses the theme’s accent background and a stronger
 primary-colored border in both light and dark themes; keyboard focus remains a separate ring. The adjacent plus button opens the current page location in a fresh tab and remains reachable
 when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The
-browser desktop and native macOS/Windows provide a sidebar toggle; compact mobile screens retain
+desktop browser provides a sidebar toggle; compact mobile screens retain
 the sidebar trigger. In browser and mobile layouts, the open sidebar places this control
 beside the project selector, immediately before project display options. When closed,
 a reopening control sits below the workspace header.
 
-On native macOS and Windows, the sidebar toggle and Back/Forward buttons stay in
-one 48px titlebar header. macOS reserves the left side for system traffic lights;
-Windows puts navigation on the left and custom minimize, maximize/restore and close
-buttons on the right, replacing the system titlebar and hiding the native menu bar.
-Window buttons remain available during connection loading and failure. Close keeps
-the existing hide-window behavior; the native Quit shortcut remains separate.
-Empty header areas drag the native window and double-click toggles maximization.
-The Windows maximize button reflects resize/focus changes. It does not implement
-the Windows 11 Snap Layouts hover menu; native dragging, resizing, shortcuts and
-window snapping require Windows verification in addition to Chromium layout tests. Collapsing
-the sidebar does not move these controls. Workspace tabs occupy the app area to the
-right of the expanded sidebar; when collapsed, they start after the native navigation
-controls. Narrow native windows place the tab strip below the titlebar so both remain
-reachable. The sidebar project row does not duplicate the native toggle; mobile sheets
-retain their own close toggle. Browser desktops use browser Back/Forward controls.
+Browser desktops use browser Back/Forward controls.
 
 Worktree display options appear while hovering anywhere in the Worktrees section,
 including its remaining space above the footer. Keyboard focus, an open options menu
 and non-hover input keep the control available.
 
 Project/worktree tab activation and sidebar page selection use the browser session history.
-Native Back/Forward call the same History API as browser navigation, across workspace tabs.
+Browser Back/Forward navigates across workspace tabs through the History API.
 Repeated selection adds no duplicate entry; navigating after Back discards forward entries.
 History restores the destination page and reopens a closed destination tab while its project
 is connected. Reload restores the current destination, but not drafts or other tabs. File
-selection, review subtabs and scroll changes do not add history entries. The native buttons
-remain available because the History API does not expose complete traversal availability;
-at a history boundary traversal has no effect.
+selection, review subtabs and scroll changes do not add history entries.
 The sidebar remains on the canvas. Preserve desktop
-gutters, collapsed state, full-width mobile content and native toolbar positioning.
+gutters, collapsed state and full-width mobile content.
 Workspace IDs are independent of project/worktree IDs. Each tab records its page and target;
 sidebar navigation updates the active tab, and labels reflect its current location. Creating a
 new tab copies that location with a fresh ID. Project/worktree changes retain the active tab ID

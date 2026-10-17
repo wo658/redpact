@@ -1,15 +1,8 @@
 import { Wait } from "testcontainers"
-
+import { failRunner, serveRunner, watchRunnerParent } from "../environment/runner-host.js"
 import { runnerImage } from "../environment/runner-image.js"
 
-process.once("disconnect", () => {
-  try {
-    process.kill(-process.pid, "SIGKILL")
-  } catch {
-    process.exit(1)
-  }
-})
-process.channel?.unref()
+watchRunnerParent()
 let input = ""
 for await (const chunk of process.stdin) {
   input += chunk
@@ -30,7 +23,13 @@ try {
     })
     .withEnvironment(spec.environment)
     .withResourcesQuota({ memory: spec.limits.memoryMiB / 1024 })
-    .withAutoCleanup(false)
+    .withAutoCleanup(true)
+    .withLogConsumer((stream) => {
+      stream.on("data", (chunk) => process.stderr.write(chunk))
+      stream.on("error", (error) =>
+        process.stderr.write(`Container log stream failed: ${error.message}\n`),
+      )
+    })
     .withAutoRemove(false)
     .withNetworkMode(spec.network)
     .withExtraHosts([{ host: "host.docker.internal", ipAddress: "host-gateway" }])
@@ -46,8 +45,7 @@ try {
     .withWaitStrategy(Wait.forLogMessage("redpact-integration-ready"))
     .withStartupTimeout(60000)
     .start()
-  process.stdout.write(JSON.stringify({ containerId: container.getId() }))
+  await serveRunner(container)
 } catch (error) {
-  process.stderr.write(error instanceof Error ? error.message : String(error))
-  process.exitCode = 1
+  await failRunner(error)
 }

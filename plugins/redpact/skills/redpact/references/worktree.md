@@ -56,7 +56,7 @@ criteria. Do not load unselected layers. Reuse existing Docker/Compose and depen
 definitions unless the task requires a shared configuration change. If setup blocks execution, inspect
 [Dependencies](dependencies.md) and resolve setup within the authorized task scope.
 Keep required setup repairs within the authorized task; preserve unrelated infrastructure and shared settings. Ask only for a missing material choice or authorization.
-Use this checkout's absolute application path for configure and execution, preserving
+Use this checkout's absolute application path for CLI settings and execution, preserving
 any monorepo subdirectory. Shared rules can live at a different returned rulesRoot;
 edit shared infrastructure only when the task explicitly requires that project-wide change.
 

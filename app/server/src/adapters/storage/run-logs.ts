@@ -6,15 +6,21 @@ import type { RunLogReader, RunLogs } from "../../core/types/run-logs.js"
 const limit = 256 * 1024
 
 export function createRunLogReader(directory: string): RunLogReader {
-  return async (id) => {
+  return async (id, side) => {
     if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
       throw new Error("Invalid run ID")
     }
-    const root = join(directory, "runs", id)
+    if (side !== undefined && side !== "before" && side !== "after") {
+      throw new Error("Invalid Playwright side")
+    }
+    const runRoot = join(directory, side ? "playwright-runs" : "runs", id)
+    const root = side ? join(runRoot, side) : runRoot
     try {
-      const info = await lstat(root)
-      if (!info.isDirectory() || info.isSymbolicLink()) {
-        throw new Error("Invalid run directory")
+      for (const path of side ? [runRoot, root] : [root]) {
+        const info = await lstat(path)
+        if (!info.isDirectory() || info.isSymbolicLink()) {
+          throw new Error("Invalid run directory")
+        }
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {

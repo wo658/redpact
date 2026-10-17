@@ -1,4 +1,8 @@
 export const en = {
+  "Apply to all File Viewer tabs in this browser.":
+    "Apply to all File Viewer tabs in this browser.",
+  "Show Git-tracked files only": "Show Git-tracked files only",
+  "No Git-tracked files to display.": "No Git-tracked files to display.",
   "Only the first 50 selected files are shown. Open the recorded run for the full list.":
     "Only the first 50 selected files are shown. Open the recorded run for the full list.",
   "The configured command discovers its own files; no exact file list is recorded.":
@@ -64,11 +68,6 @@ export const en = {
   "Waiting to start": "Waiting to start",
   "Running browser tests": "Running browser tests",
   "Starting browser": "Starting browser",
-  "Minimize window": "Minimize window",
-  "Maximize window": "Maximize window",
-  "Restore window": "Restore window",
-  "Close window": "Close window",
-  "Could not control the window.": "Could not control the window.",
   "Could not load projects.": "Could not load projects.",
   "No execution history.": "No execution history.",
   "Project history": "Project history",
@@ -118,7 +117,6 @@ export const en = {
   "GitHub repository": "GitHub repository",
   "Star on GitHub": "Star on GitHub",
   "Check for updates": "Check for updates",
-  "Could not open GitHub. Try again.": "Could not open GitHub. Try again.",
   Update: "Update",
   "Updating…": "Updating…",
   "Update to {{version}}": "Update to {{version}}",
@@ -438,8 +436,6 @@ export const en = {
   "This file exceeds the 1 MiB preview limit.": "This file exceeds the 1 MiB preview limit.",
   "Git Graph": "Git Graph",
 
-  "Go back": "Go back",
-  "Go forward": "Go forward",
   Code: "Code",
   "Changed unit test files": "Changed unit test files",
   "Changed integration test files": "Changed integration test files",

@@ -73,6 +73,15 @@ export async function listExecutions(
 }
 export async function readExecution(services: Services, input: z.infer<typeof executionReadInput>) {
   const { kind, id, detail } = input
+  const integrationReview = kind === "integration" ? services.reviews?.get(id) : undefined
+  if (integrationReview && detail !== "result") {
+    if (!integrationReview.run) {
+      problem("invalid_input", "Pending reviews have no execution evidence yet")
+    }
+    if (id !== integrationReview.run.id) {
+      return readExecution(services, { ...input, id: integrationReview.run.id })
+    }
+  }
   const executionReview = services.executionReviews?.get(id)
   if (executionReview) {
     if (executionReview.review.kind !== kind) {
@@ -200,9 +209,17 @@ export async function readRunArtifact(
   services: Services,
   input: { kind: "playwright"; id: string; artifactId: string; side: "before" | "after" },
 ) {
+  const review = services.executionReviews?.get(input.id)
+  if (review && review.review.kind !== input.kind) {
+    problem("not_found", "Execution review kind does not match")
+  }
+  if (review && !review.run) {
+    problem("invalid_input", "Pending reviews have no execution evidence yet")
+  }
+  const id = review?.run?.id ?? input.id
   const captures =
     services.captures ?? problem("settings_unsupported", "Playwright evidence is unavailable")
-  const run = captures.get(input.id)
+  const run = captures.get(id)
   const artifact =
     run[input.side].cases
       .flatMap((item) => item.artifacts)
@@ -211,9 +228,9 @@ export async function readRunArtifact(
   if (artifact.bytes > 8 * 1024 * 1024) {
     problem("invalid_input", "Use the viewer for artifacts larger than 8 MiB")
   }
-  const content = await captures.artifact(input.id, input.side, input.artifactId)
+  const content = await captures.artifact(id, input.side, input.artifactId)
   if (content.data.byteLength > 8 * 1024 * 1024 || content.contentType !== artifact.contentType) {
     problem("invalid_input", "Artifact content is unsupported or too large")
   }
-  return { kind: input.kind, id: input.id, artifact, data: content.data }
+  return { kind: input.kind, id, artifact, data: content.data }
 }

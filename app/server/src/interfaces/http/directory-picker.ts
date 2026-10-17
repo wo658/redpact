@@ -13,7 +13,7 @@ export function directoryPickerRoutes(picker?: DirectoryPicker) {
       summary: "Select a project folder in the server's OS dialog",
       tags: ["Projects"],
       description:
-        "Explicit desktop interaction only. Returns an absolute path or null on cancellation. Does not connect projects, upload files or run project code. Only one dialog may be open per server; requests expire after two minutes.",
+        "Explicit OS folder picker interaction only. Returns an absolute path or null on cancellation. Does not connect projects, upload files or run project code. Only one dialog may be open per server; requests expire after two minutes.",
       responses: {
         ...localErrors,
         200: jsonResponse(
@@ -22,7 +22,7 @@ export function directoryPickerRoutes(picker?: DirectoryPicker) {
         ),
         409: { description: "A folder selection dialog is already open." },
         502: { description: "Native folder selection failed or timed out." },
-        503: { description: "Desktop folder selection is unavailable." },
+        503: { description: "OS folder selection is unavailable." },
       },
     }),
     async (c) => {

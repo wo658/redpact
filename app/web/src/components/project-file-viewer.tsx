@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 import type { Api } from "@/lib/api"
+import { useTrackedFilesOnly } from "@/lib/tracked-files-only"
 import { useRefreshRequest } from "@/lib/use-refresh-request"
 import type { ProjectEntry } from "../../../server/src/core/types/project-files"
 import { FileList, type FileListEntry } from "./changed-file-list"
@@ -26,8 +27,9 @@ async function readExpandedFolders(
   projectId: string,
   expandedPaths: string[],
   signal: AbortSignal,
+  trackedOnly: boolean,
 ) {
-  const entries = listEntries(await api.projectFile(projectId, "", signal))
+  const entries = listEntries(await api.projectFile(projectId, "", signal, trackedOnly))
   const errors: string[] = []
   const paths = [...expandedPaths].sort((a, b) => a.split("/").length - b.split("/").length)
   // Load only expanded folders whose parents still list them.
@@ -39,7 +41,7 @@ async function readExpandedFolders(
       continue
     }
     try {
-      entries.push(...listEntries(await api.projectFile(projectId, path, signal)))
+      entries.push(...listEntries(await api.projectFile(projectId, path, signal, trackedOnly)))
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error))
     }
@@ -48,6 +50,26 @@ async function readExpandedFolders(
 }
 
 export function ProjectFileViewer({ api, projectId }: { api: Api; projectId: string }) {
+  const [trackedOnly] = useTrackedFilesOnly()
+  return (
+    <FilteredProjectFiles
+      key={`${projectId}:${trackedOnly}`}
+      api={api}
+      projectId={projectId}
+      trackedOnly={trackedOnly}
+    />
+  )
+}
+
+function FilteredProjectFiles({
+  api,
+  projectId,
+  trackedOnly,
+}: {
+  api: Api
+  projectId: string
+  trackedOnly: boolean
+}) {
   const { t } = useTranslation()
   const revision = useLiveRevision()
   const [expandedPaths, setExpandedPaths] = useState<string[]>([])
@@ -64,16 +86,25 @@ export function ProjectFileViewer({ api, projectId }: { api: Api; projectId: str
           projectId,
           expandedPaths,
           signal,
+          trackedOnly,
         )
         let file: ProjectEntry | null = null
-        if (selected) {
+        const visibleSelection = next.some((entry) =>
+          entry.kind === "folder"
+            ? !expandedPaths.includes(entry.path) && selected.startsWith(`${entry.path}/`)
+            : entry.path === selected,
+        )
+        if (selected && visibleSelection) {
           try {
-            file = await api.projectFile(projectId, selected, signal)
+            file = await api.projectFile(projectId, selected, signal, trackedOnly)
           } catch (error) {
             errors.push(error instanceof Error ? error.message : String(error))
           }
         }
         if (!signal.aborted) {
+          if (!visibleSelection) {
+            setSelected("")
+          }
           setEntries(next)
           setPreview(file)
           setError(errors.join("\n"))
@@ -82,12 +113,15 @@ export function ProjectFileViewer({ api, projectId }: { api: Api; projectId: str
         if (!signal.aborted) {
           setError(error instanceof Error ? error.message : String(error))
           setPreview(null)
+          setEntries(null)
+          setSelected("")
         }
       }
     },
-    [api, projectId, expandedPaths, selected],
+    [api, projectId, expandedPaths, selected, trackedOnly],
   )
   useRefreshRequest(read, revision, attempt)
+  const displayedSelection = trackedOnly && error && !preview ? "" : selected
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
       {error && (
@@ -108,11 +142,15 @@ export function ProjectFileViewer({ api, projectId }: { api: Api; projectId: str
             aria-label={t("Primary project files")}
           >
             {!entries && !error && <Loading>{t("Loading…")}</Loading>}
-            {entries?.length === 0 && <EmptyState>{t("Empty folder")}</EmptyState>}
+            {entries?.length === 0 && (
+              <EmptyState>
+                {t(trackedOnly ? "No Git-tracked files to display." : "Empty folder")}
+              </EmptyState>
+            )}
             {entries && (
               <FileList
                 files={entries}
-                selectedPath={selected}
+                selectedPath={displayedSelection}
                 onSelect={(path) => {
                   if (path === selected) {
                     return
@@ -129,18 +167,18 @@ export function ProjectFileViewer({ api, projectId }: { api: Api; projectId: str
             )}
           </section>
           <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-            {selected && preview?.kind !== "text" && preview?.kind !== "image" && (
+            {displayedSelection && preview?.kind !== "text" && preview?.kind !== "image" && (
               <div className="flex h-10 shrink-0 items-center gap-2 border-b px-3">
-                <FileIcon path={selected} />
-                <code className="truncate text-code font-medium" title={selected}>
-                  {selected}
+                <FileIcon path={displayedSelection} />
+                <code className="truncate text-code font-medium" title={displayedSelection}>
+                  {displayedSelection}
                 </code>
               </div>
             )}
-            {!selected && (
+            {!displayedSelection && (
               <EmptyState className="flex-1">{t("Select a file to view its contents.")}</EmptyState>
             )}
-            {selected && !preview && !error && <Loading>{t("Loading…")}</Loading>}
+            {displayedSelection && !preview && !error && <Loading>{t("Loading…")}</Loading>}
             {preview && <FileContent entry={preview} />}
           </section>
         </div>

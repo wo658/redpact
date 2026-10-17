@@ -1,0 +1,39 @@
+{
+  "composeFiles": ["compose.yaml"],
+  "services": ["app"],
+  "dependencies": {},
+  "tests": {
+    "directory": "integration",
+    "timeoutMs": 10000,
+    "env": {
+      "APP_URL": "http://app.redpact.test:3000"
+    }
+  },
+  "playwright": {
+    "directory": "ui-tests",
+    "service": "app",
+    "port": 3000,
+    "locale": "ko-KR",
+    "uiLanguage": "ko",
+    "targets": {
+      "functional": {
+        "purpose": "functional",
+        "scope": "worktree",
+        "testMatch": ["worktree/baseline.spec.ts", "worktree/task.spec.ts"]
+      },
+      "capture": {
+        "purpose": "capture",
+        "scope": "worktree",
+        "testMatch": ["worktree/capture.spec.ts"]
+      }
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "mobileViewport": {
+      "width": 390,
+      "height": 844
+    }
+  }
+}

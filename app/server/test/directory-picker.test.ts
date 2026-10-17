@@ -26,7 +26,7 @@ test("directory selection cannot be triggered by reads or foreign browser origin
   expect(pick).not.toHaveBeenCalled()
 })
 
-test("unavailable desktop dialogs report an actionable failure", async () => {
+test("unavailable OS folder dialogs report an actionable failure", async () => {
   const app = createApp({} as never)
   const result = await app.request("/api/dialogs/directory", { method: "POST" })
   expect(result.status).toBe(503)

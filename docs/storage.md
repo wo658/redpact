@@ -121,7 +121,7 @@ records refuse overwrite. Validate shapes, parent bindings and identity invarian
 report corruption rather than resetting or silently skipping it. A writer lock
 records process ownership; never steal a live or unknown owner's lock.
 
-The common CLI, desktop and App runtime holds an OS advisory lock on the permanent
+The common CLI and App runtime holds an OS advisory lock on the permanent
 `.writer.guard` file throughout startup, execution and shutdown. The guard serializes
 owner recovery and is released by the kernel when a process dies, including forced
 termination. Never delete or replace this guard file, even when it appears empty.

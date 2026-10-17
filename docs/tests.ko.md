@@ -9,10 +9,10 @@ description: 단위 테스트 명령, 통합 시나리오, 브라우저 테스�
 
 | 목적 | 테스트 유형 | 실행 진입점 | 기록되는 결과 |
 |---|---|---|---|
-| 기존 테스트 명령 실행 | Unit | MCP `run_tests` (`kind: "unit"`) 또는 앱의 Unit 컨트롤 | 명령 상태, 종료 코드, 출력 |
-| 공개 API와 의존성 검증 | Integration | MCP `run_tests` 또는 Integration 컨트롤 | 수집한 Vitest 소스, 케이스, 관찰된 단계 |
-| 브라우저 상호작용 검증 | Playwright, `purpose: "functional"` | MCP `run_tests` (`kind: "playwright"`) 또는 Tests → Playwright 컨트롤 | 시나리오와 단계 판정, 진단 첨부 파일 |
-| 검토할 애플리케이션 상태 표시 | Playwright, `purpose: "capture"` | MCP `run_tests` (`kind: "playwright"`) 또는 Tests → Playwright 컨트롤 | 이름이 있는 스크린샷, 소스, 실행 상세 |
+| 기존 테스트 명령 실행 | Unit | `redpact tests run --kind unit` 또는 앱의 Unit 컨트롤 | 명령 상태, 종료 코드, 출력 |
+| 공개 API와 의존성 검증 | Integration | `redpact tests run --kind integration` 또는 Integration 컨트롤 | 수집한 Vitest 소스, 케이스, 관찰된 단계 |
+| 브라우저 상호작용 검증 | Playwright, `purpose: "functional"` | `redpact tests run --kind playwright` 또는 Tests → Playwright 컨트롤 | 시나리오와 단계 판정, 진단 첨부 파일 |
+| 검토할 애플리케이션 상태 표시 | Playwright, `purpose: "capture"` | `redpact tests run --kind playwright` 또는 Tests → Playwright 컨트롤 | 이름이 있는 스크린샷, 소스, 실행 상세 |
 
 스크린샷으로 화면의 모습을 확인할 수 있습니다. 어설션은 테스트가 실제로 확인하는 동작을 검증합니다. 기능 검증과 화면 검토가 모두 필요한 변경이라면 둘 다 남기세요.
 
@@ -60,9 +60,9 @@ test("Application responds successfully", async (context) => {
 
 각 단계를 순서대로 await 하세요. 작업이나 어설션을 콜백 안에 넣고 실패가 전파되게 하세요. 의미 있는 동작과 확인을 별도 단계로 나누세요. 제목과 주석은 의도를 설명하고, 관찰된 단계는 실행이 어디까지 도달했는지 보여줍니다. 제출할 시나리오 제목과 단계는 작업의 언어로 작성하세요. 뷰어 언어를 바꿔도 기록된 소스는 번역되지 않습니다.
 
-에이전트에게 실제 작업 체크아웃의 절대 경로,  선택적으로 `tests.directory` 기준의 정확한 테스트 경로를 지정해 `run_tests`를 호출하도록 요청하세요. 헬퍼는 수집 번들에 남습니다. `run_tests`는 통합 테스트를 처리하며 단위 테스트 명령과 Playwright 소스는 각자의 실행 경로를 사용합니다.
+에이전트에게 실제 작업 체크아웃의 절대 경로,  선택적으로 `tests.directory` 기준의 정확한 테스트 경로를 지정해 `redpact tests run --kind integration`를 호출하도록 요청하세요. 헬퍼는 수집 번들에 남습니다. `redpact tests run --kind integration`은 통합 테스트를 처리하며 단위 테스트 명령과 Playwright 소스는 각자의 실행 경로를 사용합니다.
 
-반환된 상태를 읽고 `get_run`으로 실행을 확인하세요. 반환된 식별자를 보존하고 연결된 인스턴스에서 증거가 의도한 워크트리에 속하는지 확인하세요. 셸에서 직접 테스트를 실행해도 Redpact 제출은 생성되지 않습니다. 프로젝트의 Integration 실행 작업은 현재 소스를 새 제출로 수집합니다. 기록된 소스는 이후 편집과 분리됩니다.
+반환된 상태를 읽고 `redpact runs show`으로 실행을 확인하세요. 반환된 식별자를 보존하고 연결된 인스턴스에서 증거가 의도한 워크트리에 속하는지 확인하세요. 셸에서 직접 테스트를 실행해도 Redpact 제출은 생성되지 않습니다. 프로젝트의 Integration 실행 작업은 현재 소스를 새 제출로 수집합니다. 기록된 소스는 이후 편집과 분리됩니다.
 
 격리된 픽스처 데이터를 사용하세요. 저장 작업은 즉시 응답뿐 아니라 다시 읽은 결과도 검증하세요. 회귀 테스트는 실제 실패한 어설션을 보존하고 업데이트된 애플리케이션 입력으로 다시 실행하세요. 수집 오류와 애플리케이션 접근 불가는 준비 실패이며 의도한 어설션이 실패했다는 증거가 아닙니다.
 

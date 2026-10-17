@@ -7,7 +7,7 @@ description: Start with the Redpact in-app workspace, or install and update the 
 
 Redpact's public source and runtime downloads are hosted at
 [wo658/redpact](https://github.com/wo658/redpact). The runtime package installs the
-CLI and bundled browser viewer. It does not install the Tauri desktop application.
+CLI and bundled browser viewer.
 
 ## Start in the app
 
@@ -156,7 +156,8 @@ manage their own plugins.
 The HTTP plugins use `http://127.0.0.1:54321/mcp`; the App Page Plugin owns port 54322. To use a different instance, configure
 a direct HTTP MCP connection to its actual port instead of assuming the plugin
 follows it. Other clients may use that connection, but are not claimed as tested
-plugin integrations. Ask the agent to call `configure describe` to verify tools.
+plugin integrations. Verify CLI access with `redpact --server http://127.0.0.1:54321 settings describe --scope project --path /absolute/checkout`.
+See [agent CLI](interfaces.md) for commands and instance selection.
 Execution approval takes place in the connected web review screen. MCP returns its
 review path without inline chat cards; unavailable approval UI must not be bypassed.
 See [the interface contract](interfaces.md).
@@ -218,7 +219,7 @@ never installs or starts Redpact automatically. A missing managed package displa
 including after a host restart. A healthy existing server is reused; an unrecognized
 listener blocks startup. Status polling preserves an explicitly stopped runtime.
 
-**Start Redpact** appears on the startup screen after installation succeeds. While running, the existing Desktop/Web viewer fills the entire app area,
+**Start Redpact** appears on the startup screen after installation succeeds. While running, the shared web viewer fills the entire app area,
 without a plugin header or additional navigation. **Refresh**, **Open local viewer**
 and lifecycle recovery controls appear only when a connection or viewer error occurs.
 The private app-only MCP stop tool remains available to the host.
@@ -235,10 +236,11 @@ connection metadata; there is no second maintained skill set.
 
 The plugin also registers a separate `redpact-verification` HTTP MCP connection to
 `http://127.0.0.1:54322/mcp`, the same runtime and evidence store used by the sidebar.
-It exposes the runtime's model tools directly, preserving its web review paths and
-approval boundary; the App-only viewer bridge remains private. See
+It exposes runtime lifecycle/opening tools to the model. Operational verification tools
+and the viewer bridge retain App-only visibility and their capability boundaries; agents
+use the CLI for settings, execution and evidence. See
 [MCP interfaces](interfaces.md) for the verification contracts. The bundled installer
-still downloads public 0.8.0, whose tool set is older; expanded verification tools
+still downloads public 0.8.0, whose tool set is older; the CLI and reduced model tool set
 require a runtime built from this source or a future release containing it.
 After starting or updating a runtime, reconnect the host's MCP connection if its tool
 catalog is stale or was unavailable during startup. A custom `REDPACT_APP_PORT` also
@@ -412,7 +414,7 @@ curl --fail http://127.0.0.1:54318/api/health
 
 `docker version` should report the server as well as the client. If it cannot reach the Docker daemon, start Docker before attempting managed execution. The health request should succeed once Redpact is listening. Neither check proves that your application's image builds or its services become healthy.
 
-Next, open the Vite viewer and connect your application directory. Finally, call `configure describe` from your agent. If health works but the agent cannot connect, inspect the MCP endpoint and client connection rather than changing project test settings.
+Next, open the Vite viewer and connect your application directory. Finally, call `redpact settings describe --scope project` from your agent. If health works but the agent cannot connect, inspect CLI `--server` or `REDPACT_SERVER_URL` and the MCP endpoint rather than changing project test settings.
 
 ## Keep instance addresses together
 
@@ -435,15 +437,13 @@ Add a Streamable HTTP MCP connection in your agent client using:
 http://127.0.0.1:54318/mcp
 ```
 
-Client configuration syntax varies. Use its HTTP MCP connection facility; Redpact does not supply a stdio bridge for this workflow. See [MCP interfaces](interfaces.md) for the model-facing configuration, execution and evidence tools.
+Client configuration syntax varies. Use its HTTP MCP connection facility; Redpact does not supply a stdio bridge for this workflow. See [MCP interfaces](interfaces.md) for model lifecycle tools, App-only transport and CLI settings, execution and evidence commands.
 
-Ask the agent to call `configure`, replacing the path:
+Ask the agent to inspect settings through CLI, replacing the path and selecting the connected instance:
 
-```json
-{
-  "action": "describe",
-  "path": "/absolute/path/to/your-project"
-}
+```sh
+redpact --server http://127.0.0.1:54321 settings describe \
+  --scope project --path /absolute/path/to/your-project --json
 ```
 
 Receiving the settings schema and authoring guidance confirms connectivity. It does not confirm Docker readiness or execute tests.
@@ -459,8 +459,7 @@ The npm runtime queries the public `@wo658/redpact` registry dist-tags at startu
 six hours; browser polling reads the server cache. Stable installations follow
 `latest`; prerelease installations consider `beta` and `latest` and never downgrade.
 Checks have a ten-second deadline. Registry absence, invalid metadata and network
-failure are errors, not proof that the installed version is current. Source checkouts
-and desktop-owned servers do not start npm checks.
+failure are errors, not proof that the installed version is current. Source checkouts do not start npm checks.
 
 For recognized global npm/pnpm installations and direct local npm/pnpm dependencies,
 `redpact serve` keeps a CLI parent process outside the replaceable server. Clicking

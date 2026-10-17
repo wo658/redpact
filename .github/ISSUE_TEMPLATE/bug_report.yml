@@ -24,7 +24,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Redpact version or commit, OS/architecture, desktop or server, and relevant Node/pnpm/Docker versions.
+      description: Redpact version or commit, OS/architecture, standalone web or embedded MCP app, and relevant Node/pnpm/Docker versions.
     validations:
       required: true
   - type: textarea

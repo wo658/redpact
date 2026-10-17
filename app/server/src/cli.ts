@@ -46,8 +46,9 @@ try {
       await import("./main.js")
     }
   } else {
-    console.error("Available: redpact serve. Use the configure MCP tool for project settings.")
-    process.exitCode = 1
+    const { runAgentCli } = await import("./interfaces/cli/commands.js")
+    const { nodeCliIO } = await import("./interfaces/cli/node-io.js")
+    process.exitCode = await runAgentCli(process.argv.slice(2), await nodeCliIO())
   }
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error))

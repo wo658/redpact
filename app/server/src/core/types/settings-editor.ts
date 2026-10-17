@@ -1,5 +1,5 @@
 import type { SettingsResult } from "./settings.js"
-export type SettingsEdit = { source: string; revision: string | null }
+export type SettingsEdit = { source: string; revision: string | null; backup?: boolean }
 export type SettingsDocument = {
   file: string
   source: string | null
@@ -12,6 +12,12 @@ export type SettingsFiles = {
   write(root: string, path: string, input: SettingsEdit): Promise<void>
 }
 export type SettingsEditor = {
+  projectAt(root: string): Promise<SettingsDocument>
+  saveProjectAt(
+    root: string,
+    input: SettingsEdit,
+    executionRoot?: string,
+  ): Promise<SettingsDocument>
   project(id: string): Promise<SettingsDocument>
   saveProject(id: string, input: SettingsEdit): Promise<SettingsDocument>
   instance(): Promise<SettingsDocument>

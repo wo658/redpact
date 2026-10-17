@@ -20,17 +20,17 @@ command directory. Dockerfile ENTRYPOINT/CMD do not supply Redpact's supervisor.
 The selected source file in the viewer does not filter the configured command; execution scope uses the explicit contract below. Results do not
 invent per-case verdicts from an exit code.
 
-Integration collects current checkout sources from Project Tests and worktree review. MCP `run_tests`
+Integration collects current checkout sources from Project Tests and worktree review. `redpact tests run --kind integration`
 collects fresh sources for the supplied path. Submission identity and current file
 contents must remain distinguishable in the viewer. [Test authoring](tests.md)
 describes supported source collection and assertions.
 
-The three entries are separate execution contracts. MCP `run_tests` admits only
-Integration submissions. Unit runs start from the Unit tab or `run_tests` (`kind: "unit"`) and execute the complete
+The three entries are separate execution contracts. `redpact tests run --kind integration` admits only
+Integration submissions. Unit runs start from the Unit tab or `redpact tests run --kind unit` and execute the complete
 configured command; their exit status is not an Integration case result. Playwright
 runs start by selecting a declared functional or capture target in the Playwright
-UI/API or `run_tests` (`kind: "playwright"`). Their screenshots, UI-review artifacts, execution record and cleanup stay
-with that Playwright run rather than an MCP submission. See [MCP interfaces](interfaces.md)
+UI/API or `redpact tests run --kind playwright`. Their screenshots, UI-review artifacts, execution record and cleanup stay
+with that Playwright run rather than an Integration submission. See [MCP interfaces](interfaces.md)
 for approval limits, recorded evidence lookup and public lifecycle boundaries.
 
 The viewer presents a common progress strip for all three run types in their
@@ -79,6 +79,17 @@ completed environment. Public standalone preparation and `environmentId` reuse a
 not supported. A run environment proceeds through preparation, readiness, use,
 completion and removal, retaining diagnostics on failure.
 
+Temporary workers retain live Testcontainers container, Compose and network handles
+through evidence collection and teardown. Normal teardown uses `stop()`, `down()` and
+`Network.stop()`; Ryuk provides fallback cleanup if a worker disappears. Ownership
+labels and daemon identity remain for recovery and cleanup retries when live handles
+are unavailable, rather than replacing the normal Testcontainers lifecycle.
+The pinned library normally reuses a Ryuk session across processes. Redpact's patch
+gives each temporary worker an isolated Ryuk container/session, so another active
+execution cannot delay cleanup after that worker dies. Shared runner images and
+the persistent main environment remain outside this per-worker cleanup scope.
+Abnormal-exit cleanup observes Ryuk's reconnection grace period; it is not immediate.
+
 Success, assertion failure, preparation failure, cancellation and interruption all
 request cleanup. Stop blocks admission, confirms execution cancellation, then removes
 owned containers, networks, volumes, per-run Unit images, temporary Compose build images and captured runtime
@@ -123,12 +134,14 @@ leave resources until successful recovery.
 
 ## Manual Container
 
-The project Container screen defaults to the configured main checkout. MCP `project_container`
+The project Container screen defaults to the configured main checkout. `redpact environment`
 uses its actual `path` worktree; HTTP Container routes accept `worktreeId` to select one.
 Directory projects use their connected root. All targets use the fixed shared settings.
 Each worktree can own one manual environment, independent of test environments.
-It stays alive across tests, idle periods, agent completion and Redpact shutdown until
-explicit Stop or Restart. On server restart, ownership and observed Docker health are
+The main-checkout environment stays alive across tests, idle periods, agent completion
+and Redpact shutdown until explicit Stop or Restart. Other worktree environments use
+the temporary Testcontainers session lifecycle. For the main environment, on server
+restart ownership and observed Docker health are
 reconnected without recreating services or treating this as new test evidence.
 Interrupted preparations remain failed; interrupted stops retain cleanup ownership for retry.
 Docker unavailability is distinct from an explicit successful stop.
@@ -196,8 +209,23 @@ file-count/total-byte ceiling; submitted-test limits are separate. Concurrent fi
 edits, external downloads and mutable image tags are not a complete immutable
 application snapshot. Queued/input changes can invalidate preparation.
 
-The pinned Testcontainers patch prevents failed-start automatic cleanup from skipping
-Redpact's final logs and ordered removal. Re-evaluate it when upgrading the library.
+The pinned Testcontainers patch collects a final Compose log snapshot before failed-start
+cleanup, including failures before readiness waits begin. Re-evaluate it when upgrading
+the library.
+
+### Failure diagnostics
+
+Runner log consumers are attached before container startup. Build/start diagnostics,
+command stdout/stderr and Compose service output are collected separately, with bounded
+output and literal environment-value redaction across stream chunks. Truncation and
+collection failures remain visible in the retained logs. Command output is saved before
+copying result archives, so a missing or unreadable archive cannot erase the original
+failure output. Preparation errors retain their diagnostic message and service excerpt;
+Unit preparation failures retain stdout/stderr on the run for viewer and copy actions.
+Cleanup failure remains separate from the original execution verdict.
+The recorded execution review provides an **Execution logs** disclosure. It reads the
+same retained diagnostics as **Copy log** and the MCP log response, including Playwright
+stdout/stderr. Opening it does not rerun the command or require its container to exist.
 
 ## Runner connectivity
 
@@ -302,7 +330,10 @@ Docker CLI or Dockerode directly. The runtime client resolves existing IDs after
 worker exit or restart and supplies the selected local socket and daemon identity.
 
 The patch extends existing library clients where the pinned release lacks APIs.
-It propagates build-stream failures even when an earlier image tag exists, returns
+It adds network ownership labels and a Compose callback before failed-start cleanup
+so logs can be collected before resources disappear. It also isolates worker Ryuk
+sessions without changing the library's default reuse behavior for other callers.
+It closes build-context streams before returning, including when the Docker build API rejects before returning a response. It propagates build-stream failures even when an earlier image tag exists, returns
 an inspected image ID after building, and honors `autoCleanup: false` inside failed
 container waits. Finite log snapshots propagate retrieval errors and handle TTY and
 multiplexed stdout/stderr. Exec supports cancellation and bounded output; the runtime

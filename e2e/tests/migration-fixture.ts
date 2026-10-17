@@ -36,17 +36,17 @@ if(scenario==='resume') {
  record.data.specification={services:['app'],composeFiles:[],dependencies:{payments:{kind:'mock',services:[],env:{app:{PAYMENTS_MODE:'mock'}}}}};writeFileSync(path,JSON.stringify(record));
 }
 async function start(){
- const child=spawn(process.execPath,[cli,'serve','--data-dir',root,'--port','0'],{env:{...process.env,REDPACT_DESKTOP_CONTROL:'1'},stdio:['pipe','pipe','pipe']});
+ const child=spawn(process.execPath,[cli,'serve','--data-dir',root,'--port','0'],{env:{...process.env,REDPACT_RUNTIME_SUPERVISED:'1'},stdio:['ignore','pipe','pipe','ipc']});
  const exit=once(child,'exit');let output='';child.stdout.on('data',c=>output+=c);child.stderr.on('data',c=>output+=c);
- let port;
+ let port;child.on('message',message=>{if(message.runtimeReady)port=message.runtimeReady});
  try{
  const deadline=Date.now()+15000;
- while(!port&&child.exitCode===null&&Date.now()<deadline){for(const line of output.split('\n')){try{const x=JSON.parse(line);if(x.desktop==='ready')port=x.port}catch{}}if(!port)await new Promise(r=>setTimeout(r,20));}
+ while(!port&&child.exitCode===null&&Date.now()<deadline){await new Promise(r=>setTimeout(r,20));}
  let status=0,records=[];
- if(port){const response=await fetch('http://127.0.0.1:'+port+'/api/environments?worktreeId='+worktree);status=response.status;records=await response.json();child.stdin.write('shutdown\n');}
+ if(port){const response=await fetch('http://127.0.0.1:'+port+'/api/environments?worktreeId='+worktree);status=response.status;records=await response.json();child.send({runtimeControl:'shutdown'});}
  else if(child.exitCode===null)child.kill();
  const [code]=await exit;return {status,records,code,output};
- }finally{child.stdin.end();if(child.exitCode===null&&child.signalCode===null)child.kill();await exit;}
+ }finally{if(child.exitCode===null&&child.signalCode===null)child.kill();await exit;}
 }
 try{
  const first=await start();const after=readFileSync(path,'utf8');const log=existsSync(journal)?readFileSync(journal,'utf8'):null;

@@ -41,7 +41,7 @@ export function createStopEnvironment(deps: {
     async cleanupTemporary() {
       for (const environment of deps.environments
         .temporary()
-        .filter((item) => item.lifecycle === "run")) {
+        .filter((item) => item.lifecycle === "run" || item.manualScope === "worktree")) {
         await stop(environment.id)
       }
       await Promise.all([...pending.values()])

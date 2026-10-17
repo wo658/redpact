@@ -144,3 +144,71 @@ test("화면 내용이 바뀌면 호스트가 새 리소스를 읽고 이전 화
   expect(restored).not.toBe(previous)
   expect(await resource("<h1>Project workspace</h1>")).toBe(restored)
 })
+
+test("모델은 런타임 상태·시작·종료만 호출하고 앱 권한과 내부 경로는 받지 않는다", async () => {
+  const status = {
+    state: "stopped" as const,
+    owned: false,
+    origin: "http://127.0.0.1:54322",
+    dataDir: "/private/runtime",
+    logPath: "/private/runtime/log",
+    message: "Stopped",
+    startedPid: 123,
+  }
+  const runtime = {
+    status: vi.fn(async () => status),
+    start: vi.fn(async () => ({ ...status, state: "running" as const, owned: true })),
+    stop: vi.fn(async () => status),
+    install: vi.fn(async () => status),
+    request: vi.fn(async () => undefined),
+  }
+  const server = createAppServer({
+    runtime,
+    html: "<h1>Redpact</h1>",
+    token: "private-control-token",
+  })
+  const client = new Client({ name: "lifecycle-test", version: "1.0.0" })
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+  await server.connect(serverTransport)
+  await client.connect(clientTransport)
+  try {
+    const { tools } = await client.listTools()
+    const names = ["get_redpact_status", "start_redpact_runtime", "stop_redpact_runtime"]
+    expect(tools.filter((tool) => names.includes(tool.name)).map((tool) => tool.name)).toEqual(
+      names,
+    )
+    for (const name of names) {
+      const tool = tools.find((tool) => tool.name === name)
+      expect(tool?.inputSchema.properties).toEqual({})
+      const result = await client.callTool({ name, arguments: {} })
+      expect(result.isError).not.toBe(true)
+      expect(result.structuredContent).toEqual({
+        state: name === "start_redpact_runtime" ? "running" : "stopped",
+        owned: name === "start_redpact_runtime",
+        origin: status.origin,
+        message: status.message,
+      })
+      expect(JSON.stringify(result)).not.toContain("private-control-token")
+      expect(JSON.stringify(result)).not.toContain("/private/runtime")
+      expect(result._meta).toBeUndefined()
+    }
+    expect(runtime.start).toHaveBeenCalledTimes(1)
+    expect(runtime.stop).toHaveBeenCalledTimes(1)
+    expect(runtime.install).not.toHaveBeenCalled()
+    expect(runtime.request).not.toHaveBeenCalled()
+    runtime.stop.mockRejectedValueOnce(
+      new Error("Internal /private/runtime contains private-control-token"),
+    )
+    const failure = await client.callTool({ name: "stop_redpact_runtime", arguments: {} })
+    expect(failure.isError).toBe(true)
+    expect(JSON.stringify(failure)).not.toContain("/private/runtime")
+    expect(JSON.stringify(failure)).not.toContain("private-control-token")
+
+    expect(tools.find((tool) => tool.name === "start_redpact_server")?._meta).toMatchObject({
+      ui: { visibility: ["app"] },
+    })
+  } finally {
+    await client.close()
+    await server.close()
+  }
+})

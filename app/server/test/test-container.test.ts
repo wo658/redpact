@@ -227,7 +227,7 @@ test("Compose 미리보기는 기준 브랜치 파일을 읽고 설정 밖 경�
   expect(prepares).toBe(0)
 })
 
-test("워크트리 수동 환경은 서로 격리되고 서버 종료 후에도 명시적 종료까지 유지된다", async () => {
+test("워크트리 수동 환경은 격리되며 서버 종료는 기준 브랜치만 유지한다", async () => {
   const branchRoot = join(root, "feature-checkout")
   await git("worktree", "add", "-b", "feature", branchRoot)
   await execa(
@@ -256,6 +256,10 @@ test("워크트리 수동 환경은 서로 격리되고 서버 종료 후에도 
   await service.close()
   expect(stops).toBe(0)
   expect(environments.temporary()).toHaveLength(2)
+  await environments.close()
+  expect(stops).toBe(1)
+  expect(environments.get(other.environment!.id).state).toBe("stopped")
+  expect(environments.get(main.environment!.id).state).toBe("ready")
 })
 
 test("메인 생략 시작 중 명시적 메인 워크트리 종료는 같은 작업 잠금으로 거부한다", async () => {

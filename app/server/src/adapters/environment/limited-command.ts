@@ -12,6 +12,7 @@ export async function executeLimitedContainer(
   args: string[],
   signal: AbortSignal,
   limits: TestResources,
+  observe?: (output: Pick<UnitCommandResult, "stdout" | "stderr" | "truncated">) => void,
 ): Promise<UnitCommandResult> {
   testResourceSchema.parse(limits)
   signal.throwIfAborted()
@@ -80,7 +81,10 @@ export async function executeLimitedContainer(
       const result = await client.container.exec(container, args, {
         signal: commandAbort.signal,
         maxOutputBytes: 256 * 1024,
-        onOutput: (captured) => Object.assign(output, captured),
+        onOutput: (captured) => {
+          Object.assign(output, captured)
+          observe?.(output)
+        },
       })
       output.stdout = result.stdout
       output.stderr = result.stderr

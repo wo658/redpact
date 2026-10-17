@@ -12,14 +12,19 @@ Redpact는 로컬 개발 검토 도구입니다. 프로젝트 체크아웃을 �
 
 독립 브라우저·Global App Page는 관리 앱을 유지합니다. 채팅 MCP는 구조화된 결과와 웹 검토 링크를 반환하며 인라인 카드를 제공하지 않습니다. 탐색 경계는 [프런트엔드 규칙](frontend.md)을 따릅니다.
 
+에이전트 작업은 CLI가 로컬 HTTP를 통해 공통 workflow를 호출합니다. 모델용 MCP는
+런타임 상태·종료·앱 열기에 한정하며, App Page companion은 소유한 런타임 시작도
+담당합니다. 전체 임베디드 앱과 기존 카드는 App 전용 MCP 전송을 유지합니다.
+설정은 CLI에서 revision 기반으로 읽고 부분 수정하며 JSON은 내부 저장 형식입니다.
+일반 파일과 Git 작업은 호스트 도구를 사용합니다. [인터페이스](interfaces.md)를 참고하세요.
+
 ## 제품 지원 범위
 
 Redpact는 독립 웹 앱과 MCP를 통해 OpenAI 내부에 임베드하는 전체 웹 앱을 지원합니다.
 두 경로는 하나의 React UI와 서버 런타임을 공유하며 HTTP/SSE와 MCP는 전송 어댑터입니다.
 호스트별 기능과 제약은 [설치 안내](installation.md)를 따릅니다. 실행 승인과 상세 근거는 전체 웹 뷰어에서 제공합니다.
 
-Windows·Linux·macOS 네이티브 데스크톱 릴리스는 더 이상 지원하지 않습니다.
-남아 있는 Tauri 소스가 지원 범위를 넓히지는 않습니다.
+Windows·Linux·macOS 네이티브 데스크톱 앱과 Tauri 구현은 제거했습니다.
 CI는 OS/Node 매트릭스 없이 Ubuntu와 Node 24에서 공유 웹 UI와 서버를 검증합니다.
 이는 릴리스 검증 기준이며 모든 호스트의 동작을 입증하지는 않습니다. 자동·수동 검사는
 [개발 문서](development.md)를 참고하세요.
@@ -44,7 +49,6 @@ CI는 OS/Node 매트릭스 없이 Ubuntu와 Node 24에서 공유 웹 UI와 서�
 | `app/server/src/adapters` | 파일, native Git, 소스 파싱, 프로세스, Docker, Playwright |
 | `app/server/src/main.ts` | 구체 의존성 연결과 프로세스 수명주기 |
 | `app/web` | 브라우저와 사이드바 App Page가 공유하는 연결된 React 뷰어 |
-| `app/desktop` | 유지된 Tauri 호스트. 지원하는 릴리스 범위에서는 제외 |
 | 별도 `redpact-web` 저장소 | 웹사이트와 문서 렌더러. 이 저장소의 `docs/`를 직접 읽음 |
 
 ## 경계 규칙
@@ -97,8 +101,9 @@ TypeScript, Hono와 일반 함수를 사용합니다. controller 클래스, DI �
 - ts-morph는 TypeScript 표준 라이브러리 선언을 로드하지 않고 격리된 제출 파일의
   심볼에서 정적 테스트 의도를 추출합니다. Vitest는 실제 통합 결과를 기록합니다.
   정적 파싱은 어설션 실행이나 전체 import 수집을 입증하지 않습니다.
-- Testcontainers는 컨테이너 시작을 담당합니다. Redpact는 입력 캡처, 수락,
-  상태 관찰, 리소스 식별, 취소와 정리를 담당합니다.
+- Testcontainers는 살아 있는 worker 핸들과 Ryuk 보조 정리로 임시 컨테이너·Compose·네트워크
+  수명주기를 담당합니다. Redpact는 입력 캡처, 수락, 증거, 상태 관찰, 리소스 식별,
+  취소와 복구 정리를 담당합니다. 메인 체크아웃을 유지하는 Container는 독립 수명주기를 유지합니다.
 - Unit 명령과 Playwright는 임시 컨테이너에서 실행합니다. Integration Vitest는
   임시 컨테이너에서 실행합니다. Integration과 Playwright는 실행별 네트워크에서
   서비스 이름으로 앱에 접근합니다.

@@ -1,6 +1,6 @@
 # Project configuration
 
-Use this guide for setup or repair. `configure describe` from the connected runtime
+Use this guide for setup or repair. `redpact settings describe --scope project` from the connected runtime
 owns the executable schema; a plugin update does not update an older runtime.
 Do not copy a static sample or newer unsupported fields over the application's settings.
 
@@ -19,11 +19,19 @@ services and an isolated Vitest source bundle. Playwright requires the applicati
 service/port and declared functional/capture targets. Draft-only and unit-only
 projects need no invented server, database or empty placeholder tests.
 
-## Author one fixed configuration
+## Update one fixed configuration through CLI
 
-Read `configure describe` for schema, ownership, defaults and diagnostics. Write
-`rulesRoot/.redpact/settings.json` directly with applicable fields and preserve
-unrelated settings. A linked checkout's settings copy cannot override the primary.
+Use `redpact settings describe --scope project --path /absolute/checkout` for schema,
+ownership, defaults and diagnostics. Use `settings get` with the same scope/path
+(and optional `--pointer`) to read current values and the whole-document revision.
+Apply JSON Patch `add`, `replace`, `remove` or `test` operations with `settings patch
+--revision REVISION --patch-stdin`. Preserve unrelated values; do not read or edit
+settings/runtime JSON files directly. Use `--create` only when get reports no document.
+Missing parent objects must be added explicitly. A failed patch or validation leaves
+the original unchanged; on a conflict, read again and reconcile instead of retrying
+blindly. Malformed or duplicate-key project JSON uses revision-checked `settings repair --document-stdin`
+with a valid replacement; the server retains the original backup. Valid JSON with
+field errors uses patch. A linked checkout cannot override the primary settings.
 The selected checkout supplies actual Compose files, Dockerfiles and application/test
 sources. Do not create alternate formats, default files, mode catalogs, worktree
 overlays or a separate onboarding-state file.
@@ -38,7 +46,8 @@ Omission preserves defaults, strings override, and `{ "unset": true }` removes a
 value. Two dependencies cannot write the same service variable, even to equal values.
 `tests.env` is a separate common Integration/Playwright runner environment. Values
 are explicit strings; no secret references, automatic dotenv loading or server-env
-fallback exists. Use secure local editing for private values, not chat disclosure.
+fallback exists. Supply private values through stdin, not command-line arguments or chat disclosure.
+Settings get returns plaintext values (`redaction: none`), so request only the needed subtree.
 Text masking does not sanitize captured settings, sources, screenshots or video.
 
 Dockerfiles must build the actual application and install dependencies from its
@@ -49,25 +58,25 @@ to the consuming container. External services retain their origins and authentic
 
 ## Observation and validation
 
-Read the instance settings path and `projects` schema from `configure describe`.
-If needed, edit that instance file to observe the actual absolute root. Do not change
-its port or unrelated projects without a task reason. The full app exposes explicit
-settings editing and project connection actions; chat setup writes files directly.
+Use `redpact projects connect --path /absolute/checkout` when connection is needed.
+Use `settings describe|get|patch|validate --scope instance` for global settings;
+preserve unrelated projects and port settings. Instance patches cannot change approval
+policy or Git/GitHub settings. The full app and CLI enter shared settings workflows.
 Existing-checkout binding can record an existing path without creating a worktree.
 
-Use `get_workspace_status` and advertised read-only project/worktree APIs to verify
+Use `redpact workspace status` and advertised read-only project/worktree APIs to verify
 the observed root and checkout. Read-only status does not register missing projects.
 A saved observation entry or successful configuration validation alone does not prove
 discovery. Report unavailable or mismatched bindings without silently using another
 instance or checkout.
 
-Call `configure validate` with the actual execution path. Fix field diagnostics,
+Call `redpact settings validate --scope project` with the actual execution path. Fix field diagnostics,
 missing services and source-discovery errors without weakening validation. Empty
 settings may support inspection, but do not establish managed application readiness.
 
 ## Verify and report the agreed scope
 
-Request a meaningful managed smoke check through the appropriate MCP execution tool
+Request a meaningful managed smoke check through `redpact tests run --kind KIND`
 when included in the task. Preserve the request identity, approval state, terminal
 result and cleanup. Ask requires explicit human action in the App or connected review;
 the agent never invokes approval endpoints, extracts capabilities or switches to Auto.
@@ -78,7 +87,7 @@ Verify shared configuration against its actual checkout; do not repair a worktre
 with private overrides or claim a fresh-worktree result from the primary checkout.
 Commit, merge and publication follow the user's existing authorization, not an init
 side effect. Missing Docker or credentials can leave runtime readiness unverified
-while file authoring and validation still proceed.
+while application-file authoring and CLI settings validation still proceed.
 
 For Playwright, follow [authoring](../../redpact/references/playwright.md). Keep task
 scenarios under ignored `worktree/{captures,tests}` and maintained checks under

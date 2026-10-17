@@ -23,10 +23,12 @@ let worktreeId: string
 let submissionId: string
 let expectedSettingsDigest: string
 const selection = { services: ["app"], select: {} }
+let adapterCloses = 0
 let stops = 0
 let executions = 0
 let outcome: "passed" | "assertion_failed" = "passed"
 let failStop = false
+let preparationDiagnostic: string | undefined
 const headers = { "Content-Type": "application/json" }
 async function request(path: string, body?: object) {
   return app.request(path, {
@@ -54,10 +56,12 @@ async function _operation(name: string, args: object) {
 }
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "redpact-env-api-"))
+  adapterCloses = 0
   stops = 0
   executions = 0
   outcome = "passed"
   failStop = false
+  preparationDiagnostic = undefined
   const projectRoot = join(root, "project")
   await mkdir(join(projectRoot, ".redpact"), { recursive: true })
   await writeFile(join(projectRoot, "compose.yaml"), "services:\n  app:\n    image: alpine:3.21\n")
@@ -84,8 +88,16 @@ beforeEach(async () => {
     worktrees,
     ownerId: randomUUID(),
     adapter: {
+      close: async () => {
+        adapterCloses++
+      },
       fingerprint: async () => "fixed-input",
-      prepare: async () => {},
+      prepare: async (_record, _signal, observe) => {
+        if (preparationDiagnostic) {
+          observe({ errors: [preparationDiagnostic] })
+          throw new Error("raw adapter detail must not be forwarded")
+        }
+      },
       inspect: async () => ({ runtimeId: "runtime", resources: [], endpoints: {}, healthy: true }),
       stop: async () => {
         stops++
@@ -216,4 +228,79 @@ test("자동 정리 실패는 테스트 성공을 덮어쓰지 않고 재시도�
   await runs.stopEnvironment(run.environmentId!)
   await runs.stopEnvironment.idle()
   expect(environments.get(run.environmentId!).state).toBe("stopped")
+})
+
+test("준비 단계의 마스킹된 진단을 실행 결과에 보존한다", async () => {
+  preparationDiagnostic = "app failed readiness: database password=[REDACTED]\nconnection refused"
+  const accepted = await runs.start(submissionId, selection)
+  await expect.poll(() => runs.get(accepted.id).state).toBe("finished")
+  const run = runs.get(accepted.id)
+  expect(run.result?.outcome).toBe("environment_error")
+  expect(run.result?.errors).toEqual([preparationDiagnostic])
+  expect(JSON.stringify(run)).not.toContain("raw adapter detail")
+  expect(executions).toBe(0)
+})
+
+test("서버 종료는 비기준 수동 환경을 정리하고 종료 상태를 기록한다", async () => {
+  const record = await environments.prepare(
+    worktreeId,
+    randomUUID(),
+    expectedSettingsDigest,
+    selection,
+    null,
+    undefined,
+    "worktree",
+  )
+  await environments.idle()
+  await environments.close()
+  expect(stops).toBe(1)
+  expect(environments.get(record.id).state).toBe("stopped")
+})
+
+test("서버 종료는 기준 브랜치 수동 환경을 보존한다", async () => {
+  const record = await environments.prepare(
+    worktreeId,
+    randomUUID(),
+    expectedSettingsDigest,
+    selection,
+    null,
+    undefined,
+    "main",
+  )
+  await environments.idle()
+  await environments.close()
+  expect(stops).toBe(0)
+  expect(environments.get(record.id).state).toBe("ready")
+})
+
+test("비기준 수동 환경의 종료 실패를 기록한 뒤 worker 연결을 닫는다", async () => {
+  const record = await environments.prepare(
+    worktreeId,
+    randomUUID(),
+    expectedSettingsDigest,
+    selection,
+    null,
+    undefined,
+    "worktree",
+  )
+  await environments.idle()
+  failStop = true
+  await environments.close()
+  expect(environments.get(record.id).state).toBe("stop_failed")
+  expect(adapterCloses).toBe(1)
+})
+
+test("재시작 정리는 남아 있는 비기준 수동 환경을 제거한다", async () => {
+  const record = await environments.prepare(
+    worktreeId,
+    randomUUID(),
+    expectedSettingsDigest,
+    selection,
+    null,
+    undefined,
+    "worktree",
+  )
+  await environments.idle()
+  await runs.stopEnvironment.cleanupTemporary()
+  expect(environments.get(record.id).state).toBe("stopped")
 })

@@ -1,13 +1,15 @@
 # Fixed project dependencies
 
 Read when a task changes runtime topology, connections or application containers.
-Use the connected `configure describe` schema and the project's owning configuration
+Use the connected `redpact settings describe --scope project` schema and the project's owning configuration
 and execution documentation. An installed plugin does not update its runtime.
 Report a schema mismatch; update an instance only when that action is authorized.
 
 ## Ownership and execution
 
-One `rulesRoot/.redpact/settings.json` supplies fixed root services and one definition
+Read and change settings only through `redpact settings get/patch` with project scope,
+the actual checkout path and revision precondition. One shared configuration supplies
+fixed root services and one definition
 per dependency to every worktree. Compose, Dockerfile and source paths resolve in
 the actual execution checkout. No worktree selections, mode catalogs, overlays or
 merge promotions exist. Preserve unrelated fields and omitted environment defaults.

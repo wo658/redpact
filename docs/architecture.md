@@ -12,6 +12,13 @@ are different facts. A result never implies the others.
 
 The standalone browser and Global App Page preserve the management app. Chat MCP returns structured results and links to web review; it has no inline cards. [Frontend conventions](frontend.md) defines their navigation boundary.
 
+Agents use CLI operations over local HTTP to enter shared workflows. Model-facing
+MCP is limited to runtime status, shutdown and opening the app; the App Page companion
+can also start its owned runtime. The full embedded app and existing cards retain
+App-only MCP transport. Settings use revision-checked CLI reads and partial updates;
+JSON remains the internal storage format. General files and Git use host tools.
+See [interfaces](interfaces.md).
+
 ## Supported product scope
 
 Redpact supports the standalone web app and the full web app embedded inside OpenAI
@@ -19,11 +26,10 @@ through MCP. Both use one shared React UI and server runtime; HTTP/SSE and MCP a
 transport adapters, with host-specific capabilities and limits described in
 [installation](installation.md). Execution approval and detailed evidence remain in the full web viewer.
 
-Native Windows, Linux and macOS desktop releases are no longer supported. Retained
-Tauri sources do not expand this support scope. CI verifies the shared web UI and
-server on Ubuntu with Node 24, without an OS/Node matrix. This is the release
-verification baseline, not evidence of behavior on every host. See
-[development](development.md) for automated and manual checks.
+Native Windows, Linux and macOS desktop applications and their Tauri implementation
+have been removed. CI verifies the shared web UI and server on Ubuntu with Node 24,
+without an OS/Node matrix. This is the release verification baseline, not evidence
+of behavior on every host. See [development](development.md) for automated and manual checks.
 
 ## Components
 
@@ -45,7 +51,6 @@ Documentation site ── docs/*.md
 | `app/server/src/adapters` | Files, native Git, source parsing, processes, Docker and Playwright |
 | `app/server/src/main.ts` | Concrete dependency wiring and process lifecycle |
 | `app/web` | Connected React viewer shared by browser and sidebar App Page |
-| `app/desktop` | Retained Tauri host; outside supported release scope |
 | Separate `redpact-web` repository | Website and documentation renderer; reads this repository’s `docs/` directly |
 
 ## Boundary rules
@@ -101,8 +106,10 @@ between record files.
 - ts-morph extracts static test intent from isolated submitted-file symbols without
   loading TypeScript standard-library declarations. Vitest records actual integration results.
   Static parsing does not prove assertion execution or full import coverage.
-- Testcontainers owns container startup. Redpact owns input capture, admission,
-  health observations, resource identities, cancellation and cleanup.
+- Testcontainers owns temporary container, Compose and network lifecycles through live
+  worker handles and Ryuk fallback. Redpact owns input capture, admission, evidence,
+  health observations, resource identities, cancellation and recovery cleanup. The
+  persistent main-checkout Container retains its independent lifecycle.
 - Unit, Integration Vitest and Playwright execute in temporary containers. Integration
   and Playwright join a per-execution network with service-name access to the application.
 - The connected web viewer implements explicit request approval. MCP returns review

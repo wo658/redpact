@@ -22,8 +22,10 @@ test("MCP는 검증 도구를 확장하되 Git·파일 편집·독립 환경 관
     "get_run_artifact",
     "get_workspace_status",
     "list_runs",
-    "project_container",
+    "open_redpact",
+    "redpact_status",
     "run_tests",
+    "stop_redpact_server",
   ])
   const run = result.tools.find((tool: { name: string }) => tool.name === "run_tests")
   expect(JSON.stringify(run.inputSchema)).toContain('"kind"')

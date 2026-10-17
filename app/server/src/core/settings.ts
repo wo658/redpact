@@ -35,15 +35,15 @@ export function describeSettings() {
       },
     },
     workflow: [
-      "Preserve existing unrelated settings and omitted environment defaults. Write one fixed project configuration in rulesRoot/.redpact/settings.json. All linked worktrees share it. Compose, Dockerfile and test paths resolve in the execution checkout.",
+      "Preserve existing unrelated settings and omitted environment defaults. Use redpact settings get --scope project --path PATH for authored values and the revision. Apply partial changes with redpact settings patch --scope project --path PATH --revision REVISION --patch-stdin; use --create instead of --revision for an absent document. All linked worktrees share the primary settings root. Compose, Dockerfile and test paths resolve in the execution checkout.",
       "Declare root services and one fixed definition for each dependency. Compose provisions managed services and mocks. shared-local and remote dependencies declare existing connections and never provision containers.",
-      "Declare only the variables needed by Integration and Playwright in tests.env. Both runners receive these values; application environment values are not inherited. Store direct key-value strings in the shared JSON settings. Direct nonempty values are masked in execution text; settings and captured source remain plaintext. Secret and endpoint bindings are unsupported; use literal strings.",
-      "Call configure validate with the execution path. Validation creates a plan but never runs containers, establishes readiness or grants approval.",
-      "Request Integration through run_tests, Unit through run_tests with kind=unit, and browser verification through run_tests with kind=playwright with a declared target. Read get_run for recorded evidence. Ask requests require explicit human approval in the connected web viewer. Each run owns fresh resources and cleanup.",
+      "Declare only the variables needed by Integration and Playwright in tests.env. Both runners receive these values; application environment values are not inherited. Set direct key-value strings through settings patch. Direct nonempty values are masked in execution text; settings and captured source remain plaintext. Secret and endpoint bindings are unsupported; use literal strings.",
+      "Call redpact settings validate --scope project --path PATH with the execution path. Validation creates a plan but never runs containers, establishes readiness or grants approval.",
+      "Request execution through redpact tests run with --kind unit, integration or playwright and the execution path; Playwright requires a declared target. Read redpact runs show for recorded evidence. Ask requests require explicit human approval in the connected viewer. Each run owns fresh resources and cleanup.",
     ],
     limits: [
       "Strict JSON; no mode catalogs, worktree overlays, execution selections, compatibility readers or automatic migrations.",
-      "Existing settings must be manually rewritten for this contract. Historical runtime data uses only the current format.",
+      "Use revision-checked settings patch to correct schema-invalid documents or settings repair for malformed JSON. Repair preserves the original backup. Historical runtime data upgrades through ordered startup migrations.",
     ],
   }
 }

@@ -253,13 +253,15 @@ test("manual environments reject test run ownership and retired retention fields
   expect(environmentSchema.safeParse({ ...env, lifecycle: "manual" }).success).toBe(false)
 })
 
-test("수동 확인 환경은 테스트 실행 ID 없이 준비하고 중복 실행과 테스트 예약을 막는다", async () => {
+test("기준 브랜치 수동 환경은 중복 실행과 테스트 예약을 막고 재시작 정리에서 보존한다", async () => {
   const environment = await service.prepare(
     worktreeId,
     randomUUID(),
     settingsDigest,
     selection,
     null,
+    undefined,
+    "main",
   )
   await service.idle()
   expect(service.get(environment.id)).toMatchObject({
@@ -391,3 +393,9 @@ test.each([
     expect(((await files.history()) as string[]).at(-1)).toBe("004-manual-environment-scope")
   },
 )
+
+test("환경 종료를 다시 호출해도 닫힌 저장소를 다시 읽지 않는다", async () => {
+  await service.close()
+  storage.close()
+  await expect(service.close()).resolves.toBeUndefined()
+})

@@ -307,10 +307,14 @@ export function createExecuteTests(deps: {
           })
           .catch((error) => {
             const outcome = executionFailureOutcome(controller.signal.aborted, error?.code)
+            const diagnostics =
+              outcome === "environment_error" && run.environmentId
+                ? deps.environments?.get(run.environmentId).errors
+                : undefined
             finish(run.id, {
               outcome,
               cases: [],
-              errors: ["Runner could not complete"],
+              errors: diagnostics?.length ? diagnostics : ["Runner could not complete"],
             })
           })
           .finally(async () => {

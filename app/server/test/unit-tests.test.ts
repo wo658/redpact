@@ -299,3 +299,25 @@ test("approval does not execute when the Git selection changes", async () => {
   ).rejects.toThrow("selection changed")
   expect(f.execute).not.toHaveBeenCalled()
 })
+
+test("준비 실패의 출력과 잘림 상태를 정리 이후에도 보존한다", async () => {
+  const { deps, execute } = fixture()
+  execute.mockRejectedValueOnce(
+    Object.assign(new Error("Container preparation failed"), {
+      stdout: "pulling runner image\n",
+      stderr: "Testcontainers: readiness failed\nservice unavailable",
+      truncated: true,
+    }),
+  )
+  const service = createUnitTests(deps)
+  const run = await service.start("wt")
+  await expect.poll(() => service.get(run.id).state).toBe("finished")
+  expect(service.get(run.id)).toMatchObject({
+    outcome: "execution_error",
+    stdout: "pulling runner image\n",
+    stderr: "Testcontainers: readiness failed\nservice unavailable",
+    truncated: true,
+    cleanup: { state: "removed", error: null },
+  })
+  await service.close()
+})

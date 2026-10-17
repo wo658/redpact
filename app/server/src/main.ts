@@ -7,7 +7,6 @@ import envPaths from "env-paths"
 import pino from "pino"
 import { observeProjectFiles } from "./adapters/changes/projects.js"
 import { createChangeWatcher } from "./adapters/changes/watch.js"
-import { createNativeDirectoryPicker } from "./adapters/desktop/directory-picker.js"
 import { projectFile, snapshotInputs } from "./adapters/environment/inputs.js"
 import { createComposeAdapter } from "./adapters/environment/testcontainers.js"
 import { createUnitContainer } from "./adapters/environment/unit-container.js"
@@ -44,6 +43,7 @@ import { createRuntimeMigrationFiles } from "./adapters/storage/migrations.js"
 import { createReviewStore } from "./adapters/storage/reviews.js"
 import { createRunLogReader } from "./adapters/storage/run-logs.js"
 import { createUnitRunStore } from "./adapters/storage/unit-runs.js"
+import { createNativeDirectoryPicker } from "./adapters/system/directory-picker.js"
 import { createVitestRunner } from "./adapters/test-runner/vitest.js"
 import { runtimePackageName } from "./adapters/updates/package.js"
 import { readRegistryTags, runtimePackage } from "./adapters/updates/registry.js"
@@ -52,7 +52,7 @@ import { instanceSettingsSchema, serverPortSchema } from "./core/instance-schema
 import { testSelectionSchema } from "./core/settings-schema.js"
 import { testResourceSchema } from "./core/test-resource-schema.js"
 import type { CaptureWorkflow } from "./core/types/playwright.js"
-import { createDesktopControl } from "./interfaces/desktop/control.js"
+import { createRuntimeControl } from "./interfaces/runtime/control.js"
 import { createCaptureWorkflow } from "./workflows/capture-ui.js"
 import { createDirectoryPicker } from "./workflows/directory-picker.js"
 import { createEnvironments } from "./workflows/environments.js"
@@ -73,6 +73,7 @@ import { createPullRequests } from "./workflows/pull-requests.js"
 import { createReviewContent } from "./workflows/review-content.js"
 import { createReviewTests } from "./workflows/review-tests.js"
 import {
+  collectExistingSubmission,
   createCollectTests,
   createRunFiles,
   createRunWorktreeTests,
@@ -81,6 +82,7 @@ import { createRunQueries } from "./workflows/run-queries.js"
 import { createRuns } from "./workflows/runs.js"
 import { migrateRuntime } from "./workflows/runtime-migrations.js"
 import { createRuntimeShutdown } from "./workflows/runtime-shutdown.js"
+import { createSettingsAgent } from "./workflows/settings-agent.js"
 import { createSettingsEditor } from "./workflows/settings-editor.js"
 import { createWorkStarts } from "./workflows/start-work.js"
 import { createStopEnvironment } from "./workflows/stop-environment.js"
@@ -90,10 +92,7 @@ import { createUnitTests } from "./workflows/unit-tests.js"
 import { createUpdates } from "./workflows/updates.js"
 import { createWorktrees } from "./workflows/worktrees.js"
 
-const desktopMode = process.env.REDPACT_DESKTOP_CONTROL === "1"
-delete process.env.REDPACT_DESKTOP_CONTROL
-const runtimeSupervised =
-  process.env.REDPACT_RUNTIME_SUPERVISED === "1" && Boolean(process.send) && !desktopMode
+const runtimeSupervised = process.env.REDPACT_RUNTIME_SUPERVISED === "1" && Boolean(process.send)
 const updateError = process.env.REDPACT_UPDATE_ERROR
 delete process.env.REDPACT_RUNTIME_SUPERVISED
 delete process.env.REDPACT_UPDATE_ERROR
@@ -113,9 +112,6 @@ const command = new Command()
       .default("127.0.0.1"),
   )
   .action(async (options) => {
-    if (desktopMode && options.host !== "127.0.0.1") {
-      throw new Error("Desktop control requires a loopback listen address")
-    }
     const override = options.port === undefined ? undefined : Number(options.port)
     if (override !== undefined && !serverPortSchema.safeParse(override).success) {
       throw new Error("Invalid port")
@@ -307,7 +303,9 @@ const command = new Command()
         store: createReviewStore(directory),
         collect: async (input) => {
           const selection = testSelectionSchema.optional().parse(input.selection)
-          const result = await collect({ ...input, selection })
+          const result = input.submissionId
+            ? await collectExistingSubmission({ worktrees, submissions }, input.submissionId)
+            : await collect({ ...input, selection })
           return { ...result, selection: testSelectionSchema.parse(result.selection) }
         },
         settings: (path) => localFiles.settings(path),
@@ -387,7 +385,7 @@ const command = new Command()
       const installed = await runtimePackage()
       const updates = createUpdates({
         currentVersion: installed.version,
-        supported: !desktopMode && installed.name === runtimePackageName,
+        supported: installed.name === runtimePackageName,
         installError: updateError,
         requestInstall: runtimeSupervised
           ? (version) =>
@@ -421,6 +419,17 @@ const command = new Command()
         now: () => new Date().toISOString(),
       })
       const app = createApp({
+        settingsAgent: createSettingsAgent({
+          editor: settingsEditor,
+          settings: (path) => localFiles.settings(path),
+        }),
+        runtimeControl: {
+          stop: () => {
+            setTimeout(() => {
+              void stop("agent_request")
+            }, 100)
+          },
+        },
         pluginUpdates,
         updates,
         reviewContent: createReviewContent({
@@ -522,38 +531,33 @@ const command = new Command()
           runtimeInput.end()
         })
       }
-      const desktop =
-        desktopMode || runtimeSupervised
-          ? createDesktopControl({
-              input: runtimeInput ?? process.stdin,
-              busy: () =>
-                pluginUpdates.status().busy ||
-                captures.all().some((run) => run.state !== "finished") ||
-                merges.busy() ||
-                pullRequests.busy() ||
-                storage.store.listRuns().some((run) => run.state !== "finished") ||
-                storage.store
-                  .listEnvironments()
-                  .some((environment) =>
-                    ["preparing", "in_use", "stopping"].includes(environment.state),
-                  ) ||
-                unitStore.list().some((run) => run.state === "running"),
-              stop: () => stop(shutdownReason),
-              send: (message) => {
-                if (runtimeSupervised) {
-                  if (process.connected) {
-                    process.send?.({ runtimeControl: message.desktop }, () => {
-                      if (message.desktop === "stopped" && process.connected) {
-                        process.disconnect()
-                      }
-                    })
+      const runtimeControl = runtimeInput
+        ? createRuntimeControl({
+            input: runtimeInput,
+            busy: () =>
+              pluginUpdates.status().busy ||
+              captures.all().some((run) => run.state !== "finished") ||
+              merges.busy() ||
+              pullRequests.busy() ||
+              storage.store.listRuns().some((run) => run.state !== "finished") ||
+              storage.store
+                .listEnvironments()
+                .some((environment) =>
+                  ["preparing", "in_use", "stopping"].includes(environment.state),
+                ) ||
+              unitStore.list().some((run) => run.state === "running"),
+            stop: () => stop(shutdownReason),
+            send: (message) => {
+              if (process.connected) {
+                process.send?.({ runtimeControl: message.runtimeControl }, () => {
+                  if (message.runtimeControl === "stopped" && process.connected) {
+                    process.disconnect()
                   }
-                } else {
-                  process.stdout.write(`${JSON.stringify(message)}\n`)
-                }
-              },
-            })
-          : undefined
+                })
+              }
+            },
+          })
+        : undefined
       const activeRequests = new Set<Promise<Response>>()
       let acceptingRequests = true
       const server = serve(
@@ -563,7 +567,9 @@ const command = new Command()
               return new Response("Redpact is stopping", { status: 503 })
             }
             const pending = Promise.resolve(
-              desktop ? desktop.fetch(() => app.fetch(request, env)) : app.fetch(request, env),
+              runtimeControl
+                ? runtimeControl.fetch(() => app.fetch(request, env))
+                : app.fetch(request, env),
             )
             activeRequests.add(pending)
             void pending.finally(() => activeRequests.delete(pending)).catch(() => {})
@@ -584,9 +590,6 @@ const command = new Command()
           if (runtimeSupervised) {
             process.send?.({ runtimeReady: address.port })
           }
-          if (desktopMode) {
-            process.stdout.write(`${JSON.stringify({ desktop: "ready", port: address.port })}\n`)
-          }
         },
       )
       updates.start()
@@ -601,7 +604,7 @@ const command = new Command()
           },
           { name: "updates", close: () => updates.close() },
           { name: "directory picker", close: () => directoryPicker.close() },
-          { name: "desktop control", close: () => desktop?.close() },
+          { name: "runtime control", close: () => runtimeControl?.close() },
           { name: "project observer", close: () => projectObserver.close() },
           { name: "change streams", close: () => changes.close() },
           { name: "pull requests", close: () => pullRequests.close() },

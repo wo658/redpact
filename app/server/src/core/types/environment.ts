@@ -14,4 +14,5 @@ export type EnvironmentAdapter = {
   ): Promise<void>
   inspect(record: Environment): Promise<EnvironmentObservation>
   stop(record: Environment): Promise<void>
+  close?(): Promise<void>
 }

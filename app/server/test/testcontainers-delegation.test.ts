@@ -23,10 +23,14 @@ test("빌드 스트림 오류는 이전 이미지 태그가 있어도 실패한�
   const root = await mkdtemp(join(tmpdir(), "redpact-build-regression-"))
   directories.push(root)
   await writeFile(join(root, "Dockerfile"), "FROM scratch\n")
+  let contextClosed = false
   const Dockerode = createRequire(join(library, "index.js"))("dockerode")
   const docker = {
     modem: new Dockerode().modem,
     buildImage: vi.fn(async (tar: Readable) => {
+      tar.once("close", () => {
+        contextClosed = true
+      })
       tar.resume()
       return Readable.from([
         Buffer.from(
@@ -39,6 +43,7 @@ test("빌드 스트림 오류는 이전 이미지 태그가 있어도 실패한�
   await expect(client.build(root, { t: "previous-image:exists" })).rejects.toThrow(
     "RUN exit 17 failed",
   )
+  expect(contextClosed).toBe(true)
 })
 
 test("자동 정리를 끈 대기 실패는 로그 수집 전 컨테이너를 삭제하지 않는다", async () => {
@@ -68,9 +73,13 @@ test("유한 로그 조회 실패를 호출자에게 전파한다", async () => 
 test("Docker 빌드 API 자체의 거부도 즉시 전파한다", async () => {
   const root = await mkdtemp(join(tmpdir(), "redpact-build-api-"))
   directories.push(root)
+  let contextClosed = false
   const client = new DockerImageClient(
     {
       buildImage: async (tar: Readable) => {
+        tar.once("close", () => {
+          contextClosed = true
+        })
         tar.resume()
         throw new Error("daemon refused build")
       },
@@ -78,7 +87,37 @@ test("Docker 빌드 API 자체의 거부도 즉시 전파한다", async () => {
     "https://index.docker.io/v1/",
   )
   await expect(client.build(root, { t: "unused" })).rejects.toThrow("daemon refused build")
+  expect(contextClosed).toBe(true)
 })
+
+test.each(["응답 전", "응답 후"])(
+  "빌드 컨텍스트 오류는 %s에도 전파하고 생산자를 닫는다",
+  async (phase) => {
+    const root = await mkdtemp(join(tmpdir(), "redpact-build-context-"))
+    directories.push(root)
+    const failure = new Error("context could not be read")
+    let contextClosed = false
+    const client = new DockerImageClient(
+      {
+        buildImage: async (tar: Readable) => {
+          tar.once("close", () => {
+            contextClosed = true
+          })
+          if (phase === "응답 전") {
+            tar.destroy(failure)
+            await new Promise((resolve) => setImmediate(resolve))
+          } else {
+            setImmediate(() => tar.destroy(failure))
+          }
+          return new Readable({ read() {} })
+        },
+      },
+      "https://index.docker.io/v1/",
+    )
+    await expect(client.build(root, { t: "unused" })).rejects.toBe(failure)
+    expect(contextClosed).toBe(true)
+  },
+)
 
 test("Dockerfile별 ignore 파일이 기본 ignore보다 우선한다", async () => {
   const root = await mkdtemp(join(tmpdir(), "redpact-build-ignore-"))

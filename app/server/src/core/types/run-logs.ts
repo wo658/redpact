@@ -6,7 +6,7 @@ export type RunLogs = {
   stdout: { text: string; truncated: boolean } | null
   stderr: { text: string; truncated: boolean } | null
 }
-export type RunLogReader = (id: string) => Promise<RunLogs>
+export type RunLogReader = (id: string, side?: "before" | "after") => Promise<RunLogs>
 export type ExecutionSummary = Pick<Run, "id" | "state" | "createdAt" | "finishedAt"> & {
   kind: "integration" | "unit" | "playwright"
   submissionId?: string

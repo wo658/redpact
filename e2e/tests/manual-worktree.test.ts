@@ -1,6 +1,32 @@
 import { expect, test } from "vitest"
 import { createSteps } from "./steps"
-import { http, node, rpc } from "./target"
+import { http, node } from "./target"
+
+type CliResult<T> = {
+  exit: number
+  payload: { version: number; ok: boolean; data: T; error?: { code: string } }
+}
+
+async function cli<T>(args: string[]) {
+  return node<CliResult<T>>(
+    `
+    import {spawnSync} from 'node:child_process';
+    const args=JSON.parse(process.argv[1]);
+    const result=spawnSync(process.execPath,[
+      '/app/app/server/dist/cli.js','--server','http://127.0.0.1:54318',...args,'--json'
+    ],{encoding:'utf8',timeout:20000});
+    if(result.error) throw result.error;
+    console.log(JSON.stringify({exit:result.status,payload:JSON.parse(result.stdout)}));
+    `,
+    args,
+  )
+}
+
+function succeeded<T>(result: CliResult<T>) {
+  expect(result.exit).toBe(0)
+  expect(result.payload).toMatchObject({ version: 1, ok: true })
+  return result.payload.data
+}
 
 test("수동 환경 조회는 요청한 워크트리에 귀속되고 고정 포트 설정을 검증한다", async (context) => {
   const step = createSteps(context)
@@ -17,6 +43,11 @@ test("수동 환경 조회는 요청한 워크트리에 귀속되고 고정 포�
     console.log(JSON.stringify({main,feature}));
   `),
   )
+  await step("연결되지 않은 체크아웃 조회는 CLI 오류를 반환하고 환경을 만들지 않는다", async () => {
+    const result = await cli(["environment", "inspect", "--path", paths.feature])
+    expect(result.exit).toBe(2)
+    expect(result.payload).toMatchObject({ version: 1, ok: false, error: { code: "NOT_FOUND" } })
+  })
   const project = await step("실제 프로젝트와 기능 워크트리를 연결한다", async () => {
     const response = await http<{ id: string }>("/api/projects", "POST", { path: paths.main })
     expect(response.status).toBe(201)
@@ -30,27 +61,39 @@ test("수동 환경 조회는 요청한 워크트리에 귀속되고 고정 포�
     expect(linked.status).toBe(201)
     return response.body
   })
-  await step("MCP는 기능 체크아웃을 메인으로 대체하지 않는다", async () => {
-    const response = await rpc<{
-      isError?: boolean
-      structuredContent: { target: { id: string; projectRoot: string }; environment: unknown }
-    }>("tools/call", {
-      name: "project_container",
-      arguments: { path: paths.feature, action: "inspect" },
-    })
-    expect(response.isError).not.toBe(true)
-    expect(response.structuredContent.target.projectRoot).toBe(paths.feature)
-    expect(response.structuredContent.environment).toBeNull()
+  await step("CLI는 기능 체크아웃을 메인으로 대체하지 않는다", async () => {
+    const response = succeeded(
+      await cli<{
+        target: { id: string; projectRoot: string }
+        environment: unknown
+      }>(["environment", "inspect", "--path", paths.feature]),
+    )
+    expect(response.target.projectRoot).toBe(paths.feature)
+    expect(response.environment).toBeNull()
     const httpView = await http<{ target: { id: string; projectRoot: string } }>(
-      `/api/projects/${project.id}/test-container?worktreeId=${response.structuredContent.target.id}`,
+      `/api/projects/${project.id}/test-container?worktreeId=${response.target.id}`,
     )
     expect(httpView.body.target.projectRoot).toBe(paths.feature)
   })
   await step("공통 설정 검증은 고정 포트를 허용하되 실행을 시작하지 않는다", async () => {
-    const response = await rpc<{ structuredContent: { validation: { valid: boolean } } }>(
-      "tools/call",
-      { name: "configure", arguments: { path: paths.feature, action: "validate" } },
+    const response = succeeded(
+      await cli<{ valid: boolean; readiness: string; approval: string }>([
+        "settings",
+        "validate",
+        "--scope",
+        "project",
+        "--path",
+        paths.feature,
+      ]),
     )
-    expect(response.structuredContent.validation.valid).toBe(true)
+    expect(response).toMatchObject({
+      valid: true,
+      readiness: "not_checked",
+      approval: "not_checked",
+    })
+    const environment = succeeded(
+      await cli<{ environment: unknown }>(["environment", "inspect", "--path", paths.feature]),
+    )
+    expect(environment.environment).toBeNull()
   })
 }, 30000)

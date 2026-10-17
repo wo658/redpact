@@ -28,7 +28,7 @@ flowchart TD
 > 모바일에서 캡처해. Redpact를 사용하고 실제 실행 참조를 알려줘.
 
 에이전트는 호스트 Git 도구로 워크트리를 찾거나 만들고, 절대 체크아웃 경로로
-`get_workspace_status`를 조회합니다. 공유 설정의 확인·검증이 필요하면 `configure`를
+`redpact workspace status --path PATH`를 조회합니다. 공유 설정의 확인·검증이 필요하면 `redpact settings describe/get/patch/validate --scope project`를
 사용합니다. 상태 조회만으로 테스트가 시작되지는 않습니다. 하위 에이전트는 명확한
 파일 경계 안에서 API·UI·문서를 나눠 맡을 수 있으며, 총괄 에이전트가 통합된
 체크아웃을 검증합니다.
@@ -48,10 +48,10 @@ flowchart TD
 
 | 근거 | MCP 진입점 |
 | --- | --- |
-| 설정된 Unit 전체 명령 | `run_tests` (`kind: "unit"`) |
-| 공개 API와 저장 동작 시나리오 | `run_tests` |
-| 실제 브라우저 조작 | functional target을 지정한 `run_tests` (`kind: "playwright"`) |
-| 기록된 애플리케이션 화면 | capture target을 지정한 `run_tests` (`kind: "playwright"`) |
+| 설정된 Unit 전체 명령 | `redpact tests run --kind unit` |
+| 공개 API와 저장 동작 시나리오 | `redpact tests run --kind integration` |
+| 실제 브라우저 조작 | functional target을 지정한 `redpact tests run --kind playwright --target TARGET` |
+| 기록된 애플리케이션 화면 | capture target을 지정한 `redpact tests run --kind playwright --target TARGET` |
 
 각 요청은 정확한 워크트리 경로와 공유 고정 설정을 사용합니다. Unit, Integration,
 Playwright의 런타임과 근거 계약은 서로 다릅니다. Ask 정책에서는 연결된 실행 검토 화면에서 사람이 실행을 승인해야 합니다. 에이전트는 대기 요청을 설명할 수 있지만 대신
@@ -61,7 +61,7 @@ Playwright의 런타임과 근거 계약은 서로 다릅니다. Ask 정책에�
 
 ## 4. 주의가 필요한 근거 열기
 
-에이전트는 진행·종료 상태를 읽고 `get_review_context`로 제한된 실패 정보와 근거
+에이전트는 진행·종료 상태를 읽고 `redpact runs context --kind integration --id ID`로 제한된 실패 정보와 근거
 참조를 얻어 같은 뷰어 인스턴스의 정확한 실행을 연결합니다. 그 실행에서 결과,
 캡처된 소스, 로그와 스크린샷을 확인하세요. 이력은 기록된 워크트리에 묶입니다. 전체 앱에는 프로젝트·워크트리 탐색, 테스트 카탈로그, 환경·설정도 있습니다. 채팅 MCP는 구조화된 근거와 검토 링크를 반환합니다.
 
@@ -87,19 +87,20 @@ Unit은 전체 명령 출력을 기록하며 케이스별 사실을 만들어내
 ## 포함된 시나리오 실행하기
 
 Docker와 연결된 런타임에서 `examples/order-desk`의 절대 경로를 사용합니다.
-`configure describe` 다음 `configure validate`를 호출하고 제공된 고정
-`app` / `payments: mock` 설정을 보존하세요. 다음 입력으로 `run_tests`를 제출합니다.
+`redpact settings describe --scope project` 다음 `redpact settings validate --scope project`를 호출하고 제공된 고정
+`app` / `payments: mock` 설정을 보존하세요. 다음 입력으로 `redpact tests run --kind integration`를 제출합니다.
 
-```json
-{ "path": "/absolute/path/to/redpact/examples/order-desk", "tests": ["http.test.js"] }
+```sh
+redpact tests run --kind integration \
+  --path /absolute/path/to/redpact/examples/order-desk --test http.test.js --json
 ```
 
 테스트 경로는 예제에 설정된 `tests` 디렉터리 기준입니다. 시나리오는 HTTP 200과
 `quantity: 1`, `totalCents: 250`을 포함한 응답을 검증합니다. 로컬 fixture가 관리형
 서비스 연결을 제공합니다. 이 검증은 모의 결제 주문 응답 하나를 다루며 실제 제공자
 호환성, 재시작 후 영속성이나 브라우저 동작을 증명하지 않습니다.
-반환된 식별을 `get_run`으로 따라가며 필요한 사람의 승인을 거치고,
-`get_review_context`로 정확한 결과를 여세요. ID·체크아웃·캡처 소스·결과·정리를
+반환된 식별을 `redpact runs show --kind integration --id ID`으로 따라가며 필요한 사람의 승인을 거치고,
+`redpact runs context --kind integration --id ID`로 정확한 결과를 여세요. ID·체크아웃·캡처 소스·결과·정리를
 비교합니다. ID를 받았다는 사실은 통과가 아닙니다.
 
 예제는 `REDPACT_URL=http://127.0.0.1:54318 node examples/order-desk/tools/review.mjs http`도

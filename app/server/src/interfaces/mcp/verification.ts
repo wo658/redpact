@@ -12,13 +12,12 @@ import { getRunSummary } from "../../workflows/run-summary.js"
 import type { Services } from "../../workflows/services.js"
 import {
   listExecutions,
-  projectContainer,
   readExecution,
   readRunArtifact,
   runPlaywrightVerification,
   runUnitVerification,
 } from "../../workflows/verification.js"
-import { invoke, output, readOnly } from "./result.js"
+import { invoke, output, readOnly, uiMeta } from "./result.js"
 import { executionReviewResult, reviewResult } from "./review-result.js"
 
 export function registerVerificationTools(server: McpServer, services: Services) {
@@ -35,6 +34,7 @@ export function registerVerificationTools(server: McpServer, services: Services)
         "Run managed Integration, Unit or Playwright verification from an absolute existing checkout. kind defaults to integration for legacy calls. Integration accepts tests; executionScope overrides the shared all/changed default; Unit changed requires fileCommand; Playwright requires a declared target and optional viewport. Ask policy retains each kind's captured-input approval gates. No arbitrary command or per-case selection.",
       inputSchema: runTestsInput,
       annotations: execution,
+      _meta: uiMeta(),
     },
     async (input) => {
       try {
@@ -79,6 +79,7 @@ export function registerVerificationTools(server: McpServer, services: Services)
         kind: z.enum(["integration", "unit", "playwright"]).optional(),
       }),
       annotations: readOnly,
+      _meta: uiMeta(),
     },
     ({ path, before, kind }) => invoke(() => listExecutions(services, path, before, kind)),
   )
@@ -89,6 +90,7 @@ export function registerVerificationTools(server: McpServer, services: Services)
         "Read recorded verification evidence by kind and ID. Explicit kind with detail=result returns a bounded summary (20 failures/artifacts with counts and truncation), captured identity, verdict, cleanup and detail/viewer references; id-only calls retain the legacy Integration response; log returns bounded recorded diagnostics; source with sourcePath reads captured Integration/Playwright test code, never the live file; image with artifactId returns a recorded Playwright PNG (at most 8 MiB). Video, trace and larger images remain in the viewer. Passing evidence is not current-code freshness or human acceptance. Review IDs are supported for result and return approval state and a web review path; recorded evidence requires an admitted execution.",
       inputSchema: getRunInput,
       annotations: readOnly,
+      _meta: uiMeta(),
     },
     async (input) => {
       try {
@@ -133,6 +135,7 @@ export function registerVerificationTools(server: McpServer, services: Services)
         "Read one recorded Playwright screenshot, video or trace owned by the named run and side, up to 8 MiB. Larger artifacts remain in the viewer. Artifact IDs from other executions are rejected.",
       inputSchema: artifactInput,
       annotations: readOnly,
+      _meta: uiMeta(),
     },
     async (input) => {
       try {
@@ -156,23 +159,5 @@ export function registerVerificationTools(server: McpServer, services: Services)
         })
       }
     },
-  )
-  server.registerTool(
-    "project_container",
-    {
-      description:
-        "Inspect/start/restart/stop the observed project's manual Compose environment. path identifies the actual worktree; each worktree owns its persistent manual environment until explicit stop. Stop only owns the manual environment and cannot stop test executions. Inspect is read-only; other actions are explicit manual lifecycle requests, independent of test approval.",
-      inputSchema: z.strictObject({
-        path: verificationPath,
-        action: z.enum(["inspect", "start", "restart", "stop"]),
-      }),
-      annotations: {
-        readOnlyHint: false,
-        destructiveHint: true,
-        idempotentHint: false,
-        openWorldHint: true,
-      },
-    },
-    ({ path, action }) => invoke(() => projectContainer(services, path, action)),
   )
 }

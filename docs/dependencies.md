@@ -58,7 +58,7 @@ paths resolve in the executing checkout, so a feature uses its own code. Each ex
 owns fresh containers and networks; configuration sharing does not permit environment
 reuse. Worktree selection files and dependency overlays do not affect execution.
 
-Validate with `configure` using the actual checkout. Validation does not start services,
+Validate with `redpact settings validate --scope project --path /absolute/checkout`. Validation does not start services,
 prove connectivity or grant approval. Execution captures settings, prepares resources,
 checks readiness, runs tests and removes only its owned resources. Independently operated
 shared-local and remote services remain alive; tests must isolate their fixture data.

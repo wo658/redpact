@@ -1,6 +1,10 @@
 import type { en } from "./en"
 
 export const ko = {
+  "Apply to all File Viewer tabs in this browser.":
+    "이 브라우저의 모든 File Viewer 탭에 적용합니다.",
+  "Show Git-tracked files only": "Git 추적 파일만 표시",
+  "No Git-tracked files to display.": "표시할 Git 추적 파일이 없습니다.",
   "Only the first 50 selected files are shown. Open the recorded run for the full list.":
     "선택 파일의 처음 50개만 표시합니다. 전체 목록은 기록된 실행에서 확인하세요.",
   "The configured command discovers its own files; no exact file list is recorded.":
@@ -66,11 +70,6 @@ export const ko = {
   "Waiting to start": "실행 대기 중",
   "Running browser tests": "브라우저 테스트 실행 중",
   "Starting browser": "브라우저 시작 중",
-  "Minimize window": "창 최소화",
-  "Maximize window": "창 최대화",
-  "Restore window": "창 복원",
-  "Close window": "창 닫기",
-  "Could not control the window.": "창을 조작하지 못했습니다.",
   "Could not load projects.": "프로젝트를 불러오지 못했습니다.",
   "No execution history.": "실행 기록이 없습니다.",
   "Project history": "프로젝트 기록",
@@ -121,7 +120,6 @@ export const ko = {
   "Redpact is up to date.": "Redpact가 최신 버전입니다.",
   "Could not check for updates.": "업데이트를 확인하지 못했습니다.",
   "Check for updates": "업데이트 확인",
-  "Could not open GitHub. Try again.": "GitHub를 열지 못했습니다. 다시 시도하세요.",
   Update: "Update",
   "Updating…": "업데이트 중…",
   "Update to {{version}}": "{{version}} 버전으로 업데이트",
@@ -438,8 +436,6 @@ export const ko = {
     "바이너리 또는 UTF-8이 아닌 파일은 미리 볼 수 없습니다.",
   "This file exceeds the 1 MiB preview limit.": "이 파일은 미리보기 제한인 1 MiB를 초과합니다.",
   "Git Graph": "Git Graph",
-  "Go back": "뒤로가기",
-  "Go forward": "앞으로가기",
   Code: "코드",
   "Changed unit test files": "변경된 단위테스트 파일",
   "Changed integration test files": "변경된 통합테스트 파일",

@@ -22,42 +22,36 @@ The sample lives at `examples/order-desk` inside the Redpact checkout. Use its a
 
 Its settings reference `compose.yaml`, define `payments` with a fixed `mock` dependency, and provide service connections to tests. `tests/http.test.js` verifies that checkout returns HTTP 200 with `quantity: 1` and `totalCents: 250`. Local fixtures resolve the managed service address; no allocated host port needs to be guessed.
 
-Call `configure` with `action: "describe"` and the sample path, then validate:
+Inspect and validate the sample settings through CLI on the same instance:
 
-```json
-{
-  "action": "validate",
-  "path": "/absolute/path/to/redpact/examples/order-desk"
-}
+```sh
+redpact settings describe --scope project --path /absolute/path/to/redpact/examples/order-desk
+redpact settings validate --scope project --path /absolute/path/to/redpact/examples/order-desk
 ```
 
 The supplied file already contains sample settings; do not replace it with a generic template.
 
 ## Start the scenario
 
-Call the MCP `run_tests` tool:
+Submit the execution through CLI:
 
-```json
-{
-  "path": "/absolute/path/to/redpact/examples/order-desk",
-  "tests": ["http.test.js"]
-}
+```sh
+redpact tests run --kind integration \
+  --path /absolute/path/to/redpact/examples/order-desk --test http.test.js --json
 ```
 
 The test path is relative to the configured integration-test directory, which defaults to `integration`; this example configures it as `tests`. Selecting this scenario avoids unrelated sample tests that require a different explicit source bundle.
 
 Redpact captures the request and returns an identity. If the returned state is `awaiting_approval`, that identity represents a pending review: execution has not started. Follow the controls available in your connected client, or consult [troubleshooting](troubleshooting.md) if the client cannot present them. Repeated polling does not approve the request.
 
-Redpact snapshots integration test sources when accepting the request, before any approval wait. Once admitted for execution, it prepares the selected environment using those captured tests. Editing test files during review does not update that submission; submit a new request to include edits. A queued state can include preparation; receiving an ID is not a passing result. Repeating `run_tests` creates another request. Use `get_run` to follow the accepted request.
+Redpact snapshots integration test sources when accepting the request, before any approval wait. Once admitted for execution, it prepares the selected environment using those captured tests. Editing test files during review does not update that submission; submit a new request to include edits. A queued state can include preparation; receiving an ID is not a passing result. Repeating `redpact tests run` creates another request. Use `redpact runs show` to follow the accepted request.
 
 ## Read the result
 
-Call `get_run` with the returned ID:
+Read the result through CLI with the returned ID:
 
-```json
-{
-  "id": "RETURNED_RUN_ID"
-}
+```sh
+redpact runs show --kind integration --id RETURNED_RUN_ID --json
 ```
 
 Continue until execution reaches a terminal state. Inspect the scenario result, diagnostics, and environment cleanup status. The expected sample outcome is a passing checkout scenario; these instructions are not evidence that it passed on your computer.
@@ -103,7 +97,7 @@ A useful report might say that the recorded checkout case passed with `payments:
 
 If the first attempt fails, keep its ID and fix the reported cause. A missing helper needs a source-bundle correction; a failed image build needs an application build correction; an unexpected response needs investigation of the assertion and behavior.
 
-Submit a new request after fixing the relevant inputs. Use `get_run` only to read an existing request: it does not rerun tests or pick up edits. Compare the new recorded source and outcome with the original failure. The new execution prepares an environment from the current application and settings inputs.
+Submit a new request after fixing the relevant inputs. Use `redpact runs show` only to read an existing request: it does not rerun tests or pick up edits. Compare the new recorded source and outcome with the original failure. The new execution prepares an environment from the current application and settings inputs.
 
 ## Environment lifetime
 

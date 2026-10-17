@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { viewerFetch } from "@/lib/viewer-transport"
 import { viewerUrl } from "@/lib/viewer-url"
-import { desktopInvoke } from "./desktop"
 
 export type UpdateStatus = {
   version: string | null
@@ -63,7 +62,6 @@ export function useUpdate() {
   const [requesting, setRequesting] = useState(false)
   const pending = useRef(false)
   const revision = useRef(0)
-  const invoke = desktopInvoke()
   useEffect(() => {
     let disposed = false
     let timer: ReturnType<typeof setTimeout>
@@ -75,9 +73,7 @@ export function useUpdate() {
     async function refresh() {
       const observed = revision.current
       try {
-        const next = invoke
-          ? await invoke<UpdateStatus>("desktop_update_status")
-          : await runtimeStatus()
+        const next = await runtimeStatus()
         if (!disposed && !pending.current && observed === revision.current) {
           setStatus(next)
         }
@@ -97,8 +93,8 @@ export function useUpdate() {
       clearTimeout(timer)
       window.removeEventListener(changed, receive)
     }
-  }, [invoke])
-  async function request(command: "desktop_check_update" | "desktop_install_update") {
+  }, [])
+  async function request(command: "check" | "install") {
     if (pending.current || status.busy) {
       return
     }
@@ -106,15 +102,10 @@ export function useUpdate() {
     setRequesting(true)
     setError(null)
     try {
-      if (!invoke && command === "desktop_install_update") {
+      if (command === "install") {
         return await installRuntime(status.version)
       }
-      if (invoke) {
-        await invoke(command)
-      }
-      const next = invoke
-        ? await invoke<UpdateStatus>("desktop_update_status")
-        : await runtimeStatus(true)
+      const next = await runtimeStatus(true)
       setError(next.error ?? null)
       window.dispatchEvent(new CustomEvent(changed, { detail: next }))
       return next.error ? undefined : next
@@ -128,9 +119,8 @@ export function useUpdate() {
   return {
     status,
     error: error ?? status.installError ?? status.error ?? null,
-    native: Boolean(invoke),
     busy: status.busy || requesting,
-    check: () => request("desktop_check_update"),
-    install: () => request("desktop_install_update"),
+    check: () => request("check"),
+    install: () => request("install"),
   }
 }
