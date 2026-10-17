@@ -7,6 +7,9 @@ import { build as buildViewer } from "../../app/web/node_modules/vite/dist/node/
 const root = new URL("./", import.meta.url)
 const target = new URL("dist/redpact-marketplace/plugins/redpact-app/", root)
 const runtimePort = 54322
+const runtimeManifest = JSON.parse(
+  await readFile(new URL("../../app/server/package.json", root), "utf8"),
+)
 await mkdir(new URL("dist/", target), { recursive: true })
 const viewerBuild = await buildViewer({
   root: fileURLToPath(new URL("../../app/web/", root)),
@@ -112,7 +115,7 @@ await writeFile(
   JSON.stringify(
     {
       port: runtimePort,
-      runtimeVersion: "0.8.0",
+      runtimeVersion: runtimeManifest.version,
     },
     null,
     2,
@@ -126,9 +129,9 @@ await writeFile(
     {
       $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
       name: "redpact",
-      version: "0.6.0",
+      version: "0.7.0",
       description:
-        "Manage projects, environments and settings in the app, with separate chat approval and evidence cards.",
+        "Manage projects, settings and verification through CLI, with human approvals and evidence in the full web app.",
       author: { name: "Redpact contributors" },
       extensions: {
         "com.openai": {
@@ -198,7 +201,7 @@ await writeFile(
   `${JSON.stringify(
     {
       name: "@wo658/redpact-plugin",
-      version: "0.6.0",
+      version: "0.7.0",
       description: "Redpact sidebar app with explicit npm/pnpm runtime installation",
       license: "Apache-2.0",
       repository: {

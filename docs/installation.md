@@ -80,8 +80,7 @@ pnpm dlx @wo658/redpact@latest serve --port 54321
 Finish active work and stop that runtime before updating, then start it again.
 Use a user-writable global directory. If pnpm has no global executable directory,
 run `pnpm setup` and reopen your terminal. The executable is named `redpact`.
-As verified on 2026-10-13, npm `latest` is `0.8.0`; it does not include unpublished
-changes on GitHub `main`.
+Check `npm view @wo658/redpact version` for the published version; GitHub `main` may include unpublished changes.
 
 ### GitHub release tarballs
 
@@ -199,13 +198,13 @@ establish it.
 When the plugin-managed runtime is missing, the page shows **Install Redpact** and
 an **npm / pnpm** selector. Installation is an explicit action; opening the page or
 refreshing it does not install anything. The companion installs the fixed public
-package `@wo658/redpact@0.8.0` with the selected bundled package manager, with lifecycle
+package `@wo658/redpact@0.9.0` with the selected bundled package manager, with lifecycle
 scripts disabled. Progress is polled while the installation runs. Failures remain
 visible and the button allows a retry; details are written to `install.log`.
 There is no arbitrary package name, registry or command input.
 
-Successful installs live under `~/.redpact/app-page/packages/0.8.0-npm` or
-`~/.redpact/app-page/packages/0.8.0-pnpm`. The default is pnpm. A verified existing
+Successful installs live under `~/.redpact/app-page/packages/0.9.0-npm` or
+`~/.redpact/app-page/packages/0.9.0-pnpm`. The default is pnpm. A verified existing
 installation is reused; if both are present, npm is selected first. This lookup
 covers plugin-managed packages, not unrelated global installations or desktop apps.
 Each attempt uses a temporary directory and publishes its installation directory
@@ -239,9 +238,7 @@ The plugin also registers a separate `redpact-verification` HTTP MCP connection 
 It exposes runtime lifecycle/opening tools to the model. Operational verification tools
 and the viewer bridge retain App-only visibility and their capability boundaries; agents
 use the CLI for settings, execution and evidence. See
-[MCP interfaces](interfaces.md) for the verification contracts. The bundled installer
-still downloads public 0.8.0, whose tool set is older; the CLI and reduced model tool set
-require a runtime built from this source or a future release containing it.
+[MCP interfaces](interfaces.md) for the verification contracts. The Plugin build pins the product version from `app/server/package.json`; publish that runtime before distributing the Plugin. Version 0.9.0 includes the CLI and reduced model tool set. Install the global CLI separately to use `redpact` from a shell, and pass `--server http://127.0.0.1:54322` to target the App instance.
 After starting or updating a runtime, reconnect the host's MCP connection if its tool
 catalog is stale or was unavailable during startup. A custom `REDPACT_APP_PORT` also
 requires updating this HTTP MCP URL in the plugin manifest.
@@ -297,7 +294,7 @@ MCP bridge. It verifies full app entry, project navigation, exact request routin
 layout and the explicit web approval boundary. Published-package installation is a separate
 check: `REDPACT_TEST_RUNTIME=installed REDPACT_TEST_MANAGER=npm pnpm test:browser`
 (or `pnpm` as manager) verifies installation and owned lifecycle without claiming
-current-source viewer behavior. The installer still pins public 0.8.0.
+current-source viewer behavior. The installer pins the runtime version recorded in the Plugin build.
 
 Artifacts and logs go under `dist/redpact-evidence/`. `pnpm preview` starts the local
 harness at `http://127.0.0.1:4320`. Neither harness proves native Codex Global Apps

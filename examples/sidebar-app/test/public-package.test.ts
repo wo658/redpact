@@ -15,3 +15,14 @@ test("공개 Plugin 패키지는 플랫폼과 도구를 명시하고 설치 스�
   const metadata = JSON.parse(await readFile(new URL("runtime-artifact.json", root), "utf8"))
   expect(metadata.redpact).toBe("installed on demand")
 })
+
+test("배포 Plugin은 제품 버전의 런타임과 CLI 스킬 계약을 사용한다", async () => {
+  const runtime = JSON.parse(
+    await readFile(new URL("../../../app/server/package.json", import.meta.url), "utf8"),
+  )
+  const config = JSON.parse(await readFile(new URL("dist/config.json", root), "utf8"))
+  expect(config.runtimeVersion).toBe(runtime.version)
+  const manifest = JSON.parse(await readFile(new URL("plugin.json", root), "utf8"))
+  expect(manifest.description).toContain("CLI")
+  expect(manifest.description).not.toContain("cards")
+})

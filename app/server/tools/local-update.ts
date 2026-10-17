@@ -159,24 +159,12 @@ async function retry(operation: () => Promise<void>, timeout = 30000) {
   }
 }
 
-async function verifyServer(base: string, ui = true) {
+export async function verifyServer(base: string, ui = true, allowLegacy = false) {
   const health = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(2000) })
   if (!health.ok || (await health.json()).status !== "ok") {
     throw new Error("Redpact health check failed")
   }
-  for (const [id, method, params] of [
-    [
-      1,
-      "initialize",
-      {
-        protocolVersion: "2025-03-26",
-        capabilities: {},
-        clientInfo: { name: "local-update", version: "1.0.0" },
-      },
-    ],
-    [2, "tools/list", {}],
-    [3, "tools/call", { name: "configure", arguments: { action: "describe" } }],
-  ] as const) {
+  async function rpc(id: number, method: string, params: Record<string, unknown>) {
     const response = await fetch(`${base}/mcp`, {
       method: "POST",
       signal: AbortSignal.timeout(5000),
@@ -190,12 +178,23 @@ async function verifyServer(base: string, ui = true) {
     if (!response.ok || body.error || body.result?.isError || !body.result) {
       throw new Error(`MCP ${method} failed`)
     }
-    if (
-      method === "tools/list" &&
-      !body.result.tools?.some((tool: { name: string }) => tool.name === "configure")
-    ) {
-      throw new Error("MCP configure tool is missing")
-    }
+    return body.result
+  }
+  await rpc(1, "initialize", {
+    protocolVersion: "2025-03-26",
+    capabilities: {},
+    clientInfo: { name: "local-update", version: "1.0.0" },
+  })
+  const catalog = await rpc(2, "tools/list", {})
+  const hasTool = (name: string) =>
+    catalog.tools?.some((tool: { name: string }) => tool.name === name)
+  if (hasTool("redpact_status")) {
+    await rpc(3, "tools/call", { name: "redpact_status", arguments: {} })
+  } else if (allowLegacy && hasTool("configure")) {
+    // Only a restored previous install may use the retired model-facing probe.
+    await rpc(3, "tools/call", { name: "configure", arguments: { action: "describe" } })
+  } else {
+    throw new Error("MCP redpact_status tool is missing")
   }
   if (!ui) {
     return
@@ -392,7 +391,7 @@ async function updateRuntime(base: string) {
         () => false,
       )
       const hasUi = candidateActive || previousHadUi
-      await retry(() => verifyServer(`http://127.0.0.1:${port}`, hasUi))
+      await retry(() => verifyServer(`http://127.0.0.1:${port}`, hasUi, !candidateActive))
       if ((await readFile(join(data, "instance.json"), "utf8")) !== identity) {
         throw new Error("Instance identity changed during update")
       }

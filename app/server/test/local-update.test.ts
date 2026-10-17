@@ -14,10 +14,16 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
 import { afterEach, expect, test, vi } from "vitest"
-import { archiveStoppedWriter, assertIdle, switchRuntime } from "../tools/local-update.js"
+import {
+  archiveStoppedWriter,
+  assertIdle,
+  switchRuntime,
+  verifyServer,
+} from "../tools/local-update.js"
 
 const directories: string[] = []
 afterEach(async () => {
+  vi.unstubAllGlobals()
   await Promise.all(directories.splice(0).map((path) => rm(path, { recursive: true, force: true })))
 })
 async function fixture() {
@@ -239,3 +245,53 @@ test("archives only the lock belonging to the confirmed stopped process", async 
 
 import { execFile, spawn } from "node:child_process"
 import { once } from "node:events"
+
+function verificationRuntime(names: string[], toolError = false, html = '<div id="root"></div>') {
+  const calls: Array<{ name: string; arguments: unknown }> = []
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, options?: RequestInit) => {
+      if (url.endsWith("/api/health")) {
+        return Response.json({ status: "ok" })
+      }
+      if (!url.endsWith("/mcp")) {
+        return new Response(html)
+      }
+      const request = JSON.parse(options?.body as string)
+      if (request.method === "tools/list") {
+        return Response.json({ result: { tools: names.map((name) => ({ name })) } })
+      }
+      if (request.method === "tools/call") {
+        calls.push(request.params)
+        return Response.json({ result: { isError: toolError, content: [] } })
+      }
+      return Response.json({ result: { protocolVersion: "2025-03-26" } })
+    }),
+  )
+  return calls
+}
+
+test("로컬 업데이트는 수명 주기 MCP의 읽기 전용 상태로 후보를 검증한다", async () => {
+  const calls = verificationRuntime(["redpact_status", "open_redpact", "stop_redpact_server"])
+  await expect(verifyServer("http://runtime")).resolves.toBeUndefined()
+  expect(calls).toEqual([{ name: "redpact_status", arguments: {} }])
+})
+
+test("기존 configure 전용 런타임 검증은 rollback에서만 허용한다", async () => {
+  const calls = verificationRuntime(["configure"])
+  await expect(verifyServer("http://runtime")).rejects.toThrow("redpact_status")
+  expect(calls).toEqual([])
+  await expect(verifyServer("http://runtime", true, true)).resolves.toBeUndefined()
+  expect(calls).toEqual([{ name: "configure", arguments: { action: "describe" } }])
+})
+
+test("현재 상태 도구 실패는 rollback에서도 이전 도구로 우회하지 않는다", async () => {
+  const calls = verificationRuntime(["redpact_status", "configure"], true)
+  await expect(verifyServer("http://runtime", true, true)).rejects.toThrow("tools/call")
+  expect(calls).toEqual([{ name: "redpact_status", arguments: {} }])
+})
+
+test("상태 도구가 성공해도 웹 진입점이 없으면 후보 검증에 실패한다", async () => {
+  verificationRuntime(["redpact_status"], false, "missing viewer")
+  await expect(verifyServer("http://runtime")).rejects.toThrow("web entrypoint")
+})
