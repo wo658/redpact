@@ -1,5 +1,6 @@
 import type { z } from "zod"
 import type { unitRunSchema, unitTestSettingsSchema } from "../unit-test-schema.js"
+import type { ExecutionScope, ExecutionSelection } from "./execution-selection.js"
 export type UnitTestSettings = z.infer<typeof unitTestSettingsSchema>
 export type UnitRun = z.infer<typeof unitRunSchema>
 export type UnitCatalog = {
@@ -42,10 +43,22 @@ export type UnitTestsService = {
     worktreeId: string,
     scope?: "changed" | "all",
   ): Promise<{ settings: UnitTestSettings | null; catalog: UnitCatalog; runs: UnitRun[] }>
-  preview(worktreeId: string): Promise<{ settings: UnitTestSettings; inputDigest: string }>
+  preview(
+    worktreeId: string,
+    executionScope?: ExecutionScope,
+  ): Promise<{
+    settings: UnitTestSettings
+    inputDigest: string
+    executionSelection?: ExecutionSelection
+  }>
   start(
     worktreeId: string,
-    approved?: { settings: UnitTestSettings; inputDigest: string },
+    approved?: {
+      settings: UnitTestSettings
+      inputDigest: string
+      executionSelection?: ExecutionSelection
+    },
+    executionScope?: ExecutionScope,
   ): Promise<UnitRun>
   get(id: string): UnitRun
   cancel(id: string): Promise<UnitRun>

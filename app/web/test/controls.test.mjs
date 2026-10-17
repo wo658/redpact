@@ -2557,7 +2557,7 @@ test("unit view browses added source but runs the whole configured command witho
   await screen.findByText(sourceLine("assert 1 == 1"))
   const user = userEvent.setup({ document })
   await user.click(screen.getByRole("button", { name: "Run Unit command" }))
-  assert.deepEqual(calls, [["w1"]])
+  assert.deepEqual(calls, [["w1", undefined]])
   assert.equal(screen.queryByRole("button", { name: "Cancel command" }), null)
   assert.equal(screen.getByRole("button", { name: "Run Unit command" }).disabled, true)
 })
@@ -2954,7 +2954,7 @@ test("통합테스트는 변경 구간과 해당 파일의 실행 결과를 탐�
   assert.ok(screen.getByRole("tree", { name: "Changed integration test files" }))
 })
 
-test("통합 실행은 최근 제출본 전체를 실행하고 중복 실행과 실패를 표시한다", async () => {
+test("통합 실행은 현재 소스를 수집하고 중복 실행과 실패를 표시한다", async () => {
   await i18n.changeLanguage("en")
   const { TestObservation } = await server.ssrLoadModule("/src/components/test-observation.tsx")
   let rejectRun
@@ -2970,8 +2970,8 @@ test("통합 실행은 최근 제출본 전체를 실행하고 중복 실행과 
         submissions: async () => ({ items: [{ id: "submitted" }] }),
         submission: async () => ({ id: "submitted", files: [], parsed: [] }),
         runs: async () => ({ items: [] }),
-        startRun: (id) => {
-          calls.push(id)
+        runIntegrationTests: (id, scope) => {
+          calls.push([id, scope])
           return new Promise((_, reject) => {
             rejectRun = reject
           })
@@ -2984,16 +2984,19 @@ test("통합 실행은 최근 제출본 전체를 실행하고 중복 실행과 
   assert.ok(
     !screen.queryByText("Runs the latest submission in full, not the selected current file."),
   )
-  assert.equal(button.title, "Runs the latest submission in full, not the selected current file.")
+  assert.equal(
+    button.title,
+    "Runs current integration sources with the fixed project configuration.",
+  )
   await userEvent.setup({ document }).click(button)
-  assert.deepEqual(calls, ["submitted"])
+  assert.deepEqual(calls, [["w", undefined]])
   assert.equal(button.disabled, true)
   rejectRun(new Error("Environment unavailable"))
   await screen.findByText("Error: Environment unavailable")
   assert.equal(button.disabled, false)
 })
 
-test("제출본이 없으면 통합 실행을 비활성화한다", async () => {
+test("제출본이 없어도 현재 통합 소스를 실행할 수 있다", async () => {
   await i18n.changeLanguage("en")
   const { TestObservation } = await server.ssrLoadModule("/src/components/test-observation.tsx")
   render(
@@ -3010,7 +3013,7 @@ test("제출본이 없으면 통합 실행을 비활성화한다", async () => {
   )
   assert.equal(
     (await screen.findByRole("button", { name: "Run Integration tests" })).disabled,
-    true,
+    false,
   )
 })
 
@@ -3028,7 +3031,7 @@ test("통합 실행 접수 후 실행 중 상태를 표시하고 재실행을 �
         submissions: async () => ({ items: [{ id: "s" }] }),
         submission: async () => ({ id: "s", files: [], parsed: [] }),
         runs: async () => ({ items: [] }),
-        startRun: async () => ({ id: "r", state: "queued", result: null }),
+        runIntegrationTests: async () => ({ id: "r", state: "queued", result: null }),
       },
     }),
   )
@@ -3426,7 +3429,12 @@ test("Playwright 리뷰는 비교 없이 저장된 현재 화면을 표시한다
       screen.getByAltText("완료 화면").getAttribute("src"),
       "/api/playwright-runs/run/after/artifacts/image",
     )
-    assert.equal(screen.queryAllByRole("combobox").length, 0)
+    assert.equal(
+      screen
+        .queryAllByRole("combobox")
+        .filter((node) => node.getAttribute("aria-label") !== "Execution scope").length,
+      0,
+    )
     assert.equal(screen.queryByRole("tab"), null)
     assert.equal(screen.queryByRole("button", { name: "Recorded execution" }), null)
     assert.equal(screen.getByAltText("완료 화면").style.maxWidth, "100%")
@@ -3478,7 +3486,12 @@ test("Capture는 여러 시나리오의 모든 이미지를 선택 없이 펼쳐
   for (const image of screen.getAllByRole("img")) {
     assert.ok(image.getAttribute("src").startsWith("/latest/after/"))
   }
-  assert.equal(screen.queryAllByRole("combobox").length, 0)
+  assert.equal(
+    screen
+      .queryAllByRole("combobox")
+      .filter((node) => node.getAttribute("aria-label") !== "Execution scope").length,
+    0,
+  )
 })
 
 test("현재 화면 캡처가 실패하면 과거 기준 화면으로 대체하지 않는다", async () => {
@@ -4134,7 +4147,7 @@ test("프로젝트 Playwright 헤더에서 대상을 고른 뒤에만 테스트�
     within(screen.getByRole("dialog")).getByRole("button", { name: "Run Playwright" }),
   )
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", undefined, "functional"])
+  assert.deepEqual(calls[0], ["w", undefined, "functional", undefined])
   assert.ok(screen.getByRole("dialog"))
   // Exercise a failed poll before completion without inspecting the DOM's React fiber graph.
   const closed = waitFor(() =>
@@ -4925,7 +4938,7 @@ test("integration execution follows refreshed runs after its own run finishes", 
     submissions: async () => ({ items: [{ id: "submission" }] }),
     submission: async () => ({ id: "submission", files: [], parsed: [] }),
     runs: async () => ({ items: [] }),
-    startRun: async () => ({ id: "own", state: "queued", result: null }),
+    runIntegrationTests: async () => ({ id: "own", state: "queued", result: null }),
   }
   const view = render(createElement(TestObservation, { api, worktreeId: "w" }))
   await waitFor(() =>
@@ -5151,7 +5164,7 @@ test("워크트리 캡처는 기본 FHD 16:9 해상도로 실행한다", async (
   await waitFor(() => assert.equal(button.disabled, false))
   await userEvent.setup().click(button)
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", { width: 1920, height: 1080 }, "captures"])
+  assert.deepEqual(calls[0], ["w", { width: 1920, height: 1080 }, "captures", undefined])
   await screen.findByText("Stopped after recording request")
 })
 
@@ -5389,7 +5402,12 @@ test("Capture 빈 상태는 내부 탭 없이 표시한다", async () => {
   try {
     await screen.findByText("No recorded captures or tests match this worktree's changes.")
     assert.equal(screen.queryAllByRole("tab").length, 0)
-    assert.equal(screen.queryAllByRole("combobox").length, 0)
+    assert.equal(
+      screen
+        .queryAllByRole("combobox")
+        .filter((node) => node.getAttribute("aria-label") !== "Execution scope").length,
+      0,
+    )
   } finally {
     view.unmount()
   }
@@ -5437,7 +5455,12 @@ test("워크트리 UI 리뷰는 변경된 소스의 캡처와 테스트만 표�
   await screen.findByAltText("changed")
   assert.ok(screen.queryByAltText("unchanged") === null, "Unchanged capture must be hidden")
   assert.ok(await screen.findByAltText("changed"))
-  assert.equal(screen.queryAllByRole("combobox").length, 0)
+  assert.equal(
+    screen
+      .queryAllByRole("combobox")
+      .filter((node) => node.getAttribute("aria-label") !== "Execution scope").length,
+    0,
+  )
   assert.deepEqual(sources, [], "Capture browsing does not fetch test code")
   assert.equal(run.after.cases.length, 2, "Review must not mutate retained evidence")
   view.unmount()
@@ -5958,7 +5981,7 @@ test("UI 리뷰는 모바일 모드 토글로 저장된 모바일과 데스크�
   assert.equal(screen.queryByAltText("desktop-shot"), null)
   await user.click(screen.getByRole("button", { name: "Run Playwright" }))
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "captures"])
+  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "captures", undefined])
   await user.click(mobileMode)
   assert.equal(mobileMode.getAttribute("aria-checked"), "false")
   await screen.findByAltText("desktop-shot")
@@ -6536,7 +6559,7 @@ test("한 실행의 캡처를 실제 viewport로 분류하고 이름과 실행 �
   assert.equal(screen.queryByAltText("desktop-shot"), null)
   await user.click(screen.getByRole("button", { name: "Run Playwright" }))
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "captures"])
+  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "captures", undefined])
   await user.click(mobileMode)
   assert.equal(mobileMode.getAttribute("aria-checked"), "false")
   await screen.findByAltText("desktop-shot")
@@ -6801,7 +6824,7 @@ test("캡처 소스는 실행 전에도 파일 선택과 실행 대상으로 남
   assert.equal(run.disabled, false)
   await user.click(run)
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "screens"])
+  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "screens", undefined])
 })
 
 test("공유 파일 뷰어가 SVG 미리보기·원본 전환과 PNG·ICO 오류를 동일하게 제공한다", async () => {
@@ -7124,4 +7147,40 @@ test("선택 소스는 늦은 성공과 오류 응답을 버리고 현재 파일
   await act(async () => stale.reject(new Error("STALE_ERROR")))
   assert.equal(screen.queryByText("Error: STALE_ERROR"), null)
   assert.ok(screen.getByText("LATEST_SOURCE"))
+})
+
+test("변경 Unit 실행이 거절되어도 전체 범위로 전환해 다시 실행한다", async () => {
+  await i18n.changeLanguage("en")
+  const { UnitTests } = await server.ssrLoadModule("/src/components/unit-tests.tsx")
+  const calls = []
+  const settings = { cwd: ".", command: "test", patterns: ["unit/*.test.ts"] }
+  render(
+    createElement(UnitTests, {
+      worktreeId: "w",
+      api: {
+        unitTests: async () => ({ settings, catalog: { files: [], diagnostics: [] }, runs: [] }),
+        runUnitTests: async (_id, executionScope) => {
+          calls.push(executionScope)
+          if (executionScope === "changed") {
+            throw new Error("No tests selected")
+          }
+          return { id: "all-run", settings, state: "running", stdout: "", stderr: "" }
+        },
+      },
+    }),
+  )
+  const user = userEvent.setup({ document })
+  await waitFor(() =>
+    assert.equal(screen.getByRole("button", { name: "Run Unit command" }).disabled, false),
+  )
+  const run = screen.getByRole("button", { name: "Run Unit command" })
+  await user.click(screen.getByRole("combobox", { name: "Execution scope" }))
+  await user.click(await screen.findByRole("option", { name: "Changed tests", exact: true }))
+  await user.click(run)
+  await waitFor(() => assert.deepEqual(calls, ["changed"]))
+  await user.click(screen.getByRole("combobox", { name: "Execution scope" }))
+  await user.click(await screen.findByRole("option", { name: "All tests", exact: true }))
+  assert.equal(run.disabled, false, "거절된 요청 때문에 전체 실행이 잠기면 안 된다")
+  await user.click(run)
+  await waitFor(() => assert.deepEqual(calls, ["changed", "all"]))
 })

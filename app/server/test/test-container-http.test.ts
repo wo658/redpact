@@ -19,7 +19,7 @@ test("프로젝트 Test Container를 조회하고 명시적인 실행·재실행
       method: "POST",
     })
     expect(response.status).toBe(202)
-    expect(testContainer[action]).toHaveBeenCalledWith("project")
+    expect(testContainer[action]).toHaveBeenCalledWith("project", undefined)
   }
   const foreign = await app.request("/api/projects/project/test-container/start", {
     method: "POST",
@@ -27,4 +27,18 @@ test("프로젝트 Test Container를 조회하고 명시적인 실행·재실행
   })
   expect(foreign.status).toBe(403)
   expect(testContainer.start).toHaveBeenCalledTimes(1)
+})
+
+test("워크트리 쿼리는 선택한 수동 환경에 전달된다", async () => {
+  const inspect = vi.fn(async () => ({
+    target: null,
+    environment: null,
+    changed: null,
+    issue: null,
+  }))
+  const app = createApp({ testContainer: { inspect } } as never)
+  expect(
+    (await app.request("/api/projects/project/test-container?worktreeId=feature")).status,
+  ).toBe(200)
+  expect(inspect).toHaveBeenCalledWith("project", "feature")
 })

@@ -16,6 +16,7 @@ import { dirname, join, resolve } from "node:path"
 import { isDeepStrictEqual } from "node:util"
 import { z } from "zod"
 import { environmentSchema } from "../../core/environment-schema.js"
+import { executionSelectionSchema } from "../../core/execution-selection-schema.js"
 import { testSelectionSchema } from "../../core/settings-schema.js"
 import { startWorkInput } from "../../core/start-work-schema.js"
 import { stepResultSchema } from "../../core/step-schema.js"
@@ -63,7 +64,8 @@ const targetSchema = z.strictObject({
   projectRoot: z.string(),
   checkoutRoot: z.string(),
 })
-const submissionSchema = z.strictObject({
+export const submissionSchema = z.strictObject({
+  executionSelection: executionSelectionSchema.nullable().optional(),
   id,
   workItemId: id,
   ...binding,

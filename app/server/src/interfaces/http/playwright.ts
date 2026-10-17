@@ -81,7 +81,14 @@ export function playwrightRoutes(
       async (c) => {
         const input = c.req.valid("json")
         return c.json(
-          await workflow.start(c.req.param("id"), undefined, input.viewport, input.target),
+          await workflow.start(
+            c.req.param("id"),
+            undefined,
+            input.viewport,
+            input.target,
+            undefined,
+            input.executionScope,
+          ),
         )
       },
     )

@@ -9,7 +9,7 @@ description: Test runtimes, evidence, manual containers, limits and cleanup.
 
 | Entry | Runtime and inputs | Result |
 | --- | --- | --- |
-| Unit | Project Dockerfile and complete configured command in a temporary container | Command status, exit code, stdout/stderr and cleanup status |
+| Unit | Project Dockerfile and configured command or exact file command in a temporary container | Command status, exit code, stdout/stderr and cleanup status |
 | Integration | Containerized Vitest against a fresh Testcontainers Compose application environment | Immutable submitted source, cases, steps and run/environment records |
 | Playwright | Containerized browser against a temporary application environment | Functional results or capture evidence, optional video/trace |
 | Container | Explicitly started manual project application environment | Inspection endpoints and lifecycle state; not test evidence |
@@ -17,11 +17,10 @@ description: Test runtimes, evidence, manual containers, limits and cleanup.
 Unit has no host-command fallback. Its Dockerfile must copy sources and dependencies
 into `/workspace`, provide `/bin/sh`, and install during build. `cwd` selects the
 command directory. Dockerfile ENTRYPOINT/CMD do not supply Redpact's supervisor.
-The selected source file does not filter the configured command. Results do not
+The selected source file in the viewer does not filter the configured command; execution scope uses the explicit contract below. Results do not
 invent per-case verdicts from an exit code.
 
-Integration uses the current project catalog when started from Project Tests, or
-the latest submitted bundle when started from worktree review. MCP `run_tests`
+Integration collects current checkout sources from Project Tests and worktree review. MCP `run_tests`
 collects fresh sources for the supplied path. Submission identity and current file
 contents must remain distinguishable in the viewer. [Test authoring](tests.md)
 describes supported source collection and assertions.
@@ -52,7 +51,7 @@ path through its entry above so the connected worktree retains its result and cl
 ## Approval and accepted inputs
 
 MCP execution under Ask creates a durable review before starting project code. Unit
-records the complete configured command and a digest of the inputs its container will
+records the command/file-command specification, execution selection and a digest of the inputs its container will
 copy. Playwright records the target, purpose, effective viewport, settings digest,
 application fingerprint and test-directory digest. Requests retain their captured policy
 when future defaults change. The same reviewed request can be approved in the chat
@@ -88,10 +87,13 @@ the run environment and are removed with it. Preserve metadata, logs, results an
 from the test verdict, and remains retryable. Startup reconciles labelled resources
 and removes interrupted environments; it never reruns tests automatically.
 
-Temporary Compose builds without an authored `image` use Compose's project-specific
-image tag with owner/environment labels. Cleanup records and removes only that owned
-tag. Authored `image`, `build.tags`, pull policy and build options remain unchanged;
-those tags and external networks/volumes are not cleanup targets. Named resources
+Every Compose build uses a dedicated environment-UUID image tag, including builds
+with an authored `image`. Generated configuration clears `build.tags` so execution
+cannot overwrite authored or shared tags. Build images carry the instance ownership
+label, retaining reusable final layers across environments; durable records identify
+the environment's dedicated tags for cleanup. Other build options and pull policy
+remain unchanged. Authored tags and external networks/volumes are not cleanup targets.
+Named resources
 are removed only when their labels identify this environment. Anonymous volumes are
 removed with their owned container. Cleanup never treats a mounted volume as owned
 merely because an application uses it, and does not re-evaluate Compose expressions.
@@ -121,17 +123,31 @@ leave resources until successful recovery.
 
 ## Manual Container
 
-Project Container uses the live checkout of the configured main branch, including
-uncommitted inputs; directory projects use their connected root. No substitute
-checkout is chosen when the required checkout is missing. The fixed shared project configuration supplies the services and dependencies. One manual environment per project stays alive until
-Stop, Restart or server shutdown. It has `lifecycle: "manual"` and no test run IDs;
-it cannot be reused by test execution.
+The project Container screen defaults to the configured main checkout. MCP `project_container`
+uses its actual `path` worktree; HTTP Container routes accept `worktreeId` to select one.
+Directory projects use their connected root. All targets use the fixed shared settings.
+Each worktree can own one manual environment, independent of test environments.
+It stays alive across tests, idle periods, agent completion and Redpact shutdown until
+explicit Stop or Restart. On server restart, ownership and observed Docker health are
+reconnected without recreating services or treating this as new test evidence.
+Interrupted preparations remain failed; interrupted stops retain cleanup ownership for retry.
+Docker unavailability is distinct from an explicit successful stop.
 
-Compose build images for a manual Container use a stable project-specific Compose name,
-so the latest tagged project image remains available between manual sessions. Temporary
-test environments use separate owned build tags and remove those tags after execution;
-Redpact preserves existing project image tags and unrelated Docker images. A manual
-restart removes a superseded image only when no other tags or containers reference it.
+Stop removes all owned containers, anonymous and dedicated named volumes, networks,
+environment build tags, source snapshots and generated runtime files. Preparation and
+service logs and historical environment records remain. Dedicated names use the environment
+UUID; authored nonexternal network/volume names and build image tags cannot collide with another
+worktree or overwrite an existing project tag. External volumes/networks, bind mounts,
+pulled base images and unrelated tags remain outside environment ownership.
+
+BuildKit's content-addressed internal cache and shared image layers remain shared Docker
+resources. Redpact does not prune them or promise that removing a tag frees every byte of
+its reported image size. Builds use an instance ownership label rather than a fresh
+per-environment image label so identical final layers remain reusable. Generated Compose
+files stay outside build contexts. A newly changed source can add shared cache; dedicated
+images/tags and runtime files are still removed. Explicit cache exports declared by the
+project remain project-managed shared resources. Cleanup failure is not stopped: retained
+ownership and diagnostics allow an explicit retry, and restart waits for successful teardown.
 
 Local edits show input changes but never hot-reload or restart the session. Restart
 removes old owned resources before capturing current inputs; failed cleanup blocks
@@ -145,11 +161,12 @@ any HTTP response proves reachability, not application health.
 Compose is the application execution definition. Redpact applies the configured
 service selection and explicit dependency environment bindings, records ownership,
 and adds runner connectivity where the service's network mode permits it. It does
-not impose a managed Compose subset: fixed host ports, host mounts, privileges,
+not impose a managed Compose subset: host mounts, privileges,
 custom container names, external resources, `env_file`, configs/secrets and advanced
-build options are not rejected as Redpact policy. Authored port publications and
-image tags are preserved. Concurrent executions may conflict when the Compose
-project deliberately uses fixed ports or names; the native error is retained.
+build options are not rejected as Redpact policy. Published ports use automatic host
+allocation except explicit main-manual dependency `hostPorts`; see [configuration](configuration.md).
+Build image tags and nonexternal network/volume names are environment-owned. Custom container names
+and other authored host resources can still conflict; native errors are retained.
 
 Compose/Testcontainers handle native configuration, build, startup and wait errors.
 A healthcheck is optional. When present, its reported health is observed; otherwise
@@ -338,10 +355,54 @@ record refreshes its remaining resources when the daemon is reachable, stays
 `stop_failed`, and supports another Stop attempt. If inspection is unavailable,
 previously known resources remain recorded rather than being declared absent.
 Startup also checks previously stopped records with a known daemon identity for owned
-leftovers, and uses durable environment records to recover interrupted execution resources;
-records, submissions and logs remain after removal. Resources with no durable record
+leftovers. A manual record with retained resources becomes `stop_failed` and requires
+explicit Stop; transient execution resources are cleaned up automatically using their
+durable environment records. Records, submissions and logs remain after removal. Resources with no durable record
 or verifiable ownership require explicit investigation and are never globally pruned.
 
 Before changing daemon pools, retry cleanup for owned retained environments and
 verify the resulting network list. Increasing pool capacity does not fix a cleanup
 failure, and global network pruning can delete other projects' resources.
+
+## Selecting all or changed tests
+
+Execution selection is independent of catalog `scope` and Playwright maintenance
+`scope`. `executionScope` overrides the [shared default](configuration.md). `all`
+selects the current Integration test directory, Unit file patterns or the selected
+Playwright target. A legacy Unit shell command without `fileCommand` discovers its
+own files; its record explicitly leaves that file list unknown.
+
+`changed` compares committed HEAD with the single merge-base of HEAD and the local
+`tracking.mainBranch`. It unions committed changes, staged changes, unstaged changes
+and nonignored untracked files. Index changes remain changes even when working
+content was restored. Renames include old and new paths, but only existing catalog
+test files execute; deleted tests do not execute. A missing main branch, unborn HEAD,
+missing/ambiguous merge-base or Git read failure rejects changed execution. There is
+no silent fallback when the comparison is unavailable.
+
+Changed helper/fixture files under the runner's test directories select all files in
+that runner/target. Unit patterns without a fixed directory prefix (such as
+`foo*.test.ts`) treat the project root as the helper directory and conservatively
+select all on non-test source changes. Other targets' declared test files do not count as helpers.
+Git-visible `.redpact/settings.json`, package manifests/locks, `.gitignore`, TypeScript
+configuration and Vitest/Vite/Playwright/Jest configuration at the project root and
+runner directory also select all. Records retain requested `changed`, resolved `all`
+and `supporting_inputs` rather than disguising this as a changed-only run.
+Implementation-source edits outside those directories do not infer affected tests;
+this is file selection, not dependency analysis. Choose `all` for a full regression.
+
+Integration's explicit `tests` list combines with `all` and is recorded as `explicit`;
+it conflicts with `changed`, including a shared changed default. Helpers remain in
+the immutable submission. Playwright always selects inside one declared target and
+keeps helpers in the captured source bundle. Unit uses the authored file-command
+contract. Zero selected tests rejects admission with “No tests selected”, starts no
+container and creates no passing execution.
+
+New submissions, Unit/Playwright runs and approvals retain requested/resolved scope,
+comparison revision, reason and selected files. Approval/result views display this
+selection. Unit and Playwright revalidate selection as well as existing source/settings
+fingerprints before admission; a changed base or selected file set requires a new
+request. Integration retains its immutable submitted sources. Historical records have
+unknown selection rather than an invented full-suite claim. Project and worktree
+Integration Run controls collect the current checkout; explicitly rerunning a recorded
+submission still uses that original bundle.

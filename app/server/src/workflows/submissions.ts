@@ -8,6 +8,7 @@ import type {
   Submission,
   WorkItem,
 } from "../core/types/contracts.js"
+import type { ExecutionSelection } from "../core/types/execution-selection.js"
 import type { SubmissionsService, WorktreeService } from "../core/types/services.js"
 
 export function createSubmissions(deps: {
@@ -38,7 +39,11 @@ export function createSubmissions(deps: {
     }
     return item
   }
-  function prepare(work: WorkItem, files: SourceFile[]): Submission {
+  function prepare(
+    work: WorkItem,
+    files: SourceFile[],
+    executionSelection?: ExecutionSelection,
+  ): Submission {
     const prepared = prepareSubmissionSources(files, deps.runnerVersion)
     const worktree = work.worktreeId ? deps.store.getWorktree(work.worktreeId) : undefined
     const submission: Submission = {
@@ -53,6 +58,7 @@ export function createSubmissions(deps: {
       id: randomUUID(),
       workItemId: work.id,
       files: prepared.files,
+      ...(executionSelection ? { executionSelection } : {}),
       digest: prepared.digest,
       runnerVersion: deps.runnerVersion,
       parsed: prepared.files
@@ -123,7 +129,11 @@ export function createSubmissions(deps: {
       }
       return this.createWorkItem(intent, worktreeId)
     },
-    async submitForWork(workItemId: string, files: SourceFile[]) {
+    async submitForWork(
+      workItemId: string,
+      files: SourceFile[],
+      executionSelection?: ExecutionSelection,
+    ) {
       const work = deps.store.getWorkItem(workItemId) ?? problem("not_found", "Work item not found")
       if (work.worktreeId) {
         if (!deps.worktrees) {
@@ -131,7 +141,7 @@ export function createSubmissions(deps: {
         }
         await deps.worktrees.resolve(work.worktreeId)
       }
-      return this.submit(workItemId, files)
+      return this.submit(workItemId, files, executionSelection)
     },
     getWork(id: string) {
       return deps.store.getWorkItem(id) ?? problem("not_found", "Work item not found")
@@ -144,9 +154,13 @@ export function createSubmissions(deps: {
       deps.store.createWorkItem(item)
       return item
     },
-    submit(workItemId: string, files: SourceFile[]): Submission {
+    submit(
+      workItemId: string,
+      files: SourceFile[],
+      executionSelection?: ExecutionSelection,
+    ): Submission {
       const work = deps.store.getWorkItem(workItemId) ?? problem("not_found", "Work item not found")
-      const submission = prepare(work, files)
+      const submission = prepare(work, files, executionSelection)
       deps.store.createSubmission(submission)
       return submission
     },

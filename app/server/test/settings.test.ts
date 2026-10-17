@@ -100,6 +100,6 @@ test("empty settings normalize to an unconfigured project", () => {
     composeFiles: [],
     services: [],
     dependencies: {},
-    tests: { directory: "integration", timeoutMs: 10000, env: {} },
+    tests: { directory: "integration", timeoutMs: 10000, env: {}, executionScope: "all" },
   })
 })

@@ -68,7 +68,7 @@ export function registerVerificationTools(server: McpServer, services: Services)
     "run_tests",
     {
       description:
-        "Run managed Integration, Unit or Playwright verification from an absolute existing checkout. kind defaults to integration for legacy calls. Integration accepts tests; Unit runs its complete configured command; Playwright requires a declared target and optional viewport. Ask policy retains each kind's captured-input approval gates. No arbitrary command or per-case selection.",
+        "Run managed Integration, Unit or Playwright verification from an absolute existing checkout. kind defaults to integration for legacy calls. Integration accepts tests; executionScope overrides the shared all/changed default; Unit changed requires fileCommand; Playwright requires a declared target and optional viewport. Ask policy retains each kind's captured-input approval gates. No arbitrary command or per-case selection.",
       inputSchema: runTestsInput,
       annotations: execution,
       _meta: uiMeta(testsResource),
@@ -76,7 +76,11 @@ export function registerVerificationTools(server: McpServer, services: Services)
     async (input) => {
       try {
         if (input.kind === "integration") {
-          const request = { path: input.path, tests: input.tests }
+          const request = {
+            path: input.path,
+            tests: input.tests,
+            executionScope: input.executionScope,
+          }
           if (services.reviews) {
             return reviewResult(await services.reviews.start(request), services.reviews)
           }
@@ -88,7 +92,7 @@ export function registerVerificationTools(server: McpServer, services: Services)
         }
         const value =
           input.kind === "unit"
-            ? await runUnitVerification(services, input.path)
+            ? await runUnitVerification(services, input.path, input.executionScope)
             : await runPlaywrightVerification(services, input)
         if ("review" in value) {
           return executionReviewResult(
@@ -272,7 +276,7 @@ export function registerVerificationTools(server: McpServer, services: Services)
     "project_container",
     {
       description:
-        "Inspect/start/restart/stop the observed project's manual Compose environment. path identifies the project; execution always uses its configured main checkout, never the supplied feature checkout. Stop only owns the manual environment and cannot stop test executions. Inspect is read-only; other actions are explicit manual lifecycle requests, independent of test approval.",
+        "Inspect/start/restart/stop the observed project's manual Compose environment. path identifies the actual worktree; each worktree owns its persistent manual environment until explicit stop. Stop only owns the manual environment and cannot stop test executions. Inspect is read-only; other actions are explicit manual lifecycle requests, independent of test approval.",
       inputSchema: z.strictObject({
         path: verificationPath,
         action: z.enum(["inspect", "start", "restart", "stop"]),

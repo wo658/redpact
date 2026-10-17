@@ -151,6 +151,12 @@ export function AuthoredSettings({ api, projectId }: { api: Api; projectId?: str
           kind: "text",
           fallback: "en",
         },
+        {
+          key: "tests.executionScope",
+          label: t("Default execution scope (all or changed, all runners)"),
+          kind: "text",
+          fallback: "all",
+        },
         { key: "tests.directory", label: t("Test directory"), kind: "text", fallback: "tests" },
         {
           key: "tests.timeoutMs",

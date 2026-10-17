@@ -1,11 +1,12 @@
 import { existsSync } from "node:fs"
-import { appendFile, mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { appendFile, mkdir, rm, writeFile } from "node:fs/promises"
 import { dirname, isAbsolute, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { isDeepStrictEqual } from "node:util"
 import { execa } from "execa"
 import { getComposeClient } from "testcontainers"
-import { parse, stringify } from "yaml"
+import { stringify } from "yaml"
+import { applyHostPorts } from "../../core/manual-ports.js"
 import { environmentRedactions, runnerServiceHost } from "../../core/runner-environment.js"
 import { testSelectionSchema } from "../../core/settings-schema.js"
 import type {
@@ -17,6 +18,7 @@ import { minimalEnvironment } from "../process/environment.js"
 import { readJsonSettings } from "../settings/json.js"
 import { snapshotComposeInputs } from "./compose-inputs.js"
 import type { EffectiveCompose } from "./compose-model.js"
+import { retainLegacyImageOwnership } from "./legacy-image-ownership.js"
 import { networkDiagnostic } from "./network-diagnostic.js"
 import {
   containerLogSnapshot,
@@ -129,6 +131,7 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
       signal = AbortSignal.any([signal, AbortSignal.timeout(record.settings.environment.timeoutMs)])
       const root = directory(record)
       const stage = join(root, "source")
+      const runtimeFiles = join(root, "runtime")
       await mkdir(stage, { recursive: true, mode: 0o700 })
       const redactValues: string[] = []
       const redact = (value: string) =>
@@ -160,41 +163,35 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         ) {
           throw new Error("Settings or selection plan changed during capture")
         }
-        const selection = await stageSelection(stage, record, record.target.projectRoot)
+        const selection = await stageSelection(runtimeFiles, record, record.target.projectRoot)
         redactValues.push(...environmentRedactions(record))
         const host = await runtimeSocket()
         update({ runtimeId: await runtime(record) })
         const files = selection.files
         const env = minimalEnvironment()
         const compose = await getComposeClient(env)
-        const model = (await compose.config({
-          filePath: record.target.projectRoot,
-          files: files.map((file) => join(stage, file)),
-          projectName: record.projectName,
-          composeOptions: [
-            "--project-directory",
-            dirname(join(record.target.projectRoot, record.settings.environment.compose.files[0])),
-            "--profile",
-            "*",
-          ],
-          signal,
-        })) as EffectiveCompose
+        const model = applyHostPorts(
+          (await compose.config({
+            filePath: record.target.projectRoot,
+            files: files.map((file) => join(runtimeFiles, file)),
+            projectName: record.projectName,
+            composeOptions: [
+              "--project-directory",
+              dirname(
+                join(record.target.projectRoot, record.settings.environment.compose.files[0]),
+              ),
+              "--profile",
+              "*",
+            ],
+            signal,
+          })) as EffectiveCompose,
+          record,
+        )
         model.services = Object.fromEntries(
           Object.entries(model.services).filter(([name]) =>
             record.plan.activeServices.includes(name),
           ),
         )
-        const previousBuildImages = new Set<string>()
-        if (record.lifecycle === "manual") {
-          for (const [name, service] of Object.entries(model.services)) {
-            if (service.build && !service.image) {
-              const image = (await inspectImage(`${record.projectName}-${name}`))?.Id
-              if (image) {
-                previousBuildImages.add(image)
-              }
-            }
-          }
-        }
         const labels = { "io.redpact.owner": record.ownerId, "io.redpact.environment": record.id }
         const override: {
           services: Record<string, unknown>
@@ -222,26 +219,30 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
                   },
                 }
               : {}),
-            ...(record.lifecycle === "run" && service.build && !service.image
-              ? { build: { labels } }
+            ...(service.build
+              ? {
+                  image: `${record.projectName}-${name}`,
+                  build: { labels: { "io.redpact.owner": record.ownerId } },
+                }
               : {}),
           }
         }
         for (const [name, resource] of Object.entries(model.networks ?? { default: {} })) {
           if (!resource?.external) {
-            override.networks[name] = { labels }
+            override.networks[name] = { labels, name: `${record.projectName}-${name}` }
           }
         }
         override.networks[runnerKey] = { external: true, name: runnerName }
         for (const [name, resource] of Object.entries(model.volumes ?? {})) {
           if (!resource?.external) {
-            override.volumes[name] = { labels }
+            override.volumes[name] = { labels, name: `${record.projectName}-${name}` }
           }
         }
         // Freeze Compose's resolved model; preserve authored ports, mounts, resources and build options.
         // Only captured local build contexts move into the source snapshot.
         for (const service of Object.values(model.services)) {
           if (service.build) {
+            service.build.tags = []
             const path = relative(record.target.projectRoot, service.build.context)
             if (
               !isAbsolute(path) &&
@@ -255,7 +256,7 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         }
         const resolvedFile = ".redpact-resolved.yaml"
         await writeFile(
-          join(stage, resolvedFile),
+          join(runtimeFiles, resolvedFile),
           stringify(model, (_key, value) => {
             if (typeof value !== "string") {
               return value
@@ -268,27 +269,13 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
           },
         )
         const overrideFile = ".redpact-runtime.yaml"
-        await writeFile(join(stage, overrideFile), stringify(override), { mode: 0o600, flag: "wx" })
+        await writeFile(join(runtimeFiles, overrideFile), stringify(override), {
+          mode: 0o600,
+          flag: "wx",
+        })
         update({
           services: Object.keys(model.services).map((name) => ({ name, job: jobs.has(name) })),
         })
-        if (record.lifecycle === "run") {
-          const localBuilds = Object.entries(model.services).filter(
-            ([, service]) => service.build && !service.image,
-          )
-          if (localBuilds.length) {
-            // Capture only environment-owned tags; cleanup must not evaluate application variables.
-            await writeFile(
-              join(stage, ".redpact-image-cleanup.yaml"),
-              stringify({
-                services: Object.fromEntries(
-                  localBuilds.map(([name]) => [name, { image: `${record.projectName}-${name}` }]),
-                ),
-              }),
-              { mode: 0o600, flag: "wx" },
-            )
-          }
-        }
         signal.throwIfAborted()
         // The runner network exists even when every application uses host/none networking.
         const client = await runtimeClient()
@@ -311,13 +298,13 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
             fileURLToPath(worker),
           ],
           {
-            cwd: stage,
+            cwd: runtimeFiles,
             detached: true,
             ipc: true,
             env: { ...env, DOCKER_HOST: host },
             extendEnv: false,
             input: JSON.stringify({
-              directory: stage,
+              directory: runtimeFiles,
               files: [resolvedFile, overrideFile],
               services: record.plan.activeServices,
               profiles: record.settings.environment.compose.profiles,
@@ -337,7 +324,18 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
             mode: 0o600,
           })
           if (result.exitCode !== 0) {
-            throw new Error("Compose startup failed")
+            const fixed = Object.values(record.specification.dependencies).flatMap(
+              (item) => item.hostPorts ?? [],
+            )
+            const portConflict =
+              /port is already allocated|address already in use|Bind for .* failed/i.test(
+                result.stderr,
+              )
+            throw new Error(
+              portConflict && fixed.length && record.manualScope === "main"
+                ? `Fixed host port conflict (${fixed.map((item) => `${item.service}:${item.target} -> ${item.published}`).join(", ")}). Stop the conflicting listener or change dependency hostPorts; no fallback port was allocated.`
+                : "Compose startup failed; inspect preparation.log",
+            )
           }
           update({ endpoints: JSON.parse(result.stdout).endpoints })
         } finally {
@@ -352,27 +350,6 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         update({ resources: observation.resources, endpoints: observation.endpoints })
         if (!observation.healthy) {
           throw new Error("Services or preparation jobs are not ready")
-        }
-        if (record.lifecycle === "manual") {
-          const currentImages = new Set(
-            observation.resources
-              .filter((resource) => resource.kind === "container")
-              .map((resource) => resource.image),
-          )
-          for (const image of previousBuildImages) {
-            if (!currentImages.has(image)) {
-              const built = await inspectImage(image)
-              const client = await runtimeClient()
-              const users = await client.container.list({
-                all: true,
-                filters: { ancestor: [image] },
-              })
-              // Never remove an image referenced by unrelated tags or containers.
-              if (built && !built.RepoTags?.length && !users.length) {
-                await removeImage(image)
-              }
-            }
-          }
         }
       } catch (error) {
         await appendFile(
@@ -403,6 +380,7 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
     async stop(record) {
       if (!record.runtimeId) {
         await rm(join(directory(record), "source"), { recursive: true, force: true })
+        await rm(join(directory(record), "runtime"), { recursive: true, force: true })
         return
       }
       await runtime(record)
@@ -415,6 +393,7 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         await removeContainer(runner.Id)
       }
       const observed = await inspect(record)
+      const legacyImages = await retainLegacyImageOwnership(directory(record), record, observed)
       const deadline = Date.now() + record.settings.environment.stopTimeoutMs
       const failures: string[] = []
       for (const resource of observed.resources.sort(
@@ -482,26 +461,23 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         await appendFile(join(directory(record), "cleanup.log"), `${diagnostic}\n`, { mode: 0o600 })
         throw new Error(diagnostic)
       }
-      const source = join(directory(record), "source")
-      const imageCleanup = join(source, ".redpact-image-cleanup.yaml")
-      if (record.lifecycle === "run" && existsSync(imageCleanup)) {
-        const manifest = parse(await readFile(imageCleanup, "utf8")) as {
-          services: Record<string, { image: string }>
+      const images = new Set(
+        record.services.map((service) => `${record.projectName}-${service.name}`),
+      )
+      for (const image of images) {
+        const built = await inspectImage(image)
+        if (!built) {
+          continue
         }
-        for (const { image } of Object.values(manifest.services)) {
-          const built = await inspectImage(image)
-          if (built) {
-            if (
-              built.Config.Labels?.["io.redpact.owner"] !== record.ownerId ||
-              built.Config.Labels?.["io.redpact.environment"] !== record.id
-            ) {
-              throw new Error("Image ownership mismatch")
-            }
-            await removeImage(image)
-          }
+        const legacyOwned =
+          !built.Config.Labels?.["io.redpact.owner"] && legacyImages[image] === built.Id
+        if (built.Config.Labels?.["io.redpact.owner"] !== record.ownerId && !legacyOwned) {
+          throw new Error(`Image ownership mismatch for retained tag ${image}`)
         }
+        await removeImage(image)
       }
       await rm(join(directory(record), "source"), { recursive: true, force: true })
+      await rm(join(directory(record), "runtime"), { recursive: true, force: true })
     },
   }
 }

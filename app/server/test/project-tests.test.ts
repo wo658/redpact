@@ -30,7 +30,7 @@ test("full integration inspection bypasses comparison and validates its HTTP sco
   expect((await app.request("/api/worktrees/w/integration-tests?scope=invalid")).status).toBe(400)
   const run = await app.request("/api/worktrees/w/integration-tests/run", { method: "POST" })
   expect(run.status).toBe(202)
-  expect(runWorktreeTests).toHaveBeenCalledWith("w")
+  expect(runWorktreeTests).toHaveBeenCalledWith("w", undefined)
 })
 
 test("current integration execution captures all sources from the resolved worktree with project defaults instead of worktree choices", async () => {
@@ -60,7 +60,7 @@ test("current integration execution captures all sources from the resolved workt
   await execute("feature")
   expect(connect).toHaveBeenCalledWith("/feature")
   expect(readTests).toHaveBeenCalledWith("/feature", "acceptance", undefined)
-  expect(submitForWork).toHaveBeenCalledWith("work", sources)
+  expect(submitForWork).toHaveBeenCalledWith("work", sources, undefined)
   expect(start).toHaveBeenCalledWith("fresh", selection)
   expect(deps.worktrees.getSelection).toHaveBeenCalledWith("feature")
   expect(deps.worktrees.getIntegrationDefaults).toHaveBeenCalledWith("project")

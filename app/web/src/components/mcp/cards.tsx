@@ -32,6 +32,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item"
 import { dependencyModeLabel } from "@/lib/dependency-modes"
+import { ExecutionSelectionEvidence } from "../execution-scope"
 import { TestFileBrowser } from "../test-file-browser"
 import { UnifiedDiff } from "../unified-diff"
 import type { CardActions, Snapshot } from "./model"
@@ -324,13 +325,20 @@ export function ExecutionCard({ data, actions }: { data: Snapshot; actions: Card
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium">Complete command</p>
             <pre className="whitespace-pre-wrap break-all font-mono text-code">
-              {specification.command}
+              {specification.fileCommand
+                ? JSON.stringify([
+                    specification.fileCommand.executable,
+                    ...specification.fileCommand.args,
+                    ...(detail.executionSelection?.files ?? []).map((file) => `/workspace/${file}`),
+                  ])
+                : specification.command}
             </pre>
             <p className="break-all text-sm text-muted-foreground">
               Dockerfile: {specification.dockerfile} · Directory: {specification.cwd}
             </p>
           </div>
         )}
+        <ExecutionSelectionEvidence selection={detail.executionSelection} />
         {specification.target && (
           <div className="flex flex-col gap-1">
             <p className="break-all text-sm">

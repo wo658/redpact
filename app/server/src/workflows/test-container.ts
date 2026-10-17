@@ -21,14 +21,26 @@ export function createTestContainer(deps: {
 }): TestContainer {
   const pending = new Map<string, Promise<TestContainerInspection>>()
   let closing = false
-  function current(projectId: string) {
+  function current(projectId: string, worktreeId?: string) {
     return (
       deps.environments
         .temporary()
-        .find((env) => env.lifecycle === "manual" && env.target.projectId === projectId) ?? null
+        .find(
+          (env) =>
+            env.lifecycle === "manual" &&
+            env.target.projectId === projectId &&
+            (worktreeId ? env.target.worktreeId === worktreeId : env.manualScope !== "worktree"),
+        ) ?? null
     )
   }
-  async function target(projectId: string) {
+  async function target(projectId: string, worktreeId?: string) {
+    if (worktreeId) {
+      const worktree = deps.worktrees.getWorktree(worktreeId)
+      if (worktree.projectId !== projectId) {
+        problem("invalid_input", "Worktree belongs to another project")
+      }
+      return worktree
+    }
     const worktrees = await deps.worktrees.listWorktrees(projectId)
     const project = deps.worktrees.getProject(projectId)
     if (project.location.kind !== "git") {
@@ -38,9 +50,10 @@ export function createTestContainer(deps: {
     const { mainBranch } = await deps.projects.tracking(projectId)
     return worktrees.find((worktree) => mainBranch && worktree.branch === mainBranch) ?? null
   }
-  async function inspect(projectId: string): Promise<TestContainerInspection> {
+  async function inspect(projectId: string, worktreeId?: string): Promise<TestContainerInspection> {
     deps.worktrees.getProject(projectId)
-    const record = current(projectId)
+    const selected = await target(projectId, worktreeId)
+    const record = current(projectId, selected?.id ?? worktreeId)
     const environment = record ? await deps.environments.refresh(record.id) : null
     const result: TestContainerInspection = {
       composeFiles: [],
@@ -50,7 +63,7 @@ export function createTestContainer(deps: {
       issue: null,
     }
     try {
-      result.target = await target(projectId)
+      result.target = selected
       if (!result.target) {
         result.issue = "The main branch has no available worktree."
         return result
@@ -77,11 +90,12 @@ export function createTestContainer(deps: {
     }
     return result
   }
-  async function start(projectId: string) {
-    if (current(projectId)) {
-      return inspect(projectId)
+  async function start(projectId: string, worktreeId?: string) {
+    const selected = await target(projectId, worktreeId)
+    if (current(projectId, selected?.id ?? worktreeId)) {
+      return inspect(projectId, worktreeId)
     }
-    const worktree = await target(projectId)
+    const worktree = await target(projectId, worktreeId)
     if (!worktree) {
       problem("worktree_unavailable", "The main branch has no available worktree.")
     }
@@ -94,12 +108,22 @@ export function createTestContainer(deps: {
     if (closing) {
       problem("closing", "Server is shutting down")
     }
-    await deps.environments.prepare(worktree.id, randomUUID(), validation.digest, selection, null)
-    return inspect(projectId)
+    const main = await target(projectId)
+    await deps.environments.prepare(
+      worktree.id,
+      randomUUID(),
+      validation.digest,
+      selection,
+      null,
+      undefined,
+      main?.id === worktree.id ? "main" : "worktree",
+    )
+    return inspect(projectId, worktreeId)
   }
-  async function stop(projectId: string) {
+  async function stop(projectId: string, worktreeId?: string) {
     deps.worktrees.getProject(projectId)
-    const environment = current(projectId)
+    const selected = await target(projectId, worktreeId)
+    const environment = current(projectId, selected?.id ?? worktreeId)
     if (environment) {
       await deps.stopEnvironment(environment.id)
       await deps.stopEnvironment.idle()
@@ -107,8 +131,9 @@ export function createTestContainer(deps: {
         problem("environment_conflict", "Cleanup failed; retry Stop before restarting.")
       }
     }
-    return inspect(projectId)
+    return inspect(projectId, worktreeId)
   }
+  // Project admission also covers omitted-main and explicit-worktree aliases.
   async function action(projectId: string, operation: () => Promise<TestContainerInspection>) {
     if (closing) {
       problem("closing", "Server is shutting down")
@@ -122,8 +147,8 @@ export function createTestContainer(deps: {
   }
   return {
     busy: (id) => pending.has(id),
-    async composeSource(projectId, path) {
-      const worktree = await target(projectId)
+    async composeSource(projectId, path, worktreeId) {
+      const worktree = await target(projectId, worktreeId)
       if (!worktree) {
         problem("worktree_unavailable", "The main branch has no available worktree.")
       }
@@ -135,24 +160,20 @@ export function createTestContainer(deps: {
       return deps.readFile(worktree.projectRoot, path)
     },
     inspect,
-    start: (id) => action(id, () => start(id)),
-    stop: (id) => action(id, () => stop(id)),
-    restart: (id) =>
+    start: (id, worktreeId) => action(id, () => start(id, worktreeId)),
+    stop: (id, worktreeId) => action(id, () => stop(id, worktreeId)),
+    restart: (id, worktreeId) =>
       action(id, async () => {
-        const next = await target(id)
+        const next = await target(id, worktreeId)
         if (!next) {
           problem("worktree_unavailable", "The main branch has no available worktree.")
         }
-        await stop(id)
-        return start(id)
+        await stop(id, worktreeId)
+        return start(id, worktreeId)
       }),
     async close() {
       closing = true
       await Promise.allSettled([...pending.values()])
-      for (const env of deps.environments.temporary().filter((env) => env.lifecycle === "manual")) {
-        await deps.stopEnvironment(env.id)
-      }
-      await deps.stopEnvironment.idle()
     },
   }
 }

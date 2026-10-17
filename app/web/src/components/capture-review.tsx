@@ -5,6 +5,11 @@ import type { Api, CaptureArtifact, CaptureRun } from "@/lib/api"
 import { captureFiles, captureMatchesMode, captureRunMatchesMode } from "@/lib/review-content"
 import { useRefreshRequest } from "@/lib/use-refresh-request"
 import { ExecutionProgress } from "./execution-progress"
+import {
+  ExecutionScopePicker,
+  ExecutionSelectionEvidence,
+  executionScopeOverride,
+} from "./execution-scope"
 import { EmptyState, Loading, Notice } from "./feedback"
 import { useLiveRevision } from "./live-updates"
 import { TestFileBrowser } from "./test-file-browser"
@@ -20,6 +25,7 @@ export function CaptureReview(props: CaptureReviewProps) {
 }
 function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureReviewProps) {
   const { t } = useTranslation()
+  const [executionScope, setExecutionScope] = useState("default")
   const [data, setData] = useState<Awaited<ReturnType<Api["playwright"]>> | null>(null)
   const [catalog, setCatalog] = useState<Awaited<
     ReturnType<Api["worktreePlaywrightCatalog"]>
@@ -131,7 +137,12 @@ function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureRev
     setPending(true)
     setError("")
     try {
-      const next = await api.runPlaywright(worktreeId, viewport, target)
+      const next = await api.runPlaywright(
+        worktreeId,
+        viewport,
+        target,
+        executionScopeOverride(executionScope),
+      )
       setSelectedRun(next.id)
       setData((value) =>
         value ? { ...value, runs: [next, ...value.runs.filter((r) => r.id !== next.id)] } : value,
@@ -144,6 +155,11 @@ function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureRev
   }
   const controls = (
     <div className="flex shrink-0 items-center gap-3 whitespace-nowrap">
+      <ExecutionScopePicker
+        value={executionScope}
+        onChange={setExecutionScope}
+        disabled={pending}
+      />
       <Field orientation="horizontal" className="w-auto shrink-0">
         <Switch
           id="mobile-mode"
@@ -221,6 +237,7 @@ function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureRev
           ))}
           {run && (
             <>
+              <ExecutionSelectionEvidence selection={run.executionSelection} />
               <ExecutionProgress kind="playwright" run={run} />
               {data?.inputDigest && run.appDigest !== data.inputDigest && (
                 <Badge variant="secondary">{t("Source changed since this capture")}</Badge>

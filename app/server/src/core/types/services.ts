@@ -11,6 +11,7 @@ import type {
   Worktree,
 } from "./contracts.js"
 import type { Environment } from "./environment.js"
+import type { ExecutionSelection } from "./execution-selection.js"
 import type { BranchReview, GitDiff, GitService } from "./git.js"
 import type { ExecutionSummary, RunLogs } from "./run-logs.js"
 import type { SettingsService, TestSelection } from "./settings.js"
@@ -67,11 +68,19 @@ export type SubmissionsService = {
   }
   createWork(intent: string, worktreeId?: string): Promise<WorkItem>
 
-  submitForWork(workItemId: string, files: SourceFile[]): Promise<Submission>
+  submitForWork(
+    workItemId: string,
+    files: SourceFile[],
+    executionSelection?: ExecutionSelection,
+  ): Promise<Submission>
   getWork(id: string): WorkItem
   listWork(projectId: string): WorkItem[]
   createWorkItem(intent: string, worktreeId?: string): WorkItem
-  submit(workItemId: string, files: SourceFile[]): Submission
+  submit(
+    workItemId: string,
+    files: SourceFile[],
+    executionSelection?: ExecutionSelection,
+  ): Submission
   get(id: string): Submission
 }
 export type RunService = {
@@ -133,6 +142,7 @@ export type EnvironmentService = {
     selection: TestSelection,
     runId: string | null,
     expectedInputDigest?: string,
+    manualScope?: "main" | "worktree",
   ): Promise<Environment>
   abortPreparations(): void
   reserve(

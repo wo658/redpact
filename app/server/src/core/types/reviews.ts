@@ -1,6 +1,7 @@
 import type { z } from "zod"
 import type { reviewRecordSchema } from "../review-schema.js"
 import type { Submission } from "./contracts.js"
+import type { ExecutionScope } from "./execution-selection.js"
 import type { RunQueries } from "./services.js"
 import type { TestSelection } from "./settings.js"
 
@@ -13,6 +14,7 @@ export type ReviewStore = {
   setPolicy(policy: ApprovalPolicy): void
 }
 export type ReviewInput = {
+  executionScope?: ExecutionScope
   path: string
   tests?: string[]
   selection?: TestSelection

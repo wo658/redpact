@@ -2,6 +2,7 @@ import { zValidator } from "@hono/zod-validator"
 import { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
+import { executionScopeSchema } from "../../core/execution-selection-schema.js"
 import type { IntegrationTestsService } from "../../core/types/integration-tests.js"
 import type { Services } from "../../workflows/services.js"
 import {
@@ -88,7 +89,9 @@ export function integrationTestRoutes(
           202: jsonResponse(runResponse, "Fresh immutable submission queued for execution."),
         },
       }),
-      async (c) => c.json(await runWorktreeTests(c.req.param("id")), 202),
+      zValidator("json", z.strictObject({ executionScope: executionScopeSchema.optional() })),
+      async (c) =>
+        c.json(await runWorktreeTests(c.req.param("id"), c.req.valid("json").executionScope), 202),
     )
   }
   return routes

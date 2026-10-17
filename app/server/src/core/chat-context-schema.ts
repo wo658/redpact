@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { executionSelectionSchema } from "./execution-selection-schema.js"
 
 export const executionKind = z.enum(["integration", "unit", "playwright"])
 const freshness = z.strictObject({ state: z.literal("unknown"), reason: z.string() })
@@ -67,6 +68,10 @@ export const workspaceStatusSchema = z.strictObject({
   humanAcceptance: z.literal("not_recorded"),
 })
 const approvalPreview = z.strictObject({
+  executionSelection: executionSelectionSchema
+    .extend({ fileCount: z.number().int().nonnegative(), truncated: z.boolean() })
+    .nullable()
+    .optional(),
   settingsDigest: z.string(),
   inputDigest: z.string().optional(),
   sourceDigest: z.string().optional(),

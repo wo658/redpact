@@ -135,7 +135,7 @@ test("Unit과 Playwright는 요청한 기존 체크아웃의 동일 실행 워�
   expect(unit.isError).not.toBe(true)
   expect(unit._meta?.redpact).toMatchObject({ kind: "execution", execution: { kind: "unit" } })
   expect(services.worktrees.ensure).toHaveBeenCalledWith("project", "/repo/feature")
-  expect(services.unitTests.start).toHaveBeenCalledWith(worktreeId)
+  expect(services.unitTests.start).toHaveBeenCalledWith(worktreeId, undefined, undefined)
   const viewport = { width: 390, height: 844 }
   const playwright = await call("run_tests", {
     kind: "playwright",
@@ -153,6 +153,8 @@ test("Unit과 Playwright는 요청한 기존 체크아웃의 동일 실행 워�
     undefined,
     viewport,
     "functional",
+    undefined,
+    undefined,
   )
   expect(
     (await call("run_tests", { kind: "unit", path: "/repo/feature", command: "arbitrary" }))
@@ -296,12 +298,12 @@ test("종류별 옵션은 다른 실행 종류에 전달되지 않는다", async
 })
 
 test("수동 환경 작업은 관찰된 프로젝트만 선택하고 테스트 실행에는 접근하지 않는다", async () => {
-  const { call, services } = fixture()
+  const { call, services, worktreeId } = fixture()
   const testContainer = Object.fromEntries(
     ["inspect", "start", "restart", "stop"].map((action) => [
       action,
       vi.fn(async () => ({
-        target: { projectRoot: "/repo/main" },
+        target: { projectRoot: "/repo/feature" },
         environment: null,
         issue: null,
       })),
@@ -311,8 +313,8 @@ test("수동 환경 작업은 관찰된 프로젝트만 선택하고 테스트 �
   for (const action of ["inspect", "start", "restart", "stop"]) {
     const result = await call("project_container", { path: "/repo/feature", action })
     expect(result.isError).not.toBe(true)
-    expect(result.structuredContent.target.projectRoot).toBe("/repo/main")
-    expect(testContainer[action]).toHaveBeenCalledWith("project")
+    expect(result.structuredContent.target.projectRoot).toBe("/repo/feature")
+    expect(testContainer[action]).toHaveBeenCalledWith("project", worktreeId)
   }
   expect((await call("project_container", { path: "/unknown", action: "start" })).isError).toBe(
     true,

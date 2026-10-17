@@ -16,7 +16,7 @@ import { loadInstance } from "../src/adapters/storage/instance.js"
 import { executionSettingsSchema } from "../src/core/execution-settings.js"
 
 dockerTest(
-  "기존 수동 환경의 준비 중·준비 완료 기록을 복구하고 실제 Docker 자원을 정리한다",
+  "기존 수동 환경은 서버 재시작 후 유지하고 명시적 종료에서 실제 Docker 자원을 정리한다",
   async () => {
     const root = await mkdtemp(join(tmpdir(), "redpact-compose-restart-"))
     const projectRoot = join(root, "project")
@@ -162,15 +162,29 @@ dockerTest(
           runtime.close()
         }
         server = await launch()
+        await expect
+          .poll(async () => (await server.request(`/api/environments/${id}`)).state, {
+            timeout: 15000,
+          })
+          .toBe(state === "ready" ? "ready" : "failed")
         const recovered = await server.request(`/api/environments/${id}`)
         expect(recovered).toMatchObject({
           id,
-          state: "stopped",
+          state: state === "ready" ? "ready" : "failed",
           lifecycle: "manual",
           inputDigest: `retained-${state}`,
           settingsDigest: validation.digest,
-          resources: [],
         })
+        expect(recovered.resources.length).toBeGreaterThan(0)
+        expect(await readFile(join(environmentDirectory, "source", "captured-input"), "utf8")).toBe(
+          "retained input",
+        )
+        await server.request(`/api/environments/${id}/stop`, {})
+        await expect
+          .poll(async () => (await server.request(`/api/environments/${id}`)).state, {
+            timeout: 30000,
+          })
+          .toBe("stopped")
         expect(
           (await server.request(`/api/environments?worktreeId=${worktreeId}`)).map(
             (item: { id: string }) => item.id,

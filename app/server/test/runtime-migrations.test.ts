@@ -52,6 +52,8 @@ test("a journal write failure is retryable and never marks a failed step complet
   expect(await files.history()).toEqual([
     "001-fixed-environment-settings",
     "002-flat-environment-values",
+    "003-execution-selection",
+    "004-manual-environment-scope",
   ])
 })
 

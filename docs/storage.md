@@ -200,6 +200,12 @@ Implementation: [storage adapters](../app/server/src/adapters/storage),
 Migration implementation: [workflow](../app/server/src/workflows/runtime-migrations.ts),
 [file adapter](../app/server/src/adapters/storage/migrations.ts).
 
+Migration `003-execution-selection` adds an explicit unknown (`null`) selection to
+historical submissions, Unit/Playwright runs and their execution reviews. It preserves
+original bytes in the existing ordered-migration backups, validates records before
+replacement and retries interrupted changes. It never guesses historical file sets or
+changes verdicts. New records capture the selection contract in [execution](execution.md).
+
 Runtime lifecycle diagnostics are appended synchronously to `runtime-lifecycle.jsonl`
 in the instance data directory, independently of the parent connection. Entries include
 PID/time, startup requests/completion/failure, shutdown reasons (`manual`, `update`,
@@ -213,3 +219,19 @@ both processes cannot produce a final entry. Logs are retained without automatic
 archive them only while the instance is stopped. A live or reused PID is never reclaimed;
 invalid metadata and failed liveness probes report distinct refusal reasons. These logs
 provide future diagnosis; they do not establish the original cause of earlier shutdowns.
+
+Migration `004-manual-environment-scope` records `manualScope: "main"` on existing
+manual environments because the preceding contract only created them from the configured
+main checkout. Test records and historical evidence remain unchanged. New manual records
+capture `main` or `worktree` when started; later branch changes never retarget their port
+policy. Original bytes and interrupted retry follow the ordered migration rules above.
+Manual environment source and generated `runtime/` files are removed only after explicit
+successful teardown; server shutdown preserves their ownership for reconnection.
+
+Before removing containers for an older unlabeled build image, cleanup atomically writes
+`environments/<id>/runtime/legacy-image-ownership.json` from the captured implicit build
+and currently observed owned containers. This generated operation artifact binds each
+tag to its immutable image ID, environment, instance owner and Docker runtime; it does
+not change historical records. Partial failures retain it for retry after containers are
+gone. Missing proof requires fresh observed ownership; corrupt or mismatched proof and
+replaced images never authorize deletion. Successful teardown removes the artifact.

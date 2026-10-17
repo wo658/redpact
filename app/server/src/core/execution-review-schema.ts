@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { executionSelectionSchema } from "./execution-selection-schema.js"
 import { unitTestSettingsSchema } from "./unit-test-schema.js"
 
 export const executionReviewRecordSchema = z
@@ -17,6 +18,7 @@ export const executionReviewRecordSchema = z
     settingsDigest: z.string(),
     inputDigest: z.string(),
     sourceDigest: z.string().optional(),
+    executionSelection: executionSelectionSchema.nullable().optional(),
     specification: z.union([
       unitTestSettingsSchema,
       z.strictObject({

@@ -140,3 +140,55 @@ Per-execution limits belong in that instance file:
 ```
 
 These omitted defaults apply to subsequent managed unit, integration, and Playwright executions. Memory allows 64–1048576 MiB; time allows 1–86400 seconds. They are separate from per-test timeouts and do not limit application containers, builds, or direct shell test commands. See [resource coverage](execution.md).
+
+## Main manual dependency host ports
+
+A managed dependency can declare `hostPorts`, for example
+`"hostPorts": [{ "service": "langfuse", "target": 3000, "published": 33181 }]`.
+The service must belong to that dependency and publish the target TCP port in Compose.
+Ports are integers from 1 to 65535; duplicate targets or host ports are invalid.
+Only a manual environment on the configured main checkout uses these fixed host ports.
+Feature worktrees and all test environments use automatic publications, as do services
+without a fixed declaration. Compose-authored host port numbers are replaced by this policy.
+Actual Docker bindings supply inspection endpoints. An occupied fixed port fails with
+its service/port and remediation; Redpact never silently chooses a fallback.
+
+Local clients can keep endpoint URLs and credentials in their own Git-ignored `.env`
+or environment variables, including a separate external Langfuse. Redpact does not
+read those client files or migrate existing dependency data. `shared-local` and `remote`
+dependencies cannot declare managed host ports.
+
+## Default execution scope
+
+`tests.executionScope` is the shared default for **Unit, Integration and Playwright**,
+not just Integration. It accepts `all` (the omitted default) or `changed`.
+An execution request's `executionScope` overrides it. The viewer's **Execution scope**
+control offers Shared default, All tests and Changed tests; catalog filters and
+Playwright target maintenance scope remain separate. See [selection rules](execution.md).
+
+Unit commands retain their existing behavior when `unitTests.fileCommand` is absent:
+`all` runs `command` unchanged, with no claim about its discovered file list. `changed`
+requires the explicit file-command contract below and rejects an arbitrary shell command.
+The file-command catalog currently requires a Git checkout in both scopes; a directory-only
+project can retain its legacy `all` command. Opting into `fileCommand` makes both scopes run its executable and arguments followed by
+exact absolute `/workspace/...` test paths, with `unitTests.cwd` as the working directory.
+The executable must accept trailing file arguments and run exactly those files. This is
+an authored runner contract, not command-string inspection. Use a runner such as Vitest
+that supports file filters; avoid scripts that discard arguments or independently run
+other suites. Arguments and filenames are passed literally, never interpolated into shell code.
+
+```json
+{
+  "tests": { "executionScope": "all", "env": {} },
+  "unitTests": {
+    "dockerfile": "unit.Dockerfile",
+    "cwd": "app/server",
+    "command": "pnpm test",
+    "patterns": ["app/server/test/*.test.ts"],
+    "fileCommand": { "executable": "pnpm", "args": ["exec", "vitest", "run", "--"] }
+  }
+}
+```
+
+Install/build prerequisites in the Unit image; `fileCommand` replaces `command` for an
+opted-in execution and does not run its shell preparation steps first.

@@ -8,6 +8,7 @@ import type {
   ExecutionReviews,
   ExecutionReviewView,
 } from "../core/types/execution-reviews.js"
+import type { ExecutionScopeService } from "../core/types/execution-scope.js"
 import type { CaptureService, CaptureWorkflow } from "../core/types/playwright.js"
 import type { EnvironmentService, WorktreeService } from "../core/types/services.js"
 import type { UnitTestsService } from "../core/types/unit-tests.js"
@@ -19,6 +20,7 @@ export function createExecutionReviews(deps: {
   captures: CaptureService
   playwright: CaptureWorkflow
   environments: EnvironmentService
+  executionScopes?: ExecutionScopeService
   sourceDigest(root: string, directory: string): Promise<string>
 }): ExecutionReviews {
   const records = new Map(deps.store.list().map((record) => [record.id, record]))
@@ -82,8 +84,13 @@ export function createExecutionReviews(deps: {
     }
     const settingsDigest = result.digest
     if (input.kind === "unit") {
-      const unit = await deps.units.preview(worktreeId)
-      return { settingsDigest, inputDigest: unit.inputDigest, specification: unit.settings }
+      const unit = await deps.units.preview(worktreeId, input.executionScope)
+      return {
+        settingsDigest,
+        inputDigest: unit.inputDigest,
+        specification: unit.settings,
+        ...(unit.executionSelection ? { executionSelection: unit.executionSelection } : {}),
+      }
     }
     const settings = result.settings.playwright
     const declaration = settings && input.target ? settings.targets[input.target] : undefined
@@ -94,11 +101,13 @@ export function createExecutionReviews(deps: {
       (await deps.worktrees.getSelection(worktreeId)) ??
       problem("invalid_input", "Playwright execution plan is unavailable")
     const inputDigest = await deps.environments.fingerprint(worktreeId, selection, settingsDigest)
+    const executionSelection = await deps.executionScopes?.resolve(worktreeId, input)
     const sourceDigest = await deps.sourceDigest(target.worktree.projectRoot, settings.directory)
     return {
       settingsDigest,
       inputDigest,
       sourceDigest,
+      ...(executionSelection ? { executionSelection } : {}),
       specification: {
         target: input.target,
         purpose: declaration.purpose,
@@ -160,6 +169,7 @@ export function createExecutionReviews(deps: {
         const current = await inputs(record.worktreeId, {
           kind: record.kind,
           path: record.path,
+          executionScope: record.executionSelection?.requested,
           ...("target" in specification
             ? { target: specification.target, viewport: specification.viewport }
             : {}),
@@ -170,6 +180,7 @@ export function createExecutionReviews(deps: {
             inputDigest: record.inputDigest,
             ...(record.sourceDigest ? { sourceDigest: record.sourceDigest } : {}),
             specification,
+            ...(record.executionSelection ? { executionSelection: record.executionSelection } : {}),
           })
         ) {
           problem(
@@ -186,6 +197,9 @@ export function createExecutionReviews(deps: {
           if (record.kind === "unit" && "command" in specification) {
             run = await deps.units.start(record.worktreeId, {
               settings: specification,
+              ...(record.executionSelection
+                ? { executionSelection: record.executionSelection }
+                : {}),
               inputDigest: record.inputDigest,
             })
           } else if (
@@ -202,6 +216,9 @@ export function createExecutionReviews(deps: {
                 settingsDigest: record.settingsDigest,
                 inputDigest: record.inputDigest,
                 sourceDigest: record.sourceDigest,
+                ...(record.executionSelection
+                  ? { executionSelection: record.executionSelection }
+                  : {}),
               },
             )
           } else {

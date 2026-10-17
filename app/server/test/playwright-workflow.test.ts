@@ -344,3 +344,30 @@ test("검토한 Playwright 테스트 소스가 달라지면 캡처를 정리하�
   expect(f.captures.all()).toEqual([])
   await workflow.close()
 })
+
+test("Playwright records selected target files and rejects stale selection before provisioning", async () => {
+  const f = fixture()
+  const selection = {
+    requested: "changed" as const,
+    resolved: "changed" as const,
+    baseRevision: "a".repeat(40),
+    files: ["ui-tests/a.spec.ts"],
+    reason: "changed_files" as const,
+  }
+  const workflow = createCaptureWorkflow({
+    ...f.deps,
+    executionScopes: { resolve: async () => selection },
+  } as never)
+  await expect(
+    workflow.start("w", undefined, undefined, "captures", {
+      settingsDigest: "settings",
+      inputDigest: "input-w",
+      sourceDigest: "sources",
+      executionSelection: { ...selection, files: ["ui-tests/old.spec.ts"] },
+    }),
+  ).rejects.toThrow("selection changed")
+  expect(f.events).toEqual([])
+  const run = await workflow.start("w", undefined, undefined, "captures", undefined, "changed")
+  expect(run.executionSelection).toEqual(selection)
+  await finished(f, run.id)
+})

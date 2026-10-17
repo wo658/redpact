@@ -19,6 +19,8 @@ for (const scenario of ["legacy", "resume"]) {
       expect(JSON.parse(result.log ?? "null")).toEqual([
         "001-fixed-environment-settings",
         "002-flat-environment-values",
+        "003-execution-selection",
+        "004-manual-environment-scope",
       ])
       expect(result.unchangedAfterRestart).toBe(true)
       expect(result.settingsUnchanged).toBe(true)
