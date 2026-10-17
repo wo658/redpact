@@ -3,14 +3,14 @@
 Use by default for frontend behavior changes, with functional assertions against
 the actual application. For user-visible UI changes, capture targets are also default
 evidence retained for human review. Captures do not establish functional correctness
-or visual approval by the agent. Read configure describe
+or visual approval by the agent. Read redpact settings describe --scope project
 and use the connected service's current shared settings schema. React story files,
 storyboard catalogs and dedicated renderer connections are removed. Do not recreate
 an isolated component gallery or copy production JSX to fabricate review evidence.
 
 ## Setup and authoring
 
-Configure optional `playwright` in the primary `.redpact/settings.json`: directory,
+Use revision-checked `redpact settings patch --scope project` for optional `playwright`: directory,
 application service, internal port and required named targets. Each target declares
 `scope: "worktree" | "project"`, `purpose: "capture" | "functional"` and
 directory-relative `testMatch` globs. Scope defaults to project when omitted.
@@ -59,8 +59,9 @@ recorded code and screenshots remain in execution history.
 ## Recorded source and review
 
 A chosen target executes the complete matching source set in the selected checkout.
-Read its captured source, cases and images through `get_run` and open the exact
-`get_review_context` path. Worktree-bound history retains previous attempts and
+Read its result through `redpact runs show` and captured source/images through
+`redpact runs source/artifact` and open the exact
+`redpact runs context` path. Worktree-bound history retains previous attempts and
 artifacts after draft cleanup. Current source visibility does not prove execution,
 and an old passing run does not validate later application edits.
 
@@ -82,16 +83,16 @@ For app service, dependency or connection changes, read [Project dependencies](d
 
 ## Execute and inspect
 
-Resolve the actual worktree on the connected instance. Prefer MCP `run_tests` (`kind: "playwright"`)
-with the absolute checkout path and declared target, then `get_run` with
-`kind: "playwright"`. Under Ask, present the request for human approval; do not
+Resolve the actual worktree on the connected instance. Prefer `redpact tests run --kind playwright`
+with `--path /absolute/checkout --target TARGET`, then `redpact runs show` with
+`--kind playwright --id ID`. Under Ask, present the request for human approval; do not
 change policy or invoke an App-only approval action. If MCP Apps are unavailable,
-obtain its review path using `get_review_context` and direct the user to the same
+obtain its review path using `redpact runs context` and direct the user to the same
 connected viewer for an explicit approval action, following
 [Review and handoff](review-evidence.md). Optional viewport overrides apply to this
 execution. Read
 GET /api/playwright-runs/:id until terminal, inspect case/step evidence and distinct
-cleanup errors. Use `run_tests` with `kind: "playwright"`; Integration file filters are not valid for this kind. Do not substitute direct Docker or Playwright CLI execution:
+cleanup errors. Use `redpact tests run --kind playwright`; Integration file filters are not valid for this kind. Do not substitute direct Docker or Playwright CLI execution:
 it creates no target record, UI Review artifacts or cleanup evidence. Never use an
 unavailable endpoint as if it succeeded.
 

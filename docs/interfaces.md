@@ -17,7 +17,98 @@ HTTP and MCP enter the same application workflows and share execution/settings v
 Read-only inspection does not execute code. Explicit mutation routes own their
 normal preconditions even when called outside the viewer. See [architecture](architecture.md).
 
-## Model-facing tools
+## Agent CLI
+
+`redpact` is the agent interface for Redpact-owned state, settings, managed execution
+and recorded evidence. It calls the running server's shared workflows over local HTTP;
+it does not start another storage writer or execution engine per command. Model-facing MCP is limited to lifecycle and opening the app; operational tools remain App-only. General file browsing and Git
+operations are excluded: use ordinary file tools and native `git`/`gh`.
+
+Use `--server http://127.0.0.1:54321` or `REDPACT_SERVER_URL` for the connected
+instance. With neither, the standalone default is `http://127.0.0.1:54318`.
+The App Page instance commonly uses 54322. The CLI never searches other ports.
+`--path` resolves relative to the current directory and defaults to that directory;
+use an absolute checkout in automation. The GUI's selected project is irrelevant.
+Read-only commands never connect a project implicitly. Record commands use the stored
+`--kind` and `--id`, independently of the working directory.
+
+| Commands | Purpose |
+| --- | --- |
+| `runtime status/start/stop`, existing `serve` | Inspect/start/stop the local runtime or run the foreground/supervised server |
+| `projects list/connect/show/rename/disconnect/reconnect` | Manage Redpact project connections; mutations of records use `--project ID` |
+| `workspace status --path PATH`, `workspace list --project ID` | Inspect checkout identity, diagnostics, approvals, executions and observed checkouts |
+| `settings describe/get/patch/validate/repair --scope project\|instance` | Read and modify settings through the [revision-checked contract](settings-reference.md) |
+| `dependencies inspect --path PATH` | Inspect the fixed dependency topology |
+| `environment inspect/start/restart/stop --path PATH` | Manage the selected checkout's manual environment |
+| `environments list --path PATH`, `show/stop --id ID` | Inspect recorded resources; stop only manual-owned resources |
+| `tests list --kind KIND --path PATH`, `tests targets --path PATH` | Discover current tests and declared Playwright targets |
+| `tests run --kind KIND --path PATH` | Submit captured inputs through approval-aware admission |
+| `submissions list --path PATH`, `show/run --id ID` | Inspect or rerun retained Integration submissions |
+| `runs list --path PATH`, `show/context/wait/logs/source/artifacts/artifact --kind KIND --id ID` | Inspect recorded results and evidence |
+| `updates status/check/install --version VERSION` | Inspect, discover and explicitly install runtime updates |
+| `plugins status/check/install --agent codex\|claude --version VERSION` | Inspect, discover and explicitly install agent plugin updates |
+| `open`, `open --path PATH` or `open --kind KIND --id ID` | Open the full app, checkout history or the exact recorded review on the same instance |
+
+Use `--help` on a command for its supported options. `--version` on update commands
+is required only for `install`; `--agent` is required only for plugin installation.
+`projects list --state connected|disconnected|all` defaults to connected. Catalog
+`tests list --scope all|changed` applies only to Unit/Integration and retains the server's
+catalog default; it does not select execution scope. `tests run --execution-scope
+all|changed` overrides the shared execution default. `--kind` is `unit`, `integration`
+or `playwright`. Integration alone accepts repeated `--test RELATIVE_PATH`. Playwright
+requires `--target NAME` and optionally `--viewport WIDTHxHEIGHT`. For example, `1280x720` uses width 1280 and height 720; allowed widths are
+320–3840 and heights 240–2160. Unsupported kind-specific options fail instead of being ignored.
+
+`runs source` requires `--file CAPTURED_PATH`, never a current working-file path.
+`runs logs` returns bounded output with truncation metadata. `runs artifacts` lists
+metadata; `runs artifact --artifact ID --output FILE [--side before|after]` writes an
+owned Playwright artifact to an explicit new file; existing files are never overwritten. `runs list`, `submissions list`
+and `runs artifacts` accept a returned `--before` cursor. Keep the same target and
+filters across pages. Existing server ownership and size limits still apply.
+
+`--json` emits one versioned stdout document: `{ "version": 1, "ok": true, "data": ... }`
+or `{ "version": 1, "ok": false, "error": { "code": ..., "message": ... } }`.
+Errors may include structured details. No interactive prompt is required. Without
+`--json`, successful results use the same envelope formatted for reading.
+
+Submission without `--wait` returns accepted state and identity; exit zero does not
+mean tests passed. `tests run`, `submissions run` and `runs wait` support
+`--wait-timeout SECONDS` (default 600). Waiting ends on a terminal result, required
+human approval or client deadline. A timeout or interrupted client does not cancel
+server execution. An approval requirement returns immediately; open its review URL
+and let the person act. The CLI cannot approve requests or change approval policy.
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | Requested operation succeeded, including accepted asynchronous submission |
+| `1` | Transport or server operation failed |
+| `2` | Invalid command/input, missing record or invalid configuration |
+| `3` | Wait observed unsuccessful execution |
+| `4` | Wait requires human approval |
+| `5` | Client wait deadline reached |
+| `6` | Revision or admission conflict |
+| `7` | Wait observed cleanup failure requiring attention |
+
+Cleanup failure takes precedence over execution failure; both remain in the result.
+Reading a failed historical run with `runs show` succeeds as a read and exits zero.
+No public test cancellation, test-environment force-stop or evidence deletion is added.
+
+## Model-facing MCP and App-only transport
+
+Runtime HTTP MCP exposes only `redpact_status`, `stop_redpact_server` and
+`open_redpact` to models. `open_redpact` returns a viewer URL on that same instance
+without executing tests. HTTP cannot start a stopped process because no server is
+listening. The App Page companion provides `get_redpact_status`,
+`start_redpact_runtime`, `stop_redpact_runtime` for its owned runtime, plus the existing
+`open_redpact_app`. Model lifecycle tools neither require nor return App-only
+capability tokens.
+
+The operational tools below retain App-only visibility for existing App/card transport.
+Agents use the CLI above instead of calling hidden tools. Raw `tools/list` responses
+can include App-only tools; the host must filter them from model exposure using the
+visibility metadata. Their presence does not authorize model invocation or acting
+for a human approval.
+
 
 | Tool | Contract |
 | --- | --- |
@@ -31,8 +122,8 @@ normal preconditions even when called outside the viewer. See [architecture](arc
 | `project_container` | Absolute observed project checkout `path`, `action: inspect / start / restart / stop`; selected worktree persistent manual environment lifecycle |
 
 `run_tests` validates a strict discriminated union. Unit rejects arbitrary per-request commands; Playwright rejects arbitrary case selection. All kinds accept `executionScope: all | changed`, applying the shared [selection contract](execution.md). All kinds use the same workflows
-as HTTP, fixed project settings and existing input capture. Configure never saves files,
-starts resources or grants approval. Call describe, edit shared files, then validate.
+as HTTP, fixed project settings and existing input capture. The retained MCP configure tool never saves files, starts resources or grants approval.
+Agent settings access uses CLI describe/get/patch/validate instead of direct file edits.
 
 For compatibility, omitting `kind` in `run_tests` means Integration. An id-only
 `get_run` request (`{"id":"..."}`) preserves the existing full Integration run/review
@@ -131,19 +222,18 @@ The browser bundle uses the official Apps SDK; the server registers resources/to
 metadata with its existing SDK. Cards contain their assets and use the host bridge
 rather than iframe HTTP. [Storage](storage.md) describes durable review recovery.
 
-## Conversation context
+## CLI conversation context
 
-`get_workspace_status` reads the named checkout without registering it or executing
+`redpact workspace status` reads the named checkout without registering it or executing
 code. It returns the shared settings root and diagnostics, existing observed binding,
 pending approvals and bounded execution summaries. Active and unfinished cleanup
 records are queried independently of the recent history page. It reports observed
 facts and diagnostics; it does not prescribe commands or preapprove work.
 
-`get_review_context` returns one execution or pending review with bounded failures,
+`redpact runs context` returns one execution or pending review with bounded failures,
 evidence references and a relative `reviewPath`. Resolve it against the same viewer
 origin; it contains no environment credentials or UI capabilities. Summaries return
-up to 20 failures/evidence references with counts; use `get_run` for the retained
-detail. Freshness remains `unknown` until the relevant live inputs are actually compared,
+up to 20 failures/evidence references with counts; use CLI `runs logs/source/artifact` and the viewer for retained detail. Freshness remains `unknown` until the relevant live inputs are actually compared,
 and human acceptance is `not_recorded`. Unit command failure is not automatically
 classified as an assertion failure.
 

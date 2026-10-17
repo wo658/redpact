@@ -73,6 +73,7 @@ import { createPullRequests } from "./workflows/pull-requests.js"
 import { createReviewContent } from "./workflows/review-content.js"
 import { createReviewTests } from "./workflows/review-tests.js"
 import {
+  collectExistingSubmission,
   createCollectTests,
   createRunFiles,
   createRunWorktreeTests,
@@ -81,6 +82,7 @@ import { createRunQueries } from "./workflows/run-queries.js"
 import { createRuns } from "./workflows/runs.js"
 import { migrateRuntime } from "./workflows/runtime-migrations.js"
 import { createRuntimeShutdown } from "./workflows/runtime-shutdown.js"
+import { createSettingsAgent } from "./workflows/settings-agent.js"
 import { createSettingsEditor } from "./workflows/settings-editor.js"
 import { createWorkStarts } from "./workflows/start-work.js"
 import { createStopEnvironment } from "./workflows/stop-environment.js"
@@ -307,7 +309,9 @@ const command = new Command()
         store: createReviewStore(directory),
         collect: async (input) => {
           const selection = testSelectionSchema.optional().parse(input.selection)
-          const result = await collect({ ...input, selection })
+          const result = input.submissionId
+            ? await collectExistingSubmission({ worktrees, submissions }, input.submissionId)
+            : await collect({ ...input, selection })
           return { ...result, selection: testSelectionSchema.parse(result.selection) }
         },
         settings: (path) => localFiles.settings(path),
@@ -421,6 +425,17 @@ const command = new Command()
         now: () => new Date().toISOString(),
       })
       const app = createApp({
+        settingsAgent: createSettingsAgent({
+          editor: settingsEditor,
+          settings: (path) => localFiles.settings(path),
+        }),
+        runtimeControl: {
+          stop: () => {
+            setTimeout(() => {
+              void stop("agent_request")
+            }, 100)
+          },
+        },
         pluginUpdates,
         updates,
         reviewContent: createReviewContent({

@@ -13,7 +13,7 @@ If you have no evidence yet, follow [your first run](first-run.md). For executio
 
 Use the exact `reviewPath` returned by `get_review_context` on the same app instance. It opens the request or execution inside the full app and resolves the recorded worktree. Under Ask, inspect the captured inputs before approving; Integration requires environment and test approval, while Unit and Playwright each approve one captured request. The review links to worktree-bound history. No record is needed to open the full app and browse projects.
 
-Execution outcome, current-source freshness and human acceptance remain separate. Unverified freshness is `unknown`; acceptance is `not_recorded`. A finished Playwright run does not alone prove cleanup; without explicit cleanup evidence its summary remains `unknown`. Use `get_run` for bounded logs and retained Integration/Playwright source, and `get_run_artifact` for owned attachments. Tests have no public cancel action.
+Execution outcome, current-source freshness and human acceptance remain separate. Unverified freshness is `unknown`; acceptance is `not_recorded`. A finished Playwright run does not alone prove cleanup; without explicit cleanup evidence its summary remains `unknown`. Use `redpact runs show` for bounded logs and retained Integration/Playwright source, and `get_run_artifact` for owned attachments. Tests have no public cancel action.
 
 ## Find the right view
 
@@ -50,7 +50,7 @@ into one small line. Test verdicts remain distinct from progress and cleanup err
 
 For **Unit**, inspect the command, exit code, stdout/stderr and cleanup state. Results describe the whole command rather than individual cases. Selecting a source does not mean only that file ran. The source viewer reads current files, not an archived unit source snapshot.
 
-For **Integration**, inspect captured source, case verdicts and observed steps. Confirm meaningful assertions were reached. A skipped case or failure before the test body may have no observed steps. An unfinished step is not a pass. Agents retrieve integration evidence through `get_run`.
+For **Integration**, inspect captured source, case verdicts and observed steps. Confirm meaningful assertions were reached. A skipped case or failure before the test body may have no observed steps. An unfinished step is not a pass. Agents retrieve integration evidence through `redpact runs show`.
 
 For **Playwright**, inspect target, scope, purpose, scenario and step results, and attachments. Functional success means the executed assertions passed. Capture success means the scenario completed; the image still needs human inspection for visual judgments.
 

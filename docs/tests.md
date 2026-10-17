@@ -9,10 +9,10 @@ Start with [Review your first change](review-workflow.md) to decide which eviden
 
 | Need | Test type | Execution entry point | Recorded result |
 |---|---|---|---|
-| Run an existing test command | Unit | MCP `run_tests` (`kind: "unit"`) or Unit controls in the app | Command status, exit code and output |
-| Verify a public API and dependencies | Integration | MCP `run_tests` or Integration controls | Captured Vitest sources, cases and observed steps |
-| Verify browser interactions | Playwright, `purpose: "functional"` | MCP `run_tests` (`kind: "playwright"`) or Tests → Playwright controls | Scenario and step verdicts, diagnostic attachments |
-| Show application states for review | Playwright, `purpose: "capture"` | MCP `run_tests` (`kind: "playwright"`) or Tests → Playwright controls | Named screenshots, sources and execution details |
+| Run an existing test command | Unit | `redpact tests run --kind unit` or Unit controls in the app | Command status, exit code and output |
+| Verify a public API and dependencies | Integration | `redpact tests run --kind integration` or Integration controls | Captured Vitest sources, cases and observed steps |
+| Verify browser interactions | Playwright, `purpose: "functional"` | `redpact tests run --kind playwright` or Tests → Playwright controls | Scenario and step verdicts, diagnostic attachments |
+| Show application states for review | Playwright, `purpose: "capture"` | `redpact tests run --kind playwright` or Tests → Playwright controls | Named screenshots, sources and execution details |
 
 A screenshot lets someone inspect appearance. Assertions establish the behavior a test actually checks. Keep both when a change needs functional verification and visual review.
 
@@ -60,9 +60,9 @@ test("Application responds successfully", async (context) => {
 
 Await each step in order. Put the operation or assertion inside its callback and let failures propagate. Use separate steps for meaningful actions and checks. Titles and comments explain intent; observed steps show what execution reached. Write submitted scenario titles and steps in the task's language. Changing viewer language does not translate recorded sources.
 
-Ask the agent to call `run_tests` with the absolute working-checkout path, and optional exact test paths relative to `tests.directory`. Helpers stay in the collected bundle. `run_tests` handles integration; unit commands and Playwright sources use their own execution paths.
+Ask the agent to call `redpact tests run --kind integration` with the absolute working-checkout path, and optional exact test paths relative to `tests.directory`. Helpers stay in the collected bundle. `redpact tests run --kind integration` handles integration; unit commands and Playwright sources use their own execution paths.
 
-Read the returned state, then inspect execution through `get_run`. Preserve its identity and verify evidence belongs to the intended worktree on the connected instance. Running tests directly in a shell does not create a Redpact submission. The project Integration run action collects current sources into a fresh submission; recorded source remains separate from subsequent edits.
+Read the returned state, then inspect execution through `redpact runs show`. Preserve its identity and verify evidence belongs to the intended worktree on the connected instance. Running tests directly in a shell does not create a Redpact submission. The project Integration run action collects current sources into a fresh submission; recorded source remains separate from subsequent edits.
 
 Use isolated fixture data. For a save operation, verify readback as well as the immediate response. For a regression, retain the actual failing assertion and rerun against updated application inputs. Collection errors and unavailable applications are setup failures, not proof that the intended assertion failed.
 

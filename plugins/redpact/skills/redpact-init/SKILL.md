@@ -1,6 +1,6 @@
 ---
 name: redpact-init
-description: Inspect and configure an actual project for Redpact through authored files and MCP validation. Resolve fixed dependencies and verify the agreed managed execution without project-management UI. Feature development belongs to redpact.
+description: Inspect and configure an actual project for Redpact through revision-checked CLI settings and validation. Resolve fixed dependencies and verify the agreed managed execution without project-management UI. Feature development belongs to redpact.
 ---
 
 # Redpact Init
@@ -9,12 +9,14 @@ Resolve the actual target checkout and shared primary settings root from the req
 repository and connected runtime. Keep the Redpact service separate from the target.
 Read the [configuration guide](references/configuration.md) before authoring.
 
-Inspect the application and `configure describe`, preserve unrelated configuration,
-and write the supported `.redpact/settings.json` directly. Configure observation in
-the instance file only when needed; verify actual discovery separately from validation.
+Inspect the application and `redpact settings describe --scope project`, then read
+current values and revision with `settings get`. Apply only needed changes through
+`settings patch`; never read or edit settings/runtime JSON files directly. Configure
+observation through `projects connect` only when needed and verify discovery separately
+from validation.
 The full app also provides project management, settings and manual Container controls.
-Chat setup uses the file-authoring workflow above; inline MCP cards handle request
-approval and evidence without embedding the full management interface.
+Chat setup uses CLI settings and managed execution. Return the connected viewer
+review link for explicit human approval and recorded evidence.
 
 Use the [dependency guide](../redpact/references/dependencies.md) when services,
 connections or fixed dependency kinds need setup. Reuse inspected facts and accepted
@@ -29,7 +31,7 @@ Under Ask, only a person can approve through the App or exact connected review.
 Validation alone proves neither readiness nor approval. Do not launch persistent
 development processes or unrelated tests/captures as an initialization side effect.
 
-Report authored/reused files, execution and shared settings paths, discovery and
+Report authored/reused application files, CLI settings changes, execution and shared settings paths, discovery and
 validation results, observed managed evidence and remaining limits. Use an actual
 returned review path for evidence. Setup-only requests end here; authorized feature
 work continues through the main redpact workflow without another onboarding round.

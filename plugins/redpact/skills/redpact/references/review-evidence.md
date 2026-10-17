@@ -15,10 +15,10 @@ additional request may authorize those actions separately.
 Map requested behavior to available evidence and identify missing, failed, blocked,
 or possibly outdated checks. Compare captured identity with current source where
 available; unit command records and captured application views cannot prove source freshness.
-Start with `get_workspace_status` for the exact checkout and `list_runs` for
-older attempts. Use `get_review_context` for one execution's bounded failures,
+Start with `redpact workspace status` for the exact checkout and `redpact runs list` for
+older attempts. Use `redpact runs context` for one execution's bounded failures,
 evidence references and relative review path. Resolve that path against the connected
-viewer origin; retrieve recorded source/log/image with `get_run` as needed.
+viewer origin; retrieve recorded source/log/image with `redpact runs source/logs/artifact` as needed.
 Use the evidence already present and identify unavailable data. Review is a human
 handoff, not a new persisted approval state or a promise of fresh verification.
 
@@ -58,7 +58,7 @@ and approval cards are snapshots, so request fresh results for changed state.
 Unit, Integration and Playwright approval authorize only the captured execution;
 they do not establish human acceptance of code. Keep capabilities in App-only metadata.
 Do not invoke execution just to obtain a card. If MCP Apps are unavailable, use
-`get_review_context` with the pending request's kind and ID and link its returned review
+`redpact runs context` with the pending request's kind and ID and link its returned review
 path on the same connected viewer origin. The user can inspect the captured request and
 explicitly approve there; do not submit the viewer's approval request on their behalf.
 Neither a text reply nor opening the page records approval. If the viewer is also

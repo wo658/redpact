@@ -120,6 +120,7 @@ export function registerVerificationTools(server: McpServer, services: Services)
         kind: z.enum(["integration", "unit", "playwright"]).optional(),
       }),
       annotations: readOnly,
+      _meta: uiMeta(),
     },
     ({ path, before, kind }) => invoke(() => listExecutions(services, path, before, kind)),
   )
@@ -248,6 +249,7 @@ export function registerVerificationTools(server: McpServer, services: Services)
         "Read one recorded Playwright screenshot, video or trace owned by the named run and side, up to 8 MiB. Larger artifacts remain in the viewer. Artifact IDs from other executions are rejected.",
       inputSchema: artifactInput,
       annotations: readOnly,
+      _meta: uiMeta(),
     },
     async (input) => {
       try {
@@ -275,6 +277,7 @@ export function registerVerificationTools(server: McpServer, services: Services)
   server.registerTool(
     "project_container",
     {
+      _meta: uiMeta(),
       description:
         "Inspect/start/restart/stop the observed project's manual Compose environment. path identifies the actual worktree; each worktree owns its persistent manual environment until explicit stop. Stop only owns the manual environment and cannot stop test executions. Inspect is read-only; other actions are explicit manual lifecycle requests, independent of test approval.",
       inputSchema: z.strictObject({

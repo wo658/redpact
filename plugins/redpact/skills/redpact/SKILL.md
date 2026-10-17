@@ -1,6 +1,6 @@
 ---
 name: redpact
-description: Develop through chat with Redpact-managed verification, test-first implementation and isolated worktrees. Inspect checkout status, request Unit, Integration or Playwright execution through MCP, and return recorded evidence for human review. Use auto for verified local merge and current for the existing checkout. Initial project setup belongs to redpact-init. Use when the user invokes Redpact; ordinary repository work alone does not require this workflow.
+description: Develop through chat with Redpact-managed verification, test-first implementation and isolated worktrees. Inspect checkout status, request Unit, Integration or Playwright execution through CLI, and return recorded evidence for human review. Use auto for verified local merge and current for the existing checkout. Initial project setup belongs to redpact-init. Use when the user invokes Redpact; ordinary repository work alone does not require this workflow.
 ---
 
 # Redpact
@@ -14,29 +14,33 @@ navigation before every operation. Honor explicit scope and execution restrictio
 ## Start and continue from chat
 
 Read repository instructions, inspect the actual checkout and reuse this task's
-worktree or create isolation through the host's Git tools. Call `get_workspace_status`
+worktree or create isolation through the host's Git tools. Call `redpact workspace status`
 with its absolute path to inspect configuration diagnostics, pending approvals and
 recorded execution state. A status read does not register or execute the project;
-use `configure describe/inspect/validate` when setup needs attention.
+use `redpact settings describe/get/validate --scope project` when setup needs attention.
 
 Choose evidence from the requested behavior, write a regression, observe its intended
 assertion fail, implement, then rerun. Use subagents for independent work when available;
 give each an explicit file boundary and the same checkout/evidence identity. The parent
 integrates their changes and verifies the final tree. Delegation is not verification.
 
-Use the MCP entries below for requests and follow their returned identities. Ask policy
+Use the CLI commands below for requests and follow their returned identities.
+Select the connected instance with `--server URL` (or `REDPACT_SERVER_URL`), pass the
+actual checkout with `--path`, and request `--json` for structured results. Do not
+switch instances or depend on the GUI's selected project. Use native Git and ordinary
+file tools for application files; use Redpact CLI for its owned state and settings. Ask policy
 requires the user's action in an MCP App or the connected viewer. If the client cannot
-render Apps, call `get_review_context` with the returned kind and request ID and provide
+render Apps, call `redpact runs context` with the returned kind and request ID and provide
 its review path on the connected viewer origin for the user to review and approve.
 Never invoke an App-only approval tool, submit the viewer's approval request on the
 user's behalf, copy a capability into model context, or change policy to proceed.
 Polling and text replies do not approve execution. If neither approval interface is
 accessible, retain the pending request and explain that remaining blocker.
 
-Use `get_review_context` for a compact result, failure and evidence references, then
-`get_run` for the required recorded log, source or image. Return the provided
+Use `redpact runs context` for a compact result, failure and evidence references, then
+`redpact runs logs/source/artifact` for the required recorded evidence. Return the provided
 review path on the same connected viewer origin; do not infer a new server or claim
-the result is fresh when freshness is unknown. Use `list_runs` for older attempts
+the result is fresh when freshness is unknown. Use `redpact runs list` for older attempts
 and report cleanup failures with their execution identity. Public test cancellation is unavailable.
 
 ## Managed execution boundary
@@ -50,11 +54,16 @@ be reported as local-only.
 
 | Test type | Required connected entry point | Evidence owner |
 | --- | --- | --- |
-| Integration | MCP `run_tests` with `kind: "integration"`, then `get_run` | Integration submission and run |
-| Playwright functional or capture | MCP `run_tests` (`kind: "playwright"`) with a declared target, then `get_run` | Playwright run, recorded artifacts and cleanup |
-| Unit | MCP `run_tests` (`kind: "unit"`), then `get_run` | Whole configured command, output and cleanup |
+| Integration | `redpact tests run --kind integration`, then `redpact runs show` | Integration submission and run |
+| Playwright functional or capture | `redpact tests run --kind playwright` with a declared target, then `redpact runs show` | Playwright run, recorded artifacts and cleanup |
+| Unit | `redpact tests run --kind unit`, then `redpact runs show` | Whole configured command, output and cleanup |
 
-MCP `run_tests` selects Integration, Unit or Playwright through `kind`. Unit runs the full configured command; Playwright requires a declared target. Omitted kind remains Integration for compatibility.
+`redpact tests run --kind KIND` selects Integration, Unit or Playwright. Unit runs the
+configured command/file-command contract; Playwright requires `--target`. Use `--test`
+for Integration file selection only. Use `runs show/context` with `--kind` and `--id`;
+`runs logs/source/artifacts/artifact` retrieve recorded evidence. `--wait` stops at an
+approval requirement or terminal result; a client timeout never cancels execution.
+An accepted request is not a passing test.
 Likewise, do not describe a direct Docker run as a Redpact run or recreate its
 records manually. If the required Redpact endpoint, settings or approval is
 unavailable, finish independent work and report the connected-evidence gap.
@@ -63,7 +72,8 @@ unavailable, finish independent work and report the connected-evidence gap.
 
 In Codex, use `$redpact` and `$redpact-init`. In Claude Code, use
 `/redpact:redpact` and `/redpact:redpact-init`; the same task modes apply.
-Use the plugin's configured MCP endpoint and the same instance for the viewer.
+Use the plugin's configured instance origin for CLI and the viewer. MCP opens the
+app; operational work uses the installed `redpact` CLI.
 The regular plugin defaults to port 54321 and does not install or start the runtime;
 start `redpact serve --port 54321`. The App Page package
 bundles these same skills with its verification connection on port 54322 and manages
@@ -166,7 +176,9 @@ inspection and human approval are separate claims.
 
 ## Shared configuration changes
 
-Task-required dependency changes use the one shared project settings file. Read
+Task-required dependency changes use `redpact settings get/patch/validate --scope project`
+with the actual checkout path and current revision. Never directly read or edit
+project or runtime settings JSON. Read
 [Project dependencies](references/dependencies.md), preserve unrelated inputs and
 report effects on future executions. There are no worktree overlays or promotion
 steps. Execution still uses the selected checkout and fresh runtime resources.

@@ -13,7 +13,7 @@ Work forward from connection to cleanup. Fix the earliest failing stage before i
 
 | What you observe | Check first | Next action |
 |---|---|---|
-| Agent cannot reach any tool | Instance health and MCP URL | Restore the connection, then try `configure describe` |
+| Agent cannot reach any tool | Instance health and MCP URL | Restore the connection, then try `redpact settings describe --scope project` |
 | Configuration returns field diagnostics | Named file, field and actual checkout | Repair the declaration and validate again |
 | Request has an ID but no completed cases | Pending state and preparation diagnostics | Follow that ID; resolve the reported gate or startup issue |
 | Runner cannot import a file | Test root and captured helper paths | Correct the source bundle and submit a new request |
@@ -27,15 +27,14 @@ Do not repeatedly submit the same request just to obtain progress. Keep its retu
 
 Confirm the intended app or server is running and compare its address with the agent's MCP URL. HTTP agent Plugins target port 54321, and the App Page Plugin uses 54322; a development server may use another port and data directory. Connecting to another instance can make valid runs appear missing in the viewer.
 
-After updating a plugin connection, refresh the client or start a new agent task. Ask for `configure` with `action: "describe"` and the absolute project path. A skill installation alone does not start the server. Use the local HTTP MCP connection; a stdio bridge is not provided.
+After updating a plugin connection, refresh the client or start a new agent task. Run `redpact settings describe --scope project --path /absolute/checkout` against the same instance. A skill installation alone does not start the server. Use the local HTTP MCP connection; a stdio bridge is not provided.
 
 For rejected requests, check the intended local hostname and whether a browser proxy changed Origin or Host. Correct the endpoint instead of disabling local request checks.
 
 ## A request remains pending
 
 Ask requests remain pending until a person uses a supported MCP App or opens the
-exact connected review. Unit/Playwright use `get_run`; Integration also supports
-`get_run`. Polling and textual agreement do not approve. If neither human interface
+exact connected review. Read any kind with `redpact runs show --kind KIND --id ID`. Polling and textual agreement do not approve. If neither human interface
 is available, report the limitation and keep the request pending.
 Stale revision or changed reviewed inputs require a refreshed review or a new request,
 not approval of different settings. [Interfaces](interfaces.md) defines these checks.
@@ -43,7 +42,7 @@ not approval of different settings. [Interfaces](interfaces.md) defines these ch
 
 ## A project or worktree is missing
 
-Check the absolute directory in instance `projects` and observation diagnostics from `configure`. Git-linked checkouts must still exist and be discoverable by Git. Deleted checkouts retain history but cannot execute.
+Check the absolute directory in instance `projects` and observation diagnostics from `redpact settings describe --scope project`. Git-linked checkouts must still exist and be discoverable by Git. Deleted checkouts retain history but cannot execute.
 
 Compare `rulesRoot` and `projectRoot`. Shared settings belong to the primary checkout; editing a linked-checkout copy will not override them. Repair a moved or missing primary project path instead of substituting another checkout's settings.
 
@@ -51,7 +50,7 @@ Compare `rulesRoot` and `projectRoot`. Shared settings belong to the primary che
 
 Follow the diagnostic's file and field path. Common causes are duplicate keys, unknown fields, non-relative paths, missing Compose services, and invalid dependency kinds. Only `isolated`, `shared-local`, `remote`, and `mock` are accepted.
 
-Malformed or duplicate-key JSON needs file repair and reload. On a save conflict, preserve the draft, load current source, and reconcile edits. Another editor may have changed the file since loading. Repeat `configure validate` with the actual execution checkout .
+Malformed or duplicate-key JSON uses revision-checked CLI `settings repair`; valid JSON with field errors uses `settings patch`. On a save conflict, preserve the draft, load current source, and reconcile edits. Another editor may have changed the file since loading. Repeat `redpact settings validate --scope project` with the actual execution checkout .
 
 ## Validation passes but preparation fails
 

@@ -135,7 +135,18 @@ test("MCP Ask exposes real snapshots and UI-only controls, then starts only afte
       )
       .map((tool: { name: string }) => tool.name)
       .sort(),
-  ).toEqual(["review_action", "set_approval_policy"])
+  ).toEqual([
+    "configure",
+    "get_review_context",
+    "get_run",
+    "get_run_artifact",
+    "get_workspace_status",
+    "list_runs",
+    "project_container",
+    "review_action",
+    "run_tests",
+    "set_approval_policy",
+  ])
   let result = await call("run_tests", { path: root })
   expect(result.structuredContent.state).toBe("awaiting_approval")
   const id = result.structuredContent.id

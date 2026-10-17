@@ -17,8 +17,8 @@ tracked convention. Unit patterns must not include the selected Integration dire
 
 Read before authoring or executing managed integration tests, reading their results,
 or cancelling/removing their resources. Discover the connected tools and actual
-HTTP contract. Use configure describe before authoring settings; read [Project dependencies](dependencies.md) when services or connections need
-changes, and [configuration](../../redpact-init/references/configuration.md) only for setup repair. Unit IDs do not belong to these MCP operations.
+HTTP contract. Use redpact settings describe --scope project before authoring settings; read [Project dependencies](dependencies.md) when services or connections need
+changes, and [configuration](../../redpact-init/references/configuration.md) only for setup repair. Use the correct execution kind for every record lookup.
 
 ## Test the public behavior
 
@@ -47,7 +47,7 @@ review; they do not substitute for assertions or Steps.
 
 ## Execute and inspect
 
-Apply this section only when managed integration evidence is selected. Native unit commands do not require this helper. Every runnable test submitted through run_tests must record named Steps for its meaningful actions and assertions. This requirement also applies to existing tests selected for a new run: add missing Step instrumentation before submitting them. Test titles, comments, console logs, and a single wrapper around an entire multi-action scenario do not replace meaningful Steps.
+Apply this section only when managed integration evidence is selected. Native unit commands do not require this helper. Every runnable test submitted through `redpact tests run --kind integration` must record named Steps for its meaningful actions and assertions. This requirement also applies to existing tests selected for a new run: add missing Step instrumentation before submitting them. Test titles, comments, console logs, and a single wrapper around an entire multi-action scenario do not replace meaningful Steps.
 
 Reuse a compatible project helper or copy [Steps helper](../assets/steps.ts) into `tests.directory` as `steps.ts`. Keep that helper inside the captured test bundle; do not import it from the installed plugin or from outside the test directory. Initialize `createSteps(context)` inside each test. Await Steps sequentially, place the actual operation or assertion inside its callback, and allow failures to propagate. Do not nest Steps, run them concurrently, or record success before the callback completes. Keep shared hooks for fixtures; steps in a hook do not replace per-test Steps.
 
@@ -66,15 +66,15 @@ test("Application responds successfully", async (context) => {
 })
 ```
 
-After execution, inspect `get_run` case results and confirm that tests which reached their bodies contain observed Steps and appropriate verdicts. If Steps are missing, repair instrumentation and rerun before claiming completion. An environment/collection failure or skipped test may have no observed Steps; report that limitation instead of fabricating steps or modifying historical results. An unfinished Step is not a pass.
+After execution, inspect `redpact runs show` case results and confirm that tests which reached their bodies contain observed Steps and appropriate verdicts. If Steps are missing, repair instrumentation and rerun before claiming completion. An environment/collection failure or skipped test may have no observed Steps; report that limitation instead of fabricating steps or modifying historical results. An unfinished Step is not a pass.
 
-Use `run_tests` with the absolute execution checkout and optional exact test paths relative to `tests.directory`. It captures the shared fixed settings and immutable submitted sources. Do not pass selections or read retired choice files. Each execution owns a fresh application environment and containerized Vitest runner; package installation also stays in the runner. The returned identity may be an execution or pending review, so inspect its state and honor review gates. Validation is not approval. Poll `get_run` through completion and cleanup, then verify the submission and run in the same worktree's connected viewer. Direct Docker/Compose or Vitest output is local diagnostics, not a recorded Redpact run.
+Use `redpact tests run --kind integration` with `--path /absolute/checkout` and optional repeated `--test` paths relative to `tests.directory`. It captures the shared fixed settings and immutable submitted sources. Do not pass selections or read retired choice files. Each execution owns a fresh application environment and containerized Vitest runner; package installation also stays in the runner. The returned identity may be an execution or pending review, so inspect its state and honor review gates. Validation is not approval. Poll `redpact runs show` through completion and cleanup, then verify the submission and run in the same worktree's connected viewer. Direct Docker/Compose or Vitest output is local diagnostics, not a recorded Redpact run.
 
-For an executing request, read `get_run` until terminal evidence or the user's stopping point. Diagnose the reported failure class before choosing the next action. Preserve run IDs and actual outcomes across iterations; parsing a source file or successfully validating settings is not an executed test.
+For an executing request, read `redpact runs show` until terminal evidence or the user's stopping point. Diagnose the reported failure class before choosing the next action. Preserve run IDs and actual outcomes across iterations; parsing a source file or successfully validating settings is not an executed test.
 
 ## Respect execution approval
 
-Auto starts execution immediately. Ask returns `state: awaiting_approval`; its `id` identifies a pending review, not an executing run. Present the advertised MCP App or obtain the viewer review path from `get_review_context` with `kind: "integration"` and that ID. Wait for the user's environment approval followed by approval of the captured test bundle in either supported interface. Do not repeatedly poll a pending approval or submit duplicate requests. `get_run` accepts the review ID or eventual execution ID; preserve `reviewId` when a run begins.
+Auto starts execution immediately. Ask returns `state: awaiting_approval`; its `id` identifies a pending review, not an executing run. Present the advertised MCP App or obtain the viewer review path from `redpact runs context` with `--kind integration --id ID`. Wait for the user's environment approval followed by approval of the captured test bundle in either supported interface. Do not repeatedly poll a pending approval or submit duplicate requests. `redpact runs show` accepts the review ID or eventual execution ID; preserve `reviewId` when a run begins.
 
 `review_action` and `set_approval_policy` are App-only controls, not agent commands. Never obtain private UI capabilities from runtime files, invoke those controls on the user's behalf, switch policy to unblock execution, or bypass the gate through HTTP. Changing the next-request policy does not approve an already pending request. A client without MCP Apps can direct the user to the returned review path on the same connected viewer origin. The user must act there; textual presentation cannot replace approval. If both interfaces are unavailable, retain the pending request and report the blocker.
 
@@ -87,7 +87,7 @@ Before reporting a connected integration result, compare the returned run target
 ## Automatic lifecycle and user controls
 
 Redpact manages execution limits and removes temporary run environments automatically.
-MCP has no cancellation or environment-stop tools. Do not issue substitute HTTP
+The CLI has no test cancellation or test-environment stop commands. Do not issue substitute HTTP
 cleanup requests. Report cleanup errors with the execution identity; the web UI does not expose test cancellation either. Shared local infrastructure remains outside test environments.
 Preserve unrelated resources and execution history.
 

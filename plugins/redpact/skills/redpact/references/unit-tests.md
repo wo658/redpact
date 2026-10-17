@@ -39,8 +39,8 @@ and inspect the actual assertion failure; a nonzero process exit alone is not
 functional red. Implement and run the same assertion to green, then required
 regression checks. Do not add the integration Steps helper to native unit tests.
 
-For connected review, inspect the existing primary `.redpact/settings.json` and
-configure describe. Preserve or configure `unitTests.dockerfile`, `command`, `cwd`, and `patterns`
+For connected review, use `redpact settings describe` and `settings get` with
+`--scope project --path /absolute/checkout`. Use revision-checked `settings patch` to configure `unitTests.dockerfile`, `command`, `cwd`, and `patterns`
 using the real project command and project-relative locations, then validate. Use
 a finite command, not watch mode. Do not replace the shared whole-suite command
 with a task-specific filter merely to speed up iteration. Unit execution requires a project-authored Dockerfile that installs dependencies
@@ -52,11 +52,11 @@ Keep Unit patterns separate from `tests.directory`: managed Integration sources 
 to the Git-tracked root `integration/` directory, and validation rejects Unit patterns
 that include it. Do not place project tests beneath `.redpact`.
 
-Resolve the worktree on the same connected instance. Prefer MCP `run_tests` (`kind: "unit"`)
-with the absolute checkout path and `get_run` with `kind: "unit"`. Under Ask,
+Resolve the worktree on the same connected instance. Prefer `redpact tests run --kind unit`
+with `--path /absolute/checkout` and `redpact runs show --kind unit --id ID`. Under Ask,
 leave the returned approval request for a human; neither polling nor a text reply
 grants approval. If MCP Apps are unavailable, obtain its review path using
-`get_review_context` and direct the user to the same connected viewer for an explicit
+`redpact runs context` and direct the user to the same connected viewer for an explicit
 approval action, following [Review and handoff](review-evidence.md). Recorded results
 are also readable through `GET /api/unit-runs/:id`.
 Run the configured whole command for connected evidence, inspect its terminal

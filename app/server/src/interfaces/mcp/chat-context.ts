@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/server"
 import { reviewContextInput, workspaceStatusInput } from "../../core/verification-schema.js"
 import { getReviewContext, getWorkspaceStatus } from "../../workflows/chat-context.js"
 import type { Services } from "../../workflows/services.js"
+import { uiMeta } from "./apps.js"
 import { invoke, readOnly } from "./result.js"
 
 export function registerChatContextTools(server: McpServer, services: Services) {
@@ -12,6 +13,7 @@ export function registerChatContextTools(server: McpServer, services: Services) 
         "Read the explicit absolute working checkout's shared settings diagnostics, existing observed binding, pending execution approvals, recent/active execution identities and cleanup attention. Does not register projects, create worktrees, write settings, run tests or grant approval. Freshness and human acceptance are separate from passing results. Use get_review_context for a specific execution.",
       inputSchema: workspaceStatusInput,
       annotations: readOnly,
+      _meta: uiMeta(),
     },
     ({ path }) => invoke(() => getWorkspaceStatus(services, path)),
   )
@@ -22,6 +24,7 @@ export function registerChatContextTools(server: McpServer, services: Services) 
         "Read a bounded review summary for an execution or pending approval request by kind and ID: recorded failure classification, cleanup, immutable evidence retrieval references and a relative viewer reviewPath scoped to this record. Open reviewPath against the connected Redpact viewer origin. Never changes results or records human acceptance; current-code freshness stays unknown until separately established. Detailed evidence remains available through get_run.",
       inputSchema: reviewContextInput,
       annotations: readOnly,
+      _meta: uiMeta(),
     },
     (input) => invoke(() => getReviewContext(services, input)),
   )

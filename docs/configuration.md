@@ -10,9 +10,12 @@ execution checkout supplies Compose files, Dockerfiles, application source and t
 Sharing configuration does not share execution resources: each run creates and removes
 its own application containers, dependency containers and network.
 
-Call `configure describe` with the absolute execution path for the generated schema.
-Edit the shared settings, then call `configure validate` with the same path. Validation
-returns the fixed plan without starting anything or proving readiness or approval.
+Use `redpact settings describe --scope project --path /absolute/checkout` for the generated
+schema and `settings get` for the authored values and revision. Apply changes through
+`settings patch`, then `settings validate` with the same scope and path. Agents do not
+read or edit project or instance JSON files directly. The shared files remain the storage
+format; see [settings ownership](settings-reference.md) for partial updates and repair.
+Validation returns the fixed plan without starting anything or proving readiness or approval.
 
 ## Fixed execution plan
 
@@ -73,7 +76,7 @@ server-environment fallback. Write URLs and ports as strings yourself, for examp
 `<service>.redpact.test` DNS aliases on the execution network; host published ports
 remain separate inspection endpoints.
 
-Enter values as JSON key-value strings in the shared `.redpact/settings.json`, using
+Supply values through CLI settings patches, or use
 Dependencies for application values and Project settings for `tests.env`. Both editors
 use key and value fields. There is no separate credential store, input card or API.
 Empty strings, whitespace, `=` and `$` are literal; JSON `\n` represents a newline.
@@ -119,16 +122,16 @@ settings with explicit string values. Historical runtime records use the ordered
 [storage migration](storage.md); project settings are never rewritten automatically.
 
 Mode catalogs, execution-time selection, integration default files and worktree
-dependency overlays are retired. Rewrite existing settings manually with fixed roots
+dependency overlays are retired. Update existing settings through CLI patches with fixed roots
 and dependency definitions. There are no backward readers or automatic migrations.
 The old selection and overlay files do not affect the plan. See
 [settings ownership](settings-reference.md) for file ownership and captured inputs.
 
 ## Instance settings
 
-Global Settings controls the instance separately. `configure describe` reports that settings file's location. Instance `projects` lists absolute directories to observe. `server.port` applies after restart. Optional `github.cliPath` selects an absolute GitHub CLI executable.
+Global Settings and `redpact settings describe|get|patch|validate --scope instance` control the instance separately. Instance `projects` lists absolute directories to observe. `server.port` applies after restart. Optional `github.cliPath` selects an absolute GitHub CLI executable.
 
-Per-execution limits belong in that instance file:
+Per-execution limits belong in instance settings:
 
 ```json
 {

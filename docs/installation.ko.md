@@ -153,7 +153,8 @@ Gemini CLI는 이 마켓플레이스 카탈로그 대신 `gemini-extension.json`
 HTTP 플러그인은 `http://127.0.0.1:54321/mcp`, App Page Plugin은 54322 포트를 사용합니다. 다른 인스턴스를 쓰려면
 플러그인이 자동으로 따라간다고 가정하지 말고 실제 포트로 HTTP MCP를 직접 연결하세요.
 다른 클라이언트도 이 연결을 사용할 수 있으나 검증된 플러그인 통합으로 주장하지 않습니다.
-도구 확인에는 에이전트에게 `configure describe` 호출을 요청하세요.
+CLI 연결은 `redpact --server http://127.0.0.1:54321 settings describe --scope project --path /absolute/checkout`으로 확인하세요.
+작업 명령과 인스턴스 선택은 [에이전트 CLI](interfaces.md)를 참고하세요.
 실행 승인 카드는 호환되는 MCP Apps 호스트가 필요합니다. 플러그인 설치만으로 카드
 지원을 증명할 수 없으며, 승인 UI가 없다고 승인을 우회해서는 안 됩니다.
 [인터페이스 계약](interfaces.md)을 참고하세요.
@@ -227,9 +228,9 @@ App 패키지는 일반 플러그인과 같은 `redpact`, `redpact-init` 스킬�
 복사하고 연결 메타데이터만 조정합니다. 별도의 스킬 사본을 유지하지 않습니다.
 
 `http://127.0.0.1:54322/mcp`에 별도 `redpact-verification` HTTP MCP 연결도 등록합니다.
-런타임의 모델 도구를 직접 노출해 승인 카드와 capability 경계를 유지하며 App 전용 뷰어
-브리지는 비공개로 유지합니다. 검증 계약은 [MCP 인터페이스](interfaces.md)를 참고하세요.
-번들 설치기는 여전히 이전 도구 구성을 가진 공개 0.8.0을 다운로드합니다. 확장된 검증 도구는
+모델에는 런타임 수명 주기·앱 열기 도구를 노출합니다. 검증 작업 도구와 뷰어 브리지는
+App 전용 visibility와 capability 경계를 유지하며 에이전트는 설정·실행·증거를 CLI로 다룹니다. 검증 계약은 [MCP 인터페이스](interfaces.md)를 참고하세요.
+번들 설치기는 여전히 이전 도구 구성을 가진 공개 0.8.0을 다운로드합니다. CLI와 축소된 모델 도구 구성은
 이 소스로 빌드한 런타임이나 이를 포함하는 후속 릴리스가 필요합니다.
 런타임 시작·업데이트 후 도구 목록이 오래되었거나 시작 시 연결하지 못했다면 호스트의 MCP
 연결을 다시 연결하세요. `REDPACT_APP_PORT`를 변경하면 플러그인 manifest의 HTTP MCP URL도
@@ -394,7 +395,7 @@ curl --fail http://127.0.0.1:54318/api/health
 
 `docker version`에는 클라이언트뿐 아니라 서버 정보도 나와야 합니다. Docker 데몬에 연결하지 못한다면 관리형 실행 전에 Docker를 시작하세요. Redpact 서버가 요청을 받을 준비가 되면 health 요청이 성공해야 합니다. 이 확인만으로 애플리케이션 이미지 빌드나 서비스 준비 상태까지 검증되는 것은 아닙니다.
 
-다음으로 Vite 뷰어를 열어 애플리케이션 디렉터리를 연결하고, 마지막으로 에이전트에서 `configure describe`를 호출하세요. health는 성공하지만 에이전트가 연결하지 못한다면 프로젝트 테스트 설정 대신 MCP 주소와 클라이언트 연결을 확인하세요.
+다음으로 Vite 뷰어를 열어 애플리케이션 디렉터리를 연결하고, 마지막으로 에이전트에서 `redpact settings describe --scope project`를 호출하세요. health는 성공하지만 에이전트가 연결하지 못한다면 프로젝트 테스트 설정 대신 CLI의 `--server` 또는 `REDPACT_SERVER_URL`과 MCP 연결 주소를 확인하세요.
 
 ## 같은 인스턴스의 주소 사용하기
 
@@ -417,15 +418,13 @@ curl --fail http://127.0.0.1:54318/api/health
 http://127.0.0.1:54318/mcp
 ```
 
-설정 문법은 클라이언트마다 다릅니다. 클라이언트의 HTTP MCP 연결 기능을 사용하세요. Redpact는 이 흐름을 위한 stdio 브리지를 제공하지 않습니다. 모델에 제공하는 설정·실행·증거 도구는 [MCP 인터페이스](interfaces.md)를 참고하세요.
+설정 문법은 클라이언트마다 다릅니다. 클라이언트의 HTTP MCP 연결 기능을 사용하세요. Redpact는 이 흐름을 위한 stdio 브리지를 제공하지 않습니다. 모델 수명 주기 도구, App 전용 전송과 CLI 설정·실행·증거 명령은 [MCP 인터페이스](interfaces.md)를 참고하세요.
 
-경로를 바꾼 뒤 에이전트에게 다음 인자로 `configure`를 호출하도록 요청하세요.
+경로를 바꾸고 연결된 인스턴스를 지정한 뒤 에이전트에게 CLI로 설정을 확인하도록 요청하세요.
 
-```json
-{
-  "action": "describe",
-  "path": "/absolute/path/to/your-project"
-}
+```sh
+redpact --server http://127.0.0.1:54321 settings describe \
+  --scope project --path /absolute/path/to/your-project --json
 ```
 
 설정 스키마와 작성 지침을 받으면 연결을 확인한 것입니다. Docker 실행 준비를 확인하거나 테스트를 실행한 것은 아닙니다.

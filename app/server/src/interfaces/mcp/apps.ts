@@ -6,7 +6,10 @@ import type { ReviewTests, ReviewView } from "../../core/types/reviews.js"
 
 export const environmentResource = "ui://redpact/environment.html"
 export const testsResource = "ui://redpact/tests.html"
-export const uiMeta = (resourceUri: string) => ({ ui: { resourceUri } })
+// Visibility is a host filtering contract; approval capabilities remain mandatory.
+export const uiMeta = (resourceUri?: string) => ({
+  ui: { ...(resourceUri ? { resourceUri } : {}), visibility: ["app"] },
+})
 
 export function reviewResult(view: ReviewView, service: ReviewTests, kind = "review") {
   const { review, submission, run } = view

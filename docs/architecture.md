@@ -12,6 +12,13 @@ are different facts. A result never implies the others.
 
 The standalone browser and Global App Page preserve the management app. Inline MCP Apps are separate approval/result surfaces connected to the same workflows and stored evidence. [Frontend conventions](frontend.md) defines their navigation boundary.
 
+Agents use CLI operations over local HTTP to enter shared workflows. Model-facing
+MCP is limited to runtime status, shutdown and opening the app; the App Page companion
+can also start its owned runtime. The full embedded app and existing cards retain
+App-only MCP transport. Settings use revision-checked CLI reads and partial updates;
+JSON remains the internal storage format. General files and Git use host tools.
+See [interfaces](interfaces.md).
+
 ## Supported product scope
 
 Redpact supports the standalone web app and the full web app embedded inside OpenAI

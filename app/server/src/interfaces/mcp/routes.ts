@@ -7,6 +7,7 @@ import { configure, configureInput } from "../../workflows/configure.js"
 import type { Services } from "../../workflows/services.js"
 import { environmentResource, registerApps, uiMeta } from "./apps.js"
 import { registerChatContextTools } from "./chat-context.js"
+import { registerLifecycleTools } from "./lifecycle.js"
 import { invoke, readOnly } from "./result.js"
 import { registerVerificationTools } from "./verification.js"
 
@@ -18,6 +19,7 @@ const pathInput = z
 export function mcpRoutes(services: Services) {
   return createMcpHonoApp().all("/", async (c) => {
     const server = new McpServer({ name: "redpact", version: "0.1.0" })
+    registerLifecycleTools(server, services, new URL(c.req.url).origin)
     registerApps(server, services.reviews)
     registerVerificationTools(server, services)
     registerChatContextTools(server, services)
@@ -25,7 +27,7 @@ export function mcpRoutes(services: Services) {
       "configure",
       {
         description:
-          "Configure Redpact through local files: first call action=describe with the absolute checkout path for the current schema, examples and rulesRoot. Inspect existing files, edit rulesRoot/.redpact/settings.json directly, then call action=validate with path. Use action=inspect for current settings and discovered tests. All worktrees share one fixed project configuration; execution inputs resolve in the requested checkout. This read-only tool never saves files, starts containers or tests, or grants approval; validation does not prove readiness.",
+          "App-only configuration inspection. Agent settings access uses redpact settings describe/get/patch/validate with an explicit scope and checkout path; describe resolves the shared rulesRoot. Use action=inspect for current settings and discovered tests. All worktrees share one fixed project configuration; execution inputs resolve in the requested checkout. This read-only tool never saves files, starts containers or tests, or grants approval; validation does not prove readiness.",
         inputSchema: configureInput.extend({
           path: pathInput
             .optional()

@@ -35,7 +35,7 @@ skill 지시는 고유 목적을 유지하며 병렬 제품 설명서가 아닙�
 `meta.ko.json`은 같은 page ID를 나열합니다. 문서 사이에는 상대 Markdown 링크를
 사용하고 렌더러가 선택 언어를 유지합니다. `../` 링크는 GitHub 소스를 열며 로컬 미push
 내용보다 오래될 수 있습니다. 언어 간 heading anchor를 공유하거나 ID가 다르면 페이지를
-링크합니다. HTTP·JSON 스키마를 복사하지 말고 생성 API·`configure describe`를 참조하고
+링크합니다. HTTP·JSON 스키마를 복사하지 말고 생성 API·`redpact settings describe --scope project`를 참조하고
 이곳에는 의미를 설명합니다.
 
 ## 로컬 준비와 검사

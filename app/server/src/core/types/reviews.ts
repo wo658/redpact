@@ -14,6 +14,7 @@ export type ReviewStore = {
   setPolicy(policy: ApprovalPolicy): void
 }
 export type ReviewInput = {
+  submissionId?: string
   executionScope?: ExecutionScope
   path: string
   tests?: string[]

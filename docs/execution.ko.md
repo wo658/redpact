@@ -20,14 +20,14 @@ Unit에는 호스트 명령 fallback이 없습니다. Dockerfile은 소스와 �
 뷰어에서 선택된 소스 파일은 실행 명령을 필터링하지 않으며 실행 범위는 아래 명시적 계약을 사용합니다. 종료 코드로 개별 케이스 판정을 만들지 않습니다.
 
 프로젝트 Tests의 Integration은 현재 전체 프로젝트 목록을, 워크트리 검토에서는
-가장 최근 제출 묶음을 실행합니다. MCP `run_tests`는 주어진 경로의 새 소스를 수집합니다.
+가장 최근 제출 묶음을 실행합니다. `redpact tests run --kind integration`은 주어진 경로의 새 소스를 수집합니다.
 제출 식별자와 현재 파일을 뷰어에서 구분해야 합니다. 수집 및 단언 규칙은
 [테스트 작성](tests.md)을 참고하세요.
 
-세 항목은 서로 다른 실행 계약입니다. MCP `run_tests`는 Integration 제출만 실행합니다.
-Unit 실행은 Unit 탭 또는 `run_tests` (`kind: "unit"`)에서 시작해 설정된 명령 또는 파일 명령을 실행하며, 종료 상태를 Integration 케이스
-결과로 취급하지 않습니다. Playwright 실행은 Playwright UI/API 또는 `run_tests` (`kind: "playwright"`)에서 선언된 기능 또는 캡처
-target을 선택해 시작합니다. 스크린샷, UI Review 산출물, 실행 기록과 정리는 MCP 제출이 아닌
+세 항목은 서로 다른 실행 계약입니다. `redpact tests run --kind integration`은 Integration 제출만 실행합니다.
+Unit 실행은 Unit 탭 또는 `redpact tests run --kind unit`에서 시작해 설정된 명령 또는 파일 명령을 실행하며, 종료 상태를 Integration 케이스
+결과로 취급하지 않습니다. Playwright 실행은 Playwright UI/API 또는 `redpact tests run --kind playwright`에서 선언된 기능 또는 캡처
+target을 선택해 시작합니다. 스크린샷, UI Review 산출물, 실행 기록과 정리는 Integration 제출이 아닌
 해당 Playwright 실행에 남습니다. 승인 제한, 기록된 증거 조회와 공개 수명주기 경계는
 [MCP 인터페이스](interfaces.md)를 참고하세요.
 
@@ -110,7 +110,7 @@ Redpact는 관계없는 Docker 리소스를 prune하지 않습니다. Shared-loc
 
 ## 수동 Container
 
-프로젝트 Container 화면은 설정된 메인 체크아웃을 기본으로 사용합니다. MCP `project_container`는
+프로젝트 Container 화면은 설정된 메인 체크아웃을 기본으로 사용합니다. `redpact environment`는
 `path`의 실제 워크트리를 사용하고 HTTP Container 경로는 `worktreeId`로 대상을 선택합니다.
 디렉터리 프로젝트는 연결된 루트를 사용하며 모든 대상은 고정 공유 설정을 사용합니다.
 워크트리마다 테스트 환경과 독립된 수동 환경 하나를 가질 수 있습니다. 명시적인 Stop 또는
