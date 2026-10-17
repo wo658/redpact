@@ -98,8 +98,10 @@ between record files.
 - ts-morph extracts static test intent from isolated submitted-file symbols without
   loading TypeScript standard-library declarations. Vitest records actual integration results.
   Static parsing does not prove assertion execution or full import coverage.
-- Testcontainers owns container startup. Redpact owns input capture, admission,
-  health observations, resource identities, cancellation and cleanup.
+- Testcontainers owns temporary container, Compose and network lifecycles through live
+  worker handles and Ryuk fallback. Redpact owns input capture, admission, evidence,
+  health observations, resource identities, cancellation and recovery cleanup. The
+  persistent main-checkout Container retains its independent lifecycle.
 - Unit, Integration Vitest and Playwright execute in temporary containers. Integration
   and Playwright join a per-execution network with service-name access to the application.
 - The connected web viewer implements explicit request approval. MCP returns review

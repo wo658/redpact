@@ -10,6 +10,7 @@ type Run = {
   settings: { dockerfile: string; command: string }
   cleanup: { state: string }
   error: string
+  stderr: string
 }
 
 /** 컨테이너 정의는 프로젝트가 공유하고, Docker가 없을 때 호스트 실행으로 대체하지 않아야 한다. */
@@ -53,10 +54,10 @@ test("프로젝트 공용 단위 컨테이너 설정을 사용하고 Docker 부�
     })
   })
   const started = await step("컨테이너 단위 명령 실행 요청", () =>
-    http<Run>(`/api/worktrees/${worktree.body.id}/unit-tests/run`, "POST"),
+    http<Run>(`/api/worktrees/${worktree.body.id}/unit-tests/run`, "POST", {}),
   )
   await step("Docker가 없는 대상에서 호스트 실행 없이 오류와 정리 결과 보존 확인", async () => {
-    expect(started.status).toBe(200)
+    expect(started.status, JSON.stringify(started.body)).toBe(200)
     let result: Run | undefined
     await expect
       .poll(
@@ -72,7 +73,19 @@ test("프로젝트 공용 단위 컨테이너 설정을 사용하고 Docker 부�
       projectRoot: fixture.checkout,
       cleanup: { state: "removed" },
     })
-    expect(result?.error).toBeTruthy()
+    if (!result) {
+      throw new Error("실행 결과가 기록되지 않았습니다")
+    }
+    expect(result.error).toBeTruthy()
+    expect(result?.stderr).toContain("Could not find a working container runtime strategy")
+    const copied = await http<{ text: string }>(`/api/runs/executions/unit/${started.body.id}/copy`)
+    expect(copied.status).toBe(200)
+    expect(copied.body.text).toContain(result.stderr)
+    const review = await http<{ executionId: string; worktreeId: string }>(
+      `/api/review-context?kind=unit&id=${started.body.id}`,
+    )
+    expect(review.body.executionId).toBe(started.body.id)
+    expect(review.body.worktreeId).toBe(worktree.body.id)
     const marker = await node<boolean>(
       `import {existsSync} from 'node:fs'; console.log(JSON.stringify(existsSync(JSON.parse(process.argv[1]) + '/marker.txt')));`,
       fixture.checkout,

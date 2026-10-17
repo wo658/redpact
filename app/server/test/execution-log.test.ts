@@ -34,7 +34,7 @@ const capture = {
     ],
   },
 }
-function queries() {
+function queries(captureId = "same") {
   const run = {
     id: "integration",
     submissionId: "s",
@@ -51,10 +51,16 @@ function queries() {
       listRuns: () => [run],
       getRun: (id: string) => (id === run.id ? run : undefined),
     } as never,
-    async () => ({ stdout: null, stderr: { text: "", truncated: false } }),
+    async (_id, side) => ({
+      stdout: null,
+      stderr: {
+        text: side === "after" ? "Testcontainers browser preparation stderr" : "",
+        truncated: false,
+      },
+    }),
     {
       units: () => [unit, { ...unit, id: "hidden", worktreeId: "other" }],
-      captures: () => [capture],
+      captures: () => [{ ...capture, id: captureId }],
     } as never,
   )
 }
@@ -79,6 +85,7 @@ test("copy endpoint returns recorded diagnostics for each execution kind", async
   expect((await response.json()).text).toContain("unit output")
   const browserLog = (await (await read("playwright", "same")).json()).text
   expect(browserLog).toContain("actual timeout")
+  expect(browserLog).toContain("Testcontainers browser preparation stderr")
   expect(browserLog).toContain("Scope: worktree")
   expect((await (await read("integration", "integration")).json()).text).toContain("not recorded")
   expect((await read("unit", "missing")).status).toBe(404)
@@ -112,4 +119,27 @@ test("종류 필터는 페이지 커서의 범위와 워크트리 소유권을 �
   expect(q.listForWorktree("tree", "unit:same", "unit").items).toEqual([])
   expect(() => q.listForWorktree("tree", "playwright:same", "unit")).toThrow("Invalid run cursor")
   expect(() => q.listForWorktree("tree", "unit:hidden", "unit")).toThrow("Invalid run cursor")
+})
+
+test("MCP get_run 로그는 같은 Playwright 준비 진단을 반환한다", async () => {
+  const id = "00000000-0000-4000-8000-000000000001"
+  const app = createApp({ runs: queries(id) } as never)
+  const response = await app.request("/mcp", {
+    method: "POST",
+    headers: {
+      Host: "localhost",
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: "get_run", arguments: { kind: "playwright", id, detail: "log" } },
+    }),
+  })
+  expect(response.status).toBe(200)
+  const result = (await response.json()).result
+  expect(result.isError, JSON.stringify(result)).not.toBe(true)
+  expect(result.structuredContent.text).toContain("Testcontainers browser preparation stderr")
 })

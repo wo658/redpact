@@ -794,6 +794,7 @@ test("project tracking hides clean merged checkouts but preserves the main branc
     hideMerged: false,
   })
   expect(await services.worktrees.listWorktrees(project.id)).toEqual(original)
+  await services.runs.close()
   storage.close()
   storage = openStore(join(directory, "state"))
   expect(JSON.parse(await readFile(join(repository, ".redpact/tracking.json"), "utf8"))).toEqual({
@@ -1418,6 +1419,7 @@ test("directory projects discover Git on listing and retain project and historic
     oldRecord,
   )
   expect((await services.worktrees.connect(root)).id).toBe(project.id)
+  await services.runs.close()
   storage.close()
   storage = openStore(join(directory, "state"))
   expect(storage.store.getProject(project.id)?.location.kind).toBe("git")

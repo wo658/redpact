@@ -156,6 +156,7 @@ test("checkout이 없는 과거 실행은 잘못된 범위 구독 없이 근거�
       approval: null,
     }),
     unitRun: async () => ({ stdout: "historical output", stderr: "" }),
+    copyExecutionLog: async () => ({ text: "retained preparation stderr\n[Output truncated]" }),
   }
   try {
     render(
@@ -166,6 +167,10 @@ test("checkout이 없는 과거 실행은 잘못된 범위 구독 없이 근거�
       }),
     )
     await screen.findByText("historical output")
+    fireEvent.click(screen.getByRole("button", { name: "Execution logs", exact: true }))
+    const logs = await screen.findByRole("region", { name: "Execution logs", exact: true })
+    await waitFor(() => assert.match(logs.textContent, /retained preparation stderr/))
+    assert.match(logs.textContent, /\[Output truncated\]/)
     await waitFor(() => assert.equal(events.length, 0))
   } finally {
     cleanup()

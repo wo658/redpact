@@ -63,6 +63,7 @@ async function recordedFixture(page: Page) {
     writeFileSync(root+'/runs/'+integrationId+'/stdout.log','Integration 기록 출력\\n원문 줄바꿈 유지');
     const dir=root+'/playwright-runs/'+captureId;
     mkdirSync(dir+'/sources/project/tests',{recursive:true});mkdirSync(dir+'/after',{recursive:true});
+    writeFileSync(dir+'/after/stderr.log','기록된 Testcontainers 브라우저 준비 진단');
     const captureFile='project/tests/recorded.spec.ts';
     writeFileSync(dir+'/sources/'+captureFile,'// recorded browser source\\nexport const original = true;\\n');
     const artifacts=pictures.map(({width,image})=>{const bytes=Buffer.from(image,'base64'),id=randomUUID();writeFileSync(dir+'/after/'+id,bytes);return {id,name:'Recorded viewer '+width,contentType:'image/png',bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),viewport:{width,height:900}}});
@@ -163,6 +164,14 @@ export function registerResultRowTests(capture = false) {
         await expect(
           page.getByText("응답을 확인한다 · 기록된 단계 진단", { exact: true }),
         ).toBeVisible()
+        await page.getByRole("button", { name: "Execution logs", exact: true }).click()
+        await expect(
+          page.getByRole("region", { name: "Execution logs", exact: true }),
+        ).toContainText("기록된 Testcontainers 브라우저 준비 진단")
+        const copied = await http<{ text: string }>(
+          `/api/runs/executions/playwright/${fixture.captureId}/copy`,
+        )
+        expect(copied.body.text).toContain("기록된 Testcontainers 브라우저 준비 진단")
         for (const imageWidth of [1280, 390]) {
           const image = page.getByRole("img", {
             name: `Recorded viewer ${imageWidth}`,

@@ -18,6 +18,7 @@ import { minimalEnvironment } from "../process/environment.js"
 import { readJsonSettings } from "../settings/json.js"
 import { snapshotComposeInputs } from "./compose-inputs.js"
 import type { EffectiveCompose } from "./compose-model.js"
+import { startComposeSession } from "./compose-session.js"
 import { retainLegacyImageOwnership } from "./legacy-image-ownership.js"
 import { networkDiagnostic } from "./network-diagnostic.js"
 import {
@@ -37,6 +38,7 @@ import { stageSelection } from "./selection.js"
 export { minimalEnvironment } from "../process/environment.js"
 
 export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
+  const sessions = new Map<string, ReturnType<typeof startComposeSession>>()
   function directory(record: Environment) {
     return join(dataDir, "environments", record.id)
   }
@@ -125,6 +127,18 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
     }
   }
   return {
+    async close() {
+      const results = await Promise.allSettled(
+        [...sessions.values()].map((session) => session.terminate()),
+      )
+      sessions.clear()
+      const failures = results
+        .filter((result) => result.status === "rejected")
+        .map((result) => result.reason)
+      if (failures.length) {
+        throw new AggregateError(failures, "Compose diagnostics could not be finalized")
+      }
+    },
     fingerprint: (root, inputs) => snapshotComposeInputs(root, inputs),
     inspect,
     async prepare(record, signal, observe) {
@@ -278,72 +292,117 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         })
         signal.throwIfAborted()
         // The runner network exists even when every application uses host/none networking.
-        const client = await runtimeClient()
-        await client.network.create({
-          Name: runnerName,
-          Labels: {
-            ...labels,
-            "com.docker.compose.project": record.projectName,
-            "com.docker.compose.network": "redpact-runner",
-          },
-        })
+        const temporary = record.manualScope !== "main"
+        if (!temporary) {
+          const client = await runtimeClient()
+          await client.network.create({
+            Name: runnerName,
+            Labels: {
+              ...labels,
+              "com.docker.compose.project": record.projectName,
+              "com.docker.compose.network": "redpact-runner",
+            },
+          })
+        }
         let worker = new URL("./compose-worker.js", import.meta.url)
         if (!existsSync(worker)) {
           worker = new URL("./compose-worker.ts", import.meta.url)
         }
-        const child = execa(
-          process.execPath,
-          [
-            ...(worker.pathname.endsWith(".ts") ? ["--import", import.meta.resolve("tsx")] : []),
-            fileURLToPath(worker),
-          ],
-          {
+        if (temporary) {
+          const session = startComposeSession({
+            executable: process.execPath,
+            args: [
+              ...(worker.pathname.endsWith(".ts") ? ["--import", import.meta.resolve("tsx")] : []),
+              fileURLToPath(worker),
+            ],
             cwd: runtimeFiles,
-            detached: true,
-            ipc: true,
-            env: { ...env, DOCKER_HOST: host },
-            extendEnv: false,
-            input: JSON.stringify({
+            env: {
+              ...env,
+              DOCKER_HOST: host,
+              DEBUG: "testcontainers:build,testcontainers:pull,testcontainers:compose",
+            },
+            spec: {
+              temporary: true,
+              runnerName,
+              networkLabels: {
+                ...labels,
+                "com.docker.compose.project": record.projectName,
+                "com.docker.compose.network": "redpact-runner",
+              },
               directory: runtimeFiles,
               files: [resolvedFile, overrideFile],
               services: record.plan.activeServices,
               profiles: record.settings.environment.compose.profiles,
               projectName: record.projectName,
               timeoutMs: record.settings.environment.timeoutMs,
-            }),
-            cancelSignal: signal,
-            forceKillAfterDelay: 2000,
-            timeout: record.settings.environment.timeoutMs,
-            reject: false,
-            maxBuffer: 1024 * 1024,
-          },
-        )
-        try {
-          const result = await child
-          await writeFile(join(root, "preparation.log"), redact(networkDiagnostic(result.stderr)), {
-            mode: 0o600,
+            },
+            signal,
+            preparationLog: join(root, "preparation.log"),
+            servicesLog: join(root, "services.log"),
+            redact,
+            redactions: redactValues,
           })
-          if (result.exitCode !== 0) {
-            const fixed = Object.values(record.specification.dependencies).flatMap(
-              (item) => item.hostPorts ?? [],
+          sessions.set(record.id, session)
+          await session.ready
+        } else {
+          const child = execa(
+            process.execPath,
+            [
+              ...(worker.pathname.endsWith(".ts") ? ["--import", import.meta.resolve("tsx")] : []),
+              fileURLToPath(worker),
+            ],
+            {
+              cwd: runtimeFiles,
+              detached: true,
+              ipc: true,
+              env: { ...env, DOCKER_HOST: host },
+              extendEnv: false,
+              input: JSON.stringify({
+                directory: runtimeFiles,
+                files: [resolvedFile, overrideFile],
+                services: record.plan.activeServices,
+                profiles: record.settings.environment.compose.profiles,
+                projectName: record.projectName,
+                timeoutMs: record.settings.environment.timeoutMs,
+              }),
+              cancelSignal: signal,
+              forceKillAfterDelay: 2000,
+              timeout: record.settings.environment.timeoutMs,
+              reject: false,
+              maxBuffer: 1024 * 1024,
+            },
+          )
+          try {
+            const result = await child
+            await writeFile(
+              join(root, "preparation.log"),
+              redact(networkDiagnostic(result.stderr)),
+              {
+                mode: 0o600,
+              },
             )
-            const portConflict =
-              /port is already allocated|address already in use|Bind for .* failed/i.test(
-                result.stderr,
+            if (result.exitCode !== 0) {
+              const fixed = Object.values(record.specification.dependencies).flatMap(
+                (item) => item.hostPorts ?? [],
               )
-            throw new Error(
-              portConflict && fixed.length && record.manualScope === "main"
-                ? `Fixed host port conflict (${fixed.map((item) => `${item.service}:${item.target} -> ${item.published}`).join(", ")}). Stop the conflicting listener or change dependency hostPorts; no fallback port was allocated.`
-                : "Compose startup failed; inspect preparation.log",
-            )
-          }
-          update({ endpoints: JSON.parse(result.stdout).endpoints })
-        } finally {
-          // The Compose library spawns a CLI; kill the child group to prevent late up operations.
-          if (child.pid) {
-            try {
-              process.kill(-child.pid, "SIGKILL")
-            } catch {}
+              const portConflict =
+                /port is already allocated|address already in use|Bind for .* failed/i.test(
+                  result.stderr,
+                )
+              throw new Error(
+                portConflict && fixed.length && record.manualScope === "main"
+                  ? `Fixed host port conflict (${fixed.map((item) => `${item.service}:${item.target} -> ${item.published}`).join(", ")}). Stop the conflicting listener or change dependency hostPorts; no fallback port was allocated.`
+                  : "Compose startup failed; inspect preparation.log",
+              )
+            }
+            update({ endpoints: JSON.parse(result.stdout).endpoints })
+          } finally {
+            // The Compose library spawns a CLI; kill the child group to prevent late up operations.
+            if (child.pid) {
+              try {
+                process.kill(-child.pid, "SIGKILL")
+              } catch {}
+            }
           }
         }
         const observation = await inspect(current)
@@ -352,6 +411,13 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
           throw new Error("Services or preparation jobs are not ready")
         }
       } catch (error) {
+        update({
+          errors: [
+            redact(
+              networkDiagnostic(error instanceof Error ? error.message : "Preparation failed"),
+            ),
+          ],
+        })
         await appendFile(
           join(root, "preparation.log"),
           redact(networkDiagnostic(error instanceof Error ? error.message : "Preparation failed")),
@@ -359,7 +425,7 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
         )
         throw error
       } finally {
-        if (current.runtimeId) {
+        if (current.runtimeId && record.manualScope === "main") {
           try {
             const lines: string[] = []
             for (const id of await ids("container", current)) {
@@ -391,6 +457,25 @@ export function createComposeAdapter(dataDir: string): EnvironmentAdapter {
       ])
       for (const runner of runners) {
         await removeContainer(runner.Id)
+      }
+      const session = sessions.get(record.id)
+      if (session && !session.alive()) {
+        sessions.delete(record.id)
+      }
+      if (session?.alive()) {
+        try {
+          await session.stop(record.settings.environment.stopTimeoutMs)
+          sessions.delete(record.id)
+        } catch (error) {
+          const diagnostic = environmentRedactions(record).reduce(
+            (text, secret) => text.split(secret).join("[REDACTED]"),
+            String(error),
+          )
+          await appendFile(join(directory(record), "cleanup.log"), `${diagnostic}\n`, {
+            mode: 0o600,
+          })
+          throw error
+        }
       }
       const observed = await inspect(record)
       const legacyImages = await retainLegacyImageOwnership(directory(record), record, observed)

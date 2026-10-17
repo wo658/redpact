@@ -53,25 +53,29 @@ export async function executionText(
     const run =
       sources.captures().find((run) => run.id === id) ??
       problem("not_found", "Playwright run not found")
-    const sides = (["before", "after"] as const).map((name) => {
-      const side = run[name]
-      return [
-        `${name}: ${side.state}`,
-        side.outcome,
-        side.error,
-        ...side.cases.map((result) =>
-          [
-            `${result.file}: ${result.title} (${result.status})`,
-            ...result.errors,
-            ...result.steps.map((step) => `${step.title}${step.error ? `: ${step.error}` : ""}`),
-          ]
-            .filter(Boolean)
-            .join("\n"),
-        ),
-      ]
-        .filter(Boolean)
-        .join("\n")
-    })
+    const sides = await Promise.all(
+      (["before", "after"] as const).map(async (name) => {
+        const side = run[name]
+        const logs = await readLogs?.(id, name)
+        return [
+          `${name}: ${side.state}`,
+          side.outcome,
+          side.error,
+          ...(logs ? [stream("stdout", logs.stdout), stream("stderr", logs.stderr)] : []),
+          ...side.cases.map((result) =>
+            [
+              `${result.file}: ${result.title} (${result.status})`,
+              ...result.errors,
+              ...result.steps.map((step) => `${step.title}${step.error ? `: ${step.error}` : ""}`),
+            ]
+              .filter(Boolean)
+              .join("\n"),
+          ),
+        ]
+          .filter(Boolean)
+          .join("\n")
+      }),
+    )
     return [
       metadata(kind, run, run.outcome),
       `Target: ${run.target}`,

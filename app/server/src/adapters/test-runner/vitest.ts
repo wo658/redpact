@@ -1,10 +1,9 @@
 import { createHash } from "node:crypto"
 import { existsSync, readFileSync } from "node:fs"
-import { mkdir, readFile, writeFile } from "node:fs/promises"
+import { cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
-import { execa } from "execa"
 import { z } from "zod"
 import { classifyReport } from "../../core/results.js"
 import { stepResultSchema } from "../../core/step-schema.js"
@@ -12,15 +11,10 @@ import { testPackage } from "../../core/test-package.js"
 import { testResourceSchema } from "../../core/test-resource-schema.js"
 import type { TestRunner } from "../../core/types/contracts.js"
 import type { ReadTestResources } from "../../core/types/test-resources.js"
-import { executeLimitedContainer } from "../environment/limited-command.js"
-import {
-  containersWithLabels,
-  copyContainerOutput,
-  removeContainer,
-  runnerNetwork,
-  runtimeClient,
-  runtimeSocket,
-} from "../environment/runtime.js"
+import { createDiagnosticLog } from "../environment/diagnostics.js"
+import { collectRunnerOutput } from "../environment/runner-output.js"
+import { type RunnerSession, startRunner } from "../environment/runner-session.js"
+import { runnerNetwork, runtimeClient, runtimeSocket } from "../environment/runtime.js"
 import { minimalEnvironment } from "../environment/testcontainers.js"
 
 const require = createRequire(import.meta.url)
@@ -120,15 +114,19 @@ export function createVitestRunner(
       if (!existsSync(worker)) {
         worker = new URL("./worker.ts", import.meta.url)
       }
-      const runtime = await runtimeClient()
-      const child = execa(
-        process.execPath,
-        [
-          ...(worker.pathname.endsWith(".ts") ? ["--import", import.meta.resolve("tsx")] : []),
-          fileURLToPath(worker),
-        ],
-        {
-          input: JSON.stringify({
+      const stderrLog = createDiagnosticLog(join(directory, "stderr.log"), redactionValues)
+      const stdoutLog = createDiagnosticLog(join(directory, "stdout.log"), redactionValues)
+      let session: RunnerSession | undefined
+      let result: Awaited<ReturnType<TestRunner["execute"]>> | undefined
+      const completed = (value: Awaited<ReturnType<TestRunner["execute"]>>) => {
+        result = value
+        return value
+      }
+      try {
+        const runtime = await runtimeClient()
+        session = await startRunner(
+          worker,
+          {
             assets: dirname(fileURLToPath(import.meta.url)),
             source: sourceDirectory,
             config: await readFile(configPath, "utf8"),
@@ -153,74 +151,89 @@ export function createVitestRunner(
               REDPACT_REPORT: "/review/output/report.json",
               REDPACT_REDACT_VALUES: JSON.stringify(redactionValues),
             },
-          }),
-          ipc: true,
-          detached: true,
-          env: { ...minimalEnvironment(), DOCKER_HOST: await runtimeSocket() },
-          extendEnv: false,
-          cancelSignal: signal,
-          forceKillAfterDelay: 2000,
-          timeout: 900000,
-          reject: false,
-        },
-      )
-      try {
-        let preparation: Awaited<typeof child>
-        try {
-          preparation = await child
-        } finally {
-          if (child.pid) {
-            try {
-              process.kill(-child.pid, "SIGKILL")
-            } catch {}
-          }
-        }
-        if (preparation.exitCode !== 0) {
-          throw new Error("Integration runner preparation failed")
-        }
-        const id = JSON.parse(preparation.stdout).containerId
+          },
+          signal,
+          {
+            timeout: 900000,
+            redactions: redactionValues,
+            environment: {
+              ...minimalEnvironment(),
+              DOCKER_HOST: await runtimeSocket(),
+              DEBUG: "testcontainers:build,testcontainers:pull",
+            },
+            diagnostic: (chunk, stream) =>
+              (stream === "stderr" ? stderrLog : stdoutLog).write(chunk),
+            failure: (stderr) => `Integration runner preparation failed: ${stderr}`,
+          },
+        )
         const install = testPackage(submission.files)
           ? "pnpm install --frozen-lockfile --ignore-scripts --ignore-workspace --config.manage-package-manager-versions=false && "
           : ""
-        const processResult = await executeLimitedContainer(
-          id,
+        const collectOutput = collectRunnerOutput(stdoutLog.write, stderrLog.write)
+        const processResult = await session.execute(
           [
             "/bin/sh",
             "-c",
             `cd /review/source && ${install}mkdir -p node_modules && ln -s /runner/node_modules/vitest node_modules/vitest && node --max-old-space-size=${heapMiB} /runner/node_modules/vitest/vitest.mjs run --config /review/vitest.config.mjs`,
           ],
-          signal,
           limits,
+          signal,
+          collectOutput,
         )
-        await copyContainerOutput(id, directory)
         const redact = (text: string) =>
           redactionValues
             .filter((value) => value.length > 0)
             .sort((a, b) => b.length - a.length)
             .reduce((result, value) => result.split(value).join("[REDACTED]"), text)
-        await writeFile(join(directory, "stdout.log"), redact(processResult.stdout), {
-          mode: 0o600,
-        })
-        await writeFile(join(directory, "stderr.log"), redact(processResult.stderr), {
-          mode: 0o600,
-        })
+        // Persist command output independently of report/archive extraction.
+        collectOutput(processResult, true)
+        await stdoutLog.flush()
+        await stderrLog.flush()
+        let archiveError: string | undefined
+        try {
+          const output = join(directory, "output")
+          await mkdir(output, { recursive: true, mode: 0o700 })
+          await session.copyOutput(output)
+          // Container artifacts cannot replace immutable inputs or host-collected diagnostics.
+          const reserved = new Set([
+            "output",
+            "source",
+            "stdout.log",
+            "stderr.log",
+            "connections.json",
+            "vitest.config.mjs",
+          ])
+          for (const entry of await readdir(output)) {
+            if (!reserved.has(entry)) {
+              await cp(join(output, entry), join(directory, entry), { recursive: true })
+            }
+          }
+        } catch (error) {
+          archiveError = `Runner output collection failed: ${redact(error instanceof Error ? error.message : String(error))}`
+        }
         if (processResult.resourceLimit) {
-          return {
+          return completed({
             outcome: "execution_error",
             cases: [],
             errors: [redact(processResult.error ?? "Resource limit exceeded")],
             resourceLimit: processResult.resourceLimit,
-          }
+          })
         }
         if (signal.aborted) {
-          return { outcome: "cancelled", cases: [], errors: [] }
+          return completed({ outcome: "cancelled", cases: [], errors: [] })
         }
         if (processResult.error) {
-          return { outcome: "execution_error", cases: [], errors: [redact(processResult.error)] }
+          return completed({
+            outcome: "execution_error",
+            cases: [],
+            errors: [redact(processResult.error)],
+          })
+        }
+        if (archiveError) {
+          return completed({ outcome: "execution_error", cases: [], errors: [archiveError] })
         }
         try {
-          const client = await runtimeClient()
-          const observed = await client.container.exec(client.container.getById(id), [
+          const observed = await session.exec([
             "node",
             "-e",
             "const fs=require('fs'),crypto=require('crypto');console.log(JSON.stringify(JSON.parse(process.argv[1]).map(p=>crypto.createHash('sha256').update(fs.readFileSync('/review/source/'+p)).digest('hex'))))",
@@ -233,11 +246,11 @@ export function createVitestRunner(
                 createHash("sha256").update(file.source).digest("hex") !== hashes[index],
             )
           ) {
-            return {
+            return completed({
               outcome: "unknown",
               cases: [],
               errors: ["Submitted source changed during execution"],
-            }
+            })
           }
           const report = reportSchema.parse(JSON.parse(await readFile(reportPath, "utf8")))
           await writeFile(reportPath, JSON.stringify(report), { mode: 0o600 })
@@ -245,21 +258,51 @@ export function createVitestRunner(
             ...item,
             file: relative("/review/source", item.file),
           }))
-          return classifyReport(report, processResult.exitCode ?? 1)
+          return completed(classifyReport(report, processResult.exitCode ?? 1))
         } catch {
-          return {
+          return completed({
             outcome: "execution_error",
             cases: [],
             errors: ["Runner did not produce a valid report; inspect local run logs"],
-          }
+          })
         }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        stderrLog.write(message)
+        const redact = (text: string) =>
+          redactionValues
+            .filter(Boolean)
+            .sort((a, b) => b.length - a.length)
+            .reduce((result, value) => result.split(value).join("[REDACTED]"), text)
+        return completed({
+          outcome: signal.aborted ? "cancelled" : "execution_error",
+          cases: [],
+          errors: [redact(message)],
+        })
       } finally {
-        const containers = await containersWithLabels([
-          `io.redpact.owner=${connections.runtime.ownerId}`,
-          `io.redpact.integration=${runId}`,
-        ])
-        for (const container of containers) {
-          await removeContainer(container.Id)
+        const recordFailure = (phase: string, error: unknown) => {
+          const message = `${phase}: ${error instanceof Error ? error.message : String(error)}`
+          const redacted = redactionValues
+            .filter(Boolean)
+            .sort((a, b) => b.length - a.length)
+            .reduce((text, value) => text.split(value).join("[REDACTED]"), message)
+          if (result) {
+            if (result.outcome === "passed") {
+              result.outcome = "execution_error"
+            }
+            result.errors.push(redacted)
+          }
+          return redacted
+        }
+        try {
+          await session?.stop()
+        } catch (error) {
+          stderrLog.write(recordFailure("Runner cleanup failed", error))
+        }
+        try {
+          await Promise.all([stdoutLog.finish(), stderrLog.finish()])
+        } catch (error) {
+          recordFailure("Runner log persistence failed", error)
         }
       }
     },

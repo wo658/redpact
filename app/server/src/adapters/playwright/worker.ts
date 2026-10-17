@@ -1,14 +1,8 @@
 import { Wait } from "testcontainers"
+import { failRunner, serveRunner, watchRunnerParent } from "../environment/runner-host.js"
 import { runnerImage } from "../environment/runner-image.js"
 
-process.once("disconnect", () => {
-  try {
-    process.kill(-process.pid, "SIGKILL")
-  } catch {
-    process.exit(1)
-  }
-})
-process.channel?.unref()
+watchRunnerParent()
 let input = ""
 for await (const chunk of process.stdin) {
   input += chunk
@@ -30,7 +24,13 @@ try {
     .withEnvironment({ REDPACT_REDACT_VALUES: JSON.stringify(spec.redactions ?? []) })
     .withEnvironment({ REDPACT_UI_LANGUAGE: spec.uiLanguage })
     .withResourcesQuota({ memory: spec.limits.memoryMiB / 1024 })
-    .withAutoCleanup(false)
+    .withAutoCleanup(true)
+    .withLogConsumer((stream) => {
+      stream.on("data", (chunk) => process.stderr.write(chunk))
+      stream.on("error", (error) =>
+        process.stderr.write(`Container log stream failed: ${error.message}\n`),
+      )
+    })
     .withAutoRemove(false)
     .withNetworkMode(spec.network)
     .withEnvironment(spec.environment ?? {})
@@ -47,8 +47,7 @@ try {
     .withWaitStrategy(Wait.forLogMessage("redpact-capture-ready"))
     .withStartupTimeout(60000)
     .start()
-  process.stdout.write(JSON.stringify({ containerId: container.getId() }))
-} catch (e) {
-  process.stderr.write(e instanceof Error ? e.message : String(e))
-  process.exitCode = 1
+  await serveRunner(container)
+} catch (error) {
+  await failRunner(error)
 }

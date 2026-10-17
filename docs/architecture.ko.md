@@ -94,8 +94,9 @@ TypeScript, Hono와 일반 함수를 사용합니다. controller 클래스, DI �
 - ts-morph는 TypeScript 표준 라이브러리 선언을 로드하지 않고 격리된 제출 파일의
   심볼에서 정적 테스트 의도를 추출합니다. Vitest는 실제 통합 결과를 기록합니다.
   정적 파싱은 어설션 실행이나 전체 import 수집을 입증하지 않습니다.
-- Testcontainers는 컨테이너 시작을 담당합니다. Redpact는 입력 캡처, 수락,
-  상태 관찰, 리소스 식별, 취소와 정리를 담당합니다.
+- Testcontainers는 살아 있는 worker 핸들과 Ryuk 보조 정리로 임시 컨테이너·Compose·네트워크
+  수명주기를 담당합니다. Redpact는 입력 캡처, 수락, 증거, 상태 관찰, 리소스 식별,
+  취소와 복구 정리를 담당합니다. 메인 체크아웃을 유지하는 Container는 독립 수명주기를 유지합니다.
 - Unit 명령과 Playwright는 임시 컨테이너에서 실행합니다. Integration Vitest는
   임시 컨테이너에서 실행합니다. Integration과 Playwright는 실행별 네트워크에서
   서비스 이름으로 앱에 접근합니다.

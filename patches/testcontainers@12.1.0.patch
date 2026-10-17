@@ -93,11 +93,16 @@ index 39eb48ed2f51da762e8a334de1a2e79251916592..b83e4d8756fe834b433b586003d439b0
      async up(options, services) {
          try {
              if (services) {
-@@ -36,7 +55,7 @@ class DockerComposeClient {
+@@ -36,7 +55,12 @@ class DockerComposeClient {
              await handleAndRethrow(err, async (error) => {
                  try {
                      common_1.log.error(`Failed to up Compose environment: ${error.message}`);
 -                    await this.down(options, { removeVolumes: true, timeout: 0 });
++                    try {
++                        await options.beforeCleanup?.();
++                    } catch (logError) {
++                        common_1.log.error(`Failed to collect Compose diagnostics before cleanup: ${String(logError)}`);
++                    }
 +                    if (options.autoCleanup !== false) await this.down(options, { removeVolumes: true, timeout: 0 });
                  }
                  catch {
@@ -237,7 +242,7 @@ index 8760cfb32b8bdcf6ab4e3bdbbe15978bf108330f..2af2220d360c230816a8a07fc45a000c
          const outputChunks = [];
          const stdoutChunks = [];
          const stderrChunks = [];
-@@ -202,14 +195,18 @@ class DockerContainerClient {
+@@ -202,14 +195,23 @@ class DockerContainerClient {
                  common_1.log.debug(`Execing container with command "${command.join(" ")}"...`, { containerId: container.id });
              }
              const exec = await container.exec(execOptions);
@@ -253,8 +258,13 @@ index 8760cfb32b8bdcf6ab4e3bdbbe15978bf108330f..2af2220d360c230816a8a07fc45a000c
                  stream.on("data", (chunk) => {
 -                    chunks.push(chunk.toString());
 -                    outputChunks.push(chunk.toString());
++                    const previousSize = sizes.get(chunks) ?? 0;
++                    const previousTruncated = truncated;
 +                    append(chunks, chunk);
 +                    append(outputChunks, chunk);
++                    if ((sizes.get(chunks) ?? 0) !== previousSize || truncated !== previousTruncated) {
++                        opts?.onOutput?.({ stdout: Buffer.concat(stdoutChunks).toString(), stderr: Buffer.concat(stderrChunks).toString(), truncated });
++                    }
                      if (opts?.log && common_1.execLog.enabled()) {
                          common_1.execLog.trace(chunk.toString(), { containerId: container.id });
                      }
@@ -671,3 +681,66 @@ index 365cc6e1ad2c514af105bbe66c267c7d226f3552..8a66ce9a8bd2ededbac4f5806a13bcdc
          try {
              await client.container.stop(container, { timeout: 0 });
              await client.container.remove(container, { removeVolumes: true });
+diff --git a/build/network/network.d.ts b/build/network/network.d.ts
+--- a/build/network/network.d.ts
++++ b/build/network/network.d.ts
+@@ -5,5 +5,6 @@ export declare class Network {
+     private readonly uuid;
+     constructor(uuid?: Uuid);
++    withLabels(labels: Record<string, string>): this;
+     start(): Promise<StartedNetwork>;
+ }
+ export declare class StartedNetwork implements AsyncDisposable {
+diff --git a/build/network/network.js b/build/network/network.js
+--- a/build/network/network.js
++++ b/build/network/network.js
+@@ -9,6 +9,11 @@ class Network {
+     constructor(uuid = new common_1.RandomUuid()) {
+         this.uuid = uuid;
+     }
++    labels = {};
++    withLabels(labels) {
++        this.labels = labels;
++        return this;
++    }
+     async start() {
+         const client = await (0, container_runtime_1.getContainerRuntimeClient)();
+         const reaper = await (0, reaper_1.getReaper)(client);
+@@ -16,5 +21,6 @@ class Network {
+         common_1.log.info(`Starting network "${name}"...`);
+         const labels = (0, labels_1.createLabels)();
++        Object.assign(labels, this.labels);
+         labels[labels_1.LABEL_TESTCONTAINERS_SESSION_ID] = reaper.sessionId;
+         const network = await client.network.create({
+             Name: name,
+diff --git a/build/container-runtime/clients/compose/types.d.ts b/build/container-runtime/clients/compose/types.d.ts
+--- a/build/container-runtime/clients/compose/types.d.ts
++++ b/build/container-runtime/clients/compose/types.d.ts
+@@ -2,3 +2,4 @@
+ export type ComposeOptions = {
++    beforeCleanup?: () => Promise<void>;
+     filePath: string;
+     files: string | string[];
+diff --git a/build/reaper/reaper.js b/build/reaper/reaper.js
+--- a/build/reaper/reaper.js
++++ b/build/reaper/reaper.js
+@@ -29,7 +29,7 @@
+     }
+     const userId = (0, os_1.userInfo)().uid;
+     reaper = await (0, common_1.withFileLock)(`testcontainers-node-${userId}.lock`, async () => {
+-        const reaperContainers = await findReaperContainers(client);
++        const reaperContainers = process.env.TESTCONTAINERS_RYUK_ISOLATED === "true" ? [] : await findReaperContainers(client);
+         if (process.env.TESTCONTAINERS_RYUK_DISABLED === "true") {
+             sessionId = new common_1.RandomUuid().nextUuid();
+             return new DisabledReaper(sessionId, "");
+@@ -91,6 +91,10 @@
+     }
+     if (process.env["TESTCONTAINERS_RYUK_TEST_LABEL"] === "true") {
+         container.withLabels({ TESTCONTAINERS_RYUK_TEST_LABEL: "true" });
++    }
++    if (process.env.TESTCONTAINERS_RYUK_ISOLATED === "true") {
++        // Stock clients discover only ryuk=true; never let them join this worker's session.
++        container.withLabels({ [labels_1.LABEL_TESTCONTAINERS_RYUK]: "isolated", [labels_1.LABEL_TESTCONTAINERS_SESSION_ID]: `ryuk-${sessionId}`, "org.testcontainers.ryuk.session-id": sessionId, "org.testcontainers.ryuk.isolated": "true" });
+     }
+     const startedContainer = await container.start();
+     const socket = await connectToReaperSocket(startedContainer.getHost(), startedContainer.getMappedPort(8080), startedContainer.getId());

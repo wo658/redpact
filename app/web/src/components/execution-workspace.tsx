@@ -219,6 +219,14 @@ function RecordedEvidence({ api, context }: { api: Api; context: ReviewContext }
     <section className="flex min-w-0 flex-col gap-3">
       <h2 className="text-base font-semibold">{t("Recorded evidence")}</h2>
       {error && <Notice error>{error}</Notice>}
+      {context.executionId && (
+        <RecordedExecutionLog
+          key={`${context.kind}:${context.executionId}`}
+          api={api}
+          kind={context.kind}
+          id={context.executionId}
+        />
+      )}
       {submission && <TestEvidence submission={submission} run={run ?? null} />}
       {unit && <ExecutionProgress kind="unit" run={unit} />}
       {unit && (
@@ -302,6 +310,59 @@ function RecordedEvidence({ api, context }: { api: Api; context: ReviewContext }
             </section>
           ))}
     </section>
+  )
+}
+
+function RecordedExecutionLog({
+  api,
+  kind,
+  id,
+}: {
+  api: Api
+  kind: ExecutionSummary["kind"]
+  id: string
+}) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState<string | null>(null)
+  const [error, setError] = useState("")
+  const refresh = useCallback(
+    async (signal: AbortSignal) => {
+      if (!open) {
+        return
+      }
+      try {
+        const result = await api.copyExecutionLog(kind, id, signal)
+        if (!signal.aborted) {
+          setText(result.text)
+          setError("")
+        }
+      } catch (cause) {
+        if (!signal.aborted) {
+          setError(String(cause))
+        }
+      }
+    },
+    [api, kind, id, open],
+  )
+  useRefreshRequest(refresh, useLiveRevision())
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
+        {t("Execution logs")}
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <section aria-label={t("Execution logs")} className="min-w-0">
+          {error && <Notice error>{error}</Notice>}
+          {text === null && !error && <Loading>{t("Loading execution…")}</Loading>}
+          {text !== null && (
+            <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words text-code">
+              {text}
+            </pre>
+          )}
+        </section>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
 

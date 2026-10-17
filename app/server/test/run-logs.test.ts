@@ -27,3 +27,23 @@ test("run log reader preserves output, distinguishes missing and empty, and boun
     await rm(directory, { recursive: true, force: true })
   }
 })
+
+test("Playwright 실행의 양쪽 로그를 읽고 경로 이탈을 거부한다", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "redpact-browser-log-"))
+  try {
+    const path = join(directory, "playwright-runs", "p1", "after")
+    await mkdir(path, { recursive: true })
+    await writeFile(join(path, "stderr.log"), "browser preparation failed\n")
+    const read = createRunLogReader(directory)
+    expect(await read("p1", "after")).toEqual({
+      stdout: null,
+      stderr: { text: "browser preparation failed\n", truncated: false },
+    })
+    expect(await read("p1", "before")).toEqual({ stdout: null, stderr: null })
+    await rm(path, { recursive: true })
+    await symlink(directory, path)
+    await expect(read("p1", "after")).rejects.toThrow("Invalid run directory")
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
