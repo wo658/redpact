@@ -38,11 +38,56 @@ test("브라우저에서 사이드바를 닫고 다시 연다", async ({ page, r
   await test.step("닫은 뒤에도 다시 열어 탐색할 수 있다", async () => {
     await toggle.click()
     await expect(sidebarHeader).not.toBeInViewport()
-    const reopen = page.getByRole("button", { name: "Toggle Sidebar", exact: true })
+    const reopen = page
+      .locator(".app-header:visible")
+      .getByRole("button", { name: "Toggle Sidebar", exact: true })
     await expect(reopen).toBeVisible()
+    const header = page.locator(".app-header:visible")
+    await expect(header.getByRole("button", { name: "Toggle Sidebar", exact: true })).toBeVisible()
+    const headerBounds = await header.boundingBox()
+    const contentBounds = await page.locator('[data-slot="sidebar-inset"]:visible').boundingBox()
+    if (!headerBounds || !contentBounds) {
+      throw new Error("작업공간 헤더와 본문 영역이 표시되어야 한다")
+    }
+    expect(
+      contentBounds.y,
+      "접힌 사이드바는 헤더 아래에 추가 행을 만들지 않는다",
+    ).toBeLessThanOrEqual(headerBounds.y + headerBounds.height + 1)
+    await expect(page.getByRole("button", { name: "New tab", exact: true })).toBeInViewport()
+    await reopen.focus()
+    await page.keyboard.press("Enter")
+    await expect(sidebarHeader).toBeVisible()
+    await toggle.click()
     await reopen.click()
     await expect(sidebarHeader).toBeVisible()
     await expect(page.getByRole("navigation", { name: "Worktrees", exact: true })).toBeVisible()
+  })
+  await test.step("탭이 넘쳐도 다시 열기와 새 탭 버튼을 사용할 수 있다", async () => {
+    const newTab = page.getByRole("button", { name: "New tab", exact: true })
+    if (mobile) {
+      await toggle.click()
+      await expect(page.getByRole("dialog", { name: "Sidebar", exact: true })).toBeHidden()
+    }
+    for (let index = 0; index < 8; index += 1) {
+      await newTab.click()
+    }
+    if (!mobile) {
+      await sidebarHeader.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+    }
+    const header = page.locator(".app-header:visible")
+    await expect(header.getByRole("tab")).toHaveCount(9)
+    const reopen = header.getByRole("button", { name: "Toggle Sidebar", exact: true })
+    await expect(reopen).toBeInViewport()
+    await expect(newTab).toBeInViewport()
+    await expect(header.getByRole("tab", { selected: true })).toBeInViewport()
+    await reopen.click()
+    await page.getByRole("button", { name: "Settings", exact: true }).click()
+    await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible()
+    if (mobile) {
+      await expect(reopen).toBeInViewport()
+      await reopen.click()
+      await expect(sidebarHeader).toBeVisible()
+    }
   })
 })
 

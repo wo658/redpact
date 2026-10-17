@@ -668,6 +668,7 @@ export function WorktreePanel({
       )}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col md:my-2 md:mr-2 md:peer-data-[state=collapsed]:ml-2">
         <header className="app-header flex min-w-0 shrink-0 items-center gap-2 p-2">
+          {(isMobile ? !openMobile : !open) && <SidebarTrigger />}
           <div
             className="flex min-w-0 items-center gap-1 overflow-x-auto py-1"
             role="tablist"
@@ -744,11 +745,6 @@ export function WorktreePanel({
           )}
           <div className="h-8 min-w-4 flex-1" />
         </header>
-        {(isMobile ? !openMobile : !open) && (
-          <div className="sidebar-reopen flex shrink-0 px-2 pb-2">
-            <SidebarTrigger />
-          </div>
-        )}
         <SidebarInset
           className={cn(
             "min-h-0 min-w-0 overflow-auto md:rounded-xl md:ring-1 md:ring-border",
