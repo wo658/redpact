@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { isAbsolute, join } from "node:path"
 import { test } from "node:test"
 import { pathToFileURL } from "node:url"
+import { expectUiBehavior } from "./ui-assertion.ts"
 
 const root = process.env.PILOT_CHECKOUT
 assert.ok(root && isAbsolute(root), "PILOT_CHECKOUT must be an absolute fixture root")
@@ -18,9 +19,12 @@ async function withPage(width: number, height: number, run: (page: any) => Promi
     browser = await chromium.launch({ headless: true })
     const page = await browser.newPage({ viewport: { width, height } })
     page.setDefaultTimeout(2000)
+    page.setDefaultNavigationTimeout(10000)
     await page.goto(`http://127.0.0.1:${address.port}`)
-    await page.locator("#orders tr").nth(2).waitFor()
-    await run(page)
+    await expectUiBehavior(async () => {
+      await page.locator("#orders tr").nth(2).waitFor()
+      await run(page)
+    })
   } finally {
     await browser?.close()
     server.closeAllConnections()

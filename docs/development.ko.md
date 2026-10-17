@@ -283,6 +283,8 @@ Homebrew와 두 플러그인 클라이언트는 별도로 검증합니다. 이 �
 
 ## 비교 파일럿 fixture
 
+이 A/B/C 프로토콜은 실행 가능한 MCP 런타임을 전제로 한 과거 실험입니다. 조회 전용 MCP 런타임에서는 C 조건을 실행할 수 없으며 preflight가 차단합니다. C를 CLI나 HTTP로 대체하면 다른 실험이 됩니다. 별도로 승인된 호환 런타임을 사용하거나 새 프로토콜로 실험을 준비하세요. 기존 기록은 당시 런타임의 근거로만 해석합니다. UI 동작 대기 시간 초과는 기능 실패로 집계하며, 브라우저 시작·연결 오류는 인프라 실패로 유지합니다.
+
 `tools/pilot/fixture`는 일반 worktree, Redpact HTTP API의 shell 호출, 직접 MCP를
 비교하기 위한 독립적인 메모리 기반 Order Desk fixture입니다. DB 영속성이나
 마이그레이션은 검증하지 않습니다. `tools/pilot/tasks.json`에 한국어 인수 과제 세 개와
@@ -457,5 +459,5 @@ Vitest Integration step과 분리된 Playwright functional/capture target이 있
 포함된 CLI는 실험 준비·점검·계측만 담당합니다.
 
 Playwright functional 대상은 `baseline.spec.ts`와 피실험자가 작성한
-`ui-tests/task.spec.ts`를 포함하며 프롬프트에 파일명을 명시합니다. 모든 조건의
+`ui-tests/worktree/task.spec.ts`를 포함하며 프롬프트에 파일명을 명시합니다. 모든 조건의
 HTTP 검증 테스트는 `integration/`에 작성하고 `APP_URL`을 사용합니다.

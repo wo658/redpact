@@ -1,6 +1,8 @@
 Redpact HTTP operations for condition B
 
-This guide describes the checked-in server contract. Before sending a mutation,
+This guide describes the historical execution-capable HTTP/MCP protocol.
+A read-only MCP runtime cannot execute condition C. Do not replace C with CLI
+or HTTP; use a separately authorized compatible runtime or a new experiment protocol. Before sending a mutation,
 read GET /openapi.json on the assigned Redpact origin and verify that operation
 exists on that connected runtime. Missing operations block verification; do not
 update the runtime, switch to MCP, guess routes or change approval settings.
@@ -95,7 +97,7 @@ capture target, use the same route with target "capture" and the chosen viewport
 Do not modify target settings. The target selects its configured files: merely
 adding a file outside testMatch does not make it execute. Existing baseline.spec.ts
 is a smoke test, so report exactly which assertions were actually exercised.
-This operation corresponds to MCP run_playwright({path,target,viewport}) at the
+This operation corresponds to MCP run_tests({kind:"playwright",path,target,viewport}) at the
 verification-purpose level; HTTP identifies the checkout by worktree ID.
 
 GET /api/playwright-runs/<executionId>
@@ -104,7 +106,7 @@ Poll the returned execution identity, and inspect per-side outcomes, cases, erro
 and artifact identities. For an artifact returned by this execution:
 GET /api/playwright-runs/<executionId>/<side>/artifacts/<artifactId>
 where side is before or after. Never invent an artifact ID. Keep capture evidence
-separate from functional assertions. MCP get_execution provides the corresponding
+separate from functional assertions. MCP get_run with kind "playwright" provides the corresponding
 result/image/source access; there is no generic REST /api/executions endpoint to
 invent here.
 

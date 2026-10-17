@@ -5,8 +5,6 @@ const requiredTools = [
   "configure",
   "run_tests",
   "get_run",
-  "run_playwright",
-  "get_execution",
   "get_review_context",
   "get_workspace_status",
 ]
@@ -21,7 +19,14 @@ export function assessCapabilities(tools: string[], paths: string[]) {
     ...requiredTools.filter((name) => !tools.includes(name)).map((name) => `MCP ${name}`),
     ...requiredPaths.filter((path) => !paths.includes(path)).map((path) => `HTTP ${path}`),
   ]
-  return { ready: missing.length === 0, missing }
+  return {
+    ready: missing.length === 0,
+    missing,
+    guidance:
+      missing.length === 0
+        ? null
+        : "This historical A/B/C protocol requires execution-capable MCP. A read-only MCP runtime cannot run condition C; do not substitute CLI or HTTP. Use a separately authorized compatible runtime, or design a new experiment with a new protocol.",
+  }
 }
 
 export async function probe(base: string) {

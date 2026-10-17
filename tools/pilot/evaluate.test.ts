@@ -77,3 +77,22 @@ test("고정된 외부 평가 파일을 사용하고 모든 통과 결과를 기
   assert.equal(result.accuracy, 1)
   assert.equal(result.tests, 1)
 })
+
+test("UI 동작 대기 시간 초과는 기능 실패이며 브라우저 연결 오류는 인프라 오류다", async () => {
+  const { expectUiBehavior } = await import("./evaluation/ui-assertion.ts")
+  const timeout = new Error("Apply did not update orders")
+  timeout.name = "TimeoutError"
+  await assert.rejects(
+    expectUiBehavior(async () => {
+      throw timeout
+    }),
+    { code: "ERR_ASSERTION" },
+  )
+  const disconnected = new Error("Browser disconnected")
+  await assert.rejects(
+    expectUiBehavior(async () => {
+      throw disconnected
+    }),
+    (error) => error === disconnected,
+  )
+})

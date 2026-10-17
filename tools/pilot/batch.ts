@@ -260,7 +260,7 @@ async function setupRuntime(manifest: Manifest) {
   const capability = await probe(origin)
   await save(join(config.root, "evidence", `preflight-${Date.now()}.json`), capability)
   if (!capability.ready) {
-    throw new Error(`Runtime blocked: ${capability.missing.join(", ")}`)
+    throw new Error(`Runtime blocked: ${capability.missing.join(", ")}. ${capability.guidance}`)
   }
   const described = await rpc(origin, "configure", { action: "describe", path: primary })
   if (resolve(described.rulesRoot) !== resolve(primary)) {

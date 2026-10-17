@@ -49,7 +49,7 @@
   "verification": {
     "baselineOnly": "fixture/test/baseline.test.ts는 미구현 상태를 의도적으로 검증하므로 기준 커밋 준비 단계에서만 실행한다. 개발 완료 후 회귀 검증 대상으로 사용하지 않는다.",
     "managedIntegration": "fixture/integration/health.test.ts는 Redpact Vitest runner가 실행하는 공개 HTTP smoke 테스트이다. 과제별 인수 평가를 대신하지 않는다.",
-    "managedBrowser": "fixture/ui-tests/baseline.spec.ts와 capture.spec.ts는 Redpact Playwright runner를 사용한다.",
+    "managedBrowser": "fixture/ui-tests/worktree/baseline.spec.ts와 capture.spec.ts는 Redpact Playwright runner를 사용한다.",
     "independentEvaluation": "evaluation/*.acceptance.ts는 평가자만 수정하며 개발 작업용 fixture 복사에 포함하지 않는다.",
     "settings": "fixture/settings.example.json은 설정 템플릿이다. configure describe 후 공통 primary settings에 반영하고 configure validate를 수행한다. runner 의존성은 Redpact가 제공하며 fixture에는 설치하지 않는다."
   }

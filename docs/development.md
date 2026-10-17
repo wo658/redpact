@@ -303,6 +303,8 @@ checks do not prove Docker execution or MCP Apps card support in each client.
 
 ## Comparative pilot fixtures
 
+This A/B/C protocol is a historical experiment requiring execution-capable MCP. A read-only MCP runtime cannot execute condition C and preflight blocks dispatch. Substituting CLI or HTTP for C changes the experiment. Use a separately authorized compatible runtime or prepare a new protocol; existing records describe only their original runtime. UI interaction timeouts count as functional failures; browser startup and connection errors remain infrastructure failures.
+
 `tools/pilot/fixture` is an isolated, in-memory Order Desk fixture for comparing
 ordinary worktrees, shell HTTP calls to Redpact, and direct MCP. It does not test
 DB persistence or migrations. `tools/pilot/tasks.json` defines the three Korean
@@ -497,5 +499,5 @@ execution. The sample requires no additional product CLI: the B condition uses
 HTTP, and the included CLIs prepare/check/measure the experiment only.
 
 The functional Playwright target includes `baseline.spec.ts` and the subject-authored
-`ui-tests/task.spec.ts`; prompts specify that filename. HTTP verification tests
+`ui-tests/worktree/task.spec.ts`; prompts specify that filename. HTTP verification tests
 are authored under `integration/` and use `APP_URL` in every condition.
