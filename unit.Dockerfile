@@ -6,7 +6,6 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
 COPY app/server/package.json ./app/server/package.json
 COPY app/web/package.json ./app/web/package.json
-COPY app/desktop/package.json ./app/desktop/package.json
 RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
 # The shared local settings are excluded from build contexts; use the tracked self-E2E fixture.

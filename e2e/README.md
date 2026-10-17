@@ -69,9 +69,9 @@ Retained environments can be inspected in the Environment screen or through its 
 
 `ui-tests/project/tests` verifies the actual full app and the separately bundled inline MCP cards. Cover project/worktree navigation, files and diffs, Git, test catalogs, manual environments, dependencies and settings, including desktop/mobile controls and error states. Opening the full app without a record must show normal navigation or project connection. Exact execution links must preserve the recorded identity and explicit human approval boundary inside that app.
 
-Keep chat-context and approval checks alongside the full application coverage. Verify captured inputs, both Integration approval gates, Unit/Playwright request approval, stale-input rejection, cancellation non-exposure and live updates. Exercise the actual bundled MCP cards independently; their request/result UI must not replace the standalone, desktop or Global App Page management experience.
+Keep chat-context and approval checks alongside the full application coverage. Verify captured inputs, both Integration approval gates, Unit/Playwright request approval, stale-input rejection, cancellation non-exposure and live updates. Exercise the actual bundled MCP cards independently; their request/result UI must not replace the standalone or Global App Page management experience.
 
-Use `run_tests` (`kind: "playwright"`) with the actual checkout and the declared functional or capture target. Target patterns are relative to `ui-tests`. Capture completion alone is not visual approval: inspect desktop/mobile images and identify seeded record fixtures as fixtures, not application execution evidence. The native shell and companion's real MCP bridge need their own lifecycle checks.
+Use `run_tests` (`kind: "playwright"`) with the actual checkout and the declared functional or capture target. Target patterns are relative to `ui-tests`. Capture completion alone is not visual approval: inspect desktop/mobile images and identify seeded record fixtures as fixtures, not application execution evidence. The companion's real MCP bridge needs its own lifecycle checks.
 
 The native runner checks described in [development](../docs/development.md) cover actual capture collection, delayed/path attachments, crops, high-DPI pages and artifact persistence. They do not create a connected Integration submission.
 

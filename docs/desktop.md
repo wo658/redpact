@@ -12,8 +12,9 @@ assets remain historical artifacts and are not a supported installation path.
 ## Supported installation
 
 Use [npm/pnpm or the App Page Plugin](installation.md). Both provide the shared web
-app and runtime. Desktop source remains in `app/desktop` for reference; its version
-is not coupled to web/runtime releases. Native release workflows have been removed.
+app and runtime. Native desktop sources, Tauri dependencies, build/update commands,
+window controls and release workflows have been removed. Historical tags and published
+assets remain unchanged; previous source versions remain available in Git history.
 
 ## Existing installations
 

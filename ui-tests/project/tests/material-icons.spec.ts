@@ -49,10 +49,10 @@ test("Material 파일 아이콘과 폴더 상태를 표시하고 Git 변경 및 
       ).toHaveAttribute("src", src ?? "")
     })
     await test.step("테마 전환에 따라 TOML 아이콘 변형을 바꾸고 원문을 유지한다", async () => {
-      for (const name of ["app", "desktop", "src-tauri"]) {
+      for (const name of ["ui-tests", "project", "fixtures"]) {
         await page.getByRole("treeitem", { name, exact: true }).click()
       }
-      const file = page.getByRole("treeitem", { name: "Cargo.toml", exact: true })
+      const file = page.getByRole("treeitem", { name: "icon-theme.toml", exact: true })
       await expect(await loadedIcon(file)).toHaveAttribute("src", /toml_light\.svg$/)
       await file.click()
       await expect(page.locator(".diff-source")).toContainText("[package]")

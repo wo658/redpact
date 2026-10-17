@@ -151,7 +151,7 @@ ID가 필요하며 체크아웃을 사용할 수 없어도 보존된 실행 근�
 
 ## 로컬 접근 경계
 
-기본 및 데스크톱 실행은 loopback에 bind합니다. 서버는 loopback Host, 정확한 browser
+기본 실행은 loopback에 bind합니다. 서버는 loopback Host, 정확한 browser
 Origin과 Fetch Metadata도 검사하고 cross-site/same-site 요청을 거부합니다.
 Bearer token은 필요 없습니다. 신뢰된 로컬 프로세스는 HTTP와 파일에 접근할 수 있어
 사용자 간 격리나 악성 로컬 프로세스로부터의 격리가 아닙니다.

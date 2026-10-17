@@ -7,7 +7,7 @@ description: Start with the Redpact in-app workspace, or install and update the 
 
 Redpact's public source and runtime downloads are hosted at
 [wo658/redpact](https://github.com/wo658/redpact). The runtime package installs the
-CLI and bundled browser viewer. It does not install the Tauri desktop application.
+CLI and bundled browser viewer.
 
 ## Start in the app
 
@@ -219,7 +219,7 @@ never installs or starts Redpact automatically. A missing managed package displa
 including after a host restart. A healthy existing server is reused; an unrecognized
 listener blocks startup. Status polling preserves an explicitly stopped runtime.
 
-**Start Redpact** appears on the startup screen after installation succeeds. While running, the existing Desktop/Web viewer fills the entire app area,
+**Start Redpact** appears on the startup screen after installation succeeds. While running, the shared web viewer fills the entire app area,
 without a plugin header or additional navigation. **Refresh**, **Open local viewer**
 and lifecycle recovery controls appear only when a connection or viewer error occurs.
 The private app-only MCP stop tool remains available to the host.
@@ -460,8 +460,7 @@ The npm runtime queries the public `@wo658/redpact` registry dist-tags at startu
 six hours; browser polling reads the server cache. Stable installations follow
 `latest`; prerelease installations consider `beta` and `latest` and never downgrade.
 Checks have a ten-second deadline. Registry absence, invalid metadata and network
-failure are errors, not proof that the installed version is current. Source checkouts
-and desktop-owned servers do not start npm checks.
+failure are errors, not proof that the installed version is current. Source checkouts do not start npm checks.
 
 For recognized global npm/pnpm installations and direct local npm/pnpm dependencies,
 `redpact serve` keeps a CLI parent process outside the replaceable server. Clicking

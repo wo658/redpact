@@ -20,9 +20,8 @@ transport adapters, with host-specific capabilities and limits described in
 [installation](installation.md). Inline MCP Apps approval/result cards remain
 separate from the full app.
 
-Native Windows, Linux and macOS desktop releases are no longer supported. Retained
-Tauri sources do not expand this support scope. Supported
-web/runtime hosts still require OS-specific verification; dropping native desktop
+Native Windows, Linux and macOS desktop applications and their Tauri implementation
+have been removed. Supported web/runtime hosts still require OS-specific verification; dropping native desktop
 releases does not drop that runtime coverage.
 
 ## Components
@@ -45,7 +44,6 @@ Documentation site ── docs/*.md
 | `app/server/src/adapters` | Files, native Git, source parsing, processes, Docker and Playwright |
 | `app/server/src/main.ts` | Concrete dependency wiring and process lifecycle |
 | `app/web` | Connected React viewer and separately bundled MCP cards |
-| `app/desktop` | Retained Tauri host; outside supported release scope |
 | Separate `redpact-web` repository | Website and documentation renderer; reads this repository’s `docs/` directly |
 
 ## Boundary rules

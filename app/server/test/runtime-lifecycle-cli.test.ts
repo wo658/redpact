@@ -22,7 +22,7 @@ function launch(data: string, preload?: string, supervisedCli = false) {
       "0",
     ],
     {
-      env: { ...process.env, REDPACT_RUNTIME_SUPERVISED: "1", REDPACT_DESKTOP_CONTROL: undefined },
+      env: { ...process.env, REDPACT_RUNTIME_SUPERVISED: "1" },
       stdio: ["ignore", "pipe", "pipe", "ipc"],
     },
   )
@@ -239,3 +239,55 @@ registerHooks({load(url, context, next) {
     await rm(data, { recursive: true, force: true })
   }
 }, 25000)
+
+test("폐기한 데스크톱 환경 변수와 stdin 명령은 감독 런타임의 IPC 수명주기를 바꾸지 않는다", async () => {
+  const data = await mkdtemp(join(tmpdir(), "redpact-retired-control-"))
+  const child = spawn(process.execPath, [main, "--data-dir", data, "--port", "0"], {
+    env: {
+      ...process.env,
+      REDPACT_RUNTIME_SUPERVISED: "1",
+      REDPACT_DESKTOP_CONTROL: "1",
+    },
+    stdio: ["pipe", "pipe", "pipe", "ipc"],
+  })
+  const exit = once(child, "exit")
+  const messages: unknown[] = []
+  let output = ""
+  child.on("message", (message) => messages.push(message))
+  child.stdout?.on("data", (chunk) => {
+    output += chunk
+  })
+  child.stderr?.on("data", (chunk) => {
+    output += chunk
+  })
+  try {
+    await expect
+      .poll(
+        () =>
+          messages.find(
+            (message) =>
+              typeof message === "object" && message !== null && "runtimeReady" in message,
+          ),
+        { timeout: 10000 },
+      )
+      .toEqual({ runtimeReady: expect.any(Number) })
+    const ready = messages.find(
+      (message) => typeof message === "object" && message !== null && "runtimeReady" in message,
+    ) as { runtimeReady: number }
+    child.stdin?.end("shutdown\n")
+    expect((await fetch(`http://127.0.0.1:${ready.runtimeReady}/api/health`)).status).toBe(200)
+    expect(child.exitCode).toBeNull()
+    expect(output).not.toContain('"desktop":"ready"')
+    child.send({ runtimeControl: "shutdown" })
+    expect((await exit)[0], output).toBe(0)
+    expect(messages).toContainEqual({ runtimeControl: "stopped" })
+    expect(existsSync(join(data, ".writer.lock"))).toBe(false)
+  } finally {
+    child.stdin?.destroy()
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill("SIGKILL")
+    }
+    await exit
+    await rm(data, { recursive: true, force: true })
+  }
+}, 15000)

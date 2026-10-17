@@ -1,7 +1,5 @@
 import type { TFunction } from "i18next"
 import {
-  ArrowLeft,
-  ArrowRight,
   Blocks,
   Container,
   Files,
@@ -16,7 +14,6 @@ import {
 import { Activity, useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { AppShortcuts } from "@/components/app-shortcuts"
-import { desktopPlatform } from "@/lib/desktop"
 import { useRefreshRequest } from "@/lib/use-refresh-request"
 import { cn } from "@/lib/utils"
 import { useWordWrap } from "@/lib/word-wrap"
@@ -25,7 +22,6 @@ import { ApprovalSettings } from "./approval-settings"
 import { AuthoredSettings } from "./authored-settings"
 import { BranchReview } from "./branch-review"
 import { ProjectDependencies } from "./dependency-viewer"
-import { UpdateSettings } from "./desktop-update"
 import { EmptyState, Notice } from "./feedback"
 import { GitHubSettings } from "./github-settings"
 import { LanguageSelector } from "./language-selector"
@@ -39,6 +35,7 @@ import { ProjectSettings } from "./project-settings"
 import { ProjectStart } from "./project-start"
 import { ProjectTestContainer } from "./project-test-container"
 import { ProjectTests } from "./project-tests"
+import { UpdateSettings } from "./runtime-update"
 import { SettingsRow, SettingsSection } from "./settings-row"
 import { ThemeSettings } from "./theme-settings"
 import { Button } from "./ui/button"
@@ -521,7 +518,6 @@ export function WorktreePanel({
   const { isMobile, open, openMobile, setOpenMobile } = useSidebar()
 
   const [worktrees, setWorktrees] = useState<Worktree[]>([])
-  const nativeDesktop = desktopPlatform() !== undefined
   const [navigation, setNavigation] = useState<WorkspaceView>({
     page: initialPage,
     selectedId: initialSelectedId,
@@ -669,35 +665,8 @@ export function WorktreePanel({
           }}
         />
       )}
-      {nativeDesktop && (
-        <div className="native-sidebar-toolbar flex items-center gap-2" data-tauri-drag-region>
-          {(!isMobile || !openMobile) && <SidebarTrigger />}
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("Go back")}
-            title={t("Go back")}
-            onClick={() => window.history.back()}
-          >
-            <ArrowLeft aria-hidden="true" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("Go forward")}
-            title={t("Go forward")}
-            onClick={() => window.history.forward()}
-          >
-            <ArrowRight aria-hidden="true" />
-          </Button>
-        </div>
-      )}
-
       <div className="flex min-h-0 min-w-0 flex-1 flex-col md:my-2 md:mr-2 md:peer-data-[state=collapsed]:ml-2">
-        <header
-          data-tauri-drag-region
-          className="app-header flex min-w-0 shrink-0 items-center gap-2 p-2"
-        >
+        <header className="app-header flex min-w-0 shrink-0 items-center gap-2 p-2">
           <div
             className="flex min-w-0 items-center gap-1 overflow-x-auto py-1"
             role="tablist"
@@ -772,9 +741,9 @@ export function WorktreePanel({
               <Plus aria-hidden="true" />
             </Button>
           )}
-          <div className="h-8 min-w-4 flex-1" data-tauri-drag-region />
+          <div className="h-8 min-w-4 flex-1" />
         </header>
-        {!nativeDesktop && (isMobile ? !openMobile : !open) && (
+        {(isMobile ? !openMobile : !open) && (
           <div className="sidebar-reopen flex shrink-0 px-2 pb-2">
             <SidebarTrigger />
           </div>
@@ -948,7 +917,6 @@ export function WorktreeSidebar({
 }) {
   const { t } = useTranslation()
   const { isMobile, open } = useSidebar()
-  const nativeDesktop = desktopPlatform() !== undefined
   const menuDisplay = useProjectMenuOptions(projectId)
   const menuItems = [
     {
@@ -1064,9 +1032,7 @@ export function WorktreeSidebar({
       <SidebarHeader className="py-1">
         <div className="flex min-w-0 items-center gap-1">
           <div className="min-w-0 flex-1">{projectMenu}</div>
-          {(isMobile || (open && !nativeDesktop)) && (
-            <SidebarTrigger className="sidebar-workspace-toggle" />
-          )}
+          {(isMobile || open) && <SidebarTrigger className="sidebar-workspace-toggle" />}
           {menuItems.length > 0 && (
             <ProjectMenuOptions items={menuItems} display={menuDisplay} disabled={pending} />
           )}
