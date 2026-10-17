@@ -68,7 +68,7 @@ test("npm 게시 작업은 검증된 아티팩트를 받아 재빌드 없이 게
   ).toBe(false)
 })
 
-test("무거운 npm 설치 검증은 릴리스에서만 호출하고 지원 환경 전체를 검사한다", async () => {
+test("npm 릴리스는 단일 Linux 환경에서 패키지를 검증하고 OS 매트릭스를 실행하지 않는다", async () => {
   const workflow = parse(
     await readFile(
       new URL("../../../.github/workflows/runtime-verification.yml", import.meta.url),
@@ -76,11 +76,9 @@ test("무거운 npm 설치 검증은 릴리스에서만 호출하고 지원 환�
     ),
   )
   expect(Object.keys(workflow.on)).toEqual(["workflow_call"])
-  expect(workflow.jobs.install.needs).toBe("package")
-  expect(workflow.jobs.install.strategy.matrix).toEqual({
-    runner: ["ubuntu-latest", "macos-14", "macos-15-intel", "windows-2022"],
-    node: [24, 26],
-  })
+  expect(Object.keys(workflow.jobs)).toEqual(["package"])
+  expect(workflow.jobs.package["runs-on"]).toBe("ubuntu-latest")
+  expect(workflow.jobs.package.steps).toContainEqual({ run: "pnpm test:package" })
   const manual = parse(
     await readFile(new URL("../../../.github/workflows/npm-publish.yml", import.meta.url), "utf8"),
   )
@@ -147,4 +145,26 @@ test("수동 Mac preview는 updater 키 없이 일치하는 버전만 배포한�
       privateKey: "",
     }),
   ).toThrow("tag")
+})
+
+test("자동 앱 CI는 웹과 서버만 검증하고 무거운 플러그인 검증은 수동으로 실행한다", async () => {
+  const application = parse(
+    await readFile(new URL("../../../.github/workflows/server.yml", import.meta.url), "utf8"),
+  )
+  expect(Object.keys(application.jobs)).toEqual(["verify"])
+  const commands = application.jobs.verify.steps
+    .map((step: { run?: string }) => step.run)
+    .filter(Boolean)
+  expect(commands).toContain("pnpm --filter @redpact/web build")
+  expect(commands).toContain("pnpm --filter @redpact/server typecheck")
+  expect(commands).toContain("pnpm --filter @redpact/server test")
+  expect(commands).toContain("pnpm --filter @redpact/web test")
+  expect(commands).not.toContain("pnpm build")
+  const plugin = parse(
+    await readFile(
+      new URL("../../../.github/workflows/plugin-verification.yml", import.meta.url),
+      "utf8",
+    ),
+  )
+  expect(Object.keys(plugin.on)).toEqual(["workflow_dispatch"])
 })

@@ -1,12 +1,5 @@
 name: Verify App Page Plugin
 on:
-  pull_request:
-    paths:
-      - 'examples/sidebar-app/**'
-      - 'app/web/**'
-      - 'plugins/**'
-      - '.agents/plugins/marketplace.json'
-      - '.github/workflows/plugin-verification.yml'
   workflow_dispatch:
 permissions:
   contents: read

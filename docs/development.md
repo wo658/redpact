@@ -93,6 +93,22 @@ Lint excludes retained checkouts under `.worktrees/`; run checks from each check
 Use concise reason comments, English identifiers and implementation copy. Submitted
 acceptance scenarios follow the user's language as specified by `AGENTS.md`.
 
+## CI scope
+
+Automatic application CI runs one Ubuntu/Node 24 job for relevant pull requests and
+main pushes: lint, documentation content checks, server typecheck, web build (including
+TypeScript checking), server build/tests and web tests. It targets the supported web
+and server packages explicitly, without a separate Docker job or OS/Node matrix.
+Docker and affected actual-application checks remain available for targeted local
+verification; a green CI result does not claim they ran.
+
+The [App Page Plugin workflow](../.github/workflows/plugin-verification.yml) is
+manual-only. Its packaging and npm/pnpm browser checks remain available before
+plugin publication, without running on every web pull request. Documentation CI and
+its main-branch website deployment request remain independent of application CI.
+Runtime npm publication is also manual and uses the single-environment artifact
+verification described below.
+
 ## Documentation verification responsibilities
 
 Contributors run `pnpm docs:check` for documentation changes and update English and
@@ -207,16 +223,11 @@ synchronization. Desktop release workflows have been removed. Tag the verified c
 with `v<version>` and manually dispatch the [npm workflow](../.github/workflows/npm-publish.yml).
 Pushing a tag does not publish npm packages.
 
-The [npm verification workflow](../.github/workflows/runtime-verification.yml) builds
-one tarball, records its source commit, version and SHA-256, and retains it as an
-Actions artifact. Linux x64, macOS ARM64/Intel and Windows x64 install that same file
-with Node 24 and 26, a fresh npm cache/prefix and lifecycle scripts enabled. Checks
-cover installed package identity, CLI startup, health, bundled viewer, MCP configure
-and owned-process shutdown. The installed artifact also verifies live-writer exclusion,
-forced-termination recovery and concurrent recovery with preserved evidence on every
-OS/Node matrix entry. Windows invokes the installed CLI JavaScript entry with
-Node rather than the `.cmd` shim. These checks do not prove every Node 24+ version,
-Docker execution, or registry download availability.
+The [npm verification workflow](../.github/workflows/runtime-verification.yml) runs
+one Ubuntu/Node 24 job. It builds and installation-tests one tarball, runs server
+and web tests, records its source commit, version and SHA-256, and retains it as an
+Actions artifact. There is no OS/Node installation matrix. Other host environments,
+Docker execution and registry download availability are not established by this CI.
 
 Only after all runtime release checks pass does the npm job publish the verified
 tarball through trusted publishing. The npm job
@@ -227,7 +238,7 @@ check leaves the release unpublished (a tag and draft may remain). Retry infrast
 failures; source corrections require a new version/tag rather than moving a release tag.
 The publish script does not automatically select an npm prerelease dist-tag for
 `-beta.N`; prereleases require a separately reviewed channel. Local `publish:runtime`
-checks only the local environment; use the Actions workflow for the full matrix.
+checks only the local environment; Actions uses the Ubuntu/Node 24 baseline.
 
 The product snapshot tag is `v<version>`. Preserve historical desktop tags and published assets.
 
@@ -251,7 +262,7 @@ data and update ownership remain separate. Reconnect the host after Plugin/schem
 The runtime package includes web assets, notices, runner files and
 lockfile evidence. The pinned `fs-native-extensions` package and its native prebuilds
 are bundled for the common runtime writer guard; verify them through the installed
-package matrix before release. Preserve the bundled Testcontainers patch, locked Umzug graph (including the AJV
+package check before release. Preserve the bundled Testcontainers patch, locked Umzug graph (including the AJV
 security override), and licenses through installed-package verification. Packaging
 retains workspace overrides in its staging install; consumers receive the bundled
 graph because they do not inherit workspace overrides. The macOS-only optional

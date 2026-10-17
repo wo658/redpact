@@ -86,6 +86,19 @@ Biome은 중괄호, 중첩 삼항과 early return 뒤 중복 else 제거를 요�
 Lint는 `.worktrees/` 아래 보관된 별도 체크아웃을 제외하며, 각 체크아웃의 루트에서 검사를 실행합니다.
 제출 인수 시나리오는 `AGENTS.md`에 따라 사용자 언어를 따릅니다.
 
+## CI 범위
+
+자동 애플리케이션 CI는 관련 PR과 main push에서 Ubuntu/Node 24의 단일 job으로 lint,
+문서 내용 검사, 서버 타입 검사, 웹 빌드(TypeScript 검사 포함), 서버 빌드·테스트와 웹
+테스트를 실행합니다. 지원하는 웹·서버 패키지를 명시적으로 대상으로 하며 별도 Docker
+job이나 OS/Node 매트릭스는 실행하지 않습니다. Docker와 영향받는 실제 앱 검사는 필요한
+변경에 대한 로컬 검증으로 계속 사용할 수 있으며, CI 통과가 이 검사들의 실행을 뜻하지는 않습니다.
+
+[App Page Plugin workflow](../.github/workflows/plugin-verification.yml)는 수동 실행 전용입니다.
+플러그인 게시 전 패키징과 npm/pnpm 브라우저 검사를 실행할 수 있지만, 모든 웹 PR에서
+자동으로 실행하지 않습니다. 문서 CI와 main의 웹사이트 배포 요청은 앱 CI와 독립적입니다.
+런타임 npm 게시도 수동으로 실행하며 아래의 단일 환경 아티팩트 검증을 사용합니다.
+
 ## 문서 검증 책임
 
 기여자는 문서를 영어와 한국어로 함께 수정하고 `pnpm docs:check`를 실행합니다.
@@ -191,14 +204,11 @@ Redpact는 베타 기간에 `0.x.y` 제품 버전을 사용하고 사용자에�
 수동 [npm workflow](../.github/workflows/npm-publish.yml)를 실행하세요.
 태그 push 자체는 npm 게시를 시작하지 않습니다.
 
-[npm 검증 workflow](../.github/workflows/runtime-verification.yml)는 tarball을 한 번 만들고
-소스 커밋·버전·SHA-256을 기록해 Actions artifact로 보관합니다. Linux x64,
-macOS ARM64/Intel, Windows x64에서 Node 24·26으로 같은 파일을 설치합니다.
-각 설치는 새 npm 캐시·설치 경로와 활성화된 lifecycle script를 사용합니다.
-설치 패키지 식별 정보, CLI 시작, health, 번들 뷰어, MCP configure와 소유 프로세스 종료를
-검사합니다. 설치된 아티팩트로 각 OS/Node 조합에서 살아 있는 writer의 중복 접근 차단,
-강제 종료 후 복구, 증거를 보존하는 동시 복구도 검증합니다. Windows에서는 `.cmd` shim 대신 설치된 CLI JavaScript 진입점을 Node로
-실행합니다. 모든 Node 24+ 버전, Docker 실행, 레지스트리 다운로드 가용성을 보장하지 않습니다.
+[npm 검증 workflow](../.github/workflows/runtime-verification.yml)는 Ubuntu/Node 24의
+단일 job으로 실행합니다. tarball 하나를 빌드하고 설치 검증한 뒤 서버·웹 테스트를 실행하고,
+소스 커밋·버전·SHA-256을 기록해 Actions artifact로 보관합니다. OS/Node 설치 매트릭스는
+없습니다. 이 CI는 다른 호스트 환경, Docker 실행이나 레지스트리 다운로드 가용성을
+입증하지 않습니다.
 
 모든 런타임 릴리스 검사가 통과한 뒤에만 검증한 npm tarball을
 trusted publishing으로 게시합니다. npm job은 아티팩트 식별 정보를 다시 검사하며 재빌드하지
@@ -207,7 +217,7 @@ trusted publishing으로 게시합니다. npm job은 아티팩트 식별 정보�
 공개되지 않으며 태그와 Draft는 남을 수 있습니다. 인프라 오류는 재실행하고, 소스 수정은
 릴리스 태그를 이동하는 대신 새 버전·태그를 사용합니다. 게시 스크립트는 `-beta.N`에 맞는
 npm prerelease dist-tag를 자동 선택하지 않으므로 prerelease는 별도로 검토한 채널이 필요합니다.
-로컬 `publish:runtime`은 로컬 환경만 검사합니다. 전체 matrix 검증에는 Actions workflow를 사용하세요.
+로컬 `publish:runtime`은 로컬 환경만 검사합니다. Actions는 Ubuntu/Node 24를 검증 기준으로 사용합니다.
 
 제품 스냅샷 태그는 `v<version>`입니다. 기존 데스크톱 태그와 공개 자산은 변경하지 않습니다.
 
@@ -230,7 +240,7 @@ Plugin 예시는 54321, App Page Plugin은 54322를 사용합니다. 각 인스�
 
 패키지는 웹 에셋, 고지, 실행기 파일과 lockfile 증거를 포함합니다.
 공통 런타임 writer guard에 사용하는 고정 버전 `fs-native-extensions`와 네이티브
-prebuild를 번들로 포함하며, 릴리스 전에 설치 패키지 matrix로 검증해야 합니다.
+prebuild를 번들로 포함하며, 릴리스 전에 단일 환경의 설치 패키지 검사로 검증해야 합니다.
 설치 검증에서 번들 Testcontainers patch, AJV 보안 override를 포함한 고정 Umzug
 의존성 그래프, 라이선스를 보존하세요. 패키징의 준비 설치는 workspace override를
 유지합니다. 설치 소비자는 workspace override를 상속하지 않으므로 번들 그래프를 받습니다.

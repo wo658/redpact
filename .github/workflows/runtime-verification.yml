@@ -32,23 +32,3 @@ jobs:
             dist/redpact-*.tgz
             dist/runtime-artifact.json
           if-no-files-found: error
-  install:
-    needs: package
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [ubuntu-latest, macos-14, macos-15-intel, windows-2022]
-        node: [24, 26]
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-      - uses: actions/download-artifact@v4
-        with:
-          name: npm-runtime
-          path: dist
-      - name: Install with lifecycle scripts and verify CLI, viewer and MCP
-        run: node app/server/tools/verify-npm-install.mjs

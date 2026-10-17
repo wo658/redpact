@@ -13,8 +13,8 @@ through MCP. Keep one shared web UI and server runtime, with HTTP/SSE and MCP
 transport adapters. Chat MCP returns structured results and web review links without inline approval/result cards.
 Native Windows, Linux and macOS desktop applications are excluded from future
 release support. Do not add native desktop release work or require desktop version
-synchronization for web/runtime releases. Cross-platform web/runtime verification
-remains required for supported hosts. See [product scope](docs/architecture.md).
+synchronization for web/runtime releases. Keep CI focused on shared web/server checks
+on Ubuntu with Node 24; do not require an OS/Node verification matrix. See [product scope](docs/architecture.md).
 
 ## Documentation is part of completion
 

@@ -20,9 +20,10 @@ transport adapters, with host-specific capabilities and limits described in
 [installation](installation.md). Execution approval and detailed evidence remain in the full web viewer.
 
 Native Windows, Linux and macOS desktop releases are no longer supported. Retained
-Tauri sources do not expand this support scope. Supported
-web/runtime hosts still require OS-specific verification; dropping native desktop
-releases does not drop that runtime coverage.
+Tauri sources do not expand this support scope. CI verifies the shared web UI and
+server on Ubuntu with Node 24, without an OS/Node matrix. This is the release
+verification baseline, not evidence of behavior on every host. See
+[development](development.md) for automated and manual checks.
 
 ## Components
 

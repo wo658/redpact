@@ -52,25 +52,7 @@ jobs:
       - run: pnpm rebuild esbuild
       - run: pnpm lint
       - run: pnpm docs:check
-      - run: pnpm typecheck
-      - run: pnpm build
-      - run: pnpm test
+      - run: pnpm --filter @redpact/server typecheck
+      - run: pnpm --filter @redpact/web build
+      - run: pnpm --filter @redpact/server test
       - run: pnpm --filter @redpact/web test
-  docker:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.19.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile --ignore-scripts
-      - run: pnpm rebuild esbuild
-      - run: pnpm --filter @redpact/server build
-      - run: pnpm --filter @redpact/server exec vitest run test/environment-modes-docker.test.ts test/environment-docker.test.ts --maxWorkers=1
-        env:
-          REDPACT_DOCKER_TESTS: '1'
