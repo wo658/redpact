@@ -2,12 +2,12 @@ import { createInterface } from "node:readline"
 import type { Readable } from "node:stream"
 import { setTimeout as delay } from "node:timers/promises"
 
-// This private parent pipe is deliberately not exposed through HTTP or a WebView capability.
-export function createDesktopControl(options: {
+// This private parent pipe is deliberately not exposed through HTTP or a viewer capability.
+export function createRuntimeControl(options: {
   input: Readable
   busy: () => boolean
   stop: () => Promise<void>
-  send: (message: { desktop: string; error?: string }) => void
+  send: (message: { runtimeControl: string; error?: string }) => void
 }) {
   let draining = false
   let active = 0
@@ -27,7 +27,7 @@ export function createDesktopControl(options: {
         }
         if (!parentGone && (active || options.busy())) {
           draining = false
-          options.send({ desktop: "busy" })
+          options.send({ runtimeControl: "busy" })
           return
         }
       }
@@ -36,11 +36,11 @@ export function createDesktopControl(options: {
       options.input.destroy()
       await options.stop()
       if (!parentGone) {
-        options.send({ desktop: "stopped" })
+        options.send({ runtimeControl: "stopped" })
       }
     } catch (error) {
       if (!parentGone) {
-        options.send({ desktop: "error", error: String(error) })
+        options.send({ runtimeControl: "error", error: String(error) })
       }
       process.exitCode = 1
     }

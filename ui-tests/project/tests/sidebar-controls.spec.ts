@@ -9,47 +9,28 @@ test.use({
   },
 })
 
-test("macOS 신호등 옆에서 사이드바를 닫고 다시 연다", async ({ page, request }) => {
+test("브라우저에서 사이드바를 닫고 다시 연다", async ({ page, request }) => {
   const response = await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })
   expect(response.ok()).toBeTruthy()
   const project = await response.json()
   expect(project.location.kind).toBe("git")
   await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
-  await page.addInitScript(() => {
-    const observer = new MutationObserver(() => {
-      if (document.documentElement) {
-        document.documentElement.dataset.desktop = "macos"
-        observer.disconnect()
-      }
-    })
-    observer.observe(document, { childList: true, subtree: true })
-  })
   await openApp(page, "en")
   const mobile = (page.viewportSize()?.width ?? 1920) < 768
   if (mobile) {
     await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
   }
   const sidebarHeader = page.locator('[data-slot="sidebar-header"]:visible')
-  const toggle = (mobile ? sidebarHeader : page.locator(".native-sidebar-toolbar")).getByRole(
-    "button",
-    { name: "Toggle Sidebar", exact: true },
-  )
+  const toggle = sidebarHeader.getByRole("button", { name: "Toggle Sidebar", exact: true })
   await test.step("탐색 버튼은 사이드바 헤더에 두고 탭은 앱 영역에 둔다", async () => {
     await expect(toggle).toBeVisible()
     const options = sidebarHeader.getByRole("button", { name: "Project menu options", exact: true })
     const left = await toggle.boundingBox()
     const right = await options.boundingBox()
-    if (mobile) {
-      expect(left && right && left.x + left.width <= right.x).toBeTruthy()
-    } else {
+    expect(left && right && left.x + left.width <= right.x).toBeTruthy()
+    if (!mobile) {
       const sidebar = await page.locator('[data-slot="sidebar-container"]').boundingBox()
-      const forward = await page
-        .getByRole("button", { name: "Go forward", exact: true })
-        .boundingBox()
       const tabs = await page.getByRole("tablist", { name: "Open workspaces" }).boundingBox()
-      expect(left?.x).toBeGreaterThanOrEqual(88)
-      expect((left?.y ?? 100) + (left?.height ?? 0)).toBeLessThanOrEqual(48)
-      expect((forward?.x ?? 9999) + (forward?.width ?? 0)).toBeLessThanOrEqual(sidebar?.width ?? 0)
       expect(tabs?.x).toBeGreaterThanOrEqual(sidebar?.width ?? 0)
     }
     await expect(page.locator('.app-header [data-slot="sidebar-trigger"]')).toHaveCount(0)
@@ -59,11 +40,6 @@ test("macOS 신호등 옆에서 사이드바를 닫고 다시 연다", async ({ 
     await expect(sidebarHeader).not.toBeInViewport()
     const reopen = page.getByRole("button", { name: "Toggle Sidebar", exact: true })
     await expect(reopen).toBeVisible()
-    if (!mobile) {
-      const bounds = await reopen.boundingBox()
-      expect(bounds?.x).toBe(88)
-      expect((bounds?.y ?? 100) + (bounds?.height ?? 0)).toBeLessThanOrEqual(48)
-    }
     await reopen.click()
     await expect(sidebarHeader).toBeVisible()
     await expect(page.getByRole("navigation", { name: "Worktrees", exact: true })).toBeVisible()

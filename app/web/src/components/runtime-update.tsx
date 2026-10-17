@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "./ui/dialog"
 
-export function DesktopUpdate() {
+export function RuntimeUpdate() {
   const { t } = useTranslation()
   const update = useUpdate()
   const [open, setOpen] = useState(false)
@@ -35,13 +35,7 @@ export function DesktopUpdate() {
       <Tooltip>
         <TooltipTrigger
           render={<Button variant="outline" size="sm" disabled={update.busy} />}
-          onClick={() => {
-            if (update.native) {
-              void install()
-            } else {
-              setOpen(true)
-            }
-          }}
+          onClick={() => setOpen(true)}
           aria-label={label}
           aria-busy={update.busy}
         >

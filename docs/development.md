@@ -202,8 +202,8 @@ automated schedule. Release notes describe changes, verification, known limitati
 and required user actions in English and Korean.
 
 Supported distribution consists of the npm/pnpm web runtime and Plugins. The product
-version belongs to `app/server/package.json`; native desktop manifests do not require
-synchronization. Desktop release workflows have been removed. Tag the verified commit
+version belongs to `app/server/package.json`. Native desktop implementation and release
+workflows have been removed. Tag the verified commit
 with `v<version>` and manually dispatch the [npm workflow](../.github/workflows/npm-publish.yml).
 Pushing a tag does not publish npm packages.
 
@@ -266,7 +266,7 @@ work, preserve prior code and verify rollback on failure. Rollback restores code
 not runtime data compatibility. Never remove a live/unknown writer lock or prune
 unrelated Docker resources. Old releases remain until explicitly managed.
 The opt-in `redpact.autoUpdate` Git setting can invoke service/plugin updates after
-a clean commit; it does not replace test verification or update the desktop app.
+a clean commit; it does not replace test verification.
 
 Implementation: [runtime packaging](../app/server/tools/pack-runtime.mjs),
 [local updater](../app/server/tools/local-update.ts),

@@ -12,7 +12,7 @@ Legend: `[page]` opens a main view, `[tab]` switches within a view,
 `[action]` performs an operation, `[dialog]` opens an overlay, and `[section]`
 groups content or controls. Unmarked leaves describe visible content.
 
-This hierarchy applies to the full browser, desktop and Global App Page. Chat MCP provides structured results and web review links; see [frontend boundaries](frontend.md). Exact execution links remain available inside the full app without replacing its project navigation.
+This hierarchy applies to the full browser and Global App Page. Chat MCP provides structured results and web review links; see [frontend boundaries](frontend.md). Exact execution links remain available inside the full app without replacing its project navigation.
 
 ## Screen tree
 
@@ -145,7 +145,7 @@ Redpact
 │   │
 │   ├── GitHub repository [link; sidebar footer icon]
 │   ├── Star on GitHub [link; sidebar footer icon]
-│   ├── Update [action; newer desktop/npm version only]
+│   ├── Update [action; newer npm version only]
 │   └── Settings [page; global, sidebar footer icon]
 │       ├── Updates [section]
 │       ├── Agent plugins [section; check versions and confirm installation]
@@ -173,7 +173,7 @@ Redpact
   one compact row with accessible names and tooltips. Update has a text label; the
   remaining shortcuts use icons. Settings
   keeps its selected state. GitHub and Star open the public repository in a new
-  browser tab or the desktop system browser; users give Stars on GitHub.
+  browser tab; users give Stars on GitHub.
 
 - Project display options start with every available item visible. Hiding an item
   preserves the current page and active work. Worktrees and global Settings remain
@@ -202,9 +202,8 @@ Redpact
 - Container is a manually retained application environment. Its service/dependency
   selection comes from fixed project configuration; it is separate from recorded
   test execution evidence.
-- Browser desktop keeps the sidebar open and the header exposes only the open-workspace
-  strip rather than a sidebar toggle, page title or history controls. Compact mobile
-  screens and the native macOS desktop place the sidebar toggle beside the project selector,
+- The header exposes the open-workspace strip. Desktop browsers and compact mobile
+  screens place the sidebar toggle beside the project selector,
   before project display options. When closed, the reopen control appears below the header.
   Worktree display options appear on hover anywhere in the Worktrees section, on keyboard
   focus, while the menu is open, and for non-hover input.

@@ -65,7 +65,7 @@ Run `redpact serve --host 0.0.0.0` inside a container to accept traffic from its
 published port. Publish that port on the host's loopback, for example Docker
 `-p 127.0.0.1:54318:54318`, then open `http://127.0.0.1:54318` on the host.
 The self-E2E image supplies this listener option. Ordinary launches default to
-`127.0.0.1`; desktop control requires it. Host, Origin and Fetch Metadata checks
+`127.0.0.1`. Host, Origin and Fetch Metadata checks
 remain active. No authentication or remote/shared-user access is introduced.
 
 Manual Container Start checks declared HTTP/HTTPS endpoints from the host after

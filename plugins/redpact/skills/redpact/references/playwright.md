@@ -107,7 +107,7 @@ additional interactive browser or screenshot inspection.
 Public test cancellation and forced environment stop are unavailable. Automatic timeout, shutdown and recovery retain evidence and cleanup. Report cleanup failures with the run identity.
 Report exactly which browser scenarios and rendered images were observed, source
 identity and image/browser/viewport conditions. Linux web captures do not prove
-native desktop-shell behavior. An unsupported installed server is a setup or
+web/runtime behavior on other operating systems. An unsupported installed server is a setup or
 verification gap, not an excuse to manufacture run records or silently bypass gates.
 
 ## Completion evidence

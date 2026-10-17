@@ -16,88 +16,30 @@ test.beforeEach(async ({ request }) => {
   expect(response.ok(), "실제 앱 프로젝트를 연결한다").toBeTruthy()
 })
 
-// 실제 앱의 native IPC 경계 fixture이며 OS 설치 검증은 별도로 수행한다.
-test("새 버전만 Update를 표시하고 수동 확인은 설정에서 실행한다", async ({ page }) => {
-  await page.addInitScript(() => {
-    const state = {
-      version: null as string | null,
-      busy: false,
-      calls: [] as string[],
-      fail: false,
-    }
-    Object.assign(window, {
-      updateFixture: state,
-      __TAURI__: {
-        core: {
-          invoke: async (command: string) => {
-            if (state.fail && command === "desktop_update_status") {
-              throw new Error("Native unavailable")
-            }
-            state.calls.push(command)
-            if (command === "desktop_check_update") {
-              state.version = "9.0.0"
-            }
-            if (command === "desktop_install_update") {
-              state.busy = true
-            }
-            return { ...state }
-          },
-        },
-      },
-    })
-  })
-  await openApp(page, "en")
-  await expect(page.getByRole("tablist", { name: "Open workspaces", exact: true })).toBeVisible()
-  if ((page.viewportSize()?.width ?? 1920) < 768) {
-    await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
-  }
-  await test.step("최신 상태의 사이드바에는 업데이트나 수동 확인이 없다", async () => {
-    const group = page.getByRole("group", { name: "App shortcuts" })
-    await expect(group.getByRole("button", { name: /Update|Check for updates/ })).toHaveCount(0)
-    await group.getByRole("button", { name: "Settings", exact: true }).click()
-    if ((page.viewportSize()?.width ?? 1920) < 768) {
-      await page.keyboard.press("Escape")
-    }
-  })
-  await test.step("설정에서 새 버전을 확인해도 설치를 시작하지 않는다", async () => {
-    await page.getByRole("button", { name: "Check for updates", exact: true }).click()
-    expect(
-      await page.evaluate(
-        () => (window as unknown as { updateFixture: { calls: string[] } }).updateFixture.calls,
-      ),
-    ).not.toContain("desktop_install_update")
-  })
-  await test.step("새 버전의 Update 버튼은 설치 요청 후 중복 실행을 막는다", async () => {
+// 실제 앱에서 업데이트 API 응답만 대체하여 연결 실패와 복구를 검증한다.
+test("업데이트 조회 실패는 버튼을 숨기고 복구된 새 버전을 다시 표시한다", async ({ page }) => {
+  let fail = false
+  await page.route("**/api/updates", (route) =>
+    fail
+      ? route.fulfill({ status: 503, json: { error: "Unavailable" } })
+      : route.fulfill({ json: { version: "9.0.0", busy: false } }),
+  )
+  const update = page.getByRole("button", { name: "Update to 9.0.0", exact: true })
+  await test.step("조회한 새 버전을 사이드바에 표시한다", async () => {
+    await openApp(page, "en")
+    await expect(page.getByRole("tablist", { name: "Open workspaces", exact: true })).toBeVisible()
     if ((page.viewportSize()?.width ?? 1920) < 768) {
       await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
     }
-    const update = page
-      .getByRole("group", { name: "App shortcuts" })
-      .getByRole("button", { name: "Update to 9.0.0", exact: true })
-    await expect(update).toBeVisible({ timeout: 10000 })
-    await expect(update).toHaveText("Update")
-    await update.click()
-    await expect(update).toBeDisabled()
-    await page.evaluate(() => {
-      ;(window as unknown as { updateFixture: { busy: boolean } }).updateFixture.busy = false
-    })
-    await expect(update).toBeEnabled({ timeout: 10000 })
+    await expect(update).toBeVisible()
   })
-  await test.step("연결 실패 시 버튼을 숨기고 복구 후 새 버전 상태를 다시 반영한다", async () => {
-    const update = page.getByRole("button", { name: "Update to 9.0.0", exact: true })
-    await page.evaluate(() => {
-      ;(window as unknown as { updateFixture: { fail: boolean } }).updateFixture.fail = true
-    })
+  await test.step("업데이트 조회가 실패하면 버튼을 숨긴다", async () => {
+    fail = true
     await expect(update).toHaveCount(0, { timeout: 10000 })
-    await page.evaluate(() => {
-      ;(window as unknown as { updateFixture: { fail: boolean } }).updateFixture.fail = false
-    })
+  })
+  await test.step("조회가 복구되면 새 버전 버튼을 다시 표시한다", async () => {
+    fail = false
     await expect(update).toBeVisible({ timeout: 10000 })
-    await page.evaluate(() => {
-      ;(window as unknown as { updateFixture: { version: string | null } }).updateFixture.version =
-        null
-    })
-    await expect(update).toHaveCount(0, { timeout: 10000 })
   })
 })
 

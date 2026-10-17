@@ -7,6 +7,6 @@ dependencies:
   tools:
     - type: "mcp"
       value: "redpact"
-      description: "Redpact desktop configuration and test execution"
+      description: "Redpact runtime configuration and test execution"
       transport: "streamable_http"
       url: "http://127.0.0.1:54321/mcp"

@@ -163,7 +163,7 @@ explicit worktree ID; retained evidence remains observable if its checkout is un
 
 ## Local access boundary
 
-Default and desktop execution bind loopback. The server also validates loopback Host,
+Default execution binds loopback. The server also validates loopback Host,
 exact browser Origin and Fetch Metadata; cross-site/same-site requests are rejected.
 No Bearer token is required. Trusted local processes can call HTTP and access files;
 this is not isolation between users or against a malicious local process.

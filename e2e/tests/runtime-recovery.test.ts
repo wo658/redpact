@@ -13,7 +13,7 @@ const root=mkdtempSync(join(tmpdir(),'redpact-recovery-'));
 const children=[];
 async function start(){
  const child=spawn(process.execPath,['/app/app/server/dist/main.js','--data-dir',root,'--port','0'],{
- env:{...process.env,REDPACT_RUNTIME_SUPERVISED:'1',REDPACT_DESKTOP_CONTROL:''},stdio:['ignore','pipe','pipe','ipc']});
+ env:{...process.env,REDPACT_RUNTIME_SUPERVISED:'1'},stdio:['ignore','pipe','pipe','ipc']});
  const exit=once(child,'exit');children.push({child,exit});let output='';
  child.stdout.on('data',c=>output+=c);child.stderr.on('data',c=>output+=c);
  const deadline=Date.now()+15000;let port;

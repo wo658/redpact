@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next"
-import { DesktopTitlebar } from "@/components/desktop-titlebar"
 import { LanguageSelector } from "@/components/language-selector"
 import { Loading, Notice } from "./components/feedback"
 import { LiveUpdates } from "./components/live-updates"
@@ -31,7 +30,6 @@ export default function App({ api: connectedApi = api }: { api?: Api }) {
   return (
     <Toaster>
       <LiveUpdates>
-        <DesktopTitlebar />
         <ConnectedApp api={connectedApi} />
       </LiveUpdates>
     </Toaster>
