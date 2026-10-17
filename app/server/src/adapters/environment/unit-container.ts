@@ -1,15 +1,14 @@
 import { existsSync } from "node:fs"
 import { mkdir, rm } from "node:fs/promises"
 import { join } from "node:path"
-import { fileURLToPath } from "node:url"
-import { execa } from "execa"
 import { testResourceSchema } from "../../core/test-resource-schema.js"
 import type { ReadTestResources } from "../../core/types/test-resources.js"
 import type { UnitCommand, UnitRun } from "../../core/types/unit-tests.js"
 import { unitExecutionCommand } from "../../core/unit-execution-command.js"
 import { readProjectFile } from "../settings/bundle.js"
+import { createDiagnosticTail } from "./diagnostics.js"
 import { snapshotInputs } from "./inputs.js"
-import { executeLimitedContainer } from "./limited-command.js"
+import { type RunnerSession, startRunner } from "./runner-session.js"
 import {
   containersWithLabels,
   inspectContainer,
@@ -26,6 +25,7 @@ export function createUnitContainer(
   ownerId: string,
   readLimits: ReadTestResources = async () => testResourceSchema.parse({}),
 ): UnitCommand {
+  const sessions = new Map<string, RunnerSession>()
   const source = (run: UnitRun) => join(dataDir, "unit-sources", run.id)
   const image = (run: UnitRun) => `redpact-unit:${run.id}`
   async function runtime(run: UnitRun) {
@@ -45,6 +45,9 @@ export function createUnitContainer(
   return {
     fingerprint: (root) => snapshotInputs(root),
     async execute(run, signal, observe) {
+      const diagnostics = { stdout: createDiagnosticTail(), stderr: createDiagnosticTail() }
+      let diagnosticBytes = 0
+      const commandOutput = { stdout: "", stderr: "", truncated: false }
       try {
         signal.throwIfAborted()
         const limits = testResourceSchema.parse(await readLimits())
@@ -65,60 +68,66 @@ export function createUnitContainer(
         if (!existsSync(worker)) {
           worker = new URL("./unit-worker.ts", import.meta.url)
         }
-        const child = execa(process.execPath, [fileURLToPath(worker)], {
-          cwd: stage,
-          detached: true,
-          ipc: true,
-          env: { ...minimalEnvironment(), DOCKER_HOST: host },
-          extendEnv: false,
-          input: JSON.stringify({
+        const session = await startRunner(
+          worker,
+          {
             source: stage,
             dockerfile: run.settings.dockerfile,
             image: image(run),
             ownerId,
             id: run.id,
             limits,
-          }),
-          cancelSignal: signal,
-          forceKillAfterDelay: 2000,
-          timeout: 600000,
-          reject: false,
-          maxBuffer: 1024 * 1024,
-        })
-        let containerId: string
-        try {
-          const result = await child
-          signal.throwIfAborted()
-          if (result.exitCode !== 0) {
-            throw new Error(`Unit container preparation failed: ${result.stderr.slice(-65536)}`)
-          }
-          containerId = JSON.parse(result.stdout).containerId
-        } finally {
-          if (child.pid) {
-            try {
-              process.kill(-child.pid, "SIGKILL")
-            } catch {}
-          }
-        }
+          },
+          signal,
+          {
+            cwd: stage,
+            environment: {
+              ...minimalEnvironment(),
+              DOCKER_HOST: host,
+              DEBUG: "testcontainers:build,testcontainers:pull",
+            },
+            timeout: 600000,
+            diagnostic: (chunk, stream) => {
+              diagnostics[stream].write(chunk)
+              diagnosticBytes += chunk.length
+            },
+            failure: (stderr) => `Unit container preparation failed: ${stderr}`,
+          },
+        )
+        sessions.set(run.id, session)
+        const containerId = session.containerId
         const container = await owned(containerId, run)
         observe({ containerId, imageId: container.Image })
         signal.throwIfAborted()
-        return await executeLimitedContainer(
-          containerId,
+        return await session.execute(
           unitExecutionCommand(run.settings, run.executionSelection ?? undefined),
-          signal,
           limits,
+          signal,
+          (output) => Object.assign(commandOutput, output),
         )
       } catch (error) {
+        if (!sessions.has(run.id)) {
+          diagnostics.stdout.finish()
+          diagnostics.stderr.finish()
+        }
+        const output = {
+          stdout: commandOutput.stdout || diagnostics.stdout.read(),
+          stderr: commandOutput.stderr || diagnostics.stderr.read(),
+          truncated: commandOutput.truncated || diagnosticBytes >= 65536,
+        }
         if (signal.aborted && error === signal.reason) {
           return {
             outcome: "cancelled",
             exitCode: null,
-            stdout: "",
-            stderr: "",
-            truncated: false,
+            ...output,
             error: null,
           }
+        }
+        if (error instanceof Error) {
+          Object.assign(error, {
+            ...output,
+            stderr: output.stderr || error.message,
+          })
         }
         throw error
       }
@@ -135,13 +144,23 @@ export function createUnitContainer(
             }
           }
         }
-        const containers = await containersWithLabels([
-          `io.redpact.owner=${ownerId}`,
-          `io.redpact.unit-run=${run.id}`,
-        ])
-        for (const container of containers) {
-          await owned(container.Id, run)
-          await removeContainer(container.Id)
+        const session = sessions.get(run.id)
+        if (session) {
+          try {
+            await session.stop()
+          } finally {
+            sessions.delete(run.id)
+          }
+        } else {
+          // Recovery covers resources retained by older versions or a lost worker.
+          const containers = await containersWithLabels([
+            `io.redpact.owner=${ownerId}`,
+            `io.redpact.unit-run=${run.id}`,
+          ])
+          for (const container of containers) {
+            await owned(container.Id, run)
+            await removeContainer(container.Id)
+          }
         }
         const built = await inspectImage(image(run))
         if (built) {

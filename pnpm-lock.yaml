@@ -9,7 +9,7 @@ overrides:
 
 patchedDependencies:
   '@web-git-graph/web@1.0.7': 3578102ba4041f26f509fb564868cf8b215726417fd0f93131caaeaeb8d1d04f
-  testcontainers@12.1.0: aa5b4c2626ff89b507f09ed37aacb9c199df126cee66cd407ad584a0e8138c53
+  testcontainers@12.1.0: f2e00565b12771b204a68a3589b694188fcd0d0b7033d201bbde4e6f269cc5cc
 
 importers:
 
@@ -80,7 +80,7 @@ importers:
         version: 5.32.15
       testcontainers:
         specifier: 12.1.0
-        version: 12.1.0(patch_hash=aa5b4c2626ff89b507f09ed37aacb9c199df126cee66cd407ad584a0e8138c53)
+        version: 12.1.0(patch_hash=f2e00565b12771b204a68a3589b694188fcd0d0b7033d201bbde4e6f269cc5cc)
       ts-morph:
         specifier: 28.0.0
         version: 28.0.0
@@ -8506,7 +8506,7 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  testcontainers@12.1.0(patch_hash=aa5b4c2626ff89b507f09ed37aacb9c199df126cee66cd407ad584a0e8138c53):
+  testcontainers@12.1.0(patch_hash=f2e00565b12771b204a68a3589b694188fcd0d0b7033d201bbde4e6f269cc5cc):
     dependencies:
       '@balena/dockerignore': 1.0.2
       '@types/dockerode': 4.0.1

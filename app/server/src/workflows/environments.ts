@@ -23,6 +23,7 @@ export function createEnvironments(deps: {
   const tasks = new Map<string, Promise<void>>()
   const controls = new Map<string, AbortController>()
   let closing = false
+  let closeTask: Promise<void> | undefined
   const get = (id: string) =>
     deps.store.getEnvironment(id) ?? problem("not_found", "Environment not found")
   function save(id: string, changes: Partial<Environment>) {
@@ -231,11 +232,13 @@ export function createEnvironments(deps: {
         if (get(id).state !== "stopping") {
           save(id, {
             state: "failed",
-            errors: [
-              error instanceof Error && error.message.startsWith("Fixed host port conflict")
-                ? error.message
-                : "Environment preparation failed; inspect preparation.log and retained resources",
-            ],
+            errors: get(id).errors.length
+              ? get(id).errors
+              : [
+                  error instanceof Error && error.message.startsWith("Fixed host port conflict")
+                    ? error.message
+                    : "Environment preparation failed; inspect preparation.log and retained resources",
+                ],
           })
         }
       } finally {
@@ -244,7 +247,7 @@ export function createEnvironments(deps: {
     })
     return record
   }
-  return {
+  const service: EnvironmentService = {
     get,
     refresh,
     async fingerprint(worktreeId, selection, expectedSettingsDigest) {
@@ -435,12 +438,27 @@ export function createEnvironments(deps: {
     async idle() {
       await Promise.all([...tasks.values()])
     },
-    async close() {
-      closing = true
-      for (const controller of controls.values()) {
-        controller.abort()
-      }
-      await Promise.all([...tasks.values()])
+    close() {
+      closeTask ??= (async () => {
+        closing = true
+        for (const controller of controls.values()) {
+          controller.abort()
+        }
+        await Promise.all([...tasks.values()])
+        try {
+          for (const record of service.temporary()) {
+            if (record.lifecycle === "run" || record.manualScope === "worktree") {
+              await service.beginStop(record.id)
+              await service.completeStop(record.id)
+            }
+          }
+        } finally {
+          // Failed cleanup must not keep IPC workers (and the runtime process) alive.
+          await deps.adapter.close?.()
+        }
+      })()
+      return closeTask
     },
   }
+  return service
 }

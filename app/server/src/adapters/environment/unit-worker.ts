@@ -1,13 +1,8 @@
 import { GenericContainer, Wait } from "testcontainers"
 
-process.once("disconnect", () => {
-  try {
-    process.kill(-process.pid, "SIGKILL")
-  } catch {
-    process.exit(1)
-  }
-})
-process.channel?.unref()
+import { failRunner, serveRunner, watchRunnerParent } from "./runner-host.js"
+
+watchRunnerParent()
 let input = ""
 for await (const chunk of process.stdin) {
   input += chunk
@@ -21,7 +16,13 @@ try {
   const container = await image
     .withLabels({ "io.redpact.owner": spec.ownerId, "io.redpact.unit-run": spec.id })
     .withResourcesQuota({ memory: spec.limits.memoryMiB / 1024 })
-    .withAutoCleanup(false)
+    .withAutoCleanup(true)
+    .withLogConsumer((stream) => {
+      stream.on("data", (chunk) => process.stderr.write(chunk))
+      stream.on("error", (error) =>
+        process.stderr.write(`Container log stream failed: ${error.message}\n`),
+      )
+    })
     .withAutoRemove(false)
     .withEntrypoint(["/bin/sh", "-c"])
     .withCommand(["trap 'exit 0' TERM; echo redpact-unit-ready; while :; do sleep 1; done"])
@@ -29,8 +30,7 @@ try {
     .withWaitStrategy(Wait.forLogMessage("redpact-unit-ready"))
     .withStartupTimeout(60000)
     .start()
-  process.stdout.write(JSON.stringify({ containerId: container.getId() }))
+  await serveRunner(container)
 } catch (error) {
-  process.stderr.write(error instanceof Error ? error.message : "Unit container preparation failed")
-  process.exitCode = 1
+  await failRunner(error)
 }

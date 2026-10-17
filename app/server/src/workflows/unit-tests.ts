@@ -100,6 +100,7 @@ export function createUnitTests(deps: {
       deps.store.save({
         ...get(run.id),
         outcome: signal.aborted ? "cancelled" : "execution_error",
+        ...commandDiagnostics(error),
         error: error instanceof Error ? error.message : "Container command failed",
       })
     } finally {
@@ -269,4 +270,23 @@ export function createUnitTests(deps: {
       await Promise.all(cleaning.values())
     },
   }
+}
+
+function commandDiagnostics(
+  error: unknown,
+): Partial<Pick<UnitRun, "stdout" | "stderr" | "truncated">> {
+  if (!error || typeof error !== "object") {
+    return {}
+  }
+  const diagnostics: Partial<Pick<UnitRun, "stdout" | "stderr" | "truncated">> = {}
+  if ("stdout" in error && typeof error.stdout === "string") {
+    diagnostics.stdout = error.stdout
+  }
+  if ("stderr" in error && typeof error.stderr === "string") {
+    diagnostics.stderr = error.stderr
+  }
+  if ("truncated" in error && typeof error.truncated === "boolean") {
+    diagnostics.truncated = error.truncated
+  }
+  return diagnostics
 }

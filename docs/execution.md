@@ -79,6 +79,17 @@ completed environment. Public standalone preparation and `environmentId` reuse a
 not supported. A run environment proceeds through preparation, readiness, use,
 completion and removal, retaining diagnostics on failure.
 
+Temporary workers retain live Testcontainers container, Compose and network handles
+through evidence collection and teardown. Normal teardown uses `stop()`, `down()` and
+`Network.stop()`; Ryuk provides fallback cleanup if a worker disappears. Ownership
+labels and daemon identity remain for recovery and cleanup retries when live handles
+are unavailable, rather than replacing the normal Testcontainers lifecycle.
+The pinned library normally reuses a Ryuk session across processes. Redpact's patch
+gives each temporary worker an isolated Ryuk container/session, so another active
+execution cannot delay cleanup after that worker dies. Shared runner images and
+the persistent main environment remain outside this per-worker cleanup scope.
+Abnormal-exit cleanup observes Ryuk's reconnection grace period; it is not immediate.
+
 Success, assertion failure, preparation failure, cancellation and interruption all
 request cleanup. Stop blocks admission, confirms execution cancellation, then removes
 owned containers, networks, volumes, per-run Unit images, temporary Compose build images and captured runtime
@@ -127,8 +138,10 @@ The project Container screen defaults to the configured main checkout. `redpact 
 uses its actual `path` worktree; HTTP Container routes accept `worktreeId` to select one.
 Directory projects use their connected root. All targets use the fixed shared settings.
 Each worktree can own one manual environment, independent of test environments.
-It stays alive across tests, idle periods, agent completion and Redpact shutdown until
-explicit Stop or Restart. On server restart, ownership and observed Docker health are
+The main-checkout environment stays alive across tests, idle periods, agent completion
+and Redpact shutdown until explicit Stop or Restart. Other worktree environments use
+the temporary Testcontainers session lifecycle. For the main environment, on server
+restart ownership and observed Docker health are
 reconnected without recreating services or treating this as new test evidence.
 Interrupted preparations remain failed; interrupted stops retain cleanup ownership for retry.
 Docker unavailability is distinct from an explicit successful stop.
@@ -196,8 +209,23 @@ file-count/total-byte ceiling; submitted-test limits are separate. Concurrent fi
 edits, external downloads and mutable image tags are not a complete immutable
 application snapshot. Queued/input changes can invalidate preparation.
 
-The pinned Testcontainers patch prevents failed-start automatic cleanup from skipping
-Redpact's final logs and ordered removal. Re-evaluate it when upgrading the library.
+The pinned Testcontainers patch collects a final Compose log snapshot before failed-start
+cleanup, including failures before readiness waits begin. Re-evaluate it when upgrading
+the library.
+
+### Failure diagnostics
+
+Runner log consumers are attached before container startup. Build/start diagnostics,
+command stdout/stderr and Compose service output are collected separately, with bounded
+output and literal environment-value redaction across stream chunks. Truncation and
+collection failures remain visible in the retained logs. Command output is saved before
+copying result archives, so a missing or unreadable archive cannot erase the original
+failure output. Preparation errors retain their diagnostic message and service excerpt;
+Unit preparation failures retain stdout/stderr on the run for viewer and copy actions.
+Cleanup failure remains separate from the original execution verdict.
+The recorded execution review provides an **Execution logs** disclosure. It reads the
+same retained diagnostics as **Copy log** and the MCP log response, including Playwright
+stdout/stderr. Opening it does not rerun the command or require its container to exist.
 
 ## Runner connectivity
 
@@ -302,6 +330,9 @@ Docker CLI or Dockerode directly. The runtime client resolves existing IDs after
 worker exit or restart and supplies the selected local socket and daemon identity.
 
 The patch extends existing library clients where the pinned release lacks APIs.
+It adds network ownership labels and a Compose callback before failed-start cleanup
+so logs can be collected before resources disappear. It also isolates worker Ryuk
+sessions without changing the library's default reuse behavior for other callers.
 It propagates build-stream failures even when an earlier image tag exists, returns
 an inspected image ID after building, and honors `autoCleanup: false` inside failed
 container waits. Finite log snapshots propagate retrieval errors and handle TTY and

@@ -38,6 +38,7 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
     expect(browserFiles.map(({ path, purpose }) => ({ path, purpose }))).toEqual([
       { path: "project/captures/application.spec.ts", purpose: "capture" },
       { path: "project/captures/chat-review.spec.ts", purpose: "capture" },
+      { path: "project/captures/container-failure-logs.spec.ts", purpose: "capture" },
       { path: "project/captures/dependencies.spec.ts", purpose: "capture" },
       { path: "project/captures/execution-approval.spec.ts", purpose: "capture" },
       { path: "project/captures/execution-scope.spec.ts", purpose: "capture" },
@@ -53,6 +54,7 @@ test("the reusable self-E2E setup validates and discovers executable acceptance 
       { path: "project/captures/workspace-history.spec.ts", purpose: "capture" },
       { path: "project/tests/capture-viewport.spec.ts", purpose: "functional" },
       { path: "project/tests/chat-review.spec.ts", purpose: "functional" },
+      { path: "project/tests/container-failure-logs.spec.ts", purpose: "functional" },
       { path: "project/tests/copy-handoff.spec.ts", purpose: "functional" },
       { path: "project/tests/dependencies.spec.ts", purpose: "functional" },
       { path: "project/tests/execution-approval.spec.ts", purpose: "functional" },
