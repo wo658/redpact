@@ -74,3 +74,8 @@ Source: https://github.com/material-extensions/vscode-material-icon-theme
 Copyright (c) 2025 Material Extensions. MIT license; reproduced in
 licenses/material-icon-theme.txt and bundled with web assets as material-icons/LICENSE.
 Official associations are generated at build time with the React icon pack.
+
+shadcn/ui Checkbox — official Base UI Nova registry, retrieved 2026-10-17.
+Scope: src/components/ui/checkbox.tsx. MIT license verified at
+https://github.com/shadcn-ui/ui/blob/main/LICENSE.md; reproduced in licenses/shadcn-ui.txt.
+Adaptation: existing cn helper and semantic theme tokens without dark palette overrides.

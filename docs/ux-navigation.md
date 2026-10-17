@@ -84,6 +84,7 @@ Redpact
 │   │   │       └── Playwright execution controls [action]
 │   │   │
 │   │   ├── File Viewer [page]
+│   │   │   ├── Show Git-tracked files only [checkbox]
 │   │   │   └── File tree → selected file source or image preview
 │   │   │       └── SVG Preview / Source [tabs]
 │   │   ├── Git Graph [page; Git projects]
