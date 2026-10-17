@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    ports: ["3000"]
+    networks:
+      default:
+        aliases: [app.redpact.test]
+    environment:
+      PAYMENT_FAILURES: "${PAYMENT_FAILURES:-0}"
+      PAYMENT_PERMANENT: "${PAYMENT_PERMANENT:-0}"
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
