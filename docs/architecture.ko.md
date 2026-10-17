@@ -18,8 +18,7 @@ Redpact는 독립 웹 앱과 MCP를 통해 OpenAI 내부에 임베드하는 전�
 두 경로는 하나의 React UI와 서버 런타임을 공유하며 HTTP/SSE와 MCP는 전송 어댑터입니다.
 호스트별 기능과 제약은 [설치 안내](installation.md)를 따릅니다. 실행 승인과 상세 근거는 전체 웹 뷰어에서 제공합니다.
 
-Windows·Linux·macOS 네이티브 데스크톱 릴리스는 더 이상 지원하지 않습니다.
-남아 있는 Tauri 소스가 지원 범위를 넓히지는 않습니다.
+Windows·Linux·macOS 네이티브 데스크톱 앱과 Tauri 구현은 제거했습니다.
 CI는 OS/Node 매트릭스 없이 Ubuntu와 Node 24에서 공유 웹 UI와 서버를 검증합니다.
 이는 릴리스 검증 기준이며 모든 호스트의 동작을 입증하지는 않습니다. 자동·수동 검사는
 [개발 문서](development.md)를 참고하세요.
@@ -44,7 +43,6 @@ CI는 OS/Node 매트릭스 없이 Ubuntu와 Node 24에서 공유 웹 UI와 서�
 | `app/server/src/adapters` | 파일, native Git, 소스 파싱, 프로세스, Docker, Playwright |
 | `app/server/src/main.ts` | 구체 의존성 연결과 프로세스 수명주기 |
 | `app/web` | 브라우저와 사이드바 App Page가 공유하는 연결된 React 뷰어 |
-| `app/desktop` | 유지된 Tauri 호스트. 지원하는 릴리스 범위에서는 제외 |
 | 별도 `redpact-web` 저장소 | 웹사이트와 문서 렌더러. 이 저장소의 `docs/`를 직접 읽음 |
 
 ## 경계 규칙

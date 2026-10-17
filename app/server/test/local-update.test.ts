@@ -33,7 +33,7 @@ async function fixture() {
   await writeFile(join(root, "evidence"), "preserve")
   return { root, runtime, candidate, backup }
 }
-test("plugin-only updates keep MCP and skill metadata on desktop despite the development service port", async () => {
+test("plugin-only updates keep MCP and skill metadata on the plugin port despite the development service port", async () => {
   const { root } = await fixture()
   const repository = fileURLToPath(new URL("../../../", import.meta.url))
   await mkdir(join(root, ".agents/plugins"), { recursive: true })

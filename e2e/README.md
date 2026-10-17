@@ -71,7 +71,7 @@ Retained environments can be inspected in the Environment screen or through its 
 
 Keep chat-context and approval checks alongside the full application coverage. Verify captured inputs, both Integration approval gates, Unit/Playwright request approval, stale-input rejection, cancellation non-exposure and live updates. Verify that runtime MCP advertises no inline card resources or approval tools.
 
-Use `run_tests` (`kind: "playwright"`) with the actual checkout and the declared functional or capture target. Target patterns are relative to `ui-tests`. Capture completion alone is not visual approval: inspect desktop/mobile images and identify seeded record fixtures as fixtures, not application execution evidence. The native shell and companion's real MCP bridge need their own lifecycle checks.
+Use `run_tests` (`kind: "playwright"`) with the actual checkout and the declared functional or capture target. Target patterns are relative to `ui-tests`. Capture completion alone is not visual approval: inspect desktop/mobile images and identify seeded record fixtures as fixtures, not application execution evidence. The companion's real MCP bridge needs its own lifecycle checks.
 
 The native runner checks described in [development](../docs/development.md) cover actual capture collection, delayed/path attachments, crops, high-DPI pages and artifact persistence. They do not create a connected Integration submission.
 

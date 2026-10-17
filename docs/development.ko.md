@@ -217,8 +217,8 @@ Redpact는 베타 기간에 `0.x.y` 제품 버전을 사용하고 사용자에�
 검증 결과, 알려진 제한과 필요한 사용자 조치를 영어·한국어로 설명합니다.
 
 지원 배포는 npm/pnpm 웹 런타임과 Plugin입니다. 제품 버전은
-`app/server/package.json`에서 관리하며 네이티브 데스크톱 manifest와 동기화하지 않습니다.
-데스크톱 릴리스 workflow는 제거했습니다. 검증한 커밋에 `v<version>` 태그를 만들고
+`app/server/package.json`에서 관리합니다. 네이티브 데스크톱 구현과 릴리스 workflow는
+제거했습니다. 검증한 커밋에 `v<version>` 태그를 만들고
 수동 [npm workflow](../.github/workflows/npm-publish.yml)를 실행하세요.
 태그 push 자체는 npm 게시를 시작하지 않습니다.
 
@@ -273,7 +273,7 @@ pack·preview는 게시, Git push, release tag 생성을 하지 않습니다.
 데이터 호환성 복원이 아닙니다. 살아 있거나 불명확한 writer lock을 제거하거나 관계없는
 Docker 리소스를 prune하지 않습니다. 이전 릴리스는 명시적으로 관리할 때까지 남습니다.
 선택적 `redpact.autoUpdate` Git 설정은 깨끗한 커밋 뒤 서비스·플러그인 업데이트를 호출할
-수 있지만 테스트 검증을 대체하거나 데스크톱 앱을 업데이트하지 않습니다.
+수 있지만 테스트 검증을 대체하지 않습니다.
 
 구현: [런타임 패키징](../app/server/tools/pack-runtime.mjs),
 [로컬 updater](../app/server/tools/local-update.ts),

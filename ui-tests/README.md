@@ -8,7 +8,7 @@ Dependencies empty overview is exercised in both entry flows.
 
 | Page | Captured states |
 | --- | --- |
-| Workspace | Navigation, open project menu, web/macOS/Windows-layout history controls and expanded/collapsed sidebar at desktop/mobile widths |
+| Workspace | Navigation, open project menu, browser history and expanded/collapsed sidebar at desktop/mobile widths |
 | Settings | Complete light and dark pages |
 | Project settings | Execution configuration with page context |
 | Git Graph | Real repository commit history |
@@ -38,19 +38,17 @@ Result-row scenarios seed isolated execution records through the existing fixtur
 
 ## Coverage limits
 
-Retained screenshot history, failure dialogs and native
-Tauri chrome are not covered by these scenarios. Workspace history scenarios cover
-1280px and 390px layouts, with captures also covering 800px and dark mode; their macOS and Windows branches are rendered in Chromium and does not
-verify actual OS window controls or native dragging. Windows control scenarios replace
-only the Tauri IPC boundary to verify button calls, maximize state, failure feedback
-and keyboard retry against the real viewer. Their component
-or API tests do not substitute for captured page evidence. Capture runs execute only the selected worktree.
+Retained screenshot history and failure dialogs are not covered by these scenarios.
+Workspace history scenarios cover 1280px and 390px browser layouts, with captures
+also covering 800px and dark mode. Update captures substitute only update API
+responses and do not install packages. Component or API tests do not substitute
+for captured page evidence. Capture runs execute only the selected worktree.
 
 ## Functional tests
 
 The separate `project-tests` target checks theme persistence, dependency help and
 configuration interactions without producing named screenshots on success. Workspace
-history scenarios also cover browser/native-button traversal, forward-history replacement,
+history scenarios also cover browser history traversal, forward-history replacement,
 closed-tab recovery, reload and responsive sidebar controls. Functional cases remain
 independent from capture scenarios. Capture preparation
 assertions establish the intended image state, not complete functional coverage.

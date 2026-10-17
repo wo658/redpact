@@ -134,7 +134,6 @@ export function localRuntime(config: LocalConfig) {
     const log = await open(logPath, "a", 0o600)
     try {
       const env: NodeJS.ProcessEnv = { ...process.env, REDPACT_RUNTIME_SUPERVISED: "1" }
-      delete env.REDPACT_DESKTOP_CONTROL
       const owned = fork(entry, ["--port", String(config.port), "--data-dir", config.dataDir], {
         execPath: config.node ?? process.execPath,
         execArgv: [],

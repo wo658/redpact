@@ -19,11 +19,10 @@ through MCP. Both use one shared React UI and server runtime; HTTP/SSE and MCP a
 transport adapters, with host-specific capabilities and limits described in
 [installation](installation.md). Execution approval and detailed evidence remain in the full web viewer.
 
-Native Windows, Linux and macOS desktop releases are no longer supported. Retained
-Tauri sources do not expand this support scope. CI verifies the shared web UI and
-server on Ubuntu with Node 24, without an OS/Node matrix. This is the release
-verification baseline, not evidence of behavior on every host. See
-[development](development.md) for automated and manual checks.
+Native Windows, Linux and macOS desktop applications and their Tauri implementation
+have been removed. CI verifies the shared web UI and server on Ubuntu with Node 24,
+without an OS/Node matrix. This is the release verification baseline, not evidence
+of behavior on every host. See [development](development.md) for automated and manual checks.
 
 ## Components
 
@@ -45,7 +44,6 @@ Documentation site ── docs/*.md
 | `app/server/src/adapters` | Files, native Git, source parsing, processes, Docker and Playwright |
 | `app/server/src/main.ts` | Concrete dependency wiring and process lifecycle |
 | `app/web` | Connected React viewer shared by browser and sidebar App Page |
-| `app/desktop` | Retained Tauri host; outside supported release scope |
 | Separate `redpact-web` repository | Website and documentation renderer; reads this repository’s `docs/` directly |
 
 ## Boundary rules

@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, expect, test, vi } from "vitest"
-import { createNativeDirectoryPicker } from "../src/adapters/desktop/directory-picker.js"
+import { createNativeDirectoryPicker } from "../src/adapters/system/directory-picker.js"
 import { createDirectoryPicker } from "../src/workflows/directory-picker.js"
 
 const temporary: string[] = []

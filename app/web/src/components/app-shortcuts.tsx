@@ -1,11 +1,9 @@
 import { Settings, Star } from "lucide-react"
-import type { ComponentProps, MouseEvent } from "react"
+import type { ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
-import { DesktopUpdate } from "@/components/desktop-update"
+import { RuntimeUpdate } from "@/components/runtime-update"
 import { Button, buttonVariants } from "@/components/ui/button"
-import { toast } from "@/components/ui/toast"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { desktopInvoke, repositoryUrl } from "@/lib/desktop"
 import { viewerUrl } from "@/lib/viewer-url"
 
 function GitHubIcon(props: ComponentProps<"svg">) {
@@ -32,18 +30,6 @@ export function AppShortcuts({
   pending: boolean
 }) {
   const { t } = useTranslation()
-  async function openRepository(event: MouseEvent<HTMLAnchorElement>) {
-    const invoke = desktopInvoke()
-    if (!invoke) {
-      return
-    }
-    event.preventDefault()
-    try {
-      await invoke("desktop_open_repository")
-    } catch {
-      toast.add({ title: t("Could not open GitHub. Try again."), type: "error" })
-    }
-  }
   return (
     <fieldset aria-label={t("App shortcuts")} className="flex items-center gap-1">
       {onSettings && (
@@ -68,11 +54,10 @@ export function AppShortcuts({
           <TooltipTrigger
             render={
               <a
-                href={repositoryUrl}
+                href="https://github.com/wo658/redpact"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={buttonVariants({ variant: "ghost", size: "icon" })}
-                onClick={(event) => void openRepository(event)}
               />
             }
             aria-label={label}
@@ -83,7 +68,7 @@ export function AppShortcuts({
         </Tooltip>
       ))}
       <div className="ml-auto">
-        <DesktopUpdate />
+        <RuntimeUpdate />
       </div>
     </fieldset>
   )

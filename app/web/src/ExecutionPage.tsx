@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { DesktopTitlebar } from "@/components/desktop-titlebar"
 import { ExecutionLog } from "@/components/execution-log"
 import { ExecutionReview } from "@/components/execution-workspace"
 import { EmptyState, Notice } from "@/components/feedback"
@@ -24,7 +23,6 @@ export default function ExecutionPage({ api = connectedApi }: { api?: Api }) {
   }, [])
   return (
     <Toaster>
-      <DesktopTitlebar />
       <main className="execution-viewer min-h-dvh min-w-0 p-4 sm:p-6">
         <nav className="mx-auto mb-4 w-full content-width-768" aria-label={t("Navigation")}>
           <a href="?" onClick={navigateReviewLink} className="text-sm underline underline-offset-4">

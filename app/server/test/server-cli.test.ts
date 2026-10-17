@@ -337,17 +337,13 @@ test.each([false, true])(
   15000,
 )
 
-test.each([
-  { host: "192.0.2.1", desktop: false, error: "Allowed choices" },
-  { host: "0.0.0.0", desktop: true, error: "Desktop control requires a loopback" },
-])(
-  "지원하지 않는 수신 설정을 거부한다: $host, desktop=$desktop",
-  async ({ host, desktop, error }) => {
+test.each([{ host: "192.0.2.1", error: "Allowed choices" }])(
+  "지원하지 않는 수신 설정을 거부한다: $host",
+  async ({ host, error }) => {
     const child = spawn(
       process.execPath,
       [fileURLToPath(new URL("../dist/cli.js", import.meta.url)), "serve", "--host", host],
       {
-        env: { ...process.env, REDPACT_DESKTOP_CONTROL: desktop ? "1" : undefined },
         stdio: ["ignore", "pipe", "pipe"],
       },
     )

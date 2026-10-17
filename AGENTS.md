@@ -11,10 +11,10 @@ reference. Read the relevant feature page before changing its behavior.
 Support only the standalone web app and the full web app embedded inside OpenAI
 through MCP. Keep one shared web UI and server runtime, with HTTP/SSE and MCP
 transport adapters. Chat MCP returns structured results and web review links without inline approval/result cards.
-Native Windows, Linux and macOS desktop applications are excluded from future
-release support. Do not add native desktop release work or require desktop version
-synchronization for web/runtime releases. Keep CI focused on shared web/server checks
-on Ubuntu with Node 24; do not require an OS/Node verification matrix. See [product scope](docs/architecture.md).
+Native Windows, Linux and macOS desktop implementations and release tooling have
+been removed. Do not reintroduce native desktop code, settings or release work.
+Keep CI focused on shared web/server checks on Ubuntu with Node 24; do not require
+an OS/Node verification matrix. See [product scope](docs/architecture.md).
 
 ## Documentation is part of completion
 
@@ -97,8 +97,7 @@ Treat a release as a verified product snapshot, not a version bump on every comm
 - Before preparing a release, inspect existing tags and published versions, choose
   the next version under that policy, and summarize changes since the prior release.
 - Use `app/server/package.json` for the web/runtime product version. The private
-  workspace root version is not the product version. Native desktop manifests are
-  outside the supported release scope.
+  workspace root version is not the product version.
 - Complete required executable, affected acceptance, documentation and installed
   package checks before release. Record the exact commit, version, validation and
   remaining limitations. Explain incompatible settings/API/storage changes and any
