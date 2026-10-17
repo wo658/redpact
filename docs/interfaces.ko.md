@@ -40,7 +40,7 @@ HTTP와 같은 워크플로, 고정 프로젝트 설정과 기존 입력 캡처�
 최대 20개 실패 및 20개 산출물 메타데이터, 전체 `failureCount`/`artifactCount`/`evidenceCount`,
 `truncated`를 반환합니다. 메시지와 라벨은 2,048자로 제한합니다. 기본 결과에 원시 케이스 본문,
 stdout/stderr와 설정 원문을 복제하지 않습니다. `evidence`, 산출물 `retrieval`, `reviewPath`로
-상세를 확인하세요. 대기 요청은 승인 카드를 유지하며 실행 수락을 의미하지 않습니다. 기존 `run_unit_tests` / `run_playwright`는
+상세를 확인하세요. 대기 요청은 승인 상태와 웹 검토 경로를 유지하며 실행 수락을 의미하지 않습니다. 기존 `run_unit_tests` / `run_playwright`는
 해당 kind를 지정한 `run_tests`로, `get_execution`은 `get_run`으로,
 `list_executions`는 `list_runs`로 변경하세요. 이전 도구 이름은 노출하지 않습니다.
 
@@ -82,13 +82,12 @@ HTTP `/api/projects/:id/test-container` 및 action/compose 경로는 선택적�
 설정 쓰기와 승인 기능을 모델에 노출하지 않습니다. [실행](execution.md),
 [설정 소유권](settings-reference.md), [Git 작업](git.md)을 참고하세요.
 
-## 요청 승인과 Apps
+## 웹 뷰어에서 요청 승인
 
-번들 리소스는 `ui://redpact/environment.html`, `ui://redpact/tests.html`입니다.
-응답 snapshot을 표시하며 지속 polling·구독을 하지 않습니다. Environment 카드는 실행 시
-의존성 선택 없이 각 의존성의 고정 종류를 한 번씩 표시합니다. `get_run`은 Integration
-snapshot을, `get_run`은 Unit/Playwright 검토를 갱신합니다. 연결된 뷰어에서 실행
-이력·상세 증거·복구 제어를 확인합니다.
+런타임 MCP는 텍스트와 구조화된 결과를 반환하며 실행 요청과 요약에 `reviewPath`를
+포함합니다. 같은 연결된 뷰어 출처를 기준으로 경로를 여세요. 채팅 인라인 카드,
+HTML App 리소스, 승인 도구나 UI capability는 노출하지 않습니다.
+사이드바 App Page는 별도의 전체 앱 화면으로 유지합니다.
 
 새 실행 요청은 인스턴스 `approval` 정책을 캡처합니다.
 
@@ -106,16 +105,11 @@ Integration 승인은 캡처된 제출·고정 실행 계획·revision·설정 d
 한계는 [실행](execution.md)을 참고하세요. 승인은 테스트 충분성·TDD red·코드 변경에 대한
 사람의 수락을 입증하지 않습니다.
 
-App 전용 `review_action`, `execution_review_action`, `set_approval_policy`는 이를
-준수하는 클라이언트에서 모델에 숨겨집니다. 추측 불가능한 capability는 UI 전용 `_meta`로만
-전달되며 모델 콘텐츠에 포함되지 않습니다. Revision 검사로 오래된 작업을 거부하고 중복
-최종 승인은 기존 실행을 반환합니다. 기본 정책 변경은 새 요청에만 적용됩니다. Apps가 없는
-호스트는 연결된 검토 화면에서 명시적으로 승인할 수 있지만 텍스트 승인으로 대체하거나
-Ask를 Auto로 몰래 바꿀 수 없습니다. 뷰어의 명시적 검토 동작도 같은 workflow를 사용하며
-아래의 신뢰된 로컬 HTTP 경계를 유지합니다.
-
-브라우저 번들은 공식 Apps SDK를 사용하며 서버는 기존 SDK로 리소스·도구 메타데이터를
-등록합니다. 카드에 에셋을 포함하고 iframe HTTP 대신 host bridge를 사용합니다.
+사람은 연결된 웹 검토 화면에서 요청을 승인합니다. Revision 검사는 오래된 동작을
+거부하며 중복 최종 승인은 기존 실행을 반환합니다. 기본 정책 변경은 새 요청에만
+적용됩니다. 모델은 MCP로 승인하거나 텍스트 동의로 대체하거나 진행을 위해 Ask를
+Auto로 바꿀 수 없습니다. 뷰어를 사용할 수 없으면 요청을 대기 상태로 유지합니다.
+뷰어 동작은 같은 workflow와 아래의 신뢰된 로컬 HTTP 경계를 유지합니다.
 영속 검토 복구는 [저장소](storage.md)에서 설명합니다.
 
 ## 대화 맥락
@@ -135,7 +129,7 @@ Integration 승인 미리보기는 요청 당시 저장된 앱 서비스 선택,
 테스트 파일·시나리오 제목을 보여줍니다. 서비스 이름은 최대 50개와 전체 `serviceCount`로
 반환합니다. 현재 설정 대신 저장된 요청을 사용하며 뷰어의 환경 승인 동작 전에 표시합니다.
 
-Playwright 종료만으로 환경 제거를 증명하지 않습니다. 카드와 검토 요약은 명시적인 정리
+Playwright 종료만으로 환경 제거를 증명하지 않습니다. 검토 요약은 명시적인 정리
 근거가 없으면 정리를 `unknown`으로, 정리 오류가 기록되었으면 `failed`로 표시합니다.
 
 정확한 기록 뷰어는 `GET /api/review-context?kind=...&id=...`를 사용합니다.
@@ -161,7 +155,7 @@ Bearer token은 필요 없습니다. 신뢰된 로컬 프로세스는 HTTP와 �
 전송이나 preview 연결을 바꿔도 수락 검사를 보존하세요.
 
 구현: [MCP 등록](../app/server/src/interfaces/mcp/routes.ts),
-[App 메타데이터](../app/server/src/interfaces/mcp/apps.ts),
+[검토 결과](../app/server/src/interfaces/mcp/review-result.ts),
 [HTTP 문서](../app/server/src/interfaces/http/docs/routes.ts),
 [검토 workflow](../app/server/src/workflows/review-tests.ts).
 

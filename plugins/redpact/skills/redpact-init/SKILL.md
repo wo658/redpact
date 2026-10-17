@@ -13,8 +13,8 @@ Inspect the application and `configure describe`, preserve unrelated configurati
 and write the supported `.redpact/settings.json` directly. Configure observation in
 the instance file only when needed; verify actual discovery separately from validation.
 The full app also provides project management, settings and manual Container controls.
-Chat setup uses the file-authoring workflow above; inline MCP cards handle request
-approval and evidence without embedding the full management interface.
+Chat setup uses the file-authoring workflow above. MCP returns structured evidence
+and web review links; users approve execution in the connected viewer.
 
 Use the [dependency guide](../redpact/references/dependencies.md) when services,
 connections or fixed dependency kinds need setup. Reuse inspected facts and accepted

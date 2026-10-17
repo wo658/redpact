@@ -248,7 +248,7 @@ Builds alone do not update installed runtimes. The CLI defaults to port 54318,
 HTTP agent plugin examples use 54321, and the App Page Plugin uses 54322. Instance
 data and update ownership remain separate. Reconnect the host after Plugin/schema changes.
 
-The runtime package includes web assets, MCP resources, notices, runner files and
+The runtime package includes web assets, notices, runner files and
 lockfile evidence. The pinned `fs-native-extensions` package and its native prebuilds
 are bundled for the common runtime writer guard; verify them through the installed
 package matrix before release. Preserve the bundled Testcontainers patch, locked Umzug graph (including the AJV

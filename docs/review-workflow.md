@@ -56,8 +56,7 @@ or green observations honestly. [Test authoring](tests.md) owns runtime details.
 
 Each request uses the exact worktree path and shared fixed configuration. Unit,
 Integration and Playwright remain distinct runtimes and evidence contracts.
-Under Ask, a human approves through the supported App card or connected execution
-review. The agent may
+Under Ask, a human approves through the connected execution review. The agent may
 explain the pending request; it cannot approve it or change policy to continue.
 Approval is tied to the reviewed inputs and does not accept the resulting code.
 See [interfaces](interfaces.md) for admission and client requirements.
@@ -67,7 +66,7 @@ See [interfaces](interfaces.md) for admission and client requirements.
 The agent reads progress and terminal state, uses `get_review_context` for bounded
 failure details and evidence references, and links the recorded execution in the same
 viewer instance. Open that exact execution to inspect results, captured source,
-logs and screenshots. Its history stays bound to the recorded worktree. The full app also provides project/worktree navigation, test catalogs, environments and settings; inline chat cards remain focused on the request and its evidence.
+logs and screenshots. Its history stays bound to the recorded worktree. The full app also provides project/worktree navigation, test catalogs, environments and settings. Chat MCP returns structured evidence and review links.
 
 Read the assertions, not just their titles. A test named “updates the total” that
 only checks status 200 does not establish persistence. Compare case and step results

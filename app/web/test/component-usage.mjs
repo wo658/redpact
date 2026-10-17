@@ -21,7 +21,7 @@ async function inspectUsage() {
       build: {
         write: false,
         rolldownOptions: {
-          input: ["src/entries/standalone.tsx", "src/entries/mcp-app.tsx"].map((file) =>
+          input: ["src/entries/standalone.tsx", "src/entries/sidebar.tsx"].map((file) =>
             path.join(root, file),
           ),
         },

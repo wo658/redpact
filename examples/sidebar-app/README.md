@@ -2,8 +2,7 @@
 
 This package bundles the actual connected viewer and its App-only MCP bridge.
 The companion retains runtime installation, start/stop and recovery. The full app
-preserves project, environment, settings and Git navigation. Inline chat approval
-and evidence cards use a separate MCP resource.
+preserves project, environment, settings and Git navigation. Chat MCP returns structured evidence and web review links without inline cards.
 
 See [installation](../../docs/installation.md) for
 supported host setup, trust boundaries and verification limitations.

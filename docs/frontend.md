@@ -18,11 +18,11 @@ permission is required. Standalone and desktop entries retain HTTP and native SS
 See the [App Page installation contract](installation.md)
 for lifecycle, access boundaries, size limits and host verification requirements.
 
-## Full app and inline chat surfaces
+## Full app and chat results
 
 The standalone browser and Global App Page use the full management app: project/worktree navigation, files and diffs, Git, test catalogs, environments, dependencies, and project/global settings. Opening the app without a record restores normal project navigation or the connect-project screen.
 
-Inline MCP Apps use separately bundled request approval and result cards. They show the captured request, status and evidence for that conversation without embedding the full management navigation. They share the same runtime and evidence store. An exact `/?page=review&kind=unit|integration|playwright&id=<id>` link opens the recorded request or execution inside the full app. Record identity determines its worktree; current project selection cannot retarget it. Opening a link never requests a run. The linked review retains its worktree-bound history and explicit approval controls; test cancellation is not exposed.
+Chat MCP returns text and structured evidence with web review paths; it does not render inline cards. An exact `/?page=review&kind=unit|integration|playwright&id=<id>` link opens the recorded request or execution inside the full app. Record identity determines its worktree; current project selection cannot retarget it. Opening a link never requests a run. The linked review retains its worktree-bound history and explicit approval controls; test cancellation is not exposed.
 
 ## Test file browsing
 
@@ -247,7 +247,7 @@ on exit. Keep errors beside the action or content that owns recovery.
 
 Translate UI copy through bundled locale catalogs; preserve identifiers and literal
 source. Theme supports Light/Dark/System and word wrap defaults on; browser-storage
-failure permits session interaction. MCP cards follow host appearance. These are not
+failure permits session interaction. These are not
 project configuration fields.
 
 Use semantic buttons, labels, tabs and dialogs with keyboard focus/selection

@@ -121,12 +121,7 @@ test("configure rereads edits and shares HTTP diagnostics without writing files"
   expect(valid.structuredContent.validation.valid).toBe(true)
   for (const response of [inspection, valid]) {
     expect(response.structuredContent.dependencies).toEqual({ payments: ["mock"] })
-    expect(response._meta.redpact).toMatchObject({
-      path: directory,
-      valid: true,
-      dependencies: { payments: ["mock"] },
-      issues: [],
-    })
+    expect(response._meta).toBeUndefined()
   }
   expect(valid.structuredContent.settings).toBeUndefined()
   expect(valid.structuredContent.validation.source).toBeUndefined()
@@ -137,11 +132,11 @@ test("configure rejects unavailable actions and cannot select an arbitrary proje
   expect((await configure("describe", { projectRoot: "/another-project" })).isError).toBe(true)
 })
 
-test("configure card preserves missing-file diagnostics", async () => {
+test("configure는 카드 없이 누락 파일 진단을 보존한다", async () => {
   const result = await configure("validate")
-  expect(result._meta.redpact.valid).toBe(false)
-  expect(result._meta.redpact.issues).toEqual(result.structuredContent.validation.issues)
-  expect(result._meta.redpact.issues.length).toBeGreaterThan(0)
+  expect(result.structuredContent.validation.valid).toBe(false)
+  expect(result._meta).toBeUndefined()
+  expect(result.structuredContent.validation.issues.length).toBeGreaterThan(0)
 })
 
 test("unit-only configuration guidance requires its runtime container without integration services", async () => {
@@ -164,7 +159,7 @@ test("unit-only configuration guidance requires its runtime container without in
     "kind=integration requires configured Compose services",
   )
   expect(result.nextSteps.join(" ")).toContain("human approval")
-  expect(result.nextSteps.join(" ")).toContain("MCP App or connected viewer")
+  expect(result.nextSteps.join(" ")).toContain("connected web viewer")
   const description = (await configure("describe")).structuredContent
   expect(description.nextSteps.join(" ")).toContain("For managed integration")
   expect(description.specification.workflow.join(" ")).toContain("Preserve existing")

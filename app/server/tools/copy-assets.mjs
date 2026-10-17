@@ -10,8 +10,6 @@ await cp(
   new URL("../dist/runtime-lock.yaml", import.meta.url),
 )
 
-await import("../../web/tools/build-mcp.mjs")
-
 await mkdir(new URL("../dist/adapters/playwright/", import.meta.url), { recursive: true })
 for (const name of ["Dockerfile", "reporter.mjs", "viewport.cjs", "capture-viewport.cjs"]) {
   await cp(

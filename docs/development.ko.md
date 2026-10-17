@@ -228,7 +228,7 @@ npm prerelease dist-tag를 자동 선택하지 않으므로 prerelease는 별도
 Plugin 예시는 54321, App Page Plugin은 54322를 사용합니다. 각 인스턴스의 데이터와
 업데이트 소유권은 독립적입니다. Plugin·스키마 변경 후 호스트를 다시 연결하세요.
 
-패키지는 웹 에셋, MCP 리소스, 고지, 실행기 파일과 lockfile 증거를 포함합니다.
+패키지는 웹 에셋, 고지, 실행기 파일과 lockfile 증거를 포함합니다.
 공통 런타임 writer guard에 사용하는 고정 버전 `fs-native-extensions`와 네이티브
 prebuild를 번들로 포함하며, 릴리스 전에 설치 패키지 matrix로 검증해야 합니다.
 설치 검증에서 번들 Testcontainers patch, AJV 보안 override를 포함한 고정 Umzug

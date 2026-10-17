@@ -88,7 +88,7 @@ test("잘못된 소스는 거부하고 제출한 소스는 그대로 보존한�
   })
 }, 30000)
 
-test("MCP가 선택한 워크트리를 확인하고 테스트 결과 카드를 제공한다", async (context) => {
+test("MCP가 선택한 워크트리와 구조화된 실행 이력을 제공한다", async (context) => {
   const step = createSteps(context)
   await step("MCP에서 실행 경로와 공유 설정 유효성 확인", async () => {
     const inspected = await rpc<{
@@ -106,7 +106,7 @@ test("MCP가 선택한 워크트리를 확인하고 테스트 결과 카드를 �
     expect(inspected.structuredContent.rulesRoot).toBe("/app")
     expect(inspected.structuredContent.validation.valid).toBe(true)
   })
-  await step("MCP 도구가 제공하는 결과 카드 리소스 확인", async () => {
+  await step("MCP 이력 조회가 채팅 카드 없이 유지되는지 확인", async () => {
     const tools = await rpc<{
       tools: { name: string; _meta?: { ui?: { resourceUri: string } } }[]
     }>("tools/list", {})
@@ -128,16 +128,7 @@ test("MCP가 선택한 워크트리를 확인하고 테스트 결과 카드를 �
     )
     expect(history.structuredContent.worktreeId).toBe(worktreeId)
     expect(Array.isArray(history.structuredContent.items)).toBe(true)
-    const uri = tools.tools.find((tool) => tool.name === "get_run")?._meta?.ui?.resourceUri
-    expect(uri).toBe("ui://redpact/tests.html")
-    const resource = await rpc<{ contents: { mimeType: string; text: string }[] }>(
-      "resources/read",
-      {
-        uri,
-      },
-    )
-    expect(resource.contents[0].mimeType).toBe("text/html;profile=mcp-app")
-    expect(resource.contents[0].text).toContain('<div id="root">')
+    expect(tools.tools.every((tool) => !tool._meta?.ui)).toBe(true)
   })
 }, 30000)
 

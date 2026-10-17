@@ -55,7 +55,7 @@ that include it. Do not place project tests beneath `.redpact`.
 Resolve the worktree on the same connected instance. Prefer MCP `run_tests` (`kind: "unit"`)
 with the absolute checkout path and `get_run` with `kind: "unit"`. Under Ask,
 leave the returned approval request for a human; neither polling nor a text reply
-grants approval. If MCP Apps are unavailable, obtain its review path using
+grants approval. Obtain its web review path using
 `get_review_context` and direct the user to the same connected viewer for an explicit
 approval action, following [Review and handoff](review-evidence.md). Recorded results
 are also readable through `GET /api/unit-runs/:id`.
@@ -88,7 +88,7 @@ a visible test file does not mean the configured command executes it. Preserve a
 existing whole-suite command instead of replacing it with a narrow task filter.
 Use an established aggregate command when appropriate and authorized, or retain the
 shared command, run the relevant native command and report that coverage gap clearly.
-Do not run an unrelated command merely to obtain a green evidence card. Configure
+Do not run an unrelated command merely to obtain a passing execution record. Configure
 relevant source patterns without removing unrelated patterns when needed.
 
 ## Completion evidence

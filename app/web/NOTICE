@@ -35,7 +35,7 @@ Adaptation: existing cn helper, Linear radius, localized close label.
 
 MCP Apps browser integration uses @modelcontextprotocol/ext-apps 1.7.5 and its
 @modelcontextprotocol/sdk 1.29.0 peer. Full applicable Apache-2.0/MIT license text
-and bundled dependency notices are copied into the server dist/mcp artifact.
+and bundled dependency notices are retained with the web distribution.
 Source: https://github.com/modelcontextprotocol/ext-apps/tree/v1.7.5
 
 Apps SDK UI — non-color token adaptation

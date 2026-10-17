@@ -67,9 +67,9 @@ Retained environments can be inspected in the Environment screen or through its 
 
 ## Actual application verification
 
-`ui-tests/project/tests` verifies the actual full app and the separately bundled inline MCP cards. Cover project/worktree navigation, files and diffs, Git, test catalogs, manual environments, dependencies and settings, including desktop/mobile controls and error states. Opening the full app without a record must show normal navigation or project connection. Exact execution links must preserve the recorded identity and explicit human approval boundary inside that app.
+`ui-tests/project/tests` verifies the actual full app and web review links returned by MCP. Cover project/worktree navigation, files and diffs, Git, test catalogs, manual environments, dependencies and settings, including desktop/mobile controls and error states. Opening the full app without a record must show normal navigation or project connection. Exact execution links must preserve the recorded identity and explicit human approval boundary inside that app.
 
-Keep chat-context and approval checks alongside the full application coverage. Verify captured inputs, both Integration approval gates, Unit/Playwright request approval, stale-input rejection, cancellation non-exposure and live updates. Exercise the actual bundled MCP cards independently; their request/result UI must not replace the standalone, desktop or Global App Page management experience.
+Keep chat-context and approval checks alongside the full application coverage. Verify captured inputs, both Integration approval gates, Unit/Playwright request approval, stale-input rejection, cancellation non-exposure and live updates. Verify that runtime MCP advertises no inline card resources or approval tools.
 
 Use `run_tests` (`kind: "playwright"`) with the actual checkout and the declared functional or capture target. Target patterns are relative to `ui-tests`. Capture completion alone is not visual approval: inspect desktop/mobile images and identify seeded record fixtures as fixtures, not application execution evidence. The native shell and companion's real MCP bridge need their own lifecycle checks.
 
@@ -98,5 +98,4 @@ Browser scenarios that exercise Clipboard or Web Crypto explicitly trust only th
 disposable `http://app.redpact.test:54320` origin through full Chromium channel launch options; the headless shell does not
 honor this origin-trust option.
 This test-only setting does not change the product HTTP admission rules or browser
-security settings outside that runner. MCP card scenarios load the actual bundled
-resource in an iframe and exchange messages with a separate test host window.
+security settings outside that runner. MCP review-link scenarios open the actual connected web review screen.

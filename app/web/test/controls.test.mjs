@@ -1519,44 +1519,6 @@ test("project invalidations retain the active review tab during background list 
   assert.equal(evidenceReads, 2, "hidden Test must retain its snapshot")
 })
 
-test("actual MCP Ask card sends only a future policy change and preserves its approval button", async () => {
-  const { EnvironmentCard } = await server.ssrLoadModule("/src/components/mcp/cards.tsx")
-  const user = userEvent.setup({ document })
-  const changes = []
-  let approvals = 0
-  const data = {
-    kind: "review",
-    policy: "ask",
-    token: "capability",
-    review: {
-      id: "r1",
-      policy: "ask",
-      state: "pending",
-      environmentApproved: false,
-      selection: { services: ["api"], select: {} },
-      dependencies: {},
-      path: "/project",
-    },
-  }
-  render(
-    createElement(EnvironmentCard, {
-      data,
-      actions: {
-        busy: false,
-        approve: () => {
-          approvals++
-        },
-        changePolicy: (policy) => changes.push(policy),
-      },
-    }),
-  )
-  await user.click(screen.getByRole("button", { name: "Approval policy for the next request" }))
-  await user.click(await screen.findByRole("menuitemradio", { name: "Auto", exact: true }))
-  assert.deepEqual(changes, ["auto"])
-  assert.equal(approvals, 0)
-  assert.ok(screen.getByRole("button", { name: "Approve environment" }))
-})
-
 test("Git read failures use Toasts, preserve the diff, and clear on recovery or scope exit", async () => {
   await i18n.changeLanguage("en")
   const events = []
@@ -5302,7 +5264,6 @@ for (const surface of [
   "executed",
   "playwright-current",
   "playwright-recorded",
-  "mcp",
 ]) {
   test(`${surface} 파일 보기는 원문과 줄 번호, 구문 강조를 공통으로 제공한다`, async () => {
     await i18n.changeLanguage("en")
@@ -5345,16 +5306,6 @@ for (const surface of [
     } else if (surface === "executed") {
       Component = (await server.ssrLoadModule("/src/components/test-observation.tsx")).TestEvidence
       props = { submission, run: null }
-    } else if (surface === "mcp") {
-      Component = (await server.ssrLoadModule("/src/components/mcp/cards.tsx")).TestCard
-      props = {
-        data: {
-          policy: "ask",
-          review: { state: "pending", environmentApproved: false },
-          submission,
-        },
-        actions: { busy: false },
-      }
     } else {
       Component = (await server.ssrLoadModule("/src/components/project-playwright.tsx"))
         .PlaywrightSource
@@ -5370,11 +5321,8 @@ for (const surface of [
     if (surface === "executed") {
       await user.click(screen.getByRole("tab", { name: "Executed source" }))
     }
-    if (surface === "mcp") {
-      await user.click(screen.getByRole("tab", { name: "View test source" }))
-    }
     await waitFor(() => assert.ok(view.container.textContent.includes("literal")))
-    if (["executed", "mcp"].includes(surface)) {
+    if (["executed"].includes(surface)) {
       assert.ok(screen.getByRole("tree"), "Recorded sources retain file navigation")
     }
     const lines = [...view.container.querySelectorAll(".diff-code")]
@@ -5715,50 +5663,6 @@ test("브랜치 변경 파일 목록은 선택한 삭제 파일의 diff만 표�
   await userEvent.setup().click(await within(tree).findByText("b.ts"))
   assert.match(view.container.textContent, /removedB/)
   assert.doesNotMatch(view.container.textContent, /newA/)
-})
-
-test("MCP 파일 목록은 같은 이름의 다른 파일 결과와 소스를 섞지 않는다", async () => {
-  await i18n.changeLanguage("en")
-  const { TestCard } = await server.ssrLoadModule("/src/components/mcp/cards.tsx")
-  const files = [
-    { path: "a.ts", source: "// first" },
-    { path: "b.ts", source: "// second" },
-  ]
-  const view = render(
-    createElement(TestCard, {
-      data: {
-        policy: "ask",
-        submission: { digest: "d", files, parsed: [] },
-        run: {
-          state: "finished",
-          result: {
-            outcome: "assertion_failed",
-            errors: [],
-            cases: [
-              { file: "a.ts", name: "same", state: "passed", errors: [] },
-              {
-                file: "b.ts",
-                name: "same",
-                state: "failed",
-                errors: [{ name: "Error", message: "second failure" }],
-              },
-            ],
-          },
-        },
-      },
-      actions: { busy: false },
-    }),
-  )
-  const user = userEvent.setup()
-  const tree = screen.getByRole("tree")
-  assert.doesNotMatch(view.container.textContent, /second failure/)
-  await user.click(within(tree).getByText("b.ts"))
-  assert.match(view.container.textContent, /second failure/)
-  await user.click(screen.getByRole("tab", { name: "View test source" }))
-  assert.ok(screen.getByText("// second"))
-  await user.click(within(tree).getByText("a.ts"))
-  assert.ok(screen.getByText("// first"))
-  assert.equal(screen.queryByText("// second"), null)
 })
 
 test("공통 파일 탐색은 선택 상자로 대체하지 않고 파일 목록과 뷰를 함께 유지한다", async () => {
