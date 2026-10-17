@@ -215,18 +215,25 @@ export function createVitestRunner(
           return completed({
             outcome: "execution_error",
             cases: [],
-            errors: [redact(processResult.error ?? "Resource limit exceeded")],
+            errors: [
+              redact(processResult.error ?? "Resource limit exceeded"),
+              ...(archiveError ? [archiveError] : []),
+            ],
             resourceLimit: processResult.resourceLimit,
           })
         }
         if (signal.aborted) {
-          return completed({ outcome: "cancelled", cases: [], errors: [] })
+          return completed({
+            outcome: "cancelled",
+            cases: [],
+            errors: archiveError ? [archiveError] : [],
+          })
         }
         if (processResult.error) {
           return completed({
             outcome: "execution_error",
             cases: [],
-            errors: [redact(processResult.error)],
+            errors: [redact(processResult.error), ...(archiveError ? [archiveError] : [])],
           })
         }
         if (archiveError) {

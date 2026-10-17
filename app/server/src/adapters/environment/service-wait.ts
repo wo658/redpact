@@ -18,6 +18,7 @@ export class ServiceWait extends StartupCheckStrategy {
             stdout: source === "stdout",
             stderr: source === "stderr",
           })
+          logs.setEncoding("utf8")
           logs.on("data", (chunk) => this.consume?.(chunk.toString(), `${container.id}:${source}`))
           logs.once("end", () => this.complete?.(`${container.id}:${source}`))
           logs.on("error", (error) =>

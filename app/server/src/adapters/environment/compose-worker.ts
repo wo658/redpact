@@ -35,6 +35,7 @@ async function snapshotLogs() {
             stdout: source === "stdout",
             stderr: source === "stderr",
           })
+          logs.setEncoding("utf8")
           for await (const chunk of logs) {
             serviceLog(chunk.toString(), `${container.Id}:snapshot:${source}`)
           }
