@@ -53,13 +53,10 @@ Keep these claims distinct:
 Briefly explain omitted evidence when its relevance is not obvious. A capability
 gap may leave registration or review incomplete even when local checks pass.
 
-Use advertised presentation capabilities when they materially help review. Request
-and approval cards are snapshots, so request fresh results for changed state.
-Unit, Integration and Playwright approval authorize only the captured execution;
-they do not establish human acceptance of code. Keep capabilities in App-only metadata.
-Do not invoke execution just to obtain a card. If MCP Apps are unavailable, use
-`get_review_context` with the pending request's kind and ID and link its returned review
-path on the same connected viewer origin. The user can inspect the captured request and
-explicitly approve there; do not submit the viewer's approval request on their behalf.
-Neither a text reply nor opening the page records approval. If the viewer is also
-unavailable, preserve the pending request and provide observed evidence with that gap.
+MCP results are snapshots; request fresh results for changed state. Unit, Integration
+and Playwright approval authorize only the captured execution, not acceptance of code.
+Use the returned `reviewPath` or `get_review_context` with the request kind and ID,
+and link that path on the same connected viewer origin. The user inspects the captured
+request and explicitly approves there; do not submit approval on their behalf.
+Neither a text reply nor opening the page records approval. If the viewer is unavailable,
+preserve the pending request and report the gap.

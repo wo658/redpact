@@ -214,6 +214,10 @@ test("CLI reads shared fixed settings after restart and MCP captures them under 
   const result = (await response.json()).result
   expect(result.isError).not.toBe(true)
   expect(result.structuredContent.state).toBe("awaiting_approval")
-  expect(result._meta.redpact.review.selection).toEqual(selection)
+  const context = await fetch(
+    `http://127.0.0.1:${nextPort}/api/review-context?kind=integration&id=${result.structuredContent.id}`,
+  )
+  expect((await context.json()).approval.preview.services).toEqual(selection.services)
+  expect(result._meta).toBeUndefined()
   expect(existsSync(join(data, "environments"))).toBe(false)
 })

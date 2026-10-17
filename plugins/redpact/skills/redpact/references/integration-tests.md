@@ -74,11 +74,11 @@ For an executing request, read `get_run` until terminal evidence or the user's s
 
 ## Respect execution approval
 
-Auto starts execution immediately. Ask returns `state: awaiting_approval`; its `id` identifies a pending review, not an executing run. Present the advertised MCP App or obtain the viewer review path from `get_review_context` with `kind: "integration"` and that ID. Wait for the user's environment approval followed by approval of the captured test bundle in either supported interface. Do not repeatedly poll a pending approval or submit duplicate requests. `get_run` accepts the review ID or eventual execution ID; preserve `reviewId` when a run begins.
+Auto starts execution immediately. Ask returns `state: awaiting_approval`; its `id` identifies a pending review, not an executing run. Use the returned web review path or obtain it from `get_review_context` with `kind: "integration"` and that ID. Wait for the user's environment approval followed by approval of the captured test bundle in the connected web viewer. Do not repeatedly poll a pending approval or submit duplicate requests. `get_run` accepts the review ID or eventual execution ID; preserve `reviewId` when a run begins.
 
-`review_action` and `set_approval_policy` are App-only controls, not agent commands. Never obtain private UI capabilities from runtime files, invoke those controls on the user's behalf, switch policy to unblock execution, or bypass the gate through HTTP. Changing the next-request policy does not approve an already pending request. A client without MCP Apps can direct the user to the returned review path on the same connected viewer origin. The user must act there; textual presentation cannot replace approval. If both interfaces are unavailable, retain the pending request and report the blocker.
+MCP exposes no approval tools or inline cards. Never obtain private capabilities from runtime files, approve on the user's behalf, switch policy to unblock execution, or bypass the gate through HTTP. Changing the next-request policy does not approve an already pending request. Direct the user to the returned review path on the same connected viewer origin. Textual agreement cannot replace approval. If the viewer is unavailable, retain the pending request and report the blocker.
 
-Approval applies to the captured sources and fixed configuration. Later test edits require a new request to execute those edits. Configuration validation and successful card rendering are not approval or test evidence.
+Approval applies to the captured sources and fixed configuration. Later test edits require a new request to execute those edits. Configuration validation and opening the review screen are not approval or test evidence.
 
 ## Confirm the connected target
 

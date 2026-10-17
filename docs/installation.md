@@ -37,7 +37,7 @@ browser/CLI runtime; they do not install the plugin or update its managed packag
 Native Windows, Linux and macOS desktop apps, Homebrew and shell installers are no
 longer distributed. Existing releases are historical artifacts, not new installation
 paths. Source builds are for contributor verification. Managed tests require Docker
-Compose. See [development](development.md) for web/runtime OS verification coverage.
+Compose. See [development](development.md) for web/runtime CI verification coverage.
 
 ## Install a bundled runtime from source
 
@@ -137,8 +137,7 @@ copilot plugin install redpact@redpact
 
 This requires the GitHub Copilot CLI with `plugin` commands, not another executable
 named `copilot`. The [Copilot plugin reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference)
-documents this compatibility. Installation and MCP Apps rendering in Copilot have
-not yet been verified by this project.
+documents this compatibility. Installation in Copilot has not yet been verified by this project.
 
 Cursor has its own `.cursor-plugin/marketplace.json` catalog in this repository.
 Its Redpact manifest points to the same skills and MCP configuration, without copied
@@ -146,7 +145,7 @@ skill content. Use the GitHub repository when configuring a Cursor team marketpl
 Public Cursor Marketplace listing requires a separate submission and review; the
 repository is not evidence of an approved listing. See the
 [Cursor plugin reference](https://cursor.com/docs/reference/plugins).
-Cursor installation and MCP Apps rendering remain unverified.
+Cursor installation remains unverified.
 
 Gemini CLI uses GitHub extensions with `gemini-extension.json`, rather than these
 marketplace catalogs. This repository does not currently package a Gemini extension.
@@ -158,8 +157,8 @@ The HTTP plugins use `http://127.0.0.1:54321/mcp`; the App Page Plugin owns port
 a direct HTTP MCP connection to its actual port instead of assuming the plugin
 follows it. Other clients may use that connection, but are not claimed as tested
 plugin integrations. Ask the agent to call `configure describe` to verify tools.
-Execution approval cards require a compatible MCP Apps host. Plugin installation
-alone does not prove card support; an unavailable approval UI must not be bypassed.
+Execution approval takes place in the connected web review screen. MCP returns its
+review path without inline chat cards; unavailable approval UI must not be bypassed.
 See [the interface contract](interfaces.md).
 
 ## App Page Plugin packaging and behavior
@@ -236,8 +235,8 @@ connection metadata; there is no second maintained skill set.
 
 The plugin also registers a separate `redpact-verification` HTTP MCP connection to
 `http://127.0.0.1:54322/mcp`, the same runtime and evidence store used by the sidebar.
-It exposes the runtime's model tools directly, preserving its approval cards and
-capability boundary; the App-only viewer bridge remains private. See
+It exposes the runtime's model tools directly, preserving its web review paths and
+approval boundary; the App-only viewer bridge remains private. See
 [MCP interfaces](interfaces.md) for the verification contracts. The bundled installer
 still downloads public 0.8.0, whose tool set is older; expanded verification tools
 require a runtime built from this source or a future release containing it.
@@ -252,7 +251,7 @@ and runtime evidence are separate. Runtime update requests from the viewer repor
 that the App installer owns updates; the companion does not run an independent
 npm self-update behind the page.
 
-Before installation or startup, the page displays its setup screen. A healthy runtime displays the full app: projects, worktrees, files, diffs, Git, tests, environments and settings. With no record, normal project navigation or project connection is available. `open_redpact_app` also accepts paired `kind` and UUID `id` to open an exact request or execution inside the app without requesting or approving a run. The App accepts only a local canonical review path from its UI metadata. Status polls preserve that selection, including the **Open local viewer** recovery link. Inline chat approval/result cards remain separate from this full App Page.
+Before installation or startup, the page displays its setup screen. A healthy runtime displays the full app: projects, worktrees, files, diffs, Git, tests, environments and settings. With no record, normal project navigation or project connection is available. `open_redpact_app` also accepts paired `kind` and UUID `id` to open an exact request or execution inside the app without requesting or approving a run. The App accepts only a local canonical review path from its UI metadata. Status polls preserve that selection, including the **Open local viewer** recovery link. Inline chat approval/result cards are not provided.
 
 The App resource bundles the existing React viewer, styles, fonts and icons directly.
 Its URI includes a hash of the bundled HTML, so an updated plugin does not reuse a
@@ -293,7 +292,7 @@ For verification, install Playwright Chromium (`pnpm exec playwright install chr
 and run `pnpm typecheck` and `pnpm test`. After building the current server/viewer and
 this companion, `pnpm test:browser` checks the source-built runtime through the real
 MCP bridge. It verifies full app entry, project navigation, exact request routing, history, responsive
-layout and the separate inline approval boundary. Published-package installation is a separate
+layout and the explicit web approval boundary. Published-package installation is a separate
 check: `REDPACT_TEST_RUNTIME=installed REDPACT_TEST_MANAGER=npm pnpm test:browser`
 (or `pnpm` as manager) verifies installation and owned lifecycle without claiming
 current-source viewer behavior. The installer still pins public 0.8.0.

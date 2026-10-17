@@ -85,8 +85,7 @@ For app service, dependency or connection changes, read [Project dependencies](d
 Resolve the actual worktree on the connected instance. Prefer MCP `run_tests` (`kind: "playwright"`)
 with the absolute checkout path and declared target, then `get_run` with
 `kind: "playwright"`. Under Ask, present the request for human approval; do not
-change policy or invoke an App-only approval action. If MCP Apps are unavailable,
-obtain its review path using `get_review_context` and direct the user to the same
+change policy or approve on the user’s behalf. Obtain its web review path using `get_review_context` and direct the user to the same
 connected viewer for an explicit approval action, following
 [Review and handoff](review-evidence.md). Optional viewport overrides apply to this
 execution. Read

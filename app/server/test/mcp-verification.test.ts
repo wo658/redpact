@@ -133,7 +133,8 @@ test("Unit과 Playwright는 요청한 기존 체크아웃의 동일 실행 워�
   const { call, services, worktreeId } = fixture()
   const unit = await call("run_tests", { kind: "unit", path: "/repo/feature" })
   expect(unit.isError).not.toBe(true)
-  expect(unit._meta?.redpact).toMatchObject({ kind: "execution", execution: { kind: "unit" } })
+  expect(unit.structuredContent).toMatchObject({ kind: "unit" })
+  expect(unit._meta).toBeUndefined()
   expect(services.worktrees.ensure).toHaveBeenCalledWith("project", "/repo/feature")
   expect(services.unitTests.start).toHaveBeenCalledWith(worktreeId, undefined, undefined)
   const viewport = { width: 390, height: 844 }
@@ -144,10 +145,7 @@ test("Unit과 Playwright는 요청한 기존 체크아웃의 동일 실행 워�
     viewport,
   })
   expect(playwright.isError).not.toBe(true)
-  expect(playwright._meta?.redpact).toMatchObject({
-    kind: "execution",
-    execution: { kind: "playwright" },
-  })
+  expect(playwright.structuredContent).toMatchObject({ kind: "playwright" })
   expect(services.captureWorkflow.start).toHaveBeenCalledWith(
     worktreeId,
     undefined,
@@ -171,14 +169,16 @@ test("Unit과 Playwright는 요청한 기존 체크아웃의 동일 실행 워�
     ).isError,
   ).toBe(true)
 })
-test("Ask 정책에서 실행 대신 검토 카드를 반환하고 UI 전용 승인을 기다린다", async () => {
+test("Ask 정책에서 실행 대신 웹 검토 경로를 반환하고 승인을 기다린다", async () => {
   const { call, services, id } = fixture()
   services.reviews.policy.mockReturnValue("ask")
   const result = await call("run_tests", { kind: "unit", path: "/repo/feature" })
   expect(result.isError).not.toBe(true)
   expect(result.structuredContent).toMatchObject({ kind: "unit", state: "awaiting_approval", id })
   expect(JSON.stringify(result.structuredContent)).not.toContain("capability-secret")
-  expect(result._meta.redpact.token).toBe("capability-secret")
+  expect(result._meta).toBeUndefined()
+  expect(result.structuredContent.reviewPath).toContain(`id=${id}`)
+  expect(JSON.stringify(result)).not.toContain("capability-secret")
   expect(services.unitTests.start).not.toHaveBeenCalled()
   expect(services.captureWorkflow.start).not.toHaveBeenCalled()
 })
@@ -204,10 +204,7 @@ test("실패 로그와 기록 당시 소스·이미지를 모델에 제공한다
     detail: "source",
     sourcePath: "case.test.ts",
   })
-  expect(source._meta?.redpact).toMatchObject({
-    kind: "evidence",
-    evidence: { kind: "integration", detail: "source" },
-  })
+  expect(source._meta).toBeUndefined()
   expect(source.structuredContent).toMatchObject({
     source: "captured Integration source",
     digest: "captured-digest",
@@ -278,7 +275,7 @@ test.each([
       cleanupError,
     })
     const result = await call("get_run", { kind: "playwright", id })
-    expect(result._meta.redpact.execution.cleanup).toBe(expected)
+    expect(result.structuredContent.cleanup.state).toBe(expected)
   },
 )
 

@@ -185,13 +185,11 @@ test.skipIf(!process.env.REDPACT_APPLICATION_IMAGE).each(["capture", "functional
           ...Array(2).fill("project/captures/chat-review.spec.ts"),
           ...Array(3).fill("project/captures/execution-approval.spec.ts"),
           ...Array(2).fill("project/captures/integration-approval.spec.ts"),
-          "project/captures/mcp-app.spec.ts",
           ...Array(2).fill("project/result-rows.ts"),
         ],
         functional: [
           ...Array(2).fill("project/tests/chat-review.spec.ts"),
           ...Array(5).fill("project/tests/execution-approval.spec.ts"),
-          "project/tests/mcp-app.spec.ts",
           ...Array(2).fill("project/result-rows.ts"),
           "project/tests/window-controls.spec.ts",
         ],

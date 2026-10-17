@@ -12,7 +12,7 @@ Legend: `[page]` opens a main view, `[tab]` switches within a view,
 `[action]` performs an operation, `[dialog]` opens an overlay, and `[section]`
 groups content or controls. Unmarked leaves describe visible content.
 
-This hierarchy applies to the full browser and Global App Page. Inline chat cards are separate request/result surfaces; see [frontend boundaries](frontend.md). Exact execution links remain available inside the full app without replacing its project navigation.
+This hierarchy applies to the full browser and Global App Page. Chat MCP provides structured results and web review links; see [frontend boundaries](frontend.md). Exact execution links remain available inside the full app without replacing its project navigation.
 
 ## Screen tree
 

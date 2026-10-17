@@ -1,9 +1,5 @@
 import { expect, test } from "@playwright/test"
-import {
-  openExecutionReview,
-  openExecutionReviewViewer,
-  openIntegrationReviewViewer,
-} from "../execution-review"
+import { openExecutionReviewViewer, openIntegrationReviewViewer } from "../execution-review"
 
 test("Integration 환경 승인 전에 요청에 저장된 앱 서비스와 테스트를 확인한다", async ({ page }) => {
   const review = await openIntegrationReviewViewer(page)
@@ -41,37 +37,6 @@ test("Integration 환경 승인 전에 요청에 저장된 앱 서비스와 테�
       expect(result.structuredContent.approval.environmentApproved).toBe(true)
       expect(result.structuredContent.approval.testsApproved).toBe(false)
       expect(result.structuredContent.approval.preview.services).toEqual(["reviewed-app"])
-    })
-  } finally {
-    await review.restore()
-  }
-})
-
-test("채팅의 Unit 승인 카드는 변경된 입력을 실행하지 않고 승인 경계를 유지한다", async ({
-  page,
-}) => {
-  const review = await openExecutionReview(page)
-  try {
-    await test.step("실제 MCP 요청의 명령과 승인 대기 상태를 확인한다", async () => {
-      await expect(review.card.getByText("echo reviewed-command", { exact: true })).toBeVisible()
-      await expect(review.card.getByRole("button", { name: "Approve execution" })).toBeEnabled()
-      await review.card.getByText("Inputs", { exact: true }).click()
-      await expect(review.card.getByText("Settings", { exact: true })).toBeVisible()
-    })
-    await test.step("검토 후 파일이 바뀌면 실제 승인 요청이 실행을 거부한다", async () => {
-      await review.changeInputs()
-      await review.card.getByRole("button", { name: "Approve execution" }).click()
-      await expect(review.frame.getByText(/Execution inputs changed during review/)).toBeVisible()
-      const state = await review.rpc("tools/call", {
-        name: "get_run",
-        arguments: { kind: "unit", id: review.id },
-      })
-      expect(state.structuredContent.state).toBe("awaiting_approval")
-      expect(state.structuredContent.run).toBeUndefined()
-    })
-    await test.step("새로 읽은 검토도 입력 변경 후 실행을 승인하지 않는다", async () => {
-      await review.refresh()
-      await expect(review.card.getByRole("button", { name: "Approve execution" })).toBeVisible()
     })
   } finally {
     await review.restore()

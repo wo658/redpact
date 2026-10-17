@@ -10,15 +10,14 @@ submitted test intent and source, executes tests, and presents observed evidence
 Test success, configuration validity, application freshness and human acceptance
 are different facts. A result never implies the others.
 
-The standalone browser and Global App Page preserve the management app. Inline MCP Apps are separate approval/result surfaces connected to the same workflows and stored evidence. [Frontend conventions](frontend.md) defines their navigation boundary.
+The standalone browser and Global App Page preserve the management app. Chat MCP returns structured results and links to web review; it has no inline cards. [Frontend conventions](frontend.md) defines their navigation boundary.
 
 ## Supported product scope
 
 Redpact supports the standalone web app and the full web app embedded inside OpenAI
 through MCP. Both use one shared React UI and server runtime; HTTP/SSE and MCP are
 transport adapters, with host-specific capabilities and limits described in
-[installation](installation.md). Inline MCP Apps approval/result cards remain
-separate from the full app.
+[installation](installation.md). Execution approval and detailed evidence remain in the full web viewer.
 
 Native Windows, Linux and macOS desktop applications and their Tauri implementation
 have been removed. Supported web/runtime hosts still require OS-specific verification; dropping native desktop
@@ -29,7 +28,7 @@ releases does not drop that runtime coverage.
 ```text
 Web viewer ───────── HTTP ─┐
                            ├── workflows (Imperative Shell) ── core (pure decisions)
-Agent / MCP Apps ─── MCP ───┤                 │
+Agent            ─── MCP ───┤                 │
 Startup / observation ──────┘                 └── adapters ── Git / files / runtimes
 
 Documentation site ── docs/*.md
@@ -43,7 +42,7 @@ Documentation site ── docs/*.md
 | `app/server/src/core/types` | Type-only data and dependency contracts; no runtime exports or barrel |
 | `app/server/src/adapters` | Files, native Git, source parsing, processes, Docker and Playwright |
 | `app/server/src/main.ts` | Concrete dependency wiring and process lifecycle |
-| `app/web` | Connected React viewer and separately bundled MCP cards |
+| `app/web` | Connected React viewer shared by browser and sidebar App Page |
 | Separate `redpact-web` repository | Website and documentation renderer; reads this repository’s `docs/` directly |
 
 ## Boundary rules
@@ -103,9 +102,9 @@ between record files.
   health observations, resource identities, cancellation and cleanup.
 - Unit, Integration Vitest and Playwright execute in temporary containers. Integration
   and Playwright join a per-execution network with service-name access to the application.
-- MCP Apps implement request approval. Their capabilities
-  rely on the client keeping App-only metadata out of model context; this does not
-  establish code-review acceptance or isolation from trusted local processes.
+- The connected web viewer implements explicit request approval. MCP returns review
+  paths without approval capabilities. Approval does not establish code acceptance
+  or isolation from trusted local processes.
 - GitHub publication reuses native Git and authenticated `gh`; GitHub owns PR identity.
 
 Standalone npm installs use a CLI parent to stop the owned server before delegating package replacement to its detected npm/pnpm owner. The viewer exposes update availability; SemVer comparison uses the existing node-semver implementation. See [runtime updates](installation.md) for installation limits and restart behavior.

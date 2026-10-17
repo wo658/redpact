@@ -42,7 +42,7 @@ artifact metadata entries, full `failureCount`/`artifactCount`/`evidenceCount`, 
 `truncated`. Messages and labels are capped at 2,048 characters. Raw case bodies,
 stdout/stderr and settings source are not copied into the default result. Follow
 `evidence`, artifact `retrieval`, or `reviewPath` for detail. Pending requests retain
-their approval card and never imply admission. Migrate old
+their approval state and web review path and never imply admission. Migrate old
 `run_unit_tests` / `run_playwright` calls to `run_tests` with the corresponding kind;
 `get_execution` becomes `get_run`, and `list_executions` becomes `list_runs`.
 The old tool names are no longer exposed.
@@ -91,14 +91,12 @@ controls. MCP does not expose Git mutation, settings writes or approval capabili
 See [execution](execution.md), [settings ownership](settings-reference.md) and
 [Git operations](git.md).
 
-## Request approval and Apps
+## Request approval in the web viewer
 
-The bundled resources are `ui://redpact/environment.html` and
-`ui://redpact/tests.html`. They present response snapshots; they do not continuously
-poll or subscribe. The Environment card lists each dependency’s fixed kind once,
-without execution-time dependency choices. `get_run` refreshes an Integration snapshot;
-`get_run` refreshes Unit/Playwright reviews. The connected viewer presents
-execution history, detailed evidence and recovery controls.
+Runtime MCP returns text and structured results, including `reviewPath` for execution
+requests and summaries. Resolve that path against the same connected viewer origin.
+It exposes no inline chat cards, HTML App resources, approval tools or UI capabilities.
+The sidebar App Page remains a separate full-app surface.
 
 A new execution request captures the instance `approval` policy:
 
@@ -118,18 +116,12 @@ approved application identity through environment preparation. See [execution](e
 for external input and fingerprint limits. Approval does not prove sufficient tests,
 record a TDD red or establish human acceptance of code changes.
 
-App-only `review_action`, `execution_review_action` and `set_approval_policy` are hidden
-from models by compliant clients. Unguessable capabilities are delivered in UI-only
-`_meta`, never model-visible content. Revision checks reject stale actions; duplicate
-final approval returns the existing run. Changing the default policy affects future
-requests, never pending approvals. A host without Apps can open the connected review
-screen for an explicit approval; it cannot substitute textual approval or silently
-change Ask to Auto. The viewer's explicit review actions use the same workflows and
-retain the trusted-local HTTP boundary below.
-
-The browser bundle uses the official Apps SDK; the server registers resources/tool
-metadata with its existing SDK. Cards contain their assets and use the host bridge
-rather than iframe HTTP. [Storage](storage.md) describes durable review recovery.
+Humans approve requests in the connected web review screen. Revision checks reject
+stale actions; duplicate final approval returns the existing run. Changing the default
+policy affects future requests, never pending approvals. Models cannot approve through
+MCP, substitute textual agreement or switch Ask to Auto to proceed. If the viewer is
+unavailable, retain the pending request. Viewer actions use the same workflows and
+trusted-local HTTP boundary below. [Storage](storage.md) describes durable review recovery.
 
 ## Conversation context
 
@@ -152,8 +144,8 @@ dependency kinds and submitted test files with scenario titles. Service names ar
 limited to 50 with the full `serviceCount`; this preview uses the saved request,
 not current settings, and appears before the viewer's environment approval action.
 
-Playwright completion alone does not prove environment removal. Its card and review
-summary report cleanup as `unknown` without explicit cleanup evidence, or `failed`
+Playwright completion alone does not prove environment removal. Its review
+summary reports cleanup as `unknown` without explicit cleanup evidence, or `failed`
 when a cleanup error was recorded.
 
 The exact-record viewer uses `GET /api/review-context?kind=...&id=...`;
@@ -181,7 +173,7 @@ only on host loopback. This does not introduce remote authentication or shared-u
 access. Preserve admission checks when changing transport or preview wiring.
 
 Implementation: [MCP registration](../app/server/src/interfaces/mcp/routes.ts),
-[App metadata](../app/server/src/interfaces/mcp/apps.ts),
+[Review results](../app/server/src/interfaces/mcp/review-result.ts),
 [HTTP documentation](../app/server/src/interfaces/http/docs/routes.ts),
 [review workflow](../app/server/src/workflows/review-tests.ts).
 

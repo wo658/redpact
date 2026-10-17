@@ -10,7 +10,7 @@ reference. Read the relevant feature page before changing its behavior.
 
 Support only the standalone web app and the full web app embedded inside OpenAI
 through MCP. Keep one shared web UI and server runtime, with HTTP/SSE and MCP
-transport adapters. Inline MCP Apps approval/result cards remain separate surfaces.
+transport adapters. Chat MCP returns structured results and web review links without inline approval/result cards.
 Native Windows, Linux and macOS desktop implementations and release tooling have
 been removed. Do not reintroduce native desktop code, settings or release work. Cross-platform web/runtime verification
 remains required for supported hosts. See [product scope](docs/architecture.md).
@@ -63,8 +63,7 @@ The retired Hurl implementation and skill were removed. Use the current server t
 Read-only Git inspection and existing-checkout routing support source identity.
 The host agent owns worktree creation, Git mutations, authored settings and publication.
 Test execution provisions temporary Compose environments; general cleanup preserves
-historical evidence and handles resources retained by older versions. MCP Apps and
-explicit viewer review actions request human execution approval; they do not establish
+historical evidence and handles resources retained by older versions. Explicit viewer review actions request human execution approval; they do not establish
 human acceptance of code changes. Preserve their capability and client trust boundaries.
 Container declarations may validate but must not silently run without their requested
 environment.

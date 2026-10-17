@@ -10,14 +10,13 @@ Redpact는 로컬 개발 검토 도구입니다. 프로젝트 체크아웃을 �
 설정 유효성, 애플리케이션 최신성, 사람의 수락은 서로 다른 사실입니다. 하나의 결과가
 나머지를 입증하지는 않습니다.
 
-독립 브라우저·Global App Page는 관리 앱을 유지합니다. 인라인 MCP Apps는 같은 워크플로와 저장 근거에 연결된 별도의 승인·결과 화면입니다. 탐색 경계는 [프런트엔드 규칙](frontend.md)을 따릅니다.
+독립 브라우저·Global App Page는 관리 앱을 유지합니다. 채팅 MCP는 구조화된 결과와 웹 검토 링크를 반환하며 인라인 카드를 제공하지 않습니다. 탐색 경계는 [프런트엔드 규칙](frontend.md)을 따릅니다.
 
 ## 제품 지원 범위
 
 Redpact는 독립 웹 앱과 MCP를 통해 OpenAI 내부에 임베드하는 전체 웹 앱을 지원합니다.
 두 경로는 하나의 React UI와 서버 런타임을 공유하며 HTTP/SSE와 MCP는 전송 어댑터입니다.
-호스트별 기능과 제약은 [설치 안내](installation.md)를 따릅니다. 인라인 MCP Apps
-승인·결과 카드는 전체 앱과 별도 화면으로 유지합니다.
+호스트별 기능과 제약은 [설치 안내](installation.md)를 따릅니다. 실행 승인과 상세 근거는 전체 웹 뷰어에서 제공합니다.
 
 Windows·Linux·macOS 네이티브 데스크톱 앱과 Tauri 구현은 제거했습니다.
 지원하는 웹/런타임 호스트는 계속 OS별 검증이 필요하며, 네이티브 데스크톱 릴리스
@@ -28,7 +27,7 @@ Windows·Linux·macOS 네이티브 데스크톱 앱과 Tauri 구현은 제거했
 ```text
 웹 뷰어 ────────── HTTP ─┐
                         ├── workflows (Imperative Shell) ── core (순수 판단)
-에이전트 / MCP Apps ─ MCP ┤                 │
+에이전트           ─ MCP ┤                 │
 시작 / 관찰 ─────────────┘                 └── adapters ── Git / 파일 / 런타임
 
 문서 사이트 ── docs/*.md
@@ -42,7 +41,7 @@ Windows·Linux·macOS 네이티브 데스크톱 앱과 Tauri 구현은 제거했
 | `app/server/src/core/types` | 데이터와 의존성의 타입 전용 계약. 런타임 export와 barrel 없음 |
 | `app/server/src/adapters` | 파일, native Git, 소스 파싱, 프로세스, Docker, Playwright |
 | `app/server/src/main.ts` | 구체 의존성 연결과 프로세스 수명주기 |
-| `app/web` | 연결된 React 뷰어와 별도 번들 MCP 카드 |
+| `app/web` | 브라우저와 사이드바 App Page가 공유하는 연결된 React 뷰어 |
 | 별도 `redpact-web` 저장소 | 웹사이트와 문서 렌더러. 이 저장소의 `docs/`를 직접 읽음 |
 
 ## 경계 규칙
@@ -100,9 +99,9 @@ TypeScript, Hono와 일반 함수를 사용합니다. controller 클래스, DI �
 - Unit 명령과 Playwright는 임시 컨테이너에서 실행합니다. Integration Vitest는
   임시 컨테이너에서 실행합니다. Integration과 Playwright는 실행별 네트워크에서
   서비스 이름으로 앱에 접근합니다.
-- MCP Apps는 요청 승인을 구현합니다. 클라이언트가 App 전용
-  메타데이터를 모델 문맥에서 숨겨야 합니다. 코드 검토 수락이나 신뢰된 로컬
-  프로세스로부터의 격리를 입증하는 기능은 아닙니다.
+- 연결된 웹 뷰어에서 명시적으로 요청을 승인합니다. MCP는 승인 capability 없이
+  검토 경로를 반환합니다. 승인은 코드 수락이나 신뢰된 로컬 프로세스로부터의
+  격리를 입증하지 않습니다.
 - GitHub 게시에는 native Git과 인증된 `gh`를 재사용하며 PR 식별자는 GitHub가 소유합니다.
 
 독립 npm 설치는 CLI 부모가 소유 서버를 종료한 뒤 확인된 npm/pnpm 관리자에 패키지 교체를 맡깁니다. 뷰어에 업데이트 상태를 제공하며 SemVer 비교는 기존 node-semver 구현을 사용합니다. 설치 제약과 재시작 동작은 [런타임 업데이트](installation.md)를 참고하세요.

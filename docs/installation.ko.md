@@ -34,7 +34,7 @@ npm/pnpm 설치까지 이어갑니다. 현재 App Page Plugin은 macOS Apple Sil
 
 네이티브 Windows·Linux·macOS 데스크톱 앱, Homebrew, 셸 설치기는 더 이상 배포하지 않습니다.
 기존 릴리스는 과거 자료이며 새 설치 경로가 아닙니다. 소스 빌드는 기여자 검증용입니다.
-관리형 테스트에는 Docker Compose가 필요합니다. 웹 런타임 OS 검증 범위는
+관리형 테스트에는 Docker Compose가 필요합니다. 웹 런타임 CI 검증 범위는
 [개발 문서](development.md)를 참고하세요.
 
 ## 소스에서 번들 런타임 설치
@@ -135,14 +135,14 @@ copilot plugin install redpact@redpact
 `plugin` 명령을 지원하는 GitHub Copilot CLI가 필요하며, 이름이 `copilot`인 다른
 실행 파일과는 구분해야 합니다. 이 호환성은
 [Copilot 플러그인 문서](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference)에
-정의되어 있습니다. 이 프로젝트에서는 Copilot 설치와 MCP Apps 렌더링을 아직 검증하지 않았습니다.
+정의되어 있습니다. 이 프로젝트에서는 Copilot 설치를 아직 검증하지 않았습니다.
 
 Cursor용 `.cursor-plugin/marketplace.json` 카탈로그도 저장소에 제공합니다.
 Redpact 매니페스트는 스킬 내용을 복제하지 않고 동일한 스킬과 MCP 설정을 참조합니다.
 Cursor 팀 마켓플레이스 설정 시 이 GitHub 저장소를 사용하세요. 공개 Cursor Marketplace
 목록에 노출되려면 별도의 제출과 심사가 필요하며, 저장소 제공 자체가 등록 승인을 뜻하지는
 않습니다. [Cursor 플러그인 문서](https://cursor.com/docs/reference/plugins)를 참고하세요.
-Cursor 설치와 MCP Apps 렌더링은 아직 검증하지 않았습니다.
+Cursor 설치는 아직 검증하지 않았습니다.
 
 Gemini CLI는 이 마켓플레이스 카탈로그 대신 `gemini-extension.json`이 포함된 GitHub
 확장을 사용합니다. 이 저장소는 현재 Gemini 확장 패키지를 제공하지 않습니다.
@@ -154,8 +154,8 @@ HTTP 플러그인은 `http://127.0.0.1:54321/mcp`, App Page Plugin은 54322 포�
 플러그인이 자동으로 따라간다고 가정하지 말고 실제 포트로 HTTP MCP를 직접 연결하세요.
 다른 클라이언트도 이 연결을 사용할 수 있으나 검증된 플러그인 통합으로 주장하지 않습니다.
 도구 확인에는 에이전트에게 `configure describe` 호출을 요청하세요.
-실행 승인 카드는 호환되는 MCP Apps 호스트가 필요합니다. 플러그인 설치만으로 카드
-지원을 증명할 수 없으며, 승인 UI가 없다고 승인을 우회해서는 안 됩니다.
+실행 승인은 연결된 웹 검토 화면에서 합니다. MCP는 채팅 인라인 카드 없이 검토
+경로를 반환하며 승인 화면을 사용할 수 없다고 승인 절차를 우회해서는 안 됩니다.
 [인터페이스 계약](interfaces.md)을 참고하세요.
 
 ## App Page Plugin 패키징과 동작
@@ -227,7 +227,7 @@ App 패키지는 일반 플러그인과 같은 `redpact`, `redpact-init` 스킬�
 복사하고 연결 메타데이터만 조정합니다. 별도의 스킬 사본을 유지하지 않습니다.
 
 `http://127.0.0.1:54322/mcp`에 별도 `redpact-verification` HTTP MCP 연결도 등록합니다.
-런타임의 모델 도구를 직접 노출해 승인 카드와 capability 경계를 유지하며 App 전용 뷰어
+런타임의 모델 도구를 직접 노출해 웹 검토 경로와 승인 경계를 유지하며 App 전용 뷰어
 브리지는 비공개로 유지합니다. 검증 계약은 [MCP 인터페이스](interfaces.md)를 참고하세요.
 번들 설치기는 여전히 이전 도구 구성을 가진 공개 0.8.0을 다운로드합니다. 확장된 검증 도구는
 이 소스로 빌드한 런타임이나 이를 포함하는 후속 릴리스가 필요합니다.
@@ -241,7 +241,7 @@ App 패키지는 일반 플러그인과 같은 `redpact`, `redpact-init` 스킬�
 App 설치기가 업데이트를 관리한다고 알리며 페이지 뒤에서 독립 npm 자체 업데이트를
 수행하지 않습니다.
 
-설치·시작 전에는 해당 설정 화면을 표시합니다. 정상 런타임은 프로젝트·워크트리·파일·diff·Git·테스트·환경·설정을 포함한 전체 앱을 표시합니다. 기록 없이도 일반 프로젝트 탐색이나 프로젝트 연결을 사용할 수 있습니다. `open_redpact_app`은 `kind`와 UUID `id` 쌍으로 앱 안의 정확한 요청이나 실행을 열 수도 있으며 실행 요청이나 승인을 하지 않습니다. App은 UI 메타데이터의 로컬 정규 검토 경로만 허용합니다. 상태 조회는 선택을 유지하며 복구용 **Open local viewer**도 같은 기록을 엽니다. 채팅 인라인 승인·결과 카드는 전체 App Page와 분리됩니다.
+설치·시작 전에는 해당 설정 화면을 표시합니다. 정상 런타임은 프로젝트·워크트리·파일·diff·Git·테스트·환경·설정을 포함한 전체 앱을 표시합니다. 기록 없이도 일반 프로젝트 탐색이나 프로젝트 연결을 사용할 수 있습니다. `open_redpact_app`은 `kind`와 UUID `id` 쌍으로 앱 안의 정확한 요청이나 실행을 열 수도 있으며 실행 요청이나 승인을 하지 않습니다. App은 UI 메타데이터의 로컬 정규 검토 경로만 허용합니다. 상태 조회는 선택을 유지하며 복구용 **Open local viewer**도 같은 기록을 엽니다. 채팅 인라인 승인·결과 카드는 제공하지 않습니다.
 
 App 리소스에 기존 React 뷰어와 스타일·폰트·아이콘을 직접 포함합니다.
 URI에 번들 HTML의 해시를 포함하므로 플러그인을 업데이트하면 이전 빌드의 캐시된
@@ -278,7 +278,7 @@ MCP 연결 종료 시 모든 구독을 닫습니다. 외부 화면은 5초마다
 검증에는 Playwright Chromium(`pnpm exec playwright install chromium`)을 설치하고
 `pnpm typecheck`, `pnpm test`를 실행합니다. 현재 서버·뷰어와 이 보조 앱을 빌드한 뒤
 `pnpm test:browser`로 실제 MCP 브리지를 통한 소스 빌드 런타임을 확인합니다. 전체 앱 진입,
-프로젝트 탐색, 정확한 요청 열기, 이력, 반응형 레이아웃과 별도의 인라인 승인 경계를 검증합니다. 공개 패키지 설치는
+프로젝트 탐색, 정확한 요청 열기, 이력, 반응형 레이아웃과 명시적인 웹 승인 경계를 검증합니다. 공개 패키지 설치는
 별도 검사입니다. `REDPACT_TEST_RUNTIME=installed REDPACT_TEST_MANAGER=npm pnpm test:browser`
 (매니저는 `pnpm`도 가능)는 설치와 소유 수명주기를 검증하며 현재 소스 뷰어의 동작을
 증명하지 않습니다. 설치기는 여전히 공개 0.8.0을 고정합니다.

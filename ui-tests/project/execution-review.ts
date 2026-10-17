@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { expect, type Page } from "@playwright/test"
 import { http, node } from "./target"
 
-export async function openExecutionReview(page: Page) {
+async function createExecutionReview() {
   const root = `/tmp/redpact-approval-${randomUUID()}`
   await node(
     `
@@ -42,57 +42,12 @@ export async function openExecutionReview(page: Page) {
   expect(result.isError).not.toBe(true)
   expect(result.structuredContent.state).toBe("awaiting_approval")
   const id = result.structuredContent.reviewId
-  expect(JSON.stringify(result.structuredContent)).not.toContain(result._meta.redpact.token)
-  const resource = await rpc("resources/read", { uri: "ui://redpact/tests.html" })
-  await page.exposeFunction("redpactApprovalTool", (params: object) => rpc("tools/call", params))
-  await page.goto("/")
-  await page.setContent(
-    '<iframe title="MCP App" style="border:0;width:100%;height:100vh"></iframe>',
-  )
-  await page.evaluate(
-    ({ snapshot, html }) => {
-      window.addEventListener("message", async (event) => {
-        const message = event.data
-        const source = event.source as Window
-        if (message?.method === "ui/initialize") {
-          source.postMessage(
-            {
-              jsonrpc: "2.0",
-              id: message.id,
-              result: {
-                protocolVersion: message.params.protocolVersion,
-                hostInfo: { name: "Redpact browser test host", version: "1" },
-                hostCapabilities: { serverTools: {} },
-                hostContext: { theme: "light" },
-              },
-            },
-            "*",
-          )
-        }
-        if (message?.method === "ui/notifications/initialized") {
-          source.postMessage(
-            { jsonrpc: "2.0", method: "ui/notifications/tool-result", params: snapshot },
-            "*",
-          )
-        }
-        if (message?.method === "tools/call") {
-          const bridge = window as unknown as {
-            redpactApprovalTool(params: object): Promise<unknown>
-          }
-          const result = await bridge.redpactApprovalTool(message.params)
-          source.postMessage({ jsonrpc: "2.0", id: message.id, result }, "*")
-        }
-      })
-      document.querySelector("iframe")!.srcdoc = html
-    },
-    { snapshot: result, html: resource.contents[0].text },
-  )
-  const frame = page.frameLocator("iframe")
-  const card = frame.getByLabel("Execution review", { exact: true })
-  await expect(card).toBeVisible()
+  expect(result._meta).toBeUndefined()
+  expect(result.structuredContent.reviewPath).toContain(`id=${id}`)
+  const tools = await rpc("tools/list", {})
+  expect(tools.tools.every((tool: { _meta?: { ui?: unknown } }) => !tool._meta?.ui)).toBe(true)
   return {
-    card,
-    frame,
+    reviewPath: result.structuredContent.reviewPath,
     id,
     root,
     rpc,
@@ -102,22 +57,6 @@ export async function openExecutionReview(page: Page) {
         root,
       )
     },
-    async refresh() {
-      const snapshot = await rpc("tools/call", {
-        name: "get_run",
-        arguments: { kind: "unit", id },
-      })
-      await page.evaluate(
-        (snapshot) =>
-          document
-            .querySelector("iframe")!
-            .contentWindow!.postMessage(
-              { jsonrpc: "2.0", method: "ui/notifications/tool-result", params: snapshot },
-              "*",
-            ),
-        snapshot,
-      )
-    },
     async restore() {
       expect((await http("/api/approval-policy", "POST", original.body)).status).toBe(200)
     },
@@ -125,7 +64,7 @@ export async function openExecutionReview(page: Page) {
 }
 
 export async function openExecutionReviewViewer(page: Page) {
-  const review = await openExecutionReview(page)
+  const review = await createExecutionReview()
   try {
     const response = await review.rpc("tools/call", {
       name: "get_review_context",
@@ -136,7 +75,7 @@ export async function openExecutionReviewViewer(page: Page) {
     expect(context.id).toBe(review.id)
     expect(context.approval.preview.command).toBe("echo reviewed-command")
     await page.addInitScript(() => localStorage.setItem("redpact:language", "en"))
-    await page.goto(context.reviewPath)
+    await page.goto(review.reviewPath)
     await expect(page.getByRole("heading", { name: context.intent, exact: true })).toBeVisible()
     await expect(page.getByText(review.id, { exact: true })).toBeVisible()
     return { ...review, context }

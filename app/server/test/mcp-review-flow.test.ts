@@ -37,9 +37,21 @@ async function rpc(method: string, params?: object) {
     },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
   })
-  return (await response.json()).result
+  const body = await response.json()
+  return body.result ?? { isError: true, error: body.error }
 }
 const call = (name: string, args: object) => rpc("tools/call", { name, arguments: args })
+async function approve(id: string, revision: number, subject: "environment" | "tests") {
+  const response = await app.request(`/api/execution-reviews/integration/${id}/approve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ revision, subject }),
+  })
+  if (!response.ok) {
+    return { isError: true }
+  }
+  return call("get_run", { id })
+}
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "redpact-review-flow-"))
   await mkdir(join(root, ".redpact"))
@@ -126,7 +138,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true })
 })
 
-test("MCP Ask exposes real snapshots and UI-only controls, then starts only after both approvals", async () => {
+test("MCP는 웹 검토로 안내하고 두 번의 웹 승인 후에만 실행한다", async () => {
   const tools = (await rpc("tools/list")).tools
   expect(
     tools
@@ -135,18 +147,18 @@ test("MCP Ask exposes real snapshots and UI-only controls, then starts only afte
       )
       .map((tool: { name: string }) => tool.name)
       .sort(),
-  ).toEqual(["review_action", "set_approval_policy"])
+  ).toEqual([])
   let result = await call("run_tests", { path: root })
   expect(result.structuredContent.state).toBe("awaiting_approval")
   const id = result.structuredContent.id
-  expect(result._meta.redpact.submission.parsed[0].review.scenarios[0].title).toBe(
-    "Accept an order",
-  )
-  expect(JSON.stringify(result.structuredContent)).not.toContain(result._meta.redpact.token)
-  expect(result.content[0].text).not.toContain(result._meta.redpact.token)
+  expect(result._meta).toBeUndefined()
+  expect(
+    new URL(result.structuredContent.reviewPath, "http://localhost").searchParams.get("id"),
+  ).toBe(id)
+  expect(reviews.get(id)?.submission.parsed[0].review.scenarios[0].title).toBe("Accept an order")
   expect(preparations).toBe(0)
   expect(executions).toBe(0)
-  const token = result._meta.redpact.token
+  const token = reviews.capability(id)
   expect(
     (
       await call("review_action", {
@@ -157,20 +169,15 @@ test("MCP Ask exposes real snapshots and UI-only controls, then starts only afte
       })
     ).isError,
   ).toBe(true)
-  result = await call("review_action", {
-    id,
-    token,
-    revision: 0,
-    subject: "environment",
-  })
+  result = await approve(id, 0, "environment")
   expect(result.isError).not.toBe(true)
-  expect(result._meta.redpact.review.selection.select.payment).toBe("mock")
+  expect(reviews.get(id)?.review.selection.select.payment).toBe("mock")
   expect(preparations).toBe(0)
   await writeFile(
     join(root, "integration/order.test.ts"),
     'throw new Error("changed after review")',
   )
-  result = await call("review_action", { id, token, revision: 1, subject: "tests" })
+  result = await approve(id, 1, "tests")
   expect(result.isError).not.toBe(true)
   const runId = result.structuredContent.id
   await expect.poll(() => execution.get(runId).state).toBe("finished")
@@ -179,7 +186,7 @@ test("MCP Ask exposes real snapshots and UI-only controls, then starts only afte
   expect(
     storage.store.getSubmission(result.structuredContent.submissionId)?.files[0].source,
   ).toContain("Accept an order")
-  const duplicate = await call("review_action", { id, token, revision: 1, subject: "tests" })
+  const duplicate = await approve(id, 1, "tests")
   expect(duplicate.structuredContent.id).toBe(runId)
   expect(executions).toBe(1)
   expect((await call("get_run", { id })).structuredContent.id).toBe(runId)
@@ -187,25 +194,26 @@ test("MCP Ask exposes real snapshots and UI-only controls, then starts only afte
 
 test("Ask to Auto changes future requests without granting the pending request approval", async () => {
   const pending = await call("run_tests", { path: root })
-  const response = await call("set_approval_policy", {
-    token: pending._meta.redpact.token,
-    policy: "auto",
+  const response = await app.request("/api/approval-policy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ policy: "auto" }),
   })
-  expect(response.isError).not.toBe(true)
+  expect(response.ok).toBe(true)
   expect(
     (await call("get_run", { id: pending.structuredContent.id })).structuredContent.state,
   ).toBe("awaiting_approval")
   const next = await call("run_tests", { path: root })
   await expect.poll(() => execution.get(next.structuredContent.id).state).toBe("finished")
-  expect(next._meta.redpact.review.policy).toBe("auto")
-  expect(next._meta.redpact.review.testsApproved).toBe(false)
+  expect(next.structuredContent.approval).toBe("auto")
+  expect(reviews.get(next.structuredContent.reviewId)?.review.testsApproved).toBe(false)
   const cancelled = await reviews.cancel(pending.structuredContent.id)
   expect(cancelled?.review.state).toBe("cancelled")
   expect(
     (
       await call("review_action", {
         id: pending.structuredContent.id,
-        token: pending._meta.redpact.token,
+        token: reviews.capability(pending.structuredContent.id),
         revision: 0,
         subject: "environment",
       })
@@ -246,8 +254,7 @@ test("fixed settings supply a review snapshot and later changes require fresh re
   expect(reviews.get(pending.structuredContent.id)?.review.selection).toEqual(selection)
   expect(preparations).toBe(0)
   const id = pending.structuredContent.id
-  const token = pending._meta.redpact.token
-  const changed = await call("review_action", { id, token, revision: 0, subject: "environment" })
+  const changed = await approve(id, 0, "environment")
   expect(changed.isError).toBe(true)
   expect(preparations).toBe(0)
   expect(executions).toBe(0)
@@ -256,7 +263,7 @@ test("fixed settings supply a review snapshot and later changes require fresh re
 test("통합 조회 도구는 대기 중인 검토를 승인하거나 토큰을 노출하지 않는다", async () => {
   const pending = await call("run_tests", { path: root })
   const id = pending.structuredContent.id
-  const token = pending._meta.redpact.token
+  const token = reviews.capability(id)
   const result = await call("get_run", { kind: "integration", id })
   expect(result.isError).not.toBe(true)
   expect(result.structuredContent).toMatchObject({
@@ -265,7 +272,7 @@ test("통합 조회 도구는 대기 중인 검토를 승인하거나 토큰을 
   })
   expect(JSON.stringify(result.structuredContent)).not.toContain(token)
   expect(JSON.stringify(result.content)).not.toContain(token)
-  expect(result._meta.redpact.token).toBe(token)
+  expect(result._meta).toBeUndefined()
   expect(preparations).toBe(0)
   expect(executions).toBe(0)
 })

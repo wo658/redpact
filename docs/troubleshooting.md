@@ -33,10 +33,8 @@ For rejected requests, check the intended local hostname and whether a browser p
 
 ## A request remains pending
 
-Ask requests remain pending until a person uses a supported MCP App or opens the
-exact connected review. Unit/Playwright use `get_run`; Integration also supports
-`get_run`. Polling and textual agreement do not approve. If neither human interface
-is available, report the limitation and keep the request pending.
+Ask requests remain pending until a person explicitly approves in the exact connected web review. Unit/Playwright use `get_run`; Integration also supports
+`get_run`. Polling and textual agreement do not approve. If the web viewer is unavailable, report the limitation and keep the request pending.
 Stale revision or changed reviewed inputs require a refreshed review or a new request,
 not approval of different settings. [Interfaces](interfaces.md) defines these checks.
 

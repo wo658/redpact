@@ -77,6 +77,7 @@ test("채팅 상태 조회는 등록 없이 진단하고 실제 실행의 검토
     const run = await http<{ id: string }>(
       `/api/worktrees/${checkout.worktreeId}/unit-tests/run`,
       "POST",
+      { executionScope: "all" },
     )
     expect(run.status).toBe(200)
     await expect

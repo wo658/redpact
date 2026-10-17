@@ -25,13 +25,12 @@ give each an explicit file boundary and the same checkout/evidence identity. The
 integrates their changes and verifies the final tree. Delegation is not verification.
 
 Use the MCP entries below for requests and follow their returned identities. Ask policy
-requires the user's action in an MCP App or the connected viewer. If the client cannot
-render Apps, call `get_review_context` with the returned kind and request ID and provide
-its review path on the connected viewer origin for the user to review and approve.
-Never invoke an App-only approval tool, submit the viewer's approval request on the
-user's behalf, copy a capability into model context, or change policy to proceed.
-Polling and text replies do not approve execution. If neither approval interface is
-accessible, retain the pending request and explain that remaining blocker.
+requires the user's action in the connected web viewer. Use the returned `reviewPath`
+or call `get_review_context` with the kind and request ID, then link the path on the
+same connected viewer origin. Never submit the viewer's approval request on the user's
+behalf, read private capabilities or change policy to proceed. Polling and text replies
+do not approve execution. If the viewer is unavailable, retain the pending request
+and explain that blocker.
 
 Use `get_review_context` for a compact result, failure and evidence references, then
 `get_run` for the required recorded log, source or image. Return the provided
@@ -68,9 +67,8 @@ The regular plugin defaults to port 54321 and does not install or start the runt
 start `redpact serve --port 54321`. The App Page package
 bundles these same skills with its verification connection on port 54322 and manages
 runtime startup separately. Never switch instances just because a default is familiar.
-MCP Apps approval cards require a compatible host; the connected viewer provides the
-same explicit human approval flow when Apps are unavailable. Use the returned review
-path and preserve the requested instance and approval policy.
+Runtime MCP provides text and structured evidence without inline chat cards.
+Use the returned web review path and preserve the instance and approval policy.
 
 | Request | Completion scope |
 | --- | --- |
