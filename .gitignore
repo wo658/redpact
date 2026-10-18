@@ -5,7 +5,7 @@ node_modules/
 dist/
 /output/
 .DS_Store
-.codex/worktrees/
+.codex/
 
 # Worktree-local review drafts; executed evidence is stored by Redpact.
 ui-tests/worktree/
