@@ -26,6 +26,10 @@ describe("local API documentation", () => {
       const html = await response.text()
       expect(html).toContain("/openapi.json")
       expect(html).not.toContain(token)
+      expect(html).not.toContain("REDPACT_TOKEN")
+      expect(html).not.toContain("Authorize dialog")
+      expect(html).toContain("No API token is required")
+      expect(html).toContain("local host and same-origin")
       expect(html).not.toMatch(/(?:src|href)=["']https?:\/\//)
       const assets = [...html.matchAll(/(?:src|href)="(\/docs\/assets\/[^" ]+)"/g)].map(
         (match) => match[1],

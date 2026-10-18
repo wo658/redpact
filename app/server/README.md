@@ -1,6 +1,6 @@
 # Local server workspace
 
-TypeScript/Hono HTTP and MCP over shared Core services, with Vitest execution and
+TypeScript/Hono HTTP and MCP over shared application workflows, with Vitest execution and
 file-based evidence. Build and launch from the repository root:
 
 ```sh

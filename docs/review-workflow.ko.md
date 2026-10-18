@@ -103,6 +103,5 @@ redpact tests run --kind integration \
 `redpact runs context --kind integration --id ID`로 정확한 결과를 여세요. ID·체크아웃·캡처 소스·결과·정리를
 비교합니다. ID를 받았다는 사실은 통과가 아닙니다.
 
-예제는 `REDPACT_URL=http://127.0.0.1:54318 node examples/order-desk/tools/review.mjs http`도
-지원합니다. 각 실행은 새 환경을 소유합니다. 실패한 시도를 남기고 입력 수정 후 새
+각 실행은 새 환경을 소유합니다. 실패한 시도를 남기고 입력 수정 후 새
 요청을 제출하세요. 조회는 재실행하거나 나중에 수정된 파일을 캡처하지 않습니다.

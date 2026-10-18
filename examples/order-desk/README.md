@@ -7,16 +7,11 @@ and inventory are in memory for one execution; this fixture does not verify a re
 payment gateway or persistence across runs.
 
 Follow the maintained [review walkthrough](../../docs/review-workflow.md#try-the-included-scenario)
-with this directory's absolute path. `run_tests` takes `tests: ["http.test.js"]`;
-services and dependency kinds come from shared settings, never request-time selection.
-Read the returned identity with `get_run` and open its exact `get_review_context` link.
+with this directory's absolute path. Use `redpact tests run --kind integration`
+with `--test http.test.js`; services and dependency kinds come from shared settings.
+Read the returned identity with `redpact runs show --kind integration --id ID` and
+open its exact review with `redpact open --kind integration --id ID`.
 Each execution prepares and removes its own temporary environment.
-
-For the scripted check against an existing server:
-
-```sh
-REDPACT_URL=http://127.0.0.1:54318 node examples/order-desk/tools/review.mjs http
-```
 
 `scenarios.json` lists diagnostic bundles including intentional assertion, collection,
 execution, timeout and cancellation outcomes. Those are not a passing regression suite.

@@ -11,7 +11,9 @@ The running server exposes `/openapi.json`, `/docs` (Swagger UI), `/swagger` and
 `/redoc`. Hono route metadata and shared validators generate the API schema.
 This generated reference is the field-level authority; do not duplicate all HTTP
 schemas in Markdown. Assets are bundled locally. These API documentation routes
-are distinct from the public Next.js documentation website.
+are distinct from the public Next.js documentation website. The pages explain that
+no API token is required; documentation and API calls retain the local host and
+same-origin access boundary described below.
 
 HTTP and MCP enter the same application workflows and share execution/settings validation.
 Read-only inspection does not execute code. Explicit mutation routes own their

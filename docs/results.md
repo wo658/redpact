@@ -11,9 +11,9 @@ If you have no evidence yet, follow [your first run](first-run.md). For executio
 
 ## Open a request from chat
 
-Use the exact `reviewPath` returned by `get_review_context` on the same app instance. It opens the request or execution inside the full app and resolves the recorded worktree. Under Ask, inspect the captured inputs before approving; Integration requires environment and test approval, while Unit and Playwright each approve one captured request. The review links to worktree-bound history. No record is needed to open the full app and browse projects.
+Use the exact `reviewPath` returned by `redpact runs context --kind KIND --id ID` on the same app instance. It opens the request or execution inside the full app and resolves the recorded worktree. Under Ask, inspect the captured inputs before approving; Integration requires environment and test approval, while Unit and Playwright each approve one captured request. The review links to worktree-bound history. No record is needed to open the full app and browse projects.
 
-Execution outcome, current-source freshness and human acceptance remain separate. Unverified freshness is `unknown`; acceptance is `not_recorded`. A finished Playwright run does not alone prove cleanup; without explicit cleanup evidence its summary remains `unknown`. Use `redpact runs show` for bounded logs and retained Integration/Playwright source, and `get_run_artifact` for owned attachments. Tests have no public cancel action.
+Execution outcome, current-source freshness and human acceptance remain separate. Unverified freshness is `unknown`; acceptance is `not_recorded`. A finished Playwright run does not alone prove cleanup; without explicit cleanup evidence its summary remains `unknown`. Use `redpact runs logs` for bounded logs, `redpact runs source --file CAPTURED_PATH` for retained Integration/Playwright source, and `redpact runs artifacts` / `redpact runs artifact --artifact ID --output FILE` for owned attachments. Supply `--kind KIND --id ID` for each command; binary artifact retrieval requires `--kind playwright`. Tests have no public cancel action.
 
 ## Find the right view
 

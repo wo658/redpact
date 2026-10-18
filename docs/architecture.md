@@ -14,7 +14,7 @@ The standalone browser and Global App Page preserve the management app. Chat MCP
 
 Agents use CLI operations over local HTTP to enter shared workflows. Model-facing
 MCP is limited to runtime status, shutdown and opening the app; the App Page companion
-can also start its owned runtime. The full embedded app and existing cards retain
+can also start its owned runtime. The full embedded app retains
 App-only MCP transport. Settings use revision-checked CLI reads and partial updates;
 JSON remains the internal storage format. General files and Git use host tools.
 See [interfaces](interfaces.md).

@@ -21,7 +21,7 @@ redpact serve --project /absolute/path/to/your-project
 For a one-off launch:
 
 ```sh
-pnpm dlx redpact serve --project /absolute/path/to/your-project
+pnpm dlx @wo658/redpact serve --project /absolute/path/to/your-project
 ```
 
 Open `http://127.0.0.1:54318` for the bundled viewer. No source checkout or separate
@@ -32,8 +32,12 @@ Connect your agent using Streamable HTTP at `http://127.0.0.1:54318/mcp`.
 Redpact defaults to loopback and requires no API token. HTTP agent Plugins use port 54321 and the App Page Plugin owns port 54322.
 Connect the viewer and agent to the same instance.
 
-Ask your agent to inspect your project with `configure describe`, author
-`.redpact/settings.json`, and call `configure validate`. Validation does not prepare
+Ask your agent to inspect your project with `redpact settings describe` and
+`redpact settings get`, using `--scope project --path /absolute/checkout`. Apply
+revision-checked changes with `redpact settings patch`, then call
+`redpact settings validate` with the same scope and path. See the
+[settings contract](https://github.com/wo658/redpact/blob/main/docs/settings-reference.md).
+Validation does not prepare
 services or execute tests. Every managed execution owns temporary resources and
 cleans them up after completion. Shared infrastructure can be selected as external
 dependencies. Missing Docker or requested services never silently fall back to host
@@ -48,11 +52,11 @@ directory at a time; reuse it on restart to preserve history.
 Before registry publication, or to verify a locally built release:
 
 ```sh
-pnpm add --global /absolute/path/redpact-0.1.0.tgz --ignore-scripts
+pnpm add --global /absolute/path/redpact-0.1.0.tgz
 redpact serve --project /absolute/path/to/your-project
 ```
 
-No installation scripts are required. The package includes the server, viewer,
+Keep package-manager lifecycle scripts enabled. The package includes the server, viewer,
 runner assets and patched Testcontainers dependency. Bundled third-party software
 retains its licenses; see `LICENSE`, `NOTICE`, `licenses`, and the runtime asset
 license directories.

@@ -264,7 +264,7 @@ dockerTest(
 )
 
 dockerTest(
-  "Order Desk 스크립트가 실행별 임시 환경에서 HTTP 앱을 검증하고 정리한다",
+  "Order Desk CLI가 실행별 임시 환경에서 HTTP 앱을 검증하고 정리한다",
   async () => {
     const root = await mkdtemp(join(tmpdir(), "redpact-order-desk-"))
     const project = join(root, "project"),
@@ -295,21 +295,57 @@ dockerTest(
     try {
       await expect.poll(() => /"port":(\d+)/.exec(output)?.[1], { timeout: 20000 }).toBeTruthy()
       const base = `http://127.0.0.1:${/"port":(\d+)/.exec(output)?.[1]}`
-      const result = await execa(process.execPath, [join(project, "tools/review.mjs"), "http"], {
-        env: { REDPACT_URL: base },
-        timeout: 240000,
-        reject: false,
-      })
-      expect(result.exitCode, result.stdout + result.stderr).toBe(0)
-      expect(result.stdout).toContain('"observed":"passed"')
+      const cli = async (...args: string[]) => {
+        const result = await execa(
+          process.execPath,
+          [
+            fileURLToPath(new URL("../dist/cli.js", import.meta.url)),
+            ...args,
+            "--server",
+            base,
+            "--json",
+          ],
+          { timeout: 240000, reject: false },
+        )
+        expect(result.exitCode, result.stdout + result.stderr).toBe(0)
+        const response = JSON.parse(result.stdout)
+        expect(response.ok).toBe(true)
+        return response.data
+      }
+      await cli("projects", "connect", "--path", project)
+      await cli("settings", "validate", "--scope", "project", "--path", project)
+      const run = await cli(
+        "tests",
+        "run",
+        "--kind",
+        "integration",
+        "--path",
+        project,
+        "--test",
+        "http.test.js",
+        "--wait",
+        "--wait-timeout",
+        "180",
+      )
+      expect(run).toMatchObject({ kind: "integration", state: "finished", outcome: "passed" })
+      expect(run.identity.submissionId).toBeTruthy()
       const [p] = await (await fetch(`${base}/api/projects`)).json()
       const [worktree] = await (await fetch(`${base}/api/projects/${p.id}/worktrees`)).json()
       const environments = await (
         await fetch(`${base}/api/environments?worktreeId=${worktree.id}`)
       ).json()
       expect(environments).toHaveLength(1)
-      expect(environments[0].state).toBe("stopped")
       expect(environments[0].lifecycle).toBe("run")
+      await expect
+        .poll(
+          async () => {
+            const response = await fetch(`${base}/api/environments/${environments[0].id}`)
+            expect(response.ok).toBe(true)
+            return (await response.json()).state
+          },
+          { timeout: 60000 },
+        )
+        .toBe("stopped")
     } finally {
       child.kill("SIGTERM")
       await exited
