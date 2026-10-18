@@ -74,15 +74,6 @@ export function createApp(services: Services, options: { uiDirectory?: string } 
       return error.getResponse()
     }
     const code = "code" in error ? error.code : undefined
-    if (code === "work_start_incomplete") {
-      return c.json(
-        { code, error: error.message, recovery: "recovery" in error ? error.recovery : undefined },
-        409,
-      )
-    }
-    if (code === "work_start_conflict") {
-      return c.json({ code, error: error.message }, 409)
-    }
     if (code === "settings_invalid") {
       return c.json(
         {

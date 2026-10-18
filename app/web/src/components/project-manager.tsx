@@ -74,7 +74,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { WorktreeReview } from "@/components/worktree-review"
-import { type Api, ApiError, type Project, type WorkStartInput, type Worktree } from "@/lib/api"
+import { type Api, ApiError, type Project, type Worktree } from "@/lib/api"
 
 import {
   type WorkspacePage as Page,
@@ -547,20 +547,6 @@ export function WorktreePanel({
   const settingsTitle = page === "project-settings" ? t("Project settings") : t("Settings")
   const fillsFrame = ["git-graph", "files", "review", "tests"].includes(page)
   const isSettings = page === "settings" || page === "project-settings"
-  const requestKey = `redpact:work-start:${project.id}`
-  const [retry] = useState<WorkStartInput | null>(() => {
-    try {
-      const saved = JSON.parse(sessionStorage.getItem(requestKey) ?? "null")
-      return saved?.projectId === project.id &&
-        ["requestId", "intent", "baseRef", "branch", "path"].every(
-          (key) => typeof saved[key] === "string",
-        )
-        ? saved
-        : null
-    } catch {
-      return null
-    }
-  })
   const display = useWorktreeDisplay(
     api,
     project.id,
@@ -605,14 +591,6 @@ export function WorktreePanel({
     <>
       {error && <Notice error>{error}</Notice>}
       {display.error && <Notice error>{display.error}</Notice>}
-      {retry && (
-        <Notice>
-          {t(
-            "A previous worktree creation needs attention. Ask your agent to inspect request {{id}}.",
-            { id: retry.requestId },
-          )}
-        </Notice>
-      )}
     </>
   )
 

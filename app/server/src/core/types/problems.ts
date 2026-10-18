@@ -9,8 +9,6 @@ export type Problem = {
     | "environment_error"
     | "configuration_error"
     | "settings_unsupported"
-    | "work_start_conflict"
-    | "work_start_incomplete"
     | "not_found"
     | "invalid_input"
     | "closing"

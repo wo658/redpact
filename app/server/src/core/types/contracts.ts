@@ -114,9 +114,7 @@ export type Store = {
   saveEnvironment(value: Environment): void
   getEnvironment(id: string): Environment | undefined
   listEnvironments(): Environment[]
-  saveWorkStart(value: WorkStart): void
   getWorkStart(id: string): WorkStart | undefined
-  listWorkStarts(): WorkStart[]
   createProject(value: ProjectRecord): void
   promoteProject(value: ProjectRecord): void
   updateProject(value: ProjectRecord): void

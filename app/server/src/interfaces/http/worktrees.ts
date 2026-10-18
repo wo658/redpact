@@ -2,8 +2,7 @@ import { zValidator } from "@hono/zod-validator"
 import { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
-import { startWorkInput } from "../../core/start-work-schema.js"
-import type { WorkStarts, WorktreeService } from "../../core/types/services.js"
+import type { WorkStartQueries, WorktreeService } from "../../core/types/services.js"
 import { createWorktreeInspection } from "../../workflows/inspection.js"
 import { projectInput, worktreeInput } from "../schemas.js"
 import {
@@ -19,59 +18,34 @@ import {
   dependenciesResponse,
   gitResponse,
   projectResponse,
-  startedWorkResponse,
   workStartResponse,
   worktreeResponse,
   worktreeSettingsResponse,
 } from "./docs/schemas.js"
 
-export function worktreeRoutes(service: WorktreeService, starts?: WorkStarts) {
+export function worktreeRoutes(service: WorktreeService, starts?: WorkStartQueries) {
   const inspection = createWorktreeInspection(service)
   const imageSide = z
     .union([z.object({ dataUrl: z.string() }), z.object({ error: z.string() })])
     .nullable()
   const app = new Hono()
   if (starts) {
-    app
-      .post(
-        "/work-starts",
-        describeRoute({
-          operationId: "startWork",
-          summary: "Create a managed worktree and work item",
-          tags: ["Worktrees"],
-          description:
-            "Creates or resumes durable worktree creation. Retry with identical requestId and inputs. baseRef and branch must be valid Git references; path must be absolute. Does not prepare containers or establish readiness.",
-          requestBody: jsonBody(startWorkInput),
-          responses: {
-            ...localErrors,
-            ...inputErrors,
-            ...notFound,
-            ...conflict,
-            200: jsonResponse(
-              startedWorkResponse,
-              "Create a managed worktree and work item response.",
-            ),
-          },
-        }),
-        zValidator("json", startWorkInput),
-        async (c) => c.json(await starts.start(c.req.valid("json")), 200),
-      )
-      .get(
-        "/work-starts/:id",
-        describeRoute({
-          operationId: "getWorkStart",
-          summary: "Read worktree creation state",
-          tags: ["Worktrees"],
-          description:
-            "Returns the durable operation record, including recoverable intermediate states.",
-          responses: {
-            ...localErrors,
-            ...notFound,
-            200: jsonResponse(workStartResponse, "Read worktree creation state response."),
-          },
-        }),
-        (c) => c.json(starts.get(c.req.param("id"))),
-      )
+    app.get(
+      "/work-starts/:id",
+      describeRoute({
+        operationId: "getWorkStart",
+        summary: "Read worktree creation state",
+        tags: ["Worktrees"],
+        description:
+          "Reads retained creation evidence only. Historical states are preserved; creation cannot be resumed. Inspect and manage the checkout with host Git tools.",
+        responses: {
+          ...localErrors,
+          ...notFound,
+          200: jsonResponse(workStartResponse, "Read worktree creation state response."),
+        },
+      }),
+      (c) => c.json(starts.get(c.req.param("id"))),
+    )
   }
   return app
     .get(

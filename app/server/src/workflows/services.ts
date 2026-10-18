@@ -25,7 +25,7 @@ import type {
   RunQueries,
   StopEnvironment,
   SubmissionsService,
-  WorkStarts,
+  WorkStartQueries,
   WorktreeService,
 } from "../core/types/services.js"
 import type { SettingsService, TestSelection } from "../core/types/settings.js"
@@ -70,7 +70,7 @@ export type Services = {
   environments?: EnvironmentService
   defaultWorktreeId?: string
   worktrees?: WorktreeService
-  workStarts?: WorkStarts
+  workStarts?: WorkStartQueries
   git?: GitService
   settings: SettingsService
   submissions: SubmissionsService

@@ -1,6 +1,7 @@
 import { isAbsolute } from "node:path"
 import { z } from "zod"
 
+// Frozen input shape for retained creation records; not an executable request contract.
 export const startWorkInput = z.strictObject({
   requestId: z.string().uuid(),
   projectId: z.string().uuid(),

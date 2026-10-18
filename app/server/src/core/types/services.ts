@@ -15,12 +15,12 @@ import type { ExecutionSelection } from "./execution-selection.js"
 import type { BranchReview, GitDiff, GitService } from "./git.js"
 import type { ExecutionSummary, RunLogs } from "./run-logs.js"
 import type { SettingsService, TestSelection } from "./settings.js"
-import type { StartWorkInput, WorkStart } from "./start-work.js"
+import type { WorkStart } from "./start-work.js"
 import type { TestConnections } from "./test-connections.js"
 
-// Identity publication shares the admission gate with execution and managed creation.
+// Identity publication shares the admission gate with execution.
 export type WorktreeAdmission = {
-  ensure(projectId: string, path: string, managed?: { id: string }): Promise<Worktree>
+  ensure(projectId: string, path: string): Promise<Worktree>
 }
 export type WorktreeService = {
   exclusive<T>(operation: (admission: WorktreeAdmission) => Promise<T> | T): Promise<T>
@@ -42,19 +42,8 @@ export type WorktreeService = {
   connect(path: string, name?: string, reconnect?: boolean): Promise<ProjectRecord>
   ensure(projectId: string, path: string): Promise<Worktree>
 }
-export type WorkStarts = {
+export type WorkStartQueries = {
   get(id: string): WorkStart
-  start(input: StartWorkInput): Promise<{
-    requestId: string
-    workItemId: string
-    worktreeId: string
-    projectId: string
-    checkoutRoot: string
-    projectRoot: string
-    revision: string
-    configure: { tool: string; arguments: { action: string; worktreeId: string } }
-    nextSteps: string[]
-  }>
 }
 export type SubmissionsService = {
   latest(worktreeId: string): Submission | undefined

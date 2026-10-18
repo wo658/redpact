@@ -720,8 +720,6 @@ export const en = {
   "Project root directory": "Project root directory",
   "Git worktrees and test files are tracked automatically.":
     "Git worktrees and test files are tracked automatically.",
-  "A previous worktree creation needs attention. Ask your agent to inspect request {{id}}.":
-    "A previous worktree creation needs attention. Ask your agent to inspect request {{id}}.",
   Settings: "Settings",
   "Open settings": "Open settings",
   "Project settings": "Project settings",

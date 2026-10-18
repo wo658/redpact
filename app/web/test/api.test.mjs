@@ -9,42 +9,34 @@ const server = await createServer({
 after(() => server.close())
 const { createApi, ApiError } = await server.ssrLoadModule("/src/lib/api.ts")
 
-test("worktree actions use explicit parent IDs and preserve the creation request on retry", async () => {
+test("기존 프로젝트 연결과 과거 생성 기록 조회만 제공한다", async () => {
   const calls = []
-  const result = { requestId: "request-one", worktreeId: "worktree-one", workItemId: "work-one" }
+  const result = { id: "request-one", state: "attempted", checkoutRoot: "/repo" }
   const api = createApi(async (url, init) => {
     calls.push({ url, init })
     return Response.json(result)
   })
   await api.connect("/repo", "Project")
-  const input = {
-    requestId: "request-one",
-    projectId: "project-one",
-    intent: "Change",
-    baseRef: "HEAD",
-    branch: "codex/change",
-    path: "/new",
-  }
-  assert.deepEqual(await api.start(input), result)
-  await api.start(input)
+  assert.deepEqual(await api.getStart("request-one"), result)
+  assert.equal(api.start, undefined)
   assert.deepEqual(
     calls.map((call) => call.url),
-    ["/api/projects", "/api/work-starts", "/api/work-starts"],
+    ["/api/projects", "/api/work-starts/request-one"],
   )
-  assert.equal(calls[1].init.body, calls[2].init.body)
+  assert.equal(calls[1].init.method, "GET")
   assert.equal(calls[0].init.headers.Authorization, undefined)
   assert.deepEqual(JSON.parse(calls[0].init.body), { path: "/repo", name: "Project" })
 })
 
 test("HTTP errors, domain conflicts, and recovery diagnostics survive error handling", async () => {
   const detail = {
-    code: "work_start_incomplete",
-    error: "Creation uncertain",
+    code: "worktree_busy",
+    error: "Operation needs attention",
     recovery: { state: "attempted", nextStep: "Inspect the checkout before continuing." },
   }
   const api = createApi(async () => Response.json(detail, { status: 409 }))
   await assert.rejects(
-    api.start({}),
+    api.disconnectProject("project-one"),
     (error) =>
       error instanceof ApiError &&
       error.status === 409 &&

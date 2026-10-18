@@ -22,7 +22,20 @@ for (const width of [1280, 390]) {
     expect(response.ok()).toBeTruthy()
     const project = await response.json()
     await page.setViewportSize({ width, height: 900 })
-    await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
+    await page.addInitScript((id) => {
+      localStorage.setItem("redpact:project", id)
+      sessionStorage.setItem(
+        `redpact:work-start:${id}`,
+        JSON.stringify({
+          requestId: "retained-request",
+          projectId: id,
+          intent: "과거 생성 요청",
+          baseRef: "HEAD",
+          branch: "feature/retained",
+          path: "/retained-checkout",
+        }),
+      )
+    }, project.id)
     await openApp(page, "en")
     await test.step("프로젝트 메뉴에서 관리 화면을 연다", async () => {
       if (width < 768) {
@@ -33,6 +46,14 @@ for (const width of [1280, 390]) {
       await expect(
         page.getByRole("heading", { name: "Manage projects", exact: true }),
       ).toBeVisible()
+    })
+    await test.step("과거 생성 상태가 있어도 생성 재시도 안내나 버튼을 표시하지 않는다", async () => {
+      await expect(
+        page.getByText("A previous worktree creation needs attention.", { exact: false }),
+      ).toHaveCount(0)
+      await expect(page.getByRole("button", { name: "Create worktree", exact: true })).toHaveCount(
+        0,
+      )
     })
     const management = page.getByRole("dialog", { name: "Manage projects", exact: true })
     const search = management.getByRole("textbox", { name: "Search projects", exact: true })
