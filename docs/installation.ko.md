@@ -226,14 +226,19 @@ App 패키지는 일반 플러그인과 같은 `redpact`, `redpact-init` 스킬�
 이 App 인스턴스로 연결합니다. 빌드는 유지되는 스킬 원본을 표준 `skills/` 디렉터리로
 복사하고 연결 메타데이터만 조정합니다. 별도의 스킬 사본을 유지하지 않습니다.
 
-플러그인은 사이드바와 같은 런타임·증거 저장소의
-`http://127.0.0.1:54322/mcp`에 별도 `redpact-verification` HTTP MCP 연결도 등록합니다.
-모델에는 런타임 수명 주기·앱 열기 도구를 노출합니다. 검증 작업 도구와 뷰어 브리지는
-App 전용 visibility와 capability 경계를 유지하며 에이전트는 설정·실행·증거를 CLI로 다룹니다. 검증 계약은 [MCP 인터페이스](interfaces.md)를 참고하세요.
-Plugin 빌드는 `app/server/package.json`의 제품 버전을 고정하므로 Plugin 배포 전에 해당 런타임을 게시해야 합니다. 0.9.0에는 CLI와 축소된 모델 도구 구성이 포함됩니다. 셸에서 `redpact`를 사용하려면 전역 CLI를 별도로 설치하고, App 인스턴스를 대상으로 `--server http://127.0.0.1:54322`를 지정합니다.
-런타임 시작·업데이트 후 도구 목록이 오래되었거나 시작 시 연결하지 못했다면 호스트의 MCP
-연결을 다시 연결하세요. `REDPACT_APP_PORT`를 변경하면 플러그인 manifest의 HTTP MCP URL도
-함께 변경해야 합니다.
+패키지는 `redpact-app` STDIO MCP 연결 하나를 등록합니다. 모델용 도구는
+`get_redpact_status`, `start_redpact_runtime`, `stop_redpact_runtime`,
+`open_redpact_app` 네 가지이며 계약은 [MCP 인터페이스](interfaces.md)를 참고하세요.
+별도 `redpact-verification` HTTP 연결은 없습니다. 런타임이 중지되어도 companion은
+사용할 수 있습니다. 설치와 뷰어 브리지는 App 전용 visibility와 capability 경계를 유지합니다.
+
+에이전트는 프로젝트·설정·환경·테스트·증거·업데이트 작업에 CLI를 사용합니다.
+셸에서 `redpact`를 사용하려면 전역 CLI를 별도로 설치하고 상태 결과의 `origin`을
+`--server`로 전달합니다(기본값 `http://127.0.0.1:54322`). `REDPACT_APP_PORT`를
+변경하면 이 주소가 바뀌며 추가 MCP 연결은 필요하지 않습니다.
+Plugin 빌드는 `app/server/package.json`의 제품 버전을 고정하므로 Plugin 배포 전에
+해당 런타임을 게시해야 합니다. 0.9.0에는 CLI가 포함됩니다.
+플러그인 업데이트 후 호스트를 다시 연결해 연결 설정과 도구 목록을 갱신하세요.
 
 기본 포트는 `54322`, 런타임 데이터는 `~/.redpact/app-page/54322`, 시작 출력은 그 안의
 `app-start.log`에 저장합니다. `REDPACT_APP_PORT`와 `REDPACT_APP_DATA_DIR`로 변경할
@@ -401,7 +406,7 @@ curl --fail http://127.0.0.1:54318/api/health
 | 구성 요소 | 소스 실행 예시 | App Page Plugin |
 |---|---|---|
 | Redpact API | `http://127.0.0.1:54318` | `http://127.0.0.1:54322` |
-| 에이전트 MCP 주소 | `http://127.0.0.1:54318/mcp` | `http://127.0.0.1:54322/mcp` |
+| 에이전트 MCP 연결 | `http://127.0.0.1:54318/mcp` | 번들 `redpact-app` STDIO companion |
 | 뷰어 | 위 API로 프록시하는 Vite 주소 | 사이드바의 전체 웹 앱 |
 | 실행 이력 | `--data-dir`로 지정한 디렉터리 | Plugin 인스턴스의 데이터 디렉터리 |
 

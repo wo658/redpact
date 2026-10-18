@@ -174,6 +174,11 @@ test("모델은 런타임 상태·시작·종료만 호출하고 앱 권한과 �
   try {
     const { tools } = await client.listTools()
     const names = ["get_redpact_status", "start_redpact_runtime", "stop_redpact_runtime"]
+    const modelTools = tools.filter((tool) => {
+      const ui = tool._meta?.ui as { visibility?: string[] } | undefined
+      return !ui?.visibility || ui.visibility.includes("model")
+    })
+    expect(modelTools.map((tool) => tool.name)).toEqual([...names, "open_redpact_app"])
     expect(tools.filter((tool) => names.includes(tool.name)).map((tool) => tool.name)).toEqual(
       names,
     )

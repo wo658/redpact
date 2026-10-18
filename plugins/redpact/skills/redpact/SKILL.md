@@ -71,14 +71,41 @@ unavailable, finish independent work and report the connected-evidence gap.
 
 In Codex, use `$redpact` and `$redpact-init`. In Claude Code, use
 `/redpact:redpact` and `/redpact:redpact-init`; the same task modes apply.
-Use the plugin's configured instance origin for CLI and the viewer. MCP opens the
-app; operational work uses the installed `redpact` CLI.
-The regular plugin defaults to port 54321 and does not install or start the runtime;
-start `redpact serve --port 54321`. The App Page package
-bundles these same skills with its verification connection on port 54322 and manages
-runtime startup separately. Never switch instances just because a default is familiar.
-Runtime MCP opens the full web app and provides UI assets without operational tools or inline chat cards.
-Use the returned web review path and preserve the instance and approval policy.
+Use the plugin's configured instance origin for CLI and the viewer.
+
+For the App Page plugin, the `redpact-app` MCP connection has exactly four model tools:
+
+| Tool | Purpose |
+| --- | --- |
+| `get_redpact_status` | Inspect runtime state and its actual `origin` without starting it |
+| `start_redpact_runtime` | Start the installed runtime owned by the plugin; does not install packages |
+| `stop_redpact_runtime` | Stop only the runtime owned by this plugin session |
+| `open_redpact_app` | Open the full app or an existing review with `kind` and `id`; does not start tests or approve requests |
+
+Read status first and use its returned `origin` as CLI `--server`. Start the runtime
+when needed for the authorized task, then confirm it is running. If installation is
+missing, open the App Page for the user's installation action. App-only installation,
+viewer bridge and approval tools are not agent entry points; never extract their tokens.
+The App Page defaults to port 54322, but a configured origin takes precedence.
+
+All project, settings, environment, test execution, evidence and update operations use
+the installed `redpact` CLI. General files and Git remain host-tool responsibilities.
+The plugin does not put `redpact` on the shell PATH: check `redpact --help` and install
+the runtime CLI separately if unavailable. Use command-specific `--help` for flags.
+For example, after status returns `http://127.0.0.1:54322`:
+
+```sh
+redpact --server http://127.0.0.1:54322 workspace status --path /absolute/checkout --json
+redpact --server http://127.0.0.1:54322 tests run --kind integration --path /absolute/checkout --wait --json
+redpact --server http://127.0.0.1:54322 runs context --kind integration --id RETURNED_ID --json
+```
+
+The regular HTTP plugin uses a running runtime, defaults to port 54321 and cannot
+start a stopped HTTP server; start it with `redpact serve --port 54321`. Its MCP tools
+are `redpact_status`, `stop_redpact_server` and `open_redpact` (viewer URL). The App Page
+package does not register this extra HTTP connection. Never switch instances because
+a default is familiar. Both variants use CLI for operational work and preserve human
+approval in the connected viewer, without inline chat approval/result cards.
 
 | Request | Completion scope |
 | --- | --- |

@@ -7,6 +7,6 @@ dependencies:
   tools:
     - type: "mcp"
       value: "redpact"
-      description: "Redpact project configuration and validation"
+      description: "Redpact runtime status, shutdown and viewer URL"
       transport: "streamable_http"
       url: "http://127.0.0.1:54321/mcp"

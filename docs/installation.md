@@ -233,15 +233,20 @@ plugin, with their MCP dependency bound to this App instance. The build copies t
 maintained skill sources into the portable `skills/` directory and adjusts only
 connection metadata; there is no second maintained skill set.
 
-The plugin also registers a separate `redpact-verification` HTTP MCP connection to
-`http://127.0.0.1:54322/mcp`, the same runtime and evidence store used by the sidebar.
-It exposes runtime lifecycle/opening tools to the model. Operational verification tools
-and the viewer bridge retain App-only visibility and their capability boundaries; agents
-use the CLI for settings, execution and evidence. See
-[MCP interfaces](interfaces.md) for the verification contracts. The Plugin build pins the product version from `app/server/package.json`; publish that runtime before distributing the Plugin. Version 0.9.0 includes the CLI and reduced model tool set. Install the global CLI separately to use `redpact` from a shell, and pass `--server http://127.0.0.1:54322` to target the App instance.
-After starting or updating a runtime, reconnect the host's MCP connection if its tool
-catalog is stale or was unavailable during startup. A custom `REDPACT_APP_PORT` also
-requires updating this HTTP MCP URL in the plugin manifest.
+The package registers one `redpact-app` STDIO MCP connection. Its four model tools
+are `get_redpact_status`, `start_redpact_runtime`, `stop_redpact_runtime` and
+`open_redpact_app`; see [MCP interfaces](interfaces.md) for their contract.
+There is no additional `redpact-verification` HTTP connection. The companion remains
+available while the runtime is stopped. Installation and the viewer bridge retain
+App-only visibility and their capability boundaries.
+
+Agents use CLI for projects, settings, environments, tests, evidence and updates.
+Install the global CLI separately to use `redpact` from a shell, then pass the status
+result's `origin` through `--server` (normally `http://127.0.0.1:54322`). A custom
+`REDPACT_APP_PORT` changes that origin without requiring another MCP connection.
+The Plugin build pins the product version from `app/server/package.json`; publish
+that runtime before distributing the Plugin. Version 0.9.0 includes the CLI.
+Reconnect the host after updating the plugin to refresh its connection and tool catalog.
 
 The default plugin port is `54322`, with runtime data in
 `~/.redpact/app-page/54322` and startup output in `app-start.log` there.
@@ -418,7 +423,7 @@ Next, open the Vite viewer and connect your application directory. Finally, call
 | Component | Source-based example | App Page Plugin |
 |---|---|---|
 | Redpact API | `http://127.0.0.1:54318` | `http://127.0.0.1:54322` |
-| Agent MCP endpoint | `http://127.0.0.1:54318/mcp` | `http://127.0.0.1:54322/mcp` |
+| Agent MCP connection | `http://127.0.0.1:54318/mcp` | Bundled `redpact-app` STDIO companion |
 | Viewer | Vite URL, proxying to the API above | Full web app in the sidebar |
 | Execution history | The explicit `--data-dir` directory | The Plugin instance’s own data directory |
 
