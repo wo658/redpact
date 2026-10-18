@@ -1,14 +1,12 @@
 import { preferenceFiles } from "../../src/adapters/settings/preferences.js"
-import type { WorktreeAdapter } from "../../src/core/types/start-work.js"
 import { createGitService } from "../../src/workflows/git.js"
 import { createProjectSettings } from "../../src/workflows/project-settings.js"
-import { createWorkStarts } from "../../src/workflows/start-work.js"
+import { createWorkStartQueries } from "../../src/workflows/work-starts.js"
 import { createWorktrees } from "../../src/workflows/worktrees.js"
 
 export function createTestWorktrees(
   deps: Omit<Parameters<typeof createWorktrees>[0], "gitService" | "projects" | "git"> & {
     git: import("../../src/core/types/git.js").GitAdapter
-    worktrees?: WorktreeAdapter
   },
 ) {
   const projects = createProjectSettings({ ...deps, preferences: preferenceFiles })
@@ -20,14 +18,13 @@ export function createTestWorktrees(
     gitService: (path) => createGitService(path, deps.git),
     settings: deps.settings,
   })
-  const workStarts = createWorkStarts({ store: deps.store, git: deps.worktrees, worktrees })
+  const workStarts = createWorkStartQueries(deps.store)
   return {
     ...worktrees,
     projects,
     getTracking: projects.read,
     setTracking: projects.update,
     workStarts,
-    startWork: workStarts.start,
     getWorkStart: workStarts.get,
   }
 }

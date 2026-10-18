@@ -33,11 +33,16 @@ same record; see [project management](git.md).
 | Submission | Immutable exact test/helper source, digest, parsed intent and runner identity |
 | Integration run | Submission, accepted target/settings/Git, execution state and results |
 | Environment | Fixed services/dependency kinds, source identity, owned resources and lifecycle |
-| Work start | Durable managed-checkout creation input and planned outputs |
+| Work start | Read-only historical checkout creation input, planned outputs and observed state |
 | Review | Captured MCP policy, approvals, captured configuration, revision and eventual run linkage |
 | Unit run | Captured command/runtime identity, output, terminal and cleanup state |
 | Playwright run | Target/scenario results and recorded browser artifacts |
 | Merge attempt | Inspected source/target identities, progress and recovery outcome |
+
+Historical `work-starts/` records retain their existing format and original bytes.
+The retired creation feature has no writer or resume operation. Its records do not
+reserve paths or block project disconnection; [existing checkout connection](git.md)
+uses live Git and filesystem observations. No data migration or reset is required.
 
 A work item can receive multiple submissions; a submission can have multiple runs.
 Each new managed execution gets its own environment. Manual environments have no

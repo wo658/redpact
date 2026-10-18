@@ -382,33 +382,7 @@ export function openStore(directory: string) {
       return value
     },
     listEnvironments: () => list("environments", store.getEnvironment),
-    saveWorkStart(value) {
-      const parsed = workStartSchema.parse(value)
-      if (parsed.id !== parsed.input.requestId || !store.getProject(parsed.input.projectId)) {
-        throw new Error("Invalid work start project or request ID")
-      }
-      const previous = store.getWorkStart(value.id)
-      if (
-        previous &&
-        JSON.stringify({ ...previous, state: value.state }) !== JSON.stringify(value)
-      ) {
-        throw new Error("Work start identity cannot change")
-      }
-      const states = ["prepared", "attempted", "created", "completed"]
-      if (!previous && value.state !== "prepared") {
-        throw new Error("Invalid initial work start transition")
-      }
-      if (
-        previous &&
-        (states.indexOf(value.state) < states.indexOf(previous.state) ||
-          states.indexOf(value.state) > states.indexOf(previous.state) + 1)
-      ) {
-        throw new Error("Invalid work start transition")
-      }
-      write("work-starts", parsed, Boolean(previous))
-    },
     getWorkStart: (key) => read("work-starts", key, workStartSchema),
-    listWorkStarts: () => list("work-starts", store.getWorkStart),
     createProject(value) {
       write("projects", projectSchema.parse(value))
     },

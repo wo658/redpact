@@ -90,18 +90,30 @@ The file-name response has its own 4 MiB Git output bound. If it also exceeds th
 bound, HTTP 200 retains commit identity with `changedPathsOmitted: "size_limit"`
 and a separate diagnostic; no partial file list is returned or shown.
 
-## Managed worktree creation
+## Existing checkouts and retained creation records
 
-`POST /api/work-starts` accepts `requestId`, `projectId`, `intent`, `baseRef`, `branch`
-and an absolute `path`. Creation is a separate native Git adapter operation, not a
-side effect of inspection. It pins the source revision and planned identities before
-creating/attaching the checkout. `GET /api/work-starts/:id` reports recovery progress.
-
-Reusing the same request ID with identical inputs recovers the same operation;
-different inputs conflict. Existing branch/path collisions must be inspected, not
-removed automatically. Partial creation preserves durable state for recovery and
-never claims unobserved outputs. Use a retained project-owned worktree directory;
+The host agent creates Git worktrees with native Git. Redpact discovers, validates
+and connects existing checkouts; it never creates a branch or checkout as part of
+connection. `POST /api/projects/:id/worktrees` connects an existing checkout belonging
+to that project. Use a retained project-owned directory for development worktrees;
 `/tmp` is only for disposable test fixtures.
+
+`POST /api/work-starts` has been removed and returns 404. Clients must create the
+checkout through host Git tools, then connect its path. There is no creation or
+resume command in the CLI or MCP.
+
+`GET /api/work-starts/:id` remains a read-only view of historical creation records.
+Original inputs, planned IDs and `prepared`, `attempted`, `created` or `completed`
+states remain unchanged; they describe past observations, not active reservations.
+Incomplete records no longer hide discovered checkouts or block project disconnection.
+Active executions and owned environments still enforce their existing admission rules.
+
+Inspect any uncertain historical creation with `git worktree list` and the recorded
+path. Connect a valid checkout normally; do not retry creation through Redpact.
+Connection preserves existing checkout bindings and evidence; a newly discovered
+checkout receives its own binding rather than claiming unused IDs from an old request.
+Redpact does not delete historical records, branches or checkout files, or mark an
+uncertain creation as completed. See [runtime data](storage.md).
 
 ## Local commit and merge
 

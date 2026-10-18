@@ -16,7 +16,6 @@ export async function managementHttp(
       body: { path: args.path },
     },
     get_worktree: { path: `/api/worktrees/${args.id}` },
-    start_work: { path: "/api/work-starts", body: args },
     get_work_start: { path: `/api/work-starts/${args.id}` },
     list_environments: { path: `/api/environments?worktreeId=${args.worktreeId}` },
     get_dependencies: { path: `/api/worktrees/${args.worktreeId}/dependencies` },

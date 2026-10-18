@@ -17,7 +17,6 @@ import { readHistory } from "./adapters/git/history.js"
 import { readCommittedImage } from "./adapters/git/image.js"
 import { createGitAdapter } from "./adapters/git/isomorphic.js"
 import { createGitMutations } from "./adapters/git/mutations.js"
-import { createWorktreeAdapter } from "./adapters/git/worktrees.js"
 import { createGitHubPullRequests } from "./adapters/github/pull-requests.js"
 import { parseSource } from "./adapters/parser/source.js"
 import { createCaptureBaselineCleanup } from "./adapters/playwright/baseline.js"
@@ -84,12 +83,12 @@ import { migrateRuntime } from "./workflows/runtime-migrations.js"
 import { createRuntimeShutdown } from "./workflows/runtime-shutdown.js"
 import { createSettingsAgent } from "./workflows/settings-agent.js"
 import { createSettingsEditor } from "./workflows/settings-editor.js"
-import { createWorkStarts } from "./workflows/start-work.js"
 import { createStopEnvironment } from "./workflows/stop-environment.js"
 import { createSubmissions } from "./workflows/submissions.js"
 import { createTestContainer } from "./workflows/test-container.js"
 import { createUnitTests } from "./workflows/unit-tests.js"
 import { createUpdates } from "./workflows/updates.js"
+import { createWorkStartQueries } from "./workflows/work-starts.js"
 import { createWorktrees } from "./workflows/worktrees.js"
 
 const runtimeSupervised = process.env.REDPACT_RUNTIME_SUPERVISED === "1" && Boolean(process.send)
@@ -196,11 +195,7 @@ const command = new Command()
         gitService: (path) => createGitService(path, gitAdapter),
         settings: createSettingsService,
       })
-      const workStarts = createWorkStarts({
-        store: storage.store,
-        git: createWorktreeAdapter(),
-        worktrees,
-      })
+      const workStarts = createWorkStartQueries(storage.store)
       const project = options.project
         ? await worktrees.connect(options.project).catch((error: unknown) => {
             if ((error as { code?: string }).code === "project_disconnected") {

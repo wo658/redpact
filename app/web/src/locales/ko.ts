@@ -720,8 +720,6 @@ export const ko = {
   "Project root directory": "프로젝트 루트 디렉토리",
   "Git worktrees and test files are tracked automatically.":
     "Git worktree와 테스트 파일을 자동으로 추적합니다.",
-  "A previous worktree creation needs attention. Ask your agent to inspect request {{id}}.":
-    "이전 worktree 생성 작업을 확인해야 합니다. 에이전트에게 요청 {{id}} 확인을 맡기세요.",
   Settings: "Settings",
   "Open settings": "설정 열기",
   "Project settings": "Project settings",

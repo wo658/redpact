@@ -177,22 +177,6 @@ export const workStartResponse: z.ZodType<WorkStart> = z
     state: z.enum(["prepared", "attempted", "created", "completed"]),
   })
   .meta({ id: "WorkStart" })
-export const startedWorkResponse = z
-  .object({
-    requestId: id,
-    workItemId: id,
-    worktreeId: id,
-    projectId: id,
-    checkoutRoot: z.string(),
-    projectRoot: z.string(),
-    revision: z.string(),
-    configure: z.object({
-      tool: z.literal("configure"),
-      arguments: z.object({ action: z.literal("describe"), worktreeId: id }),
-    }),
-    nextSteps: strings,
-  })
-  .meta({ id: "StartedWork" })
 const settingsIssue = z.object({
   code: z.string(),
   path: z.string(),

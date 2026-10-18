@@ -374,15 +374,6 @@ export type Worktree = {
   gitdir: string | null
   createdAt: string
 }
-export type WorkStartInput = {
-  requestId: string
-  projectId: string
-  intent: string
-  baseRef: string
-  branch: string
-  path: string
-}
-export type WorkStartResult = { worktreeId: string; workItemId: string; requestId: string }
 export type WorkStartRecord = {
   id: string
   state: "prepared" | "attempted" | "created" | "completed"
@@ -803,7 +794,6 @@ export function createApi(fetcher: typeof fetch = viewerFetch) {
         undefined,
         signal,
       ),
-    start: (input: WorkStartInput) => request<WorkStartResult>("/work-starts", input),
     getStart: (id: string) => request<WorkStartRecord>(`/work-starts/${encodeURIComponent(id)}`),
   }
 }
