@@ -17,7 +17,9 @@ Guides explain user tasks; reference pages own precise contracts and implementat
 rules. Link to the owning page instead of restating its contract. Repository READMEs
 are short entry points and package/example instructions. `AGENTS.md` is the agent's
 work policy. License, governance and executable skill instructions keep their own
-purposes; they are not parallel product manuals.
+purposes; they are not parallel product manuals. The root README is an English
+entry point linking both documentation languages, rather than another translated
+copy of the product guide.
 
 `app/server/src/interfaces/http/docs/` contains executable OpenAPI schema and
 reference-route code, not website content; see [HTTP reference](interfaces.md#http-reference).
@@ -52,6 +54,11 @@ or link the page when heading IDs differ. Do not maintain copied HTTP/JSON schem
 link the generated API or `redpact settings describe --scope project` and document semantics here.
 
 ## Local setup and checks
+
+The repository ignores the entire `.codex/` directory, including retained worktrees
+and local experiment evidence. Keep reusable project instructions and distribution
+metadata in their existing tracked locations; do not publish local agent traces,
+experiment configuration or screenshots by force-adding this directory.
 
 Use Node 24+ and pnpm. Install with `pnpm install --frozen-lockfile`; `pnpm prepare`
 enables tracked hooks when an install skipped scripts. Before executable changes finish:
