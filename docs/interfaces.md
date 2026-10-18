@@ -105,6 +105,21 @@ listening. The App Page companion provides `get_redpact_status`,
 `open_redpact_app`. Model lifecycle tools neither require nor return App-only
 capability tokens.
 
+The App Page package registers only the companion's STDIO connection, including
+while the runtime is stopped. Its model surface is exactly these four tools:
+
+| Tool | Behavior |
+| --- | --- |
+| `get_redpact_status` | Return state, origin, message and session ownership without starting the runtime |
+| `start_redpact_runtime` | Start the installed configured runtime; does not install packages or run tests |
+| `stop_redpact_runtime` | Stop only the runtime owned by this plugin session |
+| `open_redpact_app` | Open the full app or a recorded review with paired kind/id; does not start tests or approve requests |
+
+Use the returned `origin` for CLI `--server`. Projects, settings, environments,
+tests, evidence and updates use CLI. App-only tools remain available to the embedded
+web UI, including installation and authenticated request/event bridging; they are
+not additional model operations.
+
 The seven operational tools below retain App-only visibility for full-app transport.
 Agents use the CLI above instead of calling hidden tools. Raw `tools/list` responses
 can include App-only tools; the host must filter them from model exposure using the

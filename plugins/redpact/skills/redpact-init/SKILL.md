@@ -7,6 +7,9 @@ description: Inspect and configure an actual project for Redpact through revisio
 
 Resolve the actual target checkout and shared primary settings root from the request,
 repository and connected runtime. Keep the Redpact service separate from the target.
+For the App Page plugin, follow the [MCP and CLI connection instructions](../redpact/SKILL.md#invocation):
+MCP handles server start, status, shutdown and app opening only. Use the status result's
+`origin` for CLI `--server`; setup and verification use CLI.
 Read the [configuration guide](references/configuration.md) before authoring.
 
 Inspect the application and `redpact settings describe --scope project`, then read

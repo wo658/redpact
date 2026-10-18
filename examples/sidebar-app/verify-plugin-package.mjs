@@ -44,7 +44,15 @@ try {
       },
     }),
   )
+  const manifest = JSON.parse(await readFile(join(root, "mcp.json"), "utf8"))
+  assert.deepEqual(Object.keys(manifest.mcpServers), ["redpact-app"])
   const tools = await client.listTools()
+  assert.deepEqual(
+    tools.tools
+      .filter((tool) => !tool._meta?.ui?.visibility || tool._meta.ui.visibility.includes("model"))
+      .map((tool) => tool.name),
+    ["get_redpact_status", "start_redpact_runtime", "stop_redpact_runtime", "open_redpact_app"],
+  )
   const app = tools.tools.find((tool) => tool.name === "open_redpact_app")
   assert.ok(app)
   assert.ok(app._meta["openai/ui"].entrypoints.some((entry) => entry.type === "global"))

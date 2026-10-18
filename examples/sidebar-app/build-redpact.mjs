@@ -70,8 +70,13 @@ for (const name of ["redpact", "redpact-init"]) {
   await writeFile(
     metadata,
     (await readFile(metadata, "utf8"))
-      .replace('value: "redpact"', 'value: "redpact-verification"')
-      .replace("http://127.0.0.1:54321/mcp", `http://127.0.0.1:${runtimePort}/mcp`),
+      .replace('value: "redpact"', 'value: "redpact-app"')
+      .replace('transport: "streamable_http"', 'transport: "stdio"')
+      .replace(/^      url:.*\n/gm, "")
+      .replace(
+        "Redpact runtime status, shutdown and viewer URL",
+        "Redpact server start, status, shutdown and App Page opening",
+      ),
   )
 }
 const favicon = await readFile(new URL("../../app/web/public/favicon.svg", root))
@@ -159,7 +164,6 @@ await writeFile(
     {
       $schema: "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
       mcpServers: {
-        "redpact-verification": { type: "http", url: `http://127.0.0.1:${runtimePort}/mcp` },
         "redpact-app": {
           type: "stdio",
           command: "./bin/node",

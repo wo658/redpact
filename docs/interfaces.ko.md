@@ -104,6 +104,20 @@ App Page companion은 자신이 소유한 런타임의 `get_redpact_status`,
 `start_redpact_runtime`, `stop_redpact_runtime`과 기존 `open_redpact_app`을 제공합니다.
 수명 주기 모델 도구는 App 전용 capability token을 요구하거나 반환하지 않습니다.
 
+App Page 패키지는 런타임이 중지되어 있어도 사용할 수 있는 companion의 STDIO 연결만
+등록합니다. 모델용 도구는 정확히 다음 네 가지입니다.
+
+| 도구 | 동작 |
+| --- | --- |
+| `get_redpact_status` | 런타임을 시작하지 않고 상태·origin·메시지·세션 소유 여부를 반환 |
+| `start_redpact_runtime` | 설치된 설정 대상 런타임 시작. 패키지 설치나 테스트 실행은 하지 않음 |
+| `stop_redpact_runtime` | 이 플러그인 세션이 소유한 런타임만 종료 |
+| `open_redpact_app` | 전체 앱 또는 kind/id 쌍으로 기록된 검토 열기. 테스트 실행이나 승인은 하지 않음 |
+
+반환된 `origin`을 CLI `--server`로 사용합니다. 프로젝트·설정·환경·테스트·증거·업데이트는
+CLI를 사용합니다. 설치와 인증된 요청·이벤트 브리지를 포함한 App 전용 도구는 내장 웹 UI를
+위해 유지되며 추가 모델 작업이 아닙니다.
+
 아래 작업 도구 7개는 전체 앱 통신을 위해 App 전용 visibility로 유지합니다.
 에이전트 작업은 위 CLI를 사용하며 숨겨진 도구를 호출하지 않습니다. 원시 `tools/list`에
 App 전용 도구가 포함될 수 있으며 호스트가 visibility 메타데이터에 따라 모델 목록에서
