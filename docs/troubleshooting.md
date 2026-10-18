@@ -108,7 +108,7 @@ Then inspect the URL construction in the test. A Compose hostname such as `app` 
 
 The source catalog and execution history answer different questions. A current file can be listed because its path matches the configured patterns, even if it has never executed.
 
-For Unit, confirm the configured command includes that test; browsing patterns do not alter the command. For Integration, inspect the submitted source bundle and requested test paths. For Playwright, confirm that the file matches exactly one target and that you executed that target in the intended worktree. Then open the resulting record instead of using source visibility as evidence of success.
+For Unit without `fileCommand`, confirm the configured command includes that test. With `fileCommand`, check the configured patterns and selected [execution scope](configuration.md#default-execution-scope); selecting a source preview never selects execution files. For Integration, inspect the submitted source bundle and requested test paths. For Playwright, confirm that the file matches exactly one target and that you executed that target in the intended worktree. Then open the resulting record instead of using source visibility as evidence of success.
 
 ## Report a problem
 

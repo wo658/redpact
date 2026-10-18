@@ -19,6 +19,13 @@ are short entry points and package/example instructions. `AGENTS.md` is the agen
 work policy. License, governance and executable skill instructions keep their own
 purposes; they are not parallel product manuals.
 
+`app/server/src/interfaces/http/docs/` contains executable OpenAPI schema and
+reference-route code, not website content; see [HTTP reference](interfaces.md#http-reference).
+`app/server/PACKAGE_README.md` becomes the installed package's README during packaging.
+The server/web READMEs link to the owning topics, while `e2e/README.md` and
+`ui-tests/README.md` describe repository-specific test operation and coverage.
+Asset notices and Plugin skill references remain with their distributed artifacts.
+
 ## Required maintenance in every change
 
 1. Identify affected pages before implementation. Update the owning page in the

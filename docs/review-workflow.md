@@ -106,6 +106,5 @@ Follow the returned identity with `redpact runs show --kind integration --id ID`
 then use `redpact runs context --kind integration --id ID` to open the exact result. Compare the returned ID,
 checkout, captured source, outcome and cleanup. An ID is not a passing result.
 
-The example also supports `REDPACT_URL=http://127.0.0.1:54318 node examples/order-desk/tools/review.mjs http`.
 Each execution owns a fresh environment. Preserve failed attempts and submit a new
 request after fixing inputs; polling never reruns a request or captures later edits.

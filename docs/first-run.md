@@ -9,13 +9,6 @@ This walkthrough uses the included Order Desk application. It runs an HTTP appli
 
 For your application, complete [project setup](first-project.md), then replace the sample path and test file with your authored values.
 
-The example also provides `tools/review.mjs` for a scripted HTTP check against your
-running server. From the repository root, run
-`REDPACT_URL=http://127.0.0.1:54318 node examples/order-desk/tools/review.mjs http`.
-It uses the example's fixed `app` / `payments: mock` configuration, submits the
-scenario and waits for execution cleanup. Use `all` for the fixture catalog; each
-scenario receives a fresh environment, never the manual Project Container.
-
 ## Inspect the sample
 
 The sample lives at `examples/order-desk` inside the Redpact checkout. Use its absolute path in tool calls, for example `/absolute/path/to/redpact/examples/order-desk`.

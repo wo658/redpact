@@ -191,8 +191,9 @@ Redpact
   changed-file list is empty; active runs and diagnostics remain reachable, and
   retained execution history remains in Log.
 - Project Unit and Integration browse the full primary-checkout catalog. Worktree
-  tabs focus on changed files. Unit executes its full configured command; worktree
-  Integration executes the latest submission rather than the selected source file.
+  tabs focus on changed files. Unit uses the configured command or opted-in
+  `fileCommand` with the selected [execution scope](configuration.md#default-execution-scope);
+  worktree Integration executes the latest submission rather than the selected source file.
 - Project Playwright records remain browsable without a live primary checkout.
   Project Unit and Integration require that checkout. Branch-only review exposes
   committed diffs without worktree execution controls.

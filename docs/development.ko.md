@@ -17,6 +17,13 @@ description: 기여자 검증, 릴리스와 단일 문서 정본 관리 규칙�
 실행 안내이며 `AGENTS.md`는 에이전트 작업 정책입니다. 라이선스·거버넌스·실행 가능한
 skill 지시는 고유 목적을 유지하며 병렬 제품 설명서가 아닙니다.
 
+`app/server/src/interfaces/http/docs/`는 웹사이트 본문이 아니라 OpenAPI 스키마와
+레퍼런스 경로를 구현하는 실행 코드입니다. [HTTP 레퍼런스](interfaces.md)를 참고하세요.
+`app/server/PACKAGE_README.md`는 패키징할 때 설치 패키지의 README가 됩니다.
+server/web README는 소유 주제로 연결하고, `e2e/README.md`와 `ui-tests/README.md`는
+이 저장소의 테스트 실행 절차와 검증 범위를 설명합니다.
+자산 고지와 Plugin skill 참조 자료는 배포되는 산출물과 함께 유지합니다.
+
 ## 모든 변경의 필수 유지 작업
 
 1. 구현 전에 영향받는 문서를 찾습니다. 동작, 기본값, API·설정, UI 탐색, 제약, 명령을
@@ -31,7 +38,7 @@ skill 지시는 고유 목적을 유지하며 병렬 제품 설명서가 아닙�
    확인할 수 있지만 사실과 번역 의미는 리뷰어가 확인해야 합니다.
 
 소문자와 hyphen으로 된 안정된 slug를 사용합니다. 영어는 `name.md`, 한국어는
-`name.md`이며 `title`, `description` frontmatter가 필요합니다. `meta.en.json`과
+`name.ko.md`이며 `title`, `description` frontmatter가 필요합니다. `meta.en.json`과
 `meta.ko.json`은 같은 page ID를 나열합니다. 문서 사이에는 상대 Markdown 링크를
 사용하고 렌더러가 선택 언어를 유지합니다. `../` 링크는 GitHub 소스를 열며 로컬 미push
 내용보다 오래될 수 있습니다. 언어 간 heading anchor를 공유하거나 ID가 다르면 페이지를

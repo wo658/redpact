@@ -9,13 +9,6 @@ description: 포함된 HTTP 시나리오를 실행하고 기록된 결과를 확
 
 직접 개발하는 애플리케이션에는 [프로젝트 설정](first-project.md)을 완료한 뒤 예제 경로와 테스트 파일을 작성한 값으로 바꿔 적용하세요.
 
-예제의 `tools/review.mjs`로 실행 중인 서버에 HTTP 검증을 제출할 수도 있습니다.
-저장소 루트에서
-`REDPACT_URL=http://127.0.0.1:54318 node examples/order-desk/tools/review.mjs http`를 실행하세요.
-이 명령은 예제의 고정 `app` / `payments: mock` 구성을 사용하고 시나리오를 제출한 뒤
-실행 자원 정리를 기다립니다. `all`은 전체 예제 시나리오를 실행합니다. 각 시나리오는
-새 환경을 사용하며 수동 Project Container를 재사용하지 않습니다.
-
 ## 예제 확인
 
 예제는 Redpact 체크아웃의 `examples/order-desk`에 있습니다. 도구 호출에는 `/absolute/path/to/redpact/examples/order-desk`처럼 절대 경로를 사용하세요.

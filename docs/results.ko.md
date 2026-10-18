@@ -11,9 +11,9 @@ Redpact에 실행을 요청한 프로젝트와 워크트리를 선택하세요. 
 
 ## 채팅에서 요청 열기
 
-같은 앱 인스턴스에서 `get_review_context`가 반환한 정확한 `reviewPath`를 여세요. 전체 앱 안에서 요청이나 실행을 열고 기록된 워크트리를 확인합니다. Ask에서는 캡처된 입력을 확인한 뒤 승인합니다. Integration은 환경과 테스트를 차례로 승인하며 Unit·Playwright는 캡처된 요청을 한 번 승인합니다. 검토는 해당 워크트리의 이력으로 연결됩니다. 전체 앱을 열어 프로젝트를 탐색하는 데 실행 기록은 필요하지 않습니다.
+같은 앱 인스턴스에서 `redpact runs context --kind KIND --id ID`가 반환한 정확한 `reviewPath`를 여세요. 전체 앱 안에서 요청이나 실행을 열고 기록된 워크트리를 확인합니다. Ask에서는 캡처된 입력을 확인한 뒤 승인합니다. Integration은 환경과 테스트를 차례로 승인하며 Unit·Playwright는 캡처된 요청을 한 번 승인합니다. 검토는 해당 워크트리의 이력으로 연결됩니다. 전체 앱을 열어 프로젝트를 탐색하는 데 실행 기록은 필요하지 않습니다.
 
-실행 결과·현재 소스의 최신성·사람의 수락은 서로 다릅니다. 확인하지 않은 최신성은 `unknown`, 수락은 `not_recorded`입니다. Playwright 종료만으로 정리를 증명하지 않으며 명시적 정리 근거가 없으면 요약은 `unknown`을 유지합니다. `redpact runs show`으로 제한된 로그와 보존된 Integration/Playwright 소스를, `get_run_artifact`로 소유한 첨부 파일을 조회합니다. 공개 테스트 취소 기능은 없습니다.
+실행 결과·현재 소스의 최신성·사람의 수락은 서로 다릅니다. 확인하지 않은 최신성은 `unknown`, 수락은 `not_recorded`입니다. Playwright 종료만으로 정리를 증명하지 않으며 명시적 정리 근거가 없으면 요약은 `unknown`을 유지합니다. 제한된 로그는 `redpact runs logs`, 보존된 Integration/Playwright 소스는 `redpact runs source --file CAPTURED_PATH`, 소유한 첨부 파일은 `redpact runs artifacts` / `redpact runs artifact --artifact ID --output FILE`로 조회합니다. 각 명령에 `--kind KIND --id ID`를 지정하며 바이너리 첨부 파일 조회는 `--kind playwright`가 필요합니다. 공개 테스트 취소 기능은 없습니다.
 
 ## 알맞은 화면 찾기
 

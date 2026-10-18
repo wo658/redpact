@@ -33,7 +33,7 @@ function page(kind: "redoc" | "swagger") {
 ${redoc ? "" : '<link rel="stylesheet" href="/docs/assets/swagger-ui.css">'}
 </head><body>
 <nav aria-label="API documentation"><a href="/redoc">Redoc</a> · <a href="/swagger">Swagger UI</a> · <a href="/openapi.json">OpenAPI JSON</a></nav>
-<p>Documentation is public on this local server. API calls require your REDPACT_TOKEN in Swagger UI's Authorize dialog.</p>
+<p>No API token is required. Documentation and API calls use the local host and same-origin access boundary.</p>
 <noscript>Enable JavaScript to read the interactive reference, or download <a href="/openapi.json">OpenAPI JSON</a>.</noscript>
 <div id="${redoc ? "redoc" : "swagger-ui"}"></div>
 <script src="/docs/assets/${redoc ? "redoc.standalone.js" : "swagger-ui-bundle.js"}"></script>

@@ -46,6 +46,11 @@ for captured page evidence. Capture runs execute only the selected worktree.
 
 ## Functional tests
 
+`api-docs.spec.ts` checks the English API reference at `/docs`, `/swagger` and
+`/redoc` at desktop/mobile widths, including token-free access guidance, rendered
+API headings and navigation to the generated OpenAPI specification. These server
+pages use fixed English copy independently of the viewer language preference.
+
 The separate `project-tests` target checks theme persistence, dependency help and
 configuration interactions without producing named screenshots on success. Workspace
 history scenarios also cover browser history traversal, forward-history replacement,
