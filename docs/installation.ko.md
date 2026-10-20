@@ -31,6 +31,7 @@ npm/pnpm 설치까지 이어갑니다. 현재 App Page Plugin은 macOS Apple Sil
 | npm / pnpm | CLI와 전체 웹 앱 | Node 24+, npm 또는 pnpm |
 | GPT / Codex App Page Plugin | 사이드바 앱, 런타임 설치·실행, 개발 스킬 | 현재 macOS Apple Silicon, Plugin 설치용 npm과 지원 호스트 |
 | 다른 에이전트 Plugin | 스킬과 HTTP MCP 연결 | npm/pnpm으로 설치하고 실행한 런타임 |
+| Skills CLI | 개발·초기 설정 스킬 | 별도 CLI·런타임 설치, Node 24+, Git, pnpm |
 
 네이티브 Windows·Linux·macOS 데스크톱 앱, Homebrew, 셸 설치기는 더 이상 배포하지 않습니다.
 기존 릴리스는 과거 자료이며 새 설치 경로가 아닙니다. 소스 빌드는 기여자 검증용입니다.
@@ -85,6 +86,52 @@ pnpm dlx @wo658/redpact@latest serve --port 54321
 특정 버전이 필요하면 [릴리스](https://github.com/wo658/redpact/releases)에서 해당
 패키지와 체크섬을 확인하세요. 오래된 `runtime-v0.1.0`은 과거 릴리스이며 최신 설치 경로가 아닙니다.
 소스의 현재 변경이 필요하면 위의 소스 패키지 빌드 절차를 사용하세요.
+
+## 플러그인 없이 스킬 설치하기
+
+[Skills CLI](https://github.com/vercel-labs/skills)로 개발·초기 설정 스킬을 프로젝트에
+설치할 수 있습니다. Node 24 이상, Git, pnpm을 준비하세요.
+
+```sh
+pnpm dlx skills find redpact
+pnpm dlx skills add wo658/redpact --list
+pnpm dlx skills add wo658/redpact --skill redpact redpact-init
+```
+
+안내가 나오면 사용할 코딩 에이전트를 선택하세요. `--agent codex` 또는
+`--agent claude-code`로 에이전트를 지정하고, 비대화형 설치에는 `--yes`를 추가합니다.
+기본은 프로젝트 범위 설치이며 사용자 범위 설치는 `--global`을 추가하세요.
+두 스킬의 가이드가 서로 참조하므로 함께 설치해야 합니다. 기존
+`plugins/redpact/skills/` 원본을 사용하며 별도 스킬 저장소나 콘텐츠 복사본은 없습니다.
+
+스킬은 지침과 참고 자료만 설치합니다. 위 npm/pnpm 명령으로 CLI·런타임을 설치하고
+별도 터미널에서 `redpact serve --port 54321`을 시작하세요. 실행 상태를 유지하고
+`http://127.0.0.1:54321`에서 결과를 검토합니다. 이미 사용하는 실행 중 인스턴스가
+있다면 새 서버를 시작하지 말고 그 인스턴스의 실제 주소를 유지하세요.
+
+```sh
+redpact --help
+redpact --server http://127.0.0.1:54321 workspace status --path /absolute/path/to/your-project --json
+```
+
+프로젝트 경로와 서버 주소를 실제 체크아웃·인스턴스로 바꾸세요. CLI 작업 흐름에서
+MCP는 선택 사항입니다. Skills CLI는 MCP 연결을 등록하거나 사이드바 앱·Docker를
+설치하지 않습니다. 관리형 테스트에는 Compose를 포함한 Docker와
+[프로젝트 설정](configuration.md)이 필요하며, 실행 승인은 연결된 웹 뷰어에서 진행합니다.
+
+새 에이전트 세션을 시작하세요. Codex에서는 `$redpact-init`으로 프로젝트를 설정한 뒤
+`$redpact <task>`로 개발합니다. Claude Code의 독립 스킬 명령은 `/redpact-init`과
+`/redpact`이며, 플러그인 명령은 아래의 네임스페이스 형식을 유지합니다. 다른 에이전트는
+해당 호스트의 스킬 호출 UI를 사용하세요. 같은 에이전트 범위에 Skills CLI와 플러그인으로
+중복 설치하지 마세요.
+
+`find-skills`는 `skills find`로 생태계를 검색합니다. 검색 색인과 GitHub 설치는
+별개입니다. 검색 결과에 Redpact가 없으면 위의 직접 `add` 명령이나 `--list`를
+사용하세요. [skills.sh FAQ](https://skills.sh/docs/faq)는 설치 텔레메트리를 통한 자동
+등재를 설명하지만 즉시 검색 노출을 보장하지 않습니다. `pnpm dlx skills check`는 설치한
+스킬의 업데이트를 확인하고 `pnpm dlx skills update`는 스킬을 업데이트합니다. Redpact
+런타임은 업데이트하지 않습니다. 이 설치본은 Skills CLI로 관리하며 Redpact의 플러그인
+업데이트 화면은 플러그인만 관리합니다.
 
 ## 에이전트 플러그인 설치
 

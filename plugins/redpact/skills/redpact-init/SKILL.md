@@ -1,9 +1,13 @@
 ---
 name: redpact-init
-description: Inspect and configure an actual project for Redpact through revision-checked CLI settings and validation. Resolve fixed dependencies and verify the agreed managed execution without project-management UI. Feature development belongs to redpact.
+description: Set up an actual project for Redpact-managed Unit, integration testing and Playwright verification through revision-checked CLI settings and validation. Resolve fixed dependencies and verify the agreed managed execution without project-management UI. Feature development belongs to redpact.
 ---
 
 # Redpact Init
+
+For a standalone Skills CLI installation, first follow the
+[standalone connection instructions](../redpact/SKILL.md#standalone-skill-installation).
+Install both skills together; the CLI workflow does not require MCP or a sidebar app.
 
 Resolve the actual target checkout and shared primary settings root from the request,
 repository and connected runtime. Keep the Redpact service separate from the target.

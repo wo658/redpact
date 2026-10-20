@@ -229,7 +229,7 @@ Redpact는 베타 기간에 `0.x.y` 제품 버전을 사용하고 사용자에�
 올리지 않습니다. 이 주기는 운영 정책이며 자동 일정은 아닙니다. 릴리스 노트는 변경,
 검증 결과, 알려진 제한과 필요한 사용자 조치를 영어·한국어로 설명합니다.
 
-지원 배포는 npm/pnpm 웹 런타임과 Plugin입니다. 제품 버전은
+지원 배포는 npm/pnpm 웹 런타임, Plugin과 독립 에이전트 스킬입니다. 제품 버전은
 `app/server/package.json`에서 관리합니다. 네이티브 데스크톱 구현과 릴리스 workflow는
 제거했습니다. 검증한 커밋에 `v<version>` 태그를 만들고
 수동 [npm workflow](../.github/workflows/npm-publish.yml)를 실행하세요.
@@ -296,7 +296,9 @@ Docker 리소스를 prune하지 않습니다. 이전 릴리스는 명시적으�
 
 ## 공개 설치 배포
 
-공개 배포 경로는 npm/pnpm 웹 런타임과 Plugin뿐입니다. Homebrew·셸 설치기 및
+공개 배포 경로는 npm/pnpm 웹 런타임, Plugin과 Skills CLI 독립 에이전트 스킬입니다.
+독립 스킬은 `plugins/redpact/skills/` 원본을 재사용하며 별도로 설치한 런타임이 필요합니다.
+명령은 [설치 문서](installation.md)를 참고하세요. Homebrew·셸 설치기 및
 네이티브 데스크톱 배포 workflow는 제거했습니다. 소스 빌드와 Docker Compose는
 기여자 개발 도구이며 추가 제품 배포 채널이 아닙니다.
 
