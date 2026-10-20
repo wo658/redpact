@@ -1,6 +1,6 @@
 ---
 name: redpact
-description: Develop through chat with Redpact-managed verification, test-first implementation and isolated worktrees. Inspect checkout status, request Unit, Integration or Playwright execution through CLI, and return recorded evidence for human review. Use auto for verified local merge and current for the existing checkout. Initial project setup belongs to redpact-init. Use when the user invokes Redpact; ordinary repository work alone does not require this workflow.
+description: Develop through chat with Redpact-managed TDD, isolated worktrees, Unit and integration testing, and Playwright verification. Request execution through CLI and return recorded test evidence for human review. Use auto for verified local merge and current for the existing checkout. Initial project setup belongs to redpact-init. Use when the user invokes Redpact; ordinary repository work alone does not require this workflow.
 ---
 
 # Redpact
@@ -68,6 +68,31 @@ records manually. If the required Redpact endpoint, settings or approval is
 unavailable, finish independent work and report the connected-evidence gap.
 
 ## Invocation
+
+### Standalone skill installation
+
+Skills CLI users install both `redpact` and `redpact-init` from `wo658/redpact`;
+their guides reference each other. This installs instructions and resources only,
+not the CLI, runtime, sidebar app or an MCP connection.
+
+Without a plugin, check `redpact --help`. If the CLI is missing, use Node 24+ and
+`pnpm add --global @wo658/redpact@latest` (or `npm install --global @wo658/redpact@latest`).
+Use an already selected running instance with CLI `--server URL`. If none is selected,
+start `redpact serve --port 54321` in a persistent terminal and use
+`http://127.0.0.1:54321` for both CLI and browser review. Confirm the connection with
+`redpact --server URL workspace status --path /absolute/checkout --json`.
+Do not start a second instance to work around an unavailable selected instance.
+Managed execution also requires Docker with Compose and actual project configuration.
+
+MCP is optional for this CLI workflow. A skill's tool dependency metadata does not
+register an MCP server. If MCP is configured, use its status result's actual origin;
+otherwise use the explicitly selected CLI origin and returned web review paths.
+Never call unavailable plugin tools or install a sidebar plugin as a prerequisite
+for standalone use. Start a new agent session after installing skills. In Codex use
+`$redpact-init` or `$redpact`; standalone Claude Code skills use `/redpact-init` or
+`/redpact`. Follow the host's skill invocation UI for other agents.
+
+### Plugin installation
 
 In Codex, use `$redpact` and `$redpact-init`. In Claude Code, use
 `/redpact:redpact` and `/redpact:redpact-init`; the same task modes apply.

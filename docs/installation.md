@@ -33,6 +33,7 @@ browser/CLI runtime; they do not install the plugin or update its managed packag
 | npm / pnpm | CLI and full web app | Node 24+, npm or pnpm |
 | GPT / Codex App Page Plugin | Sidebar app, runtime install/start and development skills | Currently macOS Apple Silicon, npm for Plugin installation and a compatible host |
 | Other agent plugins | Skills and HTTP MCP connection | A running npm/pnpm runtime |
+| Skills CLI | Development and setup skills | Separately installed CLI/runtime; Node 24+, Git and pnpm |
 
 Native Windows, Linux and macOS desktop apps, Homebrew and shell installers are no
 longer distributed. Existing releases are historical artifacts, not new installation
@@ -88,6 +89,54 @@ For a specific version, inspect its package and checksum in
 [Releases](https://github.com/wo658/redpact/releases). The old `runtime-v0.1.0` is a
 historical release, not the latest installation path. To use current source
 changes, follow the source-package build instructions above.
+
+## Install skills without a plugin
+
+Install the development and setup skills into your project with the
+[Skills CLI](https://github.com/vercel-labs/skills). Use Node 24+, Git and pnpm:
+
+```sh
+pnpm dlx skills find redpact
+pnpm dlx skills add wo658/redpact --list
+pnpm dlx skills add wo658/redpact --skill redpact redpact-init
+```
+
+Choose your coding agent when prompted. Add `--agent codex` or `--agent claude-code`
+to select it explicitly, and `--yes` for noninteractive installation. Installation
+is project-local by default; add `--global` for user-level skills. Install both
+skills because their guides reference each other. They use the maintained sources
+under `plugins/redpact/skills/`; there is no separate skill repository or content copy.
+
+Skills install instructions and resources only. Install the CLI/runtime using the
+npm/pnpm commands above, then start `redpact serve --port 54321` in a separate terminal.
+Keep it running and open `http://127.0.0.1:54321` for review. If you already use a
+running instance, keep its actual origin instead of starting another one:
+
+```sh
+redpact --help
+redpact --server http://127.0.0.1:54321 workspace status --path /absolute/path/to/your-project --json
+```
+
+Replace the project path and server origin with your actual checkout and instance.
+MCP is optional for the CLI workflow; Skills CLI does not register an MCP connection,
+install the sidebar app or provision Docker. Managed tests still require Docker with
+Compose and [project configuration](configuration.md). Execution approval stays in
+the connected web viewer.
+
+Start a new agent session. In Codex invoke `$redpact-init` to configure the project,
+then `$redpact <task>` for development. Standalone Claude Code skills use
+`/redpact-init` and `/redpact`; plugin commands retain their namespaced forms below.
+Other agents use their own skill invocation UI. Avoid installing duplicate copies
+through both Skills CLI and a plugin in the same agent scope.
+
+`find-skills` uses `skills find` to search the ecosystem. Search indexing is separate
+from GitHub installation: if Redpact is absent from results, use the direct `add`
+command or `--list` above. The [skills.sh FAQ](https://skills.sh/docs/faq) describes
+automatic listing through installation telemetry; it does not promise immediate
+search visibility. `pnpm dlx skills check` checks installed skills for updates and
+`pnpm dlx skills update` updates them; neither updates the Redpact runtime. Use
+Skills CLI to manage these installations; Redpact's plugin update controls manage
+plugins only.
 
 ## Install an agent plugin
 

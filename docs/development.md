@@ -253,7 +253,8 @@ for every commit or merely because a week elapsed. This cadence is policy, not a
 automated schedule. Release notes describe changes, verification, known limitations
 and required user actions in English and Korean.
 
-Supported distribution consists of the npm/pnpm web runtime and Plugins. The product
+Supported distribution consists of the npm/pnpm web runtime, Plugins and standalone
+agent skills. The product
 version belongs to `app/server/package.json`. Native desktop implementation and release
 workflows have been removed. Tag the verified commit
 with `v<version>` and manually dispatch the [npm workflow](../.github/workflows/npm-publish.yml).
@@ -324,7 +325,9 @@ Implementation: [runtime packaging](../app/server/tools/pack-runtime.mjs),
 
 ## Public installation distribution
 
-Public distribution supports only the npm/pnpm web runtime and Plugins. Homebrew,
+Public distribution supports the npm/pnpm web runtime, Plugins and standalone agent
+skills through Skills CLI. Standalone skills reuse `plugins/redpact/skills/` and
+require a separately installed runtime; see [installation](installation.md). Homebrew,
 shell installers and native desktop distribution workflows have been removed.
 Source builds and Docker Compose are contributor tools, not additional product channels.
 
