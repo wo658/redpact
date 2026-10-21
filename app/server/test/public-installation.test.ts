@@ -22,7 +22,7 @@ test("에이전트 카탈로그는 호스트에 맞는 Plugin 배포를 가리�
       expect(entry.source).toEqual({
         source: "npm",
         package: "@wo658/redpact-plugin",
-        version: "0.6.0",
+        version: expect.stringMatching(/^\d+\.\d+\.\d+$/),
         registry: "https://registry.npmjs.org",
       })
       continue

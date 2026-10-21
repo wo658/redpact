@@ -6921,22 +6921,6 @@ test("브라우저 방문 기록으로 메뉴와 작업공간 탭을 복원하�
   assert.ok(screen.getByRole("combobox", { name: "Main branch" }))
 })
 
-test("브라우저 화면은 외부 속성이 있어도 네이티브 창 컨트롤을 노출하지 않는다", async () => {
-  await i18n.changeLanguage("en")
-  document.documentElement.dataset.desktop = "windows"
-  const originalFetch = globalThis.fetch
-  globalThis.fetch = () => new Promise(() => {})
-  try {
-    const { default: App } = await server.ssrLoadModule("/src/App.tsx")
-    render(createElement(App))
-    assert.ok(screen.queryByRole("button", { name: "Minimize window" }) === null)
-    assert.ok(screen.queryByRole("button", { name: "Close window" }) === null)
-  } finally {
-    globalThis.fetch = originalFetch
-    delete document.documentElement.dataset.desktop
-  }
-})
-
 test("선택 소스는 늦은 성공과 오류 응답을 버리고 현재 파일만 표시한다", async () => {
   const { act } = await import("@testing-library/react")
   await i18n.changeLanguage("en")

@@ -12,6 +12,11 @@ test("공개 Plugin 패키지는 플랫폼과 도구를 명시하고 설치 스�
   expect(pkg.cpu).toEqual(["arm64"])
   expect(pkg.scripts).toBeUndefined()
   expect(pkg.version).toBe(manifest.version)
+  const catalog = JSON.parse(
+    await readFile(new URL("../../../.agents/plugins/marketplace.json", import.meta.url), "utf8"),
+  )
+  expect(pkg.name).toBe(catalog.plugins[0].source.package)
+  expect(pkg.version).toBe(catalog.plugins[0].source.version)
   const metadata = JSON.parse(await readFile(new URL("runtime-artifact.json", root), "utf8"))
   expect(metadata.redpact).toBe("installed on demand")
 })

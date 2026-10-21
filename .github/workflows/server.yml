@@ -9,6 +9,7 @@ on:
       - 'patches/**'
       - 'tools/**'
       - 'plugins/**'
+      - '.agents/plugins/**'
       - 'unit.Dockerfile'
       - '.dockerignore'
       - 'package.json'
@@ -26,6 +27,7 @@ on:
       - 'patches/**'
       - 'tools/**'
       - 'plugins/**'
+      - '.agents/plugins/**'
       - 'unit.Dockerfile'
       - '.dockerignore'
       - 'package.json'
@@ -52,6 +54,7 @@ jobs:
       - run: pnpm rebuild esbuild
       - run: pnpm lint
       - run: pnpm docs:check
+      - run: pnpm plugins:check --registry
       - run: pnpm --filter @redpact/server typecheck
       - run: pnpm --filter @redpact/web build
       - run: pnpm --filter @redpact/server test

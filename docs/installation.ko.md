@@ -33,8 +33,7 @@ npm/pnpm 설치까지 이어갑니다. 현재 App Page Plugin은 macOS Apple Sil
 | 다른 에이전트 Plugin | 스킬과 HTTP MCP 연결 | npm/pnpm으로 설치하고 실행한 런타임 |
 | Skills CLI | 개발·초기 설정 스킬 | 별도 CLI·런타임 설치, Node 24+, Git, pnpm |
 
-네이티브 Windows·Linux·macOS 데스크톱 앱, Homebrew, 셸 설치기는 더 이상 배포하지 않습니다.
-기존 릴리스는 과거 자료이며 새 설치 경로가 아닙니다. 소스 빌드는 기여자 검증용입니다.
+소스 빌드는 기여자 검증용입니다.
 관리형 테스트에는 Docker Compose가 필요합니다. 웹 런타임 CI 검증 범위는
 [개발 문서](development.md)를 참고하세요.
 
@@ -248,7 +247,7 @@ npm 배포본 및 고정 버전 pnpm CLI를 플러그인에 포함합니다. 이
 설치 결과는 `~/.redpact/app-page/packages/0.9.0-npm` 또는
 `~/.redpact/app-page/packages/0.9.0-pnpm`에 저장합니다. 기본 선택은 pnpm입니다.
 검증된 기존 설치가 있으면 재사용하며 두 가지가 모두 있으면 npm을 먼저 선택합니다.
-이 탐지는 플러그인 관리 패키지만 대상으로 하며 다른 전역 설치나 데스크톱 앱은
+이 탐지는 플러그인 관리 패키지만 대상으로 하며 다른 전역 설치는
 탐색하지 않습니다. 임시 디렉터리에 설치한 후 패키지 버전, 진입점, 뷰어를 확인해야
 완료 디렉터리로 이동합니다. 전역 PATH·전역 패키지·프로젝트 의존성을 바꾸지 않습니다.
 MCP 프로세스의 `REDPACT_APP_INSTALL_DIR`로 패키지 루트를 변경할 수 있습니다.
@@ -324,8 +323,8 @@ MCP 연결 종료 시 모든 구독을 닫습니다. 외부 화면은 5초마다
 종료하고 진행 중 패키지 설치를 취소합니다. 이후 세션은 설치 패키지와 저장 데이터를
 재사용합니다. `codex plugin remove redpact-app@redpact-app-local`로 앱 플러그인을 제거하며
 활성 세션의 소유 프로세스를 멈추려면 해당 연결을 먼저 종료해야 합니다. 플러그인 제거는
-관리 패키지 경로와 런타임 데이터를 보존합니다. 별도 전역 Redpact를 제거하거나 데스크톱
-앱을 휴지통으로 옮겨도 런타임 데이터는 그대로 남습니다.
+관리 패키지 경로와 런타임 데이터를 보존합니다. 별도 전역 Redpact를 제거해도
+런타임 데이터는 그대로 남습니다.
 
 검증에는 Playwright Chromium(`pnpm exec playwright install chromium`)을 설치하고
 `pnpm typecheck`, `pnpm test`를 실행합니다. 현재 서버·뷰어와 이 보조 앱을 빌드한 뒤
@@ -410,7 +409,7 @@ pnpm install --frozen-lockfile
 pnpm --filter @redpact/server build
 ```
 
-의존성을 설치하면 이 저장소의 Git 훅이 활성화됩니다. 데스크톱 애플리케이션을 설치하거나 런타임 패키지를 게시하는 작업은 아닙니다.
+의존성을 설치하면 이 저장소의 Git 훅이 활성화됩니다. 런타임 패키지를 게시하는 작업은 아닙니다.
 
 ## 서버와 뷰어 실행
 

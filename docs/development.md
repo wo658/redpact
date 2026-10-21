@@ -255,8 +255,7 @@ and required user actions in English and Korean.
 
 Supported distribution consists of the npm/pnpm web runtime, Plugins and standalone
 agent skills. The product
-version belongs to `app/server/package.json`. Native desktop implementation and release
-workflows have been removed. Tag the verified commit
+version belongs to `app/server/package.json`. Tag the verified commit
 with `v<version>` and manually dispatch the [npm workflow](../.github/workflows/npm-publish.yml).
 Pushing a tag does not publish npm packages.
 
@@ -277,7 +276,7 @@ The publish script does not automatically select an npm prerelease dist-tag for
 `-beta.N`; prereleases require a separately reviewed channel. Local `publish:runtime`
 checks only the local environment; Actions uses the Ubuntu/Node 24 baseline.
 
-The product snapshot tag is `v<version>`. Preserve historical desktop tags and published assets.
+The product snapshot tag is `v<version>`.
 
 ## Runtime packaging and updates
 
@@ -327,20 +326,28 @@ Implementation: [runtime packaging](../app/server/tools/pack-runtime.mjs),
 
 Public distribution supports the npm/pnpm web runtime, Plugins and standalone agent
 skills through Skills CLI. Standalone skills reuse `plugins/redpact/skills/` and
-require a separately installed runtime; see [installation](installation.md). Homebrew,
-shell installers and native desktop distribution workflows have been removed.
+require a separately installed runtime; see [installation](installation.md).
 Source builds and Docker Compose are contributor tools, not additional product channels.
 
 The Codex catalog `.agents/plugins/marketplace.json` installs a pinned version of
 `@wo658/redpact-plugin` from npm. Claude and Cursor catalogs retain their HTTP Plugin.
 App Page Plugin versions are independent of runtime and HTTP Plugin versions.
+The npm source in `.agents/plugins/marketplace.json` is the single package-name and
+version input for the generated npm and Plugin manifests. Change the catalog pin
+when preparing a Plugin release; do not hardcode a separate build version.
+`pnpm plugins:check --registry` verifies that the pinned version is published and
+matches npm's `latest` dist-tag. Application CI runs this check on Ubuntu/Node 24,
+including catalog-only changes; registry failures fail the check. Extracted-package
+verification also compares both manifests with the catalog before publication.
 
 In `examples/sidebar-app`, `pnpm pack:plugin` bundles macOS arm64 Node, npm, pnpm,
 the full web viewer, MCP companion and skills. Run `pnpm test`, `pnpm typecheck`,
 `pnpm test:package`, and the actual installation browser checks for npm and pnpm.
 `dist/plugin-artifact.json` records the source commit, version and tarball SHA-256.
 Publish that verified tarball with `npm publish <tarball> --access public`, verify
-registry installation, then update the catalog pin. Never replace a published version.
+registry installation with `pnpm plugins:check --registry`, then merge the catalog
+change. A prepared unpublished version intentionally fails the registry check until
+publication completes. Never replace a published version.
 Plugin installation runs no lifecycle scripts; runtime install/start remain explicit
 in-app actions. Actual sidebar discovery in the host is a separate check from the
 browser harness.

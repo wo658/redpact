@@ -7,6 +7,7 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
+import { readPluginSource } from "../../tools/plugins/check-release.mjs"
 
 const dist = new URL("dist/", import.meta.url)
 const artifact = JSON.parse(await readFile(new URL("plugin-artifact.json", dist), "utf8"))
@@ -25,6 +26,11 @@ try {
   const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8"))
   assert.equal(pkg.version, artifact.version)
   assert.equal(pkg.name, "@wo658/redpact-plugin")
+  const source = await readPluginSource()
+  assert.equal(pkg.name, source.package)
+  assert.equal(pkg.version, source.version)
+  const plugin = JSON.parse(await readFile(join(root, "plugin.json"), "utf8"))
+  assert.equal(plugin.version, source.version)
   const node = join(root, "bin/node")
   for (const tool of ["tooling/npm/bin/npm-cli.js", "tooling/pnpm/bin/pnpm.cjs"]) {
     assert.match(
