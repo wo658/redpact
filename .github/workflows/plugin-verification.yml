@@ -67,4 +67,11 @@ jobs:
         run: node tools/plugins/publish.mjs
       - name: Verify published catalog version
         if: ${{ inputs.publish }}
-        run: node tools/plugins/check-release.mjs --registry
+        run: |
+          for attempt in {1..20}; do
+            if node tools/plugins/check-release.mjs --registry; then
+              exit 0
+            fi
+            sleep 15
+          done
+          exit 1

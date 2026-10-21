@@ -352,7 +352,8 @@ The manual [Plugin workflow](../.github/workflows/plugin-verification.yml) defau
 verification only. Enable its `publish` input to publish that verified artifact from
 an Ubuntu/Node 24 job using npm OIDC trusted publishing. The publisher verifies the
 catalog version, source commit, filename and SHA-256 before publishing without a
-rebuild, then checks the registry against the catalog. Configure the package trust
+rebuild, then waits up to five minutes for npm processing and registry/catalog
+agreement. A final mismatch or registry outage fails the job. Configure the package trust
 once with npm 11.15 or newer: `npm trust github @wo658/redpact-plugin --repo wo658/redpact --file plugin-verification.yml --allow-publish --yes`.
 Account setup may require npm two-factor authentication; subsequent workflow publishes
 use short-lived OIDC credentials and need no stored npm write token. Published versions
