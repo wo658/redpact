@@ -17,6 +17,7 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.github/workflows/server.yml'
+      - '.github/workflows/plugin-verification.yml'
   push:
     branches: [main]
     paths:
@@ -35,6 +36,7 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.github/workflows/server.yml'
+      - '.github/workflows/plugin-verification.yml'
 permissions:
   contents: read
 jobs:

@@ -69,4 +69,15 @@ test("자동 앱 CI는 웹과 서버만 검증하고 무거운 플러그인 검�
     ),
   )
   expect(Object.keys(plugin.on)).toEqual(["workflow_dispatch"])
+  expect(plugin.on.workflow_dispatch?.inputs?.publish?.default).toBe(false)
+  expect(plugin.jobs.publish?.needs).toBe("verify")
+  expect(plugin.jobs.publish?.["runs-on"]).toBe("ubuntu-latest")
+  expect(plugin.jobs.publish?.permissions["id-token"]).toBe("write")
+  const publishSteps = plugin.jobs.publish?.steps ?? []
+  expect(publishSteps).toContainEqual({ run: "node tools/plugins/publish.mjs --dry-run" })
+  expect(publishSteps).toContainEqual({
+    name: "Publish with npm trusted publishing",
+    if: "${{ inputs.publish }}",
+    run: "node tools/plugins/publish.mjs",
+  })
 })

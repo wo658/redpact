@@ -35,3 +35,21 @@ test("레지스트리 장애는 버전 일치 성공으로 처리하지 않는�
     }),
   ).rejects.toThrow("registry unavailable")
 })
+
+test("게시할 Plugin의 버전·소스·체크섬·파일명이 검증 기록과 달라지면 거부한다", async () => {
+  const { verifyPluginArtifact } = await import(
+    new URL("../../../tools/plugins/publish.mjs", import.meta.url).href
+  )
+  const expected = {
+    version: "0.7.0",
+    commit: "verified-source",
+    sha256: "verified-checksum",
+    filename: "wo658-redpact-plugin-0.7.0.tgz",
+  }
+  expect(() => verifyPluginArtifact(expected, expected)).not.toThrow()
+  for (const key of Object.keys(expected)) {
+    expect(() => verifyPluginArtifact({ ...expected, [key]: "changed" }, expected)).toThrow(
+      "mismatch",
+    )
+  }
+})

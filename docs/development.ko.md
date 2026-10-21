@@ -319,6 +319,15 @@ App Page Plugin 버전은 런타임 및 HTTP Plugin 버전과 독립적입니다
 `pnpm plugins:check --registry`로 검증한 뒤 카탈로그 변경을 병합합니다.
 준비 중인 미게시 버전은 게시가 끝날 때까지 레지스트리 검사가 실패하는 것이 정상입니다.
 게시된 버전은 교체하지 않습니다.
+수동 [Plugin workflow](../.github/workflows/plugin-verification.yml)는 기본적으로 검증만 합니다.
+`publish` 입력을 켜면 검증한 아티팩트를 Ubuntu/Node 24 job에서 npm OIDC trusted publishing으로
+게시합니다. 게시기는 카탈로그 버전·소스 커밋·파일명·SHA-256을 확인하고 재빌드 없이 게시한 뒤
+레지스트리와 카탈로그를 다시 비교합니다. 패키지 신뢰 연결은
+`npm trust github @wo658/redpact-plugin --repo wo658/redpact --file plugin-verification.yml --allow-publish --yes`로
+npm 11.15 이상에서 한 번 설정합니다. 계정 설정에는 npm 2차 인증이 필요할 수 있지만 이후 workflow 게시는
+단기 OIDC 인증을 사용하므로 npm 쓰기 토큰을 저장할 필요가 없습니다. 게시 버전은 변경할 수
+없으므로 새 버전에서만 게시를 실행하세요.
+
 Plugin 설치는 lifecycle script를 실행하지 않으며 런타임 설치·시작은 앱 안에서 명시적으로
 요청합니다. 호스트의 실제 사이드바 노출 검증은 브라우저 harness 검사와 별개입니다.
 

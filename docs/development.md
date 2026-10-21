@@ -348,6 +348,16 @@ Publish that verified tarball with `npm publish <tarball> --access public`, veri
 registry installation with `pnpm plugins:check --registry`, then merge the catalog
 change. A prepared unpublished version intentionally fails the registry check until
 publication completes. Never replace a published version.
+The manual [Plugin workflow](../.github/workflows/plugin-verification.yml) defaults to
+verification only. Enable its `publish` input to publish that verified artifact from
+an Ubuntu/Node 24 job using npm OIDC trusted publishing. The publisher verifies the
+catalog version, source commit, filename and SHA-256 before publishing without a
+rebuild, then checks the registry against the catalog. Configure the package trust
+once with npm 11.15 or newer: `npm trust github @wo658/redpact-plugin --repo wo658/redpact --file plugin-verification.yml --allow-publish --yes`.
+Account setup may require npm two-factor authentication; subsequent workflow publishes
+use short-lived OIDC credentials and need no stored npm write token. Published versions
+remain immutable, so run publishing only for a new version.
+
 Plugin installation runs no lifecycle scripts; runtime install/start remain explicit
 in-app actions. Actual sidebar discovery in the host is a separate check from the
 browser harness.
