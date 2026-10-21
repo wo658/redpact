@@ -5,7 +5,7 @@
 Use Redpact as an in-app workspace beside your coding conversation. Open projects,
 worktrees, files, Git changes, tests and environments without leaving the app.
 The current implementation is a **GPT / Codex App Page Plugin**; it is not
-a listing in the public ChatGPT app directory. Supported installation paths are npm/pnpm for the web app, Plugins and standalone agent skills. Native desktop distribution has ended.
+a listing in the public ChatGPT app directory. Supported installation paths are npm/pnpm for the web app, Plugins and standalone agent skills.
 
 Start with the [in-app setup](docs/installation.md): open Redpact,
 choose **Install Redpact** when the runtime is missing, then **Start Redpact**.

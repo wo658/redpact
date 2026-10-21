@@ -2,12 +2,6 @@ import { readFile } from "node:fs/promises"
 import { expect, test } from "vitest"
 import { parse } from "yaml"
 
-test("네이티브 데스크톱 배포 workflow를 제공하지 않는다", async () => {
-  const { readdir } = await import("node:fs/promises")
-  const workflows = await readdir(new URL("../../../.github/workflows/", import.meta.url))
-  expect(workflows.filter((name) => name.startsWith("desktop-"))).toEqual([])
-})
-
 test("npm 게시 작업은 검증된 아티팩트를 받아 재빌드 없이 게시한다", async () => {
   const workflow = parse(
     await readFile(new URL("../../../.github/workflows/npm-publish.yml", import.meta.url), "utf8"),
@@ -64,6 +58,9 @@ test("자동 앱 CI는 웹과 서버만 검증하고 무거운 플러그인 검�
   expect(commands).toContain("pnpm --filter @redpact/server typecheck")
   expect(commands).toContain("pnpm --filter @redpact/server test")
   expect(commands).toContain("pnpm --filter @redpact/web test")
+  expect(commands).toContain("pnpm plugins:check --registry")
+  expect(application.on.pull_request.paths).toContain(".agents/plugins/**")
+  expect(application.on.push.paths).toContain(".agents/plugins/**")
   expect(commands).not.toContain("pnpm build")
   const plugin = parse(
     await readFile(
@@ -72,4 +69,15 @@ test("자동 앱 CI는 웹과 서버만 검증하고 무거운 플러그인 검�
     ),
   )
   expect(Object.keys(plugin.on)).toEqual(["workflow_dispatch"])
+  expect(plugin.on.workflow_dispatch?.inputs?.publish?.default).toBe(false)
+  expect(plugin.jobs.publish?.needs).toBe("verify")
+  expect(plugin.jobs.publish?.["runs-on"]).toBe("ubuntu-latest")
+  expect(plugin.jobs.publish?.permissions["id-token"]).toBe("write")
+  const publishSteps = plugin.jobs.publish?.steps ?? []
+  expect(publishSteps).toContainEqual({ run: "node tools/plugins/publish.mjs --dry-run" })
+  expect(publishSteps).toContainEqual({
+    name: "Publish with npm trusted publishing",
+    if: "${{ inputs.publish }}",
+    run: "node tools/plugins/publish.mjs",
+  })
 })

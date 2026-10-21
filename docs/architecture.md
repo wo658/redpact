@@ -26,8 +26,7 @@ through MCP. Both use one shared React UI and server runtime; HTTP/SSE and MCP a
 transport adapters, with host-specific capabilities and limits described in
 [installation](installation.md). Execution approval and detailed evidence remain in the full web viewer.
 
-Native Windows, Linux and macOS desktop applications and their Tauri implementation
-have been removed. CI verifies the shared web UI and server on Ubuntu with Node 24,
+CI verifies the shared web UI and server on Ubuntu with Node 24,
 without an OS/Node matrix. This is the release verification baseline, not evidence
 of behavior on every host. See [development](development.md) for automated and manual checks.
 

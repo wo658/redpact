@@ -1,6 +1,11 @@
 name: Verify App Page Plugin
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the verified Plugin using npm trusted publishing
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -38,3 +43,36 @@ jobs:
             examples/sidebar-app/dist/plugin-artifact.json
             examples/sidebar-app/dist/redpact-evidence/
           if-no-files-found: error
+  publish:
+    needs: verify
+    if: github.repository == 'wo658/redpact'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@v4
+        with:
+          name: app-page-plugin
+          path: examples/sidebar-app/dist
+      - run: node tools/plugins/publish.mjs --dry-run
+      - name: Publish with npm trusted publishing
+        if: ${{ inputs.publish }}
+        run: node tools/plugins/publish.mjs
+      - name: Verify published catalog version
+        if: ${{ inputs.publish }}
+        timeout-minutes: 5
+        run: |
+          for attempt in {1..20}; do
+            if node tools/plugins/check-release.mjs --registry; then
+              exit 0
+            fi
+            sleep 15
+          done
+          exit 1

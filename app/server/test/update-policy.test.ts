@@ -39,7 +39,7 @@ test("중복 확인을 합치고 조회 실패를 최신 상태로 바꾸지 않
   updates.close()
 })
 
-test("개발·데스크톱 서버는 npm 조회를 시작하지 않는다", async () => {
+test("개발 서버는 npm 조회를 시작하지 않는다", async () => {
   const readTags = vi.fn()
   const updates = createUpdates({
     currentVersion: "0.2.0",

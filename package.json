@@ -16,6 +16,7 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "test": "pnpm --filter @redpact/server test",
+    "plugins:check": "node tools/plugins/check-release.mjs",
     "pack:runtime": "pnpm --filter @redpact/web build && pnpm --filter @redpact/server build && node app/server/tools/pack-runtime.mjs",
     "local:update": "node app/server/tools/local-update.ts",
     "local:update:plugin": "node app/server/tools/local-update.ts --plugin-only",

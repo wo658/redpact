@@ -9,6 +9,11 @@ supported host setup, trust boundaries and verification limitations.
 
 - `pnpm build` bundles `app/web/src/entries/sidebar.tsx` and `src/redpact/main.ts`.
 - `pnpm bundle:redpact` also supplies the contained Node/npm/pnpm tools.
+The public catalog `.agents/plugins/marketplace.json` supplies the generated package
+and Plugin versions. From the repository root, `pnpm plugins:check --registry` checks
+that the catalog matches the published npm `latest` version. See
+[Plugin distribution](../../docs/development.md#public-installation-distribution) for release ordering.
+
 - `pnpm pack:plugin` creates the public `@wo658/redpact-plugin` npm tarball and provenance.
 - `pnpm test:package` verifies the extracted tarball, bundled tools and MCP resources.
 - `pnpm test` and `pnpm typecheck` check the companion.

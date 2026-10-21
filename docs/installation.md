@@ -35,9 +35,7 @@ browser/CLI runtime; they do not install the plugin or update its managed packag
 | Other agent plugins | Skills and HTTP MCP connection | A running npm/pnpm runtime |
 | Skills CLI | Development and setup skills | Separately installed CLI/runtime; Node 24+, Git and pnpm |
 
-Native Windows, Linux and macOS desktop apps, Homebrew and shell installers are no
-longer distributed. Existing releases are historical artifacts, not new installation
-paths. Source builds are for contributor verification. Managed tests require Docker
+Source builds are for contributor verification. Managed tests require Docker
 Compose. See [development](development.md) for web/runtime CI verification coverage.
 
 ## Install a bundled runtime from source
@@ -255,7 +253,7 @@ There is no arbitrary package name, registry or command input.
 Successful installs live under `~/.redpact/app-page/packages/0.9.0-npm` or
 `~/.redpact/app-page/packages/0.9.0-pnpm`. The default is pnpm. A verified existing
 installation is reused; if both are present, npm is selected first. This lookup
-covers plugin-managed packages, not unrelated global installations or desktop apps.
+covers plugin-managed packages, not unrelated global installations.
 Each attempt uses a temporary directory and publishes its installation directory
 only after the package version, entrypoint and viewer have been checked. It does
 not change global PATH, globally installed packages, or project dependencies.
@@ -339,7 +337,7 @@ A later session reuses the installed package and stored data. Remove the compani
 with `codex plugin remove redpact-app@redpact-app-local`; active sessions must first
 disconnect to stop their owned processes. Plugin removal preserves the managed
 package directory and runtime data. Uninstalling a separate global Redpact package
-or moving its desktop application to Trash also leaves runtime data untouched.
+also leaves runtime data untouched.
 
 For verification, install Playwright Chromium (`pnpm exec playwright install chromium`)
 and run `pnpm typecheck` and `pnpm test`. After building the current server/viewer and
@@ -429,7 +427,7 @@ pnpm install --frozen-lockfile
 pnpm --filter @redpact/server build
 ```
 
-Dependency installation enables this repository's Git hooks. It does not install a desktop application or publish a runtime package.
+Dependency installation enables this repository's Git hooks. It does not publish a runtime package.
 
 ## Start the server and viewer
 

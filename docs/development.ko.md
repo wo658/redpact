@@ -230,8 +230,7 @@ Redpact는 베타 기간에 `0.x.y` 제품 버전을 사용하고 사용자에�
 검증 결과, 알려진 제한과 필요한 사용자 조치를 영어·한국어로 설명합니다.
 
 지원 배포는 npm/pnpm 웹 런타임, Plugin과 독립 에이전트 스킬입니다. 제품 버전은
-`app/server/package.json`에서 관리합니다. 네이티브 데스크톱 구현과 릴리스 workflow는
-제거했습니다. 검증한 커밋에 `v<version>` 태그를 만들고
+`app/server/package.json`에서 관리합니다. 검증한 커밋에 `v<version>` 태그를 만들고
 수동 [npm workflow](../.github/workflows/npm-publish.yml)를 실행하세요.
 태그 push 자체는 npm 게시를 시작하지 않습니다.
 
@@ -250,7 +249,7 @@ trusted publishing으로 게시합니다. npm job은 아티팩트 식별 정보�
 npm prerelease dist-tag를 자동 선택하지 않으므로 prerelease는 별도로 검토한 채널이 필요합니다.
 로컬 `publish:runtime`은 로컬 환경만 검사합니다. Actions는 Ubuntu/Node 24를 검증 기준으로 사용합니다.
 
-제품 스냅샷 태그는 `v<version>`입니다. 기존 데스크톱 태그와 공개 자산은 변경하지 않습니다.
+제품 스냅샷 태그는 `v<version>`입니다.
 
 ## 런타임 패키징과 업데이트
 
@@ -298,20 +297,39 @@ Docker 리소스를 prune하지 않습니다. 이전 릴리스는 명시적으�
 
 공개 배포 경로는 npm/pnpm 웹 런타임, Plugin과 Skills CLI 독립 에이전트 스킬입니다.
 독립 스킬은 `plugins/redpact/skills/` 원본을 재사용하며 별도로 설치한 런타임이 필요합니다.
-명령은 [설치 문서](installation.md)를 참고하세요. Homebrew·셸 설치기 및
-네이티브 데스크톱 배포 workflow는 제거했습니다. 소스 빌드와 Docker Compose는
+명령은 [설치 문서](installation.md)를 참고하세요. 소스 빌드와 Docker Compose는
 기여자 개발 도구이며 추가 제품 배포 채널이 아닙니다.
 
 Codex 카탈로그 `.agents/plugins/marketplace.json`은 npm의 `@wo658/redpact-plugin`을
 고정 버전으로 설치합니다. Claude·Cursor 카탈로그는 기존 HTTP Plugin을 사용합니다.
 App Page Plugin 버전은 런타임 및 HTTP Plugin 버전과 독립적입니다.
+`.agents/plugins/marketplace.json`의 npm 소스가 생성되는 npm·Plugin manifest의
+패키지명과 버전을 결정하는 단일 기준입니다. Plugin 릴리스를 준비할 때 카탈로그의
+고정 버전을 바꾸며 빌드에 별도 버전을 하드코딩하지 않습니다.
+`pnpm plugins:check --registry`는 고정 버전이 npm에 게시되어 있고 `latest` dist-tag와
+일치하는지 검증합니다. 애플리케이션 CI는 카탈로그만 변경한 경우에도 Ubuntu/Node 24에서
+이 검사를 실행하며 레지스트리 장애도 검사 실패로 처리합니다. 추출 패키지 검증도 게시 전에
+두 manifest를 카탈로그와 비교합니다.
 
 `examples/sidebar-app`에서 `pnpm pack:plugin`은 macOS arm64용 Node·npm·pnpm,
 전체 웹 뷰어, MCP companion과 스킬을 묶습니다. `pnpm test`, `pnpm typecheck`,
 `pnpm test:package`를 실행하고 npm·pnpm 실제 설치 브라우저 검사도 각각 실행하세요.
 `dist/plugin-artifact.json`은 소스 커밋·버전·tarball SHA-256을 기록합니다.
 검증한 tarball을 `npm publish <tarball> --access public`으로 게시한 뒤 레지스트리에서
-검증하고 카탈로그의 고정 버전을 갱신합니다. 게시된 버전은 교체하지 않습니다.
+`pnpm plugins:check --registry`로 검증한 뒤 카탈로그 변경을 병합합니다.
+준비 중인 미게시 버전은 게시가 끝날 때까지 레지스트리 검사가 실패하는 것이 정상입니다.
+게시된 버전은 교체하지 않습니다.
+수동 [Plugin workflow](../.github/workflows/plugin-verification.yml)는 기본적으로 검증만 합니다.
+검증한 tarball을 `npm pack --dry-run`으로 검사하므로 이미 게시한 버전도 재검증할 수 있습니다.
+`publish` 입력을 켜면 검증한 아티팩트를 Ubuntu/Node 24 job에서 npm OIDC trusted publishing으로
+게시합니다. 게시기는 카탈로그 버전·소스 커밋·파일명·SHA-256을 확인하고 재빌드 없이 게시한 뒤
+npm 처리와 레지스트리·카탈로그 일치를 최대 5분 기다립니다. 마지막 검사에서도 불일치하거나
+레지스트리 장애가 있으면 job이 실패합니다. 패키지 신뢰 연결은
+`npm trust github @wo658/redpact-plugin --repo wo658/redpact --file plugin-verification.yml --allow-publish --yes`로
+npm 11.15 이상에서 한 번 설정합니다. 계정 설정에는 npm 2차 인증이 필요할 수 있지만 이후 workflow 게시는
+단기 OIDC 인증을 사용하므로 npm 쓰기 토큰을 저장할 필요가 없습니다. 게시 버전은 변경할 수
+없으므로 새 버전에서만 게시를 실행하세요.
+
 Plugin 설치는 lifecycle script를 실행하지 않으며 런타임 설치·시작은 앱 안에서 명시적으로
 요청합니다. 호스트의 실제 사이드바 노출 검증은 브라우저 harness 검사와 별개입니다.
 

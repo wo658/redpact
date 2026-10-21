@@ -240,13 +240,12 @@ registerHooks({load(url, context, next) {
   }
 }, 25000)
 
-test("폐기한 데스크톱 환경 변수와 stdin 명령은 감독 런타임의 IPC 수명주기를 바꾸지 않는다", async () => {
+test("stdin 명령은 감독 런타임의 IPC 수명주기를 바꾸지 않는다", async () => {
   const data = await mkdtemp(join(tmpdir(), "redpact-retired-control-"))
   const child = spawn(process.execPath, [main, "--data-dir", data, "--port", "0"], {
     env: {
       ...process.env,
       REDPACT_RUNTIME_SUPERVISED: "1",
-      REDPACT_DESKTOP_CONTROL: "1",
     },
     stdio: ["pipe", "pipe", "pipe", "ipc"],
   })
@@ -277,7 +276,6 @@ test("폐기한 데스크톱 환경 변수와 stdin 명령은 감독 런타임�
     child.stdin?.end("shutdown\n")
     expect((await fetch(`http://127.0.0.1:${ready.runtimeReady}/api/health`)).status).toBe(200)
     expect(child.exitCode).toBeNull()
-    expect(output).not.toContain('"desktop":"ready"')
     child.send({ runtimeControl: "shutdown" })
     expect((await exit)[0], output).toBe(0)
     expect(messages).toContainEqual({ runtimeControl: "stopped" })

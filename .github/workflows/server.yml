@@ -9,6 +9,7 @@ on:
       - 'patches/**'
       - 'tools/**'
       - 'plugins/**'
+      - '.agents/plugins/**'
       - 'unit.Dockerfile'
       - '.dockerignore'
       - 'package.json'
@@ -16,6 +17,7 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.github/workflows/server.yml'
+      - '.github/workflows/plugin-verification.yml'
   push:
     branches: [main]
     paths:
@@ -26,6 +28,7 @@ on:
       - 'patches/**'
       - 'tools/**'
       - 'plugins/**'
+      - '.agents/plugins/**'
       - 'unit.Dockerfile'
       - '.dockerignore'
       - 'package.json'
@@ -33,6 +36,7 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.github/workflows/server.yml'
+      - '.github/workflows/plugin-verification.yml'
 permissions:
   contents: read
 jobs:
@@ -52,6 +56,7 @@ jobs:
       - run: pnpm rebuild esbuild
       - run: pnpm lint
       - run: pnpm docs:check
+      - run: pnpm plugins:check --registry
       - run: pnpm --filter @redpact/server typecheck
       - run: pnpm --filter @redpact/web build
       - run: pnpm --filter @redpact/server test

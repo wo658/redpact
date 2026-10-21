@@ -1,12 +1,13 @@
 import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 import { build } from "esbuild"
-
 import { build as buildViewer } from "../../app/web/node_modules/vite/dist/node/index.js"
+import { readPluginSource } from "../../tools/plugins/check-release.mjs"
 
 const root = new URL("./", import.meta.url)
 const target = new URL("dist/redpact-marketplace/plugins/redpact-app/", root)
 const runtimePort = 54322
+const pluginSource = await readPluginSource()
 const runtimeManifest = JSON.parse(
   await readFile(new URL("../../app/server/package.json", root), "utf8"),
 )
@@ -72,7 +73,7 @@ for (const name of ["redpact", "redpact-init"]) {
     (await readFile(metadata, "utf8"))
       .replace('value: "redpact"', 'value: "redpact-app"')
       .replace('transport: "streamable_http"', 'transport: "stdio"')
-      .replace(/^      url:.*\n/gm, "")
+      .replace(/^ {6}url:.*\n/gm, "")
       .replace(
         "Redpact runtime status, shutdown and viewer URL",
         "Redpact server start, status, shutdown and App Page opening",
@@ -134,7 +135,7 @@ await writeFile(
     {
       $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
       name: "redpact",
-      version: "0.7.0",
+      version: pluginSource.version,
       description:
         "Manage projects, settings and verification through CLI, with human approvals and evidence in the full web app.",
       author: { name: "Redpact contributors" },
@@ -204,8 +205,8 @@ await writeFile(
   new URL("package.json", target),
   `${JSON.stringify(
     {
-      name: "@wo658/redpact-plugin",
-      version: "0.7.0",
+      name: pluginSource.package,
+      version: pluginSource.version,
       description: "Redpact sidebar app with explicit npm/pnpm runtime installation",
       license: "Apache-2.0",
       repository: {
