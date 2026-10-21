@@ -320,6 +320,7 @@ App Page Plugin 버전은 런타임 및 HTTP Plugin 버전과 독립적입니다
 준비 중인 미게시 버전은 게시가 끝날 때까지 레지스트리 검사가 실패하는 것이 정상입니다.
 게시된 버전은 교체하지 않습니다.
 수동 [Plugin workflow](../.github/workflows/plugin-verification.yml)는 기본적으로 검증만 합니다.
+검증한 tarball을 `npm pack --dry-run`으로 검사하므로 이미 게시한 버전도 재검증할 수 있습니다.
 `publish` 입력을 켜면 검증한 아티팩트를 Ubuntu/Node 24 job에서 npm OIDC trusted publishing으로
 게시합니다. 게시기는 카탈로그 버전·소스 커밋·파일명·SHA-256을 확인하고 재빌드 없이 게시한 뒤
 npm 처리와 레지스트리·카탈로그 일치를 최대 5분 기다립니다. 마지막 검사에서도 불일치하거나

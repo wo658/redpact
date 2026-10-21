@@ -349,7 +349,8 @@ registry installation with `pnpm plugins:check --registry`, then merge the catal
 change. A prepared unpublished version intentionally fails the registry check until
 publication completes. Never replace a published version.
 The manual [Plugin workflow](../.github/workflows/plugin-verification.yml) defaults to
-verification only. Enable its `publish` input to publish that verified artifact from
+verification only: it inspects the verified tarball with `npm pack --dry-run`, so
+already published versions remain verifiable. Enable its `publish` input to publish that verified artifact from
 an Ubuntu/Node 24 job using npm OIDC trusted publishing. The publisher verifies the
 catalog version, source commit, filename and SHA-256 before publishing without a
 rebuild, then waits up to five minutes for npm processing and registry/catalog

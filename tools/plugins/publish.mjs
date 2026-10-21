@@ -11,6 +11,13 @@ export function verifyPluginArtifact(actual, expected) {
   }
 }
 
+export function pluginPublishCommand(tarball, dryRun) {
+  if (dryRun) {
+    return ["pack", tarball, "--dry-run", "--ignore-scripts"]
+  }
+  return ["publish", tarball, "--access", "public", "--tag", "latest"]
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   assert(process.env.GITHUB_SHA, "GITHUB_SHA is required to identify the verified source")
   const source = await readPluginSource()
@@ -26,9 +33,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       .update(await readFile(tarball))
       .digest("hex"),
   })
-  const args = ["publish", fileURLToPath(tarball), "--access", "public", "--tag", "latest"]
-  if (process.argv.includes("--dry-run")) {
-    args.push("--dry-run")
-  }
+  const args = pluginPublishCommand(fileURLToPath(tarball), process.argv.includes("--dry-run"))
   execFileSync("npm", args, { stdio: "inherit" })
 }

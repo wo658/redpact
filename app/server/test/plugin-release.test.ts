@@ -53,3 +53,24 @@ test("게시할 Plugin의 버전·소스·체크섬·파일명이 검증 기록�
     )
   }
 })
+
+test("검증 전용 모드는 이미 게시된 버전에서도 게시 명령을 실행하지 않는다", async () => {
+  const { pluginPublishCommand } = await import(
+    new URL("../../../tools/plugins/publish.mjs", import.meta.url).href
+  )
+  const tarball = "/verified artifact/plugin.tgz"
+  expect(pluginPublishCommand(tarball, true)).toEqual([
+    "pack",
+    tarball,
+    "--dry-run",
+    "--ignore-scripts",
+  ])
+  expect(pluginPublishCommand(tarball, false)).toEqual([
+    "publish",
+    tarball,
+    "--access",
+    "public",
+    "--tag",
+    "latest",
+  ])
+})
