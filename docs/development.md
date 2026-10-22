@@ -107,6 +107,46 @@ Lint excludes retained checkouts under `.worktrees/`; run checks from each check
 Use concise reason comments, English identifiers and implementation copy. Submitted
 acceptance scenarios follow the user's language as specified by `AGENTS.md`.
 
+## Local test-plan chat probe
+
+The optional [MCP Apps probe](../app/web/src/entries/test-plan-probe.tsx) is a separate,
+local-only plugin for checking natural-language test editing and chat submission.
+It does not change the product's test workflow, settings or execution approvals.
+The view reuses Redpact's tabs, buttons, text inputs, shared CSS and fonts. Top-level
+Unit, Integration and Playwright tabs select the editable list while preserving edits
+across tab changes. It follows the host's light or dark theme.
+With the workspace and sidebar example dependencies installed, run from
+`examples/sidebar-app`:
+
+```sh
+node probe/build.mjs
+node probe/browser.mjs
+codex plugin marketplace add "$PWD/dist/test-plan-probe-marketplace"
+codex plugin add test-plan-probe@redpact-test-plan-probe
+```
+
+Reconnect the host if needed, select **Redpact Test Plan Probe** in the conversation,
+and ask it to open the probe. Edit the Unit, Integration or Playwright items and
+choose **Confirm** or **Request changes**. The default footer shows only these two actions.
+Request changes opens a compact dialog
+only after a click; its placeholder asks for natural-language instructions to the AI.
+**Send** sends all three current plans and that feedback, asking for a
+new draft to review. A rewrite request is not approval and requires nonblank feedback. The dialog
+closes after host acceptance; rejection keeps it open with the draft preserved.
+Cancel or Escape closes it while retaining the feedback draft.
+Long items grow with their text; only the list scrolls, keeping the tabs and footer
+actions available. Edits live only in the open view. The app sends the current
+text and a unique marker using `App.sendMessage`; it does not execute the sample tests.
+The host must advertise message support. Host rejection preserves the editable plan.
+
+The browser check uses the real SDK bridge with a recording host; it checks editing,
+addition, deletion, exact submitted text and rejection recovery, and captures desktop
+and mobile states under `dist/test-plan-probe-evidence/`. It does not prove GPT receipt.
+Actual-host verification requires a subsequent model reply containing the submitted
+marker and revised text. A successful SDK response alone is insufficient. Host
+reconnection, composer submission or another explicit user action may be needed.
+This probe is not part of the published Redpact plugin or managed execution evidence.
+
 ## CI scope
 
 Automatic application CI runs one Ubuntu/Node 24 job for relevant pull requests and

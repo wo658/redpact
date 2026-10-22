@@ -99,6 +99,35 @@ Biome은 중괄호, 중첩 삼항과 early return 뒤 중복 else 제거를 요�
 Lint는 `.worktrees/` 아래 보관된 별도 체크아웃을 제외하며, 각 체크아웃의 루트에서 검사를 실행합니다.
 제출 인수 시나리오는 `AGENTS.md`에 따라 사용자 언어를 따릅니다.
 
+## 로컬 테스트 계획 채팅 검증
+
+선택적인 [MCP Apps 검증 앱](../app/web/src/entries/test-plan-probe.tsx)은 자연어 테스트
+편집과 채팅 제출을 확인하는 별도의 로컬 전용 플러그인입니다. 제품의 테스트 흐름,
+설정, 실행 승인을 변경하지 않습니다. 화면은 기존 Redpact의 탭, 버튼, 텍스트 입력, 공통 CSS와 폰트를 재사용합니다. 최상단의 Unit·Integration·Playwright 탭으로 편집할 목록을 선택하며 전환해도 수정 내용이 유지됩니다. 호스트의 밝은 테마와 어두운 테마를 따릅니다. 루트 워크스페이스와 사이드바 예제 의존성을 설치한 뒤
+`examples/sidebar-app`에서 실행합니다.
+
+```sh
+node probe/build.mjs
+node probe/browser.mjs
+codex plugin marketplace add "$PWD/dist/test-plan-probe-marketplace"
+codex plugin add test-plan-probe@redpact-test-plan-probe
+```
+
+필요하면 호스트를 다시 연결하고 대화에서 **Redpact Test Plan Probe**를 선택한 뒤
+검증 앱을 열어 달라고 요청합니다. Unit, Integration, Playwright 항목을 수정하고
+**Confirm** 또는 **Request changes**를 선택합니다. 기본 하단에는 이 두 액션만 표시됩니다. Request changes를 눌렀을 때만 작은 대화상자가 열리며 입력 안내는 AI에게 자연어로 수정 방향을 설명하도록 요청합니다. **Send**가 현재 세 종류의 계획과 의견을 함께 보내 재검토용 초안을 요청합니다. 재작성 요청은 승인이 아니며 의견이 비어 있으면 제출할 수 없습니다. 전송이 수락되면 입력창은 닫히며, 거절되면 의견을 보존한 채 열린 상태로 유지됩니다. Cancel 또는 Escape로 닫아도 의견 초안은 유지됩니다. 긴 항목은 자동으로 높이가 늘어나고, 목록 영역만 스크롤하므로 상단 탭과 하단 액션은 유지됩니다. 수정 내용은 열린 화면 안에만 유지됩니다.
+앱은 `App.sendMessage`로 현재 본문과 고유 식별 코드를 보내며 예제 테스트를
+실행하지 않습니다. 호스트가 메시지 지원을 선언해야 합니다. 호스트가 제출을
+거절해도 편집한 계획은 유지됩니다.
+
+브라우저 검사는 실제 SDK 브리지와 메시지를 기록하는 호스트를 사용합니다.
+편집·추가·삭제·제출 원문·거절 후 복구를 확인하고 데스크톱 및 모바일 화면을
+`dist/test-plan-probe-evidence/`에 캡처합니다. 이 결과는 GPT 수신을 증명하지 않습니다.
+실제 호스트 검증에는 제출한 식별 코드와 수정 본문이 포함된 후속 모델 응답이
+필요합니다. SDK 응답 성공만으로는 충분하지 않습니다. 호스트 재연결, 입력창에서의
+전송 또는 사용자의 다른 명시적 동작이 필요할 수 있습니다. 이 검증 앱은 배포되는
+Redpact 플러그인이나 관리형 실행 근거에 포함되지 않습니다.
+
 ## CI 범위
 
 자동 애플리케이션 CI는 관련 PR과 main push에서 Ubuntu/Node 24의 단일 job으로 lint,
