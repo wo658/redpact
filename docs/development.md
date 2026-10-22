@@ -322,6 +322,9 @@ Implementation: [runtime packaging](../app/server/tools/pack-runtime.mjs),
 [local updater](../app/server/tools/local-update.ts),
 [release workflow](../.github/workflows/npm-publish.yml).
 
+Local runtime updates preflight migration compatibility on a temporary data copy
+before stopping the service. See [upgrade preflight](storage.md) for scope and limits.
+
 ## Public installation distribution
 
 Public distribution supports the npm/pnpm web runtime, Plugins and standalone agent

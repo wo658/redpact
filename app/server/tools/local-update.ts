@@ -65,8 +65,13 @@ export async function switchRuntime(options: {
   start: () => Promise<void>
   verify: () => Promise<void>
   idle: () => Promise<void>
+  preflight?: () => Promise<void>
 }): Promise<void> {
   await options.idle()
+  if (options.preflight) {
+    await options.preflight()
+    await options.idle()
+  }
   await options.stop()
   let moved = false
   let linked = false
@@ -213,6 +218,38 @@ export async function verifyServer(base: string, ui = true, allowLegacy = false)
       throw new Error(`Missing UI asset: ${path}`)
     }
     await asset.body?.cancel()
+  }
+}
+
+export async function preflightRuntime(runtime: string, data: string) {
+  const temporary = await mkdtemp(join(tmpdir(), "redpact-migration-preflight-"))
+  try {
+    const snapshot = join(temporary, "data")
+    await cp(data, snapshot, {
+      recursive: true,
+      filter: (path) => ![".writer.guard", ".writer.lock"].includes(path.split("/").at(-1) ?? ""),
+    })
+    // Only migrations and record validation run here; never start recovery or touch Docker.
+    const script = `
+      import { pathToFileURL } from 'node:url';
+      import { join } from 'node:path';
+      const [runtime, snapshot] = process.argv.slice(1);
+      const { createRuntimeMigrationFiles } = await import(pathToFileURL(join(runtime, 'dist/adapters/storage/migrations.js')).href);
+      const { migrateRuntime } = await import(pathToFileURL(join(runtime, 'dist/workflows/runtime-migrations.js')).href);
+      const files = createRuntimeMigrationFiles(snapshot);
+      await migrateRuntime(files);
+      const history = await files.history();
+      for (const file of await files.executionSelections(history.at(-1))) {
+        try { files.validateExecutionSelection(file, file.source); }
+        catch (error) { throw new Error(file.family + '/' + file.id + '.json: ' + error.message); }
+      }
+    `
+    await exec(process.execPath, ["--input-type=module", "-e", script, runtime, snapshot], {
+      timeout: 120000,
+      maxBuffer: 1024 * 1024,
+    })
+  } finally {
+    await rm(temporary, { recursive: true, force: true })
   }
 }
 
@@ -384,6 +421,7 @@ async function updateRuntime(base: string) {
     candidate,
     backup,
     ...service,
+    preflight: () => preflightRuntime(join(candidate, "node_modules/@wo658/redpact"), data),
     idle: () => assertIdle(data),
     verify: async () => {
       const candidateActive = await lstat(backup).then(
