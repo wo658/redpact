@@ -73,7 +73,11 @@ export async function openLargeCommit(
       : { changedPaths: ["large.txt", "tail.txt"] }),
     omitted: [metadataOnly ? metadataNotice : sizeNotice],
   })
+  await expect(page.getByRole("alert")).toHaveCount(0)
+  await page.getByRole("button", { name: /^Problems \(/ }).click()
+  const problems = page.getByRole("dialog", { name: "Problems", exact: true })
   await expect(
-    page.getByText(metadataOnly ? metadataNotice : sizeNotice, { exact: true }),
+    problems.getByText(metadataOnly ? metadataNotice : sizeNotice, { exact: true }),
   ).toBeVisible()
+  await page.keyboard.press("Escape")
 }

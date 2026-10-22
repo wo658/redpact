@@ -46,7 +46,9 @@ alone does not create a Redpact submission. Opening the full app without an exec
 
 `e2e/compose.yaml` builds the actual server and viewer from the selected checkout.
 The target has its own `/tmp/redpact-e2e-state`; the installed controlling service is
-independent. Docker and Compose are required on the controller host. Git and pnpm are
+independent. The fixture explicitly sets `REDPACT_GIT_MAX_BUFFER_MIB=4` to exercise
+configured output-limit recovery with small commits; the product default remains 128 MiB.
+Docker and Compose are required on the controller host. Git and pnpm are
 installed in the target image. No host Docker socket or host runtime data is mounted.
 
 Redpact supplies `REDPACT_CONNECTIONS_FILE`. The `tests/target.ts` helper uses its

@@ -24,15 +24,15 @@ function visibleText(children: ReactNode): string {
 export function Notice({
   children,
   error = false,
-  background = false,
+  critical = false,
 }: {
   children: ReactNode
   error?: boolean
-  background?: boolean
+  critical?: boolean
 }) {
   const message = visibleText(children)
   const collected = useProblem(message, error)
-  if (error && background && collected) {
+  if (error && !critical && collected) {
     return null
   }
   return (

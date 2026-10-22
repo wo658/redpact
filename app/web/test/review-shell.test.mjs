@@ -231,8 +231,11 @@ test("잘못된 검토 링크는 네트워크 호출 없이 진단하고 다른 
         ),
       }),
     )
-    assert.equal(screen.getByRole("alert").textContent, "Invalid execution link.")
+    assert.equal(screen.queryByRole("alert"), null)
     assert.ok(screen.getByRole("heading", { name: "Open an execution from chat" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Problems (1)" }))
+    assert.ok(await screen.findByRole("dialog", { name: "Problems" }))
+    assert.ok(screen.getByText("Invalid execution link."))
   } finally {
     cleanup()
     window.history.replaceState(null, "", "/")

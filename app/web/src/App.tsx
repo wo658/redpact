@@ -85,7 +85,9 @@ function ConnectedApp({ api }: { api: Api }) {
         <CardContent className="flex flex-col gap-3">
           {error ? (
             <>
-              <Notice error>{error}</Notice>
+              <Notice error critical>
+                {error}
+              </Notice>
               <p className="text-sm text-muted-foreground">
                 {t("Start the Redpact server, then retry.")}
               </p>

@@ -63,7 +63,7 @@ export function BranchReview({
       </p>
       {(error || parsed.error) && <Notice error>{error || parsed.error}</Notice>}
       {!result && !error && <Loading>{t("Loading Git changes…")}</Loading>}
-      {result && !result.available && <Notice>{result.reason}</Notice>}
+      {result && !result.available && <Notice error>{result.reason}</Notice>}
       {result?.available && !parsed.files.length && (
         <EmptyState>{t("No changes in this comparison.")}</EmptyState>
       )}

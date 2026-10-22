@@ -16,13 +16,13 @@ function ImageSide({ side, label, path }: { side: GitImageSide; label: string; p
     return <EmptyState>{t("Image absent in this revision")}</EmptyState>
   }
   if ("error" in side) {
-    return <Notice>{side.error}</Notice>
+    return <Notice error>{side.error}</Notice>
   }
   return (
     <figure className="flex min-w-0 flex-1 flex-col gap-2 p-3">
       {label && <figcaption className="text-sm font-medium">{label}</figcaption>}
       {failedUrl === side.dataUrl ? (
-        <Notice>{t("This image could not be decoded.")}</Notice>
+        <Notice error>{t("This image could not be decoded.")}</Notice>
       ) : (
         <div className="image-diff-canvas flex min-h-48 flex-1 items-center justify-center overflow-auto rounded-md border p-4">
           <img

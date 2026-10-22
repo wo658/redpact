@@ -3,6 +3,8 @@ services:
     build:
       context: ..
       dockerfile: e2e/Dockerfile
+    environment:
+      REDPACT_GIT_MAX_BUFFER_MIB: "4"
     ports:
       - "54318"
       - "54319"

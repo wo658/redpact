@@ -251,21 +251,29 @@ Errors and active execution/cleanup must remain reachable. Stale evidence requir
 an accessible diagnostic in the owning view or Problems, not a fabricated empty
 state or silently current result.
 Handle live-update notices through the shared components and clean subscriptions
-on exit. Keep errors beside the action or content that owns recovery.
+on exit. Route noncritical diagnostics to Problems while keeping recovery controls
+with the owning action or content.
 
 ## Problems and background failures
 
-Error notices show a compact diagnostic beside the owning action or content, without
-an expanded Problem details/copy shell. Failed actions, invalid configuration and
-initial reads with no usable content remain visible there. Execution and cleanup
-failures remain visible in their evidence views.
+All noncritical error notices are collected in **Problems** without inserting an
+inline alert into the page. This includes initial feature reads, background refreshes,
+failed saves/actions, invalid settings, Git/image diagnostics and execution/cleanup
+errors. The execution verdict, progress and disabled approval/action controls remain
+truthful; collecting a diagnostic never turns a failure into success or enables a
+blocked operation. Successful content stays available and may be outdated until a
+successful refresh.
 
-When a worktree list, execution review/log or Integration catalog refresh fails while
-usable content is already displayed, the viewer keeps that content and collects the
-error without inserting a notice into the page. The workspace header's **Problems**
-button shows the number of collected problems; open it to inspect messages, last-seen
-times, observation counts and page locations, or clear the list. Retained content may
-be outdated until a successful refresh. The panel never opens automatically.
+Only errors explicitly marked critical stay inline, such as failure to connect to
+the server before the application can load. A feature request returning 503 is not
+itself critical. Independent components without the app's Problems provider retain
+an inline fallback so diagnostics cannot disappear outside the shared app shell.
+
+The workspace header's **Problems** button shows the number of collected problems;
+the project connection screen also provides it. Open the list to inspect messages,
+last-seen times, observation counts and page locations, or clear it. The panel never
+opens automatically. Informational notices and user-requested recovery dialogs keep
+their existing roles.
 
 Problems are browser-session memory, shared across workspace tabs and lost on reload;
 they are not server history. Matching message/location pairs share one row. The list

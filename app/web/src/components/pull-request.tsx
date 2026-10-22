@@ -100,7 +100,7 @@ export function PullRequestAction({
               {t("Push this branch and publish a pull request. Remote merging is separate.")}
             </DialogDescription>
           </DialogHeader>
-          {error && <Notice>{t(error)}</Notice>}
+          {error && <Notice error>{t(error)}</Notice>}
           {!inspection && !error && <Loading>{t("Preparing PR…")}</Loading>}
           {result ? (
             <div className="flex flex-col gap-3">

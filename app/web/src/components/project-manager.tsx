@@ -590,11 +590,7 @@ export function WorktreePanel({
 
   const notices = (
     <>
-      {error && (
-        <Notice error background={!loading && worktrees.length > 0}>
-          {error}
-        </Notice>
-      )}
+      {error && <Notice error>{error}</Notice>}
       {display.error && <Notice error>{display.error}</Notice>}
     </>
   )

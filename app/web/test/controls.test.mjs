@@ -3221,7 +3221,7 @@ test("백그라운드 오류는 화면을 차지하지 않고 문제 목록에�
       ProblemsProvider,
       null,
       createElement(ProblemsButton),
-      createElement(Notice, { error: true, background: true }, "Request failed (503)"),
+      createElement(Notice, { error: true }, "Request failed (503)"),
       createElement("p", null, "Existing content"),
     ),
   )

@@ -155,7 +155,9 @@ export function UnitTests({
       >
         {toolbar}
         {data.catalog.diagnostics.map((message) => (
-          <Notice key={message}>{message}</Notice>
+          <Notice error key={message}>
+            {message}
+          </Notice>
         ))}
         <EmptyState>
           {t("Configure a unit test Dockerfile, command and file patterns in Project settings.")}
@@ -200,7 +202,9 @@ export function UnitTests({
             className="flex h-0 min-h-0 min-w-0 flex-col gap-3 overflow-auto"
           >
             {data.catalog.diagnostics.map((message) => (
-              <Notice key={message}>{message}</Notice>
+              <Notice error key={message}>
+                {message}
+              </Notice>
             ))}
             {!selected ? (
               <EmptyState>

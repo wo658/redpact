@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
+import { Notice } from "./feedback"
 import { SearchPicker } from "./search-picker"
 import { SettingsListField } from "./settings-list-field"
 import { Button } from "./ui/button"
@@ -123,11 +124,7 @@ export function PlaywrightTargetFields({
           </Button>
         </FieldGroup>
       ))}
-      {duplicate && (
-        <p role="alert" className="text-sm text-destructive">
-          {t("This key already exists.")}
-        </p>
-      )}
+      {duplicate && <Notice error>{t("This key already exists.")}</Notice>}
       <Button
         type="button"
         variant="outline"

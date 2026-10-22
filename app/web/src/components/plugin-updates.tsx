@@ -121,7 +121,7 @@ export function PluginUpdateSettings() {
             </span>
           )}
           <span role="status">{statusLabel(row)}</span>
-          {row.error && <Notice error={row.status === "error"}>{t(row.error)}</Notice>}
+          {row.error && <Notice error>{t(row.error)}</Notice>}
           {row.status === "available" && row.latestVersion && (
             <Button
               variant="outline"

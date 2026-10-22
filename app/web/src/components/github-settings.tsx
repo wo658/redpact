@@ -22,7 +22,7 @@ export function GitHubSettings({ api }: { api: Api }) {
             <span className="text-muted-foreground">{connection.cliPath}</span>
           </p>
         )}
-        {error && <Notice>{t(error)}</Notice>}
+        {error && <Notice error>{t(error)}</Notice>}
         <Button
           variant="outline"
           disabled={pending}

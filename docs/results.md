@@ -123,3 +123,6 @@ Every execution owns temporary resources and cleans them up automatically after 
 **Clean up worktree code** removes recorded Playwright task drafts only after its checks pass. Historical evidence remains. Unit runtime input copies are removed during cleanup while command evidence remains. Integration submissions retain their captured test bundle.
 
 Changing [configuration](configuration.md)  affects future requests; it does not rewrite results or reconfigure an existing environment. Return to the [documentation overview](index.md).
+
+Error callouts follow the shared [Problems contract](frontend.md). Collecting
+messages does not change recorded execution outcomes or cleanup states.

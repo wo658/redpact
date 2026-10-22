@@ -1,6 +1,7 @@
 import { PlusIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
+import { Notice } from "./feedback"
 import { Button } from "./ui/button"
 import { Field, FieldGroup, FieldLabel } from "./ui/field"
 import { Input } from "./ui/input"
@@ -151,11 +152,7 @@ export function TestEnvironmentFields({
               </Field>
             </FieldGroup>
           ))}
-          {duplicate && (
-            <p role="alert" className="text-sm text-destructive">
-              {t("This key already exists.")}
-            </p>
-          )}
+          {duplicate && <Notice error>{t("This key already exists.")}</Notice>}
           <Button
             type="button"
             variant="outline"
@@ -172,11 +169,7 @@ export function TestEnvironmentFields({
           </Button>
         </FieldGroup>
       )}
-      {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
+      {error && <Notice error>{error}</Notice>}
       <Button
         type="button"
         variant="ghost"

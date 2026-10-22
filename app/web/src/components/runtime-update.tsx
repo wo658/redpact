@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useUpdate } from "@/lib/use-update"
+import { Notice } from "./feedback"
 import { SettingsRow, SettingsSection } from "./settings-row"
 import {
   Dialog,
@@ -60,7 +61,7 @@ export function RuntimeUpdate() {
                   )}
             </DialogDescription>
           </DialogHeader>
-          {update.error && <p role="alert">{update.error}</p>}
+          {update.error && <Notice error>{update.error}</Notice>}
           {update.busy && <p role="status">{t("Updating and restarting…")}</p>}
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>{t("Close")}</DialogClose>
@@ -105,9 +106,9 @@ export function UpdateSettings() {
           {t("Check for updates")}
         </Button>
         {update.error && (
-          <p role="alert">
+          <Notice error>
             {t("Could not check for updates.")} {update.error}
-          </p>
+          </Notice>
         )}
       </SettingsRow>
     </SettingsSection>

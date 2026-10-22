@@ -96,9 +96,7 @@ export function ExecutionReview({
           </h1>
         </header>
         {error && (
-          <Notice error background={Boolean(context)}>
-            {t("{{error}} · Displayed evidence may be outdated.", { error })}
-          </Notice>
+          <Notice error>{t("{{error}} · Displayed evidence may be outdated.", { error })}</Notice>
         )}
         {!context && !error && <Loading>{t("Loading execution…")}</Loading>}
         {context && (

@@ -98,13 +98,11 @@ export function CommitChanges({
       )}
       {!loading && !failed && comparison?.patchOmitted === "size_limit" && (
         <div className="min-h-0 overflow-auto p-3">
-          <Notice>
-            {comparison.changedPathsOmitted
-              ? t(
-                  "Patch and file list exceed their 4 MiB display limits. Only commit metadata is shown.",
-                )
-              : t("Patch exceeds the 4 MiB display limit. Only changed file paths are shown.")}
-          </Notice>
+          {comparison.omitted.map((message) => (
+            <Notice error key={message}>
+              {t(message)}
+            </Notice>
+          ))}
           {!comparison.changedPathsOmitted && (
             <ul aria-label={t("Changed files")} className="mt-3 space-y-1 text-sm">
               {comparison.changedPaths?.map((name) => (

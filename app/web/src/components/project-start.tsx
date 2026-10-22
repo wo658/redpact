@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import type { Api } from "@/lib/api"
 import { BrandWordmark } from "./brand-wordmark"
 import { Notice } from "./feedback"
+import { ProblemsButton } from "./problems"
 import { Button } from "./ui/button"
 import { Spinner } from "./ui/spinner"
 
@@ -65,6 +66,9 @@ export function ProjectStart({
   const visibleError = pickerError || (phase === "idle" ? error : "")
   return (
     <main className="flex min-h-dvh w-full flex-col bg-background px-6 py-8">
+      <div className="flex justify-end">
+        <ProblemsButton />
+      </div>
       <section
         aria-label={t("Connect project")}
         className="m-auto flex w-full max-w-lg justify-center"

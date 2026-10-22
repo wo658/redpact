@@ -313,12 +313,12 @@ function GitChanges({
       return <Loading>{t("Loading Git changes…")}</Loading>
     }
     if (!result.available) {
-      return <Notice>{t("Git unavailable: {{reason}}", { reason: result.reason })}</Notice>
+      return <Notice error>{t("Git unavailable: {{reason}}", { reason: result.reason })}</Notice>
     }
     return (
       <>
         {result.omitted.length > 0 && (
-          <Notice>
+          <Notice error>
             <p>{t("Some files could not be previewed:")}</p>
             {result.omitted.map((reason) => (
               <p key={reason} className="break-all">

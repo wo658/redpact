@@ -43,7 +43,7 @@ export function SelectedTestSource({
     return <Loading>{t("Loading…")}</Loading>
   }
   if (source.source === null) {
-    return <Notice>{source.issue}</Notice>
+    return <Notice error>{source.issue}</Notice>
   }
   return (
     <TestCode

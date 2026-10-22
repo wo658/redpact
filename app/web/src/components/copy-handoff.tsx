@@ -1,7 +1,7 @@
 import { Check, Copy } from "lucide-react"
 import { type ReactNode, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Alert, AlertDescription } from "./ui/alert"
+import { Notice } from "./feedback"
 import { Button } from "./ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
 
@@ -68,11 +68,7 @@ export function CopyHandoff({
         </Button>
       </div>
       <div className="pt-2">{children}</div>
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      {error && <Notice error>{error}</Notice>}
       {(showContext || error) && (
         <pre className="mt-3 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted p-2 text-xs">
           {copyText}

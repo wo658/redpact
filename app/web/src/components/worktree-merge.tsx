@@ -235,12 +235,12 @@ export function WorktreeMerge({
           {t("Merge into {{branch}}", { branch: data?.targetBranch ?? "…" })}
         </Button>
       </div>
-      {failure && <Notice>{failure}</Notice>}
-      {error && <Notice>{error}</Notice>}
+      {failure && <Notice error>{failure}</Notice>}
+      {error && <Notice error>{error}</Notice>}
       {!data && !error && <Loading>{t("Loading Git changes…")}</Loading>}
       {data && (
         <>
-          {data.blockedReason && <Notice>{t(data.blockedReason)}</Notice>}
+          {data.blockedReason && <Notice error>{t(data.blockedReason)}</Notice>}
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <Badge variant="secondary">
@@ -286,7 +286,9 @@ export function WorktreeMerge({
                 }}
               >
                 {commitRevision !== data.source.revision && (
-                  <Notice>{t("Changes have changed since inspection; review them again")}</Notice>
+                  <Notice error>
+                    {t("Changes have changed since inspection; review them again")}
+                  </Notice>
                 )}
                 <FieldGroup>
                   <Field>
@@ -374,7 +376,7 @@ export function WorktreeMerge({
             ))}
           </ul>
           {discard && discard.revision !== data?.source.revision && (
-            <Notice>{t("Changes have changed since inspection; review them again")}</Notice>
+            <Notice error>{t("Changes have changed since inspection; review them again")}</Notice>
           )}
           <AlertDialogFooter>
             <Button variant="outline" disabled={busy} onClick={() => setDiscard(null)}>
@@ -459,10 +461,12 @@ function UncommittedChanges({
                 className="flex h-96 min-w-0 shrink-0 flex-col"
               >
                 <p className="py-2 text-sm font-medium">{label}</p>
-                {!diff.available && <Notice>{diff.reason}</Notice>}
-                {patches[index].error && <Notice>{t(patches[index].error)}</Notice>}
+                {!diff.available && <Notice error>{diff.reason}</Notice>}
+                {patches[index].error && <Notice error>{t(patches[index].error)}</Notice>}
                 {diff.omitted.map((reason) => (
-                  <Notice key={reason}>{reason}</Notice>
+                  <Notice error key={reason}>
+                    {reason}
+                  </Notice>
                 ))}
                 {file ? (
                   <FileDiff
@@ -545,7 +549,7 @@ function MergeSummary({ record }: { record: MergeRecord }) {
         {record.targetHead.slice(0, 8)})
       </p>
       {record.error && <p className="whitespace-pre-wrap break-words text-sm">{record.error}</p>}
-      {record.cleanupError && <Notice>{record.cleanupError}</Notice>}
+      {record.cleanupError && <Notice error>{record.cleanupError}</Notice>}
     </>
   )
 }

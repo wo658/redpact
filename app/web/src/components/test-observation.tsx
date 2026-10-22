@@ -127,9 +127,7 @@ export function TestObservation({
         }}
       />
       {error && (
-        <Notice error background={Boolean(data)}>
-          {t("{{error}} · Displayed evidence may be outdated.", { error })}
-        </Notice>
+        <Notice error>{t("{{error}} · Displayed evidence may be outdated.", { error })}</Notice>
       )}
       {evidenceError && (
         <Notice error>
@@ -300,7 +298,9 @@ export function IntegrationTestFiles({
         </TabsList>
         <TabsContent value="code" className="flex h-0 min-h-0 flex-col gap-3 overflow-auto">
           {data.catalog.diagnostics.map((message) => (
-            <Notice key={message}>{message}</Notice>
+            <Notice error key={message}>
+              {message}
+            </Notice>
           ))}
           {!selected && (
             <EmptyState>
