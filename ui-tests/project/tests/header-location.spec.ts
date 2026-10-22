@@ -1,81 +1,98 @@
 import { expect, test } from "@playwright/test"
-import { openApp } from "../app"
+import { isOnScreen, openApp } from "../app"
 
-// 격리된 테스트 앱 origin에서 실제 Clipboard와 Web Crypto API를 검증한다.
-test.use({
-  channel: "chromium",
-  launchOptions: {
-    args: ["--unsafely-treat-insecure-origin-as-secure=http://app.redpact.test:54320"],
-  },
-})
-
-test("헤더가 프로젝트와 현재 페이지를 표시하고 긴 이름과 여러 탭도 화면을 넘지 않는다", async ({
-  page,
-  request,
-}) => {
+test("페이지를 바꾸면 공용 헤더의 제목과 탐색을 교체한다", async ({ page, request }) => {
   const name = "Redpact 프로젝트의 아주 긴 이름 header location regression"
   const response = await request.post("/api/projects", { data: { path: "/app", name } })
   expect(response.ok()).toBeTruthy()
   const project = await response.json()
-  expect((await request.patch(`/api/projects/${project.id}`, { data: { name } })).ok()).toBeTruthy()
-  try {
-    await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
-    await openApp(page, "en")
-    const tabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
-    async function openSidebar() {
-      if ((page.viewportSize()?.width ?? 1920) < 768) {
-        await page.keyboard.press("Escape")
-        await expect(page.getByRole("dialog")).toHaveCount(0)
-        await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).first().click()
-      }
+  await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
+  await openApp(page, "en")
+  const header = page.locator(".app-header:visible")
+  async function navigate(label: string) {
+    const button = page.getByRole("button", { name: label, exact: true })
+    if (!(await isOnScreen(button))) {
+      await header.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
     }
-    async function navigate(label: string) {
-      await openSidebar()
-      await page.getByRole("button", { name: label, exact: true }).click()
-      await page.keyboard.press("Escape")
-    }
-    await test.step("워크트리를 선택해도 사이드바 메뉴만 표시한다", async () => {
-      await openSidebar()
-      await page
-        .getByRole("navigation", { name: "Worktrees", exact: true })
-        .getByRole("button")
-        .first()
-        .click()
-      await page.keyboard.press("Escape")
-      await expect(tabs.getByRole("tab", { selected: true })).toHaveAccessibleName(
-        `${name} / Worktrees`,
-      )
-      await expect(tabs.getByRole("tab", { selected: true })).not.toContainText("… /")
-    })
-    await test.step("사이드바 이동에 맞춰 현재 위치를 갱신한다", async () => {
-      await navigate("Settings")
-      await expect(tabs.getByRole("tab", { selected: true })).toHaveAccessibleName(
-        `${name} / Settings`,
-      )
-      await navigate("File Viewer")
-      await expect(tabs.getByRole("tab", { selected: true })).toHaveAccessibleName(
-        `${name} / File Viewer`,
-      )
-    })
-    await test.step("탭 전환과 좁은 화면에서도 프로젝트와 마지막 위치가 남는다", async () => {
-      await page.getByRole("button", { name: "New tab", exact: true }).click()
-      await navigate("Settings")
-      await tabs.getByRole("tab").first().click()
-      await expect(tabs.getByRole("tab", { selected: true })).toHaveAccessibleName(
-        `${name} / File Viewer`,
-      )
-      for (let i = 0; i < 5; i++) {
-        await page.getByRole("button", { name: "New tab", exact: true }).click()
-      }
-      await expect(tabs.getByRole("tab").last()).toBeInViewport()
-      await expect(page.getByRole("button", { name: "New tab", exact: true })).toBeInViewport()
+    await button.click()
+    await page.keyboard.press("Escape")
+  }
+  for (const title of ["File Viewer", "Git Graph", "Container", "Project settings", "Settings"]) {
+    await test.step(`${title}의 제목을 공용 헤더로 옮긴다`, async () => {
+      await navigate(title)
+      await expect(header.getByRole("heading", { name: title, exact: true })).toBeVisible()
+      await expect(header.getByRole("button", { name: "Fetch", exact: true })).toHaveCount(0)
+      await expect(
+        header.getByRole("button", { name: "Toggle Sidebar", exact: true }),
+      ).toBeInViewport()
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
         page.viewportSize()?.width ?? 1920,
       )
     })
+  }
+  await test.step("Dependencies와 Tests의 탭도 공용 헤더에서 작동한다", async () => {
+    await navigate("Dependencies")
+    await header.getByRole("tab", { name: "Configuration", exact: true }).click()
+    await expect(header.getByRole("tab", { name: "Configuration", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    )
+    await navigate("Tests")
+    await expect(header.getByRole("tab", { name: "Unit", exact: true })).toBeVisible()
+    await expect(header.getByRole("tab", { name: "Configuration", exact: true })).toHaveCount(0)
+    await header.getByRole("tab", { name: "Playwright", exact: true }).click()
+    await expect(header.getByRole("tab", { name: "Screenshots", exact: true })).toBeVisible()
+  })
+})
+
+test("공용 헤더의 저장 버튼은 본문 설정 폼의 변경값을 저장하고 다시 읽는다", async ({
+  page,
+  request,
+}) => {
+  const response = await request.post("/api/projects", { data: { path: "/app", name: "Redpact" } })
+  expect(response.ok()).toBeTruthy()
+  const project = await response.json()
+  const endpoint = `/api/projects/${project.id}/configuration`
+  const original = await (await request.get(endpoint)).json()
+  const settings = JSON.parse(original.source)
+  const timeout = String((settings.tests?.timeoutMs ?? 10000) + 123)
+  try {
+    await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
+    await openApp(page, "en")
+    const header = page.locator(".app-header:visible")
+    const navigation = page.getByRole("button", { name: "Project settings", exact: true })
+    if (!(await isOnScreen(navigation))) {
+      await header.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+    }
+    await navigation.click()
+    await page.keyboard.press("Escape")
+    const save = header.getByRole("button", { name: "Save settings", exact: true })
+    const field = page.locator('input[name="tests.timeoutMs"]')
+    await expect(field).toBeVisible()
+    await expect(save).toBeDisabled()
+    await field.fill(timeout)
+    await expect(save).toBeEnabled()
+    const saved = page.waitForResponse(
+      (value) => value.url().endsWith(endpoint) && value.request().method() === "PUT",
+    )
+    await save.click()
+    expect((await saved).ok(), "헤더의 버튼이 연결된 본문 폼을 전송한다").toBeTruthy()
+    await expect(save).toBeDisabled()
+    const persisted = await (await request.get(endpoint)).json()
+    expect(JSON.parse(persisted.source).tests.timeoutMs, "서버에서 변경값을 다시 읽는다").toBe(
+      Number(timeout),
+    )
+    await page.reload()
+    await expect(field).toHaveValue(timeout)
   } finally {
+    const current = await (await request.get(endpoint)).json()
     expect(
-      (await request.patch(`/api/projects/${project.id}`, { data: { name: project.name } })).ok(),
+      (
+        await request.put(endpoint, {
+          data: { source: original.source, revision: current.revision },
+        })
+      ).ok(),
+      "격리 앱의 원래 설정을 복원한다",
     ).toBeTruthy()
   }
 })

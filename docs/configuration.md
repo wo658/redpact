@@ -165,9 +165,11 @@ dependencies cannot declare managed host ports.
 
 `tests.executionScope` is the shared default for **Unit, Integration and Playwright**,
 not just Integration. It accepts `all` (the omitted default) or `changed`.
-An execution request's `executionScope` overrides it. The viewer's **Execution scope**
-control offers Shared default, All tests and Changed tests; catalog filters and
-Playwright target maintenance scope remain separate. See [selection rules](execution.md).
+Agent API/CLI execution requests can override it with `executionScope`. The viewer's
+Run controls use this shared default and have no per-run Execution scope selector.
+Catalog filters and Playwright target maintenance scope remain separate. Recorded
+approval/result evidence still shows requested and resolved scope; see
+[selection rules](execution.md).
 
 Unit commands retain their existing behavior when `unitTests.fileCommand` is absent:
 `all` runs `command` unchanged, with no claim about its discovered file list. `changed`

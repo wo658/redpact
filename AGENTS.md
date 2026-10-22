@@ -8,9 +8,12 @@ reference. Read the relevant feature page before changing its behavior.
 
 ## Supported product scope
 
-Support only the standalone web app and the full web app embedded inside OpenAI
-through MCP. Keep one shared web UI and server runtime, with HTTP/SSE and MCP
-transport adapters. Chat MCP returns structured results and web review links without inline approval/result cards.
+The primary experience is the GPT-embedded viewer for agent work, test evidence,
+human execution approval and test environment management. Support the standalone
+web app with the same shared UI and server runtime, using HTTP/SSE and MCP transport
+adapters. Keep manual Git workbench controls out of the viewer; agents own Git writes
+and publication through host tools and the retained backend workflows. Chat MCP
+returns structured results and web review links without inline approval/result cards.
 Native Windows, Linux and macOS desktop implementations and release tooling have
 been removed. Do not reintroduce native desktop code, settings or release work.
 Keep CI focused on shared web/server checks on Ubuntu with Node 24; do not require
@@ -45,7 +48,13 @@ Write repository documentation, comments, examples, and UI copy in English. Pres
 
 Exception: user-facing semantic content in submitted E2E tests follows the user's requested language, or the language of their task when unspecified. This includes acceptance scenarios, Vitest `describe`/`test`/`it` titles, case-intent comments, assertion-reason comments, and recorded step names. A Korean task therefore produces Korean review content. Keep code identifiers, API names, paths, and protocol values unchanged; this exception does not change the language of general repository documentation or implementation comments.
 
-For every UI or screen change, review the relevant Playwright tests and verify the changed screen through the actual application. Run functional tests for affected navigation, controls, states, and responsive behavior; add or update meaningful coverage when missing. For layout or styling changes, also capture and inspect the relevant desktop and mobile states. Browser tools and screenshots are authorized for this verification without a separate request. Static HTML/CSS checks, component tests, and builds supplement this evidence; they do not replace it. Report any unverified state or execution blocker explicitly. Read `docs/frontend.md` before UI work. The default `app/web/` entry is the connected viewer; separate demo surfaces do not specify backend behavior.
+The shared app header must remain exactly one row in Full, Half View and Mobile.
+Prioritize removing low-value controls before crowding the header. Keep its sidebar
+trigger and Problems reachable, with independent navigation/action scrolling as a
+fallback. Follow [frontend conventions](docs/frontend.md) for placement and responsive
+behavior. Treat Half View as an explicit design and verification target.
+
+For every UI or screen change, review the relevant Playwright tests and verify the changed screen through the actual application. Run functional tests for affected navigation, controls, states, and responsive behavior; add or update meaningful coverage when missing. For layout or styling changes, also capture and inspect Full (1920px), Half View (800px), and Mobile (390px or 414px) states. Browser tools and screenshots are authorized for this verification without a separate request. Static HTML/CSS checks, component tests, and builds supplement this evidence; they do not replace it. Report any unverified state or execution blocker explicitly. Read `docs/frontend.md` before UI work. The default `app/web/` entry is the connected viewer; separate demo surfaces do not specify backend behavior.
 
 ## Implementation
 
@@ -75,6 +84,13 @@ For this repository's managed acceptance tests, follow `e2e/README.md`. Use the 
 working checkout in `redpact tests run --kind integration`, preserve the shared primary settings root, and verify
 that the connected viewer lists the returned submission under that same worktree.
 Do not substitute a clone/example or treat local unit-test output as submitted evidence.
+
+## Collaboration
+
+When useful for a substantial task, divide independent implementation, documentation
+and test work among subagents with explicit file ownership and one checkout/evidence
+identity. The parent integrates and reviews the combined result; delegation does not
+replace verification. Trivial changes do not require parallel work.
 
 ## Commands
 

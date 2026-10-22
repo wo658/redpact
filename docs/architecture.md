@@ -10,7 +10,11 @@ submitted test intent and source, executes tests, and presents observed evidence
 Test success, configuration validity, application freshness and human acceptance
 are different facts. A result never implies the others.
 
-The standalone browser and Global App Page preserve the management app. Chat MCP returns structured results and links to web review; it has no inline cards. [Frontend conventions](frontend.md) defines their navigation boundary.
+The primary experience is the GPT-embedded viewer: users follow agent work, inspect
+test evidence, approve execution and manage test environments. The standalone browser
+remains supported with the same UI and runtime. Chat MCP returns structured results
+and links to web review; it has no inline cards. [Frontend conventions](frontend.md)
+defines their navigation boundary.
 
 Agents use CLI operations over local HTTP to enter shared workflows. Model-facing
 MCP is limited to runtime status, shutdown and opening the app; the App Page companion
@@ -25,6 +29,18 @@ Redpact supports the standalone web app and the full web app embedded inside Ope
 through MCP. Both use one shared React UI and server runtime; HTTP/SSE and MCP are
 transport adapters, with host-specific capabilities and limits described in
 [installation](installation.md). Execution approval and detailed evidence remain in the full web viewer.
+
+The viewer prioritizes evidence, execution approval and environment lifecycle over
+manual Git operations. Source/commit inspection stays available; Git writes and
+publication belong to agents using host tools and retained backend workflows.
+Removing a viewer button does not remove its server contract or authorize an agent
+operation. Test execution approval remains distinct from acceptance of code or Git
+changes. See [Git operations](git.md).
+
+The app uses one page-owned shared header in Full, Half View and Mobile. Keep it on
+one row, remove low-value controls before adding density, and preserve content width
+at half view. [Frontend conventions](frontend.md) owns responsive details and verification
+viewports; the embedded and standalone entries share this design.
 
 CI verifies the shared web UI and server on Ubuntu with Node 24,
 without an OS/Node matrix. This is the release verification baseline, not evidence

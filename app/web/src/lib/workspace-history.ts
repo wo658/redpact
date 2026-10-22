@@ -15,7 +15,7 @@ const viewSchema = z.object({
   selectedId: z.string(),
 })
 
-const tabSchema = z.object({
+const locationSchema = z.object({
   id: z.string(),
   kind: z.enum(["project", "worktree"]),
   label: z.string(),
@@ -26,14 +26,14 @@ const tabSchema = z.object({
 
 export type WorkspaceView = z.infer<typeof viewSchema>
 export type WorkspacePage = WorkspaceView["page"]
-export type WorkspaceTab = z.infer<typeof tabSchema>
+export type WorkspaceLocation = z.infer<typeof locationSchema>
 
-export function readWorkspaceHistory(state: unknown): WorkspaceTab | undefined {
-  const result = z.object({ redpactWorkspace: tabSchema }).safeParse(state)
+export function readWorkspaceHistory(state: unknown): WorkspaceLocation | undefined {
+  const result = z.object({ redpactWorkspace: locationSchema }).safeParse(state)
   return result.success ? result.data.redpactWorkspace : undefined
 }
 
-export function writeWorkspaceHistory(tab: WorkspaceTab, replace = false) {
+export function writeWorkspaceHistory(tab: WorkspaceLocation, replace = false) {
   const current = readWorkspaceHistory(window.history.state)
   const currentView = current?.view ?? { page: "review", selectedId: current?.worktreeId ?? "" }
   const nextView = tab.view ?? { page: "review", selectedId: tab.worktreeId ?? "" }

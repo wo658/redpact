@@ -21,7 +21,7 @@ export async function openScreenshotGallery(page: Page) {
     localStorage.setItem("redpact:theme", "light")
   }, project.body.id)
   await page.goto("/")
-  await expect(page.getByRole("tablist", { name: "열린 작업공간", exact: true })).toBeVisible()
+  await expect(page.locator(".app-header:visible")).toBeVisible()
   await page.evaluate(() => document.fonts.ready)
   const light = (await page.screenshot({ animations: "disabled", scale: "css" })).toString("base64")
   await page.evaluate(() => document.documentElement.classList.add("dark"))

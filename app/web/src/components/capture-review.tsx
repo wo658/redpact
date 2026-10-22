@@ -5,11 +5,7 @@ import type { Api, CaptureArtifact, CaptureRun } from "@/lib/api"
 import { captureFiles, captureMatchesMode, captureRunMatchesMode } from "@/lib/review-content"
 import { useRefreshRequest } from "@/lib/use-refresh-request"
 import { ExecutionProgress } from "./execution-progress"
-import {
-  ExecutionScopePicker,
-  ExecutionSelectionEvidence,
-  executionScopeOverride,
-} from "./execution-scope"
+import { ExecutionSelectionEvidence } from "./execution-scope"
 import { EmptyState, Loading, Notice } from "./feedback"
 import { useLiveRevision } from "./live-updates"
 import { TestFileBrowser } from "./test-file-browser"
@@ -25,7 +21,6 @@ export function CaptureReview(props: CaptureReviewProps) {
 }
 function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureReviewProps) {
   const { t } = useTranslation()
-  const [executionScope, setExecutionScope] = useState("default")
   const [data, setData] = useState<Awaited<ReturnType<Api["playwright"]>> | null>(null)
   const [catalog, setCatalog] = useState<Awaited<
     ReturnType<Api["worktreePlaywrightCatalog"]>
@@ -118,18 +113,6 @@ function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureRev
             artifact.contentType !== "image/png" || captureMatchesMode(artifact, mobileMode),
         ),
       })) ?? []
-  async function cleanupWorktree() {
-    setPending(true)
-    setError("")
-    try {
-      await api.cleanupPlaywrightWorktree(worktreeId)
-      await refresh(new AbortController().signal)
-    } catch (error) {
-      setError(error instanceof Error ? error.message : String(error))
-    } finally {
-      setPending(false)
-    }
-  }
   async function execute() {
     if (!worktreeId) {
       return
@@ -137,12 +120,7 @@ function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureRev
     setPending(true)
     setError("")
     try {
-      const next = await api.runPlaywright(
-        worktreeId,
-        viewport,
-        target,
-        executionScopeOverride(executionScope),
-      )
+      const next = await api.runPlaywright(worktreeId, viewport, target)
       setSelectedRun(next.id)
       setData((value) =>
         value ? { ...value, runs: [next, ...value.runs.filter((r) => r.id !== next.id)] } : value,
@@ -155,53 +133,22 @@ function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureRev
   }
   const controls = (
     <div className="flex shrink-0 items-center gap-3 whitespace-nowrap">
-      <ExecutionScopePicker
-        value={executionScope}
-        onChange={setExecutionScope}
-        disabled={pending}
-      />
-      <Field orientation="horizontal" className="w-auto shrink-0">
-        <Switch
-          id="mobile-mode"
-          checked={mobileMode}
-          onCheckedChange={(checked) => {
-            setMobileMode(checked)
-            setSelectedRun("")
-          }}
-        />
-        <FieldLabel htmlFor="mobile-mode">{t("Mobile")}</FieldLabel>
-      </Field>
       {worktreeId && (
-        <>
-          <Button
-            size="toolbar"
-            variant="ghost"
-            disabled={
-              pending ||
-              !target ||
-              !data?.settings ||
-              !catalog ||
-              Boolean(data.error) ||
-              data?.runs.some((item) => item.state !== "finished" || Boolean(item.cleanupError))
-            }
-            onClick={() => void execute()}
-          >
-            {t("Run Playwright")}
-          </Button>
-          {data?.runs.some((item) => item.scope === "worktree") && (
-            <Button
-              size="toolbar"
-              variant="ghost"
-              disabled={
-                pending ||
-                data.runs.some((item) => item.state !== "finished" || Boolean(item.cleanupError))
-              }
-              onClick={() => void cleanupWorktree()}
-            >
-              {t("Clean up worktree code")}
-            </Button>
-          )}
-        </>
+        <Button
+          size="toolbar"
+          variant="ghost"
+          disabled={
+            pending ||
+            !target ||
+            !data?.settings ||
+            !catalog ||
+            Boolean(data.error) ||
+            data?.runs.some((item) => item.state !== "finished" || Boolean(item.cleanupError))
+          }
+          onClick={() => void execute()}
+        >
+          {t("Run Playwright")}
+        </Button>
       )}
     </div>
   )
@@ -222,11 +169,27 @@ function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureRev
       >
         <div className="flex min-h-0 flex-1 flex-col gap-3">
           {!actionsContainer && controls}
-          {run && (
-            <span className="text-xs text-muted-foreground">
-              {run.settings.viewport.width} × {run.settings.viewport.height}
-            </span>
-          )}
+          <div
+            data-slot="capture-toolbar"
+            className="flex min-w-0 shrink-0 flex-wrap items-center gap-3 border-b px-3 py-2"
+          >
+            <Field orientation="horizontal" className="w-auto shrink-0">
+              <Switch
+                id="mobile-mode"
+                checked={mobileMode}
+                onCheckedChange={(checked) => {
+                  setMobileMode(checked)
+                  setSelectedRun("")
+                }}
+              />
+              <FieldLabel htmlFor="mobile-mode">{t("Mobile")}</FieldLabel>
+            </Field>
+            {run && (
+              <span className="text-xs text-muted-foreground">
+                {run.settings.viewport.width} × {run.settings.viewport.height}
+              </span>
+            )}
+          </div>
           {error && <Notice error>{error}</Notice>}
           {data?.error && <Notice error>{data.error}</Notice>}
           {catalogError && <Notice error>{catalogError}</Notice>}

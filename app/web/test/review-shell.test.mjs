@@ -54,7 +54,7 @@ test("앱 홈은 프로젝트 관리에 연결하고 채팅 검토를 강요하�
   const { sampleApi } = await import("./workspace-fixture.mjs")
   captureEvents()
   render(createElement(App, { api: sampleApi() }))
-  await waitFor(() => assert.ok(screen.getByRole("tablist", { name: "Open workspaces" })))
+  await waitFor(() => assert.ok(document.querySelector(".app-header")))
   fireEvent.click(screen.getByRole("button", { name: "Redpact example", exact: true }))
   assert.ok(await screen.findByRole("menuitem", { name: "Manage projects" }))
   assert.equal(screen.queryByRole("heading", { name: "Open an execution from chat" }), null)

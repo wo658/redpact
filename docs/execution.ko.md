@@ -228,13 +228,20 @@ fixture에서 독립적인 데이터를 사용해야 합니다.
 
 Playwright는 현재 워크트리 캡처 초안과 변경된 프로젝트 캡처 파일을 실행 전이나
 PNG가 없는 상태에서도 보여 줍니다. 소스가 있으면 탭, 파일 선택과 실행 버튼을
-사용할 수 있습니다. Desktop·Mobile은 소스 목록이 아닌 기록된 이미지만 필터링합니다.
+사용할 수 있습니다. 스크린샷 뷰어 내부의 Mobile 스위치는 소스 목록이 아닌 기록된
+Desktop·Mobile 이미지만 필터링하며 공용 앱 헤더 공간을 사용하지 않습니다.
 선택 크기에 맞는 최신 실행에 이미지가 없다고 이전 이미지를 대신 보여 주지 않습니다. 기록된 CSS viewport
 너비 768px을 경계로 PNG를 분류합니다. 정보가 없으면 두 모드에 명시적으로 표시합니다.
 픽셀 크기, 파일명, 현재 실행 기본값으로 viewport를 추정하지 않습니다. 프로젝트 Captures는
 실행 전에도 선언된 capture 소스를 표시하고 파일별 Test Code와 Screenshots를 분리합니다. 빈
 Screenshots 탭도 실행 가능한 capture 코드를 숨기지 않습니다. 프로젝트 Tests는 변경 파일
 검토와 별도로 Captures·Tests·Runs를 유지합니다.
+
+뷰어는 Clean up worktree code 작업을 제공하지 않습니다. 에이전트가 마지막 기록 실행
+후 `POST /api/worktrees/:id/playwright/cleanup-worktree`로 초안 정리를 명시적으로
+요청합니다. 기록되지 않은 초안 변경이나 미완료 실행·리소스 정리가 있으면 거부합니다.
+작업 초안을 제거해도 보관된 소스·이미지·실행 이력은 제거하지 않습니다. 이는 뷰어의
+테스트 환경 수명주기·정리 제어와 별개입니다.
 
 비어 있지 않은 환경변수 값이 있는 실행은 trace archive를 생략합니다. 이미지·비디오·제출 소스는 자격 증명
 검사를 하지 않습니다. 환경변수 원문을 텍스트에서 가리는 것은 악성 코드 sandbox가 아닙니다.
@@ -362,7 +369,9 @@ daemon 풀을 변경하기 전에 소유권이 있는 잔여 환경의 정리를
 ## 전체 또는 변경 테스트 선택
 
 실행 범위는 카탈로그 `scope`, Playwright 유지관리 `scope`와 별개입니다.
-`executionScope`가 [공유 기본값](configuration.md)을 재정의합니다. `all`은 현재
+에이전트는 API·CLI 요청의 `executionScope`로 [공유 기본값](configuration.md)을
+재정의할 수 있습니다. 뷰어의 Run 제어는 실행별 선택기 없이 공유 기본값을 사용하며,
+기록된 범위는 승인·결과 증거에 계속 표시합니다. `all`은 현재
 Integration 디렉터리, Unit 파일 패턴 또는 선택한 Playwright 대상 전체를 고릅니다.
 `fileCommand` 없는 기존 Unit 셸 명령은 파일을 직접 찾으며 기록은 정확한 파일 목록을
 알 수 없음을 명시합니다.

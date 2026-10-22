@@ -1,9 +1,15 @@
 ---
 title: Projects and Git
-description: Checkout discovery, comparisons, creation, local merge and GitHub publication.
+description: Checkout discovery, read-only review and agent-owned Git operations.
 ---
 
 # Projects and Git
+
+The viewer supports source identity and read-only review while agents own Git writes
+and publication. Uncommitted, Merge, PR and Fetch controls are absent from the UI.
+Agents use host Git/`gh` tools within their authorized scope; existing backend HTTP
+workflows below remain available. UI removal does not remove those APIs or grant
+permission for a write. See [product scope](architecture.md).
 
 ## Identity and discovery
 
@@ -31,13 +37,14 @@ the folder, Git/directory kind and folder availability. **Connect project** uses
 native folder picker and lets you set a display name. Connecting the same canonical
 project reuses its identity; an existing display name is preserved.
 
-**Rename** changes only the instance's display name, including open project tabs.
+**Rename** changes only the instance's display name in project navigation.
 Project settings still owns execution configuration. Folder moves, repository creation,
 cloning and permanent history deletion are not project-management operations.
 
 **Disconnect** requires confirmation and keeps source files, settings, worktrees,
-credentials and execution history. It removes the project from the switcher, closes
-its workspace tabs and stops automatic observation and new execution. The last
+credentials and execution history. It removes the project from the switcher and
+stops automatic observation and new execution. If it was selected, navigation moves
+to another connected project. The last
 disconnection returns to startup, where management remains available. The stored
 disconnected state survives restart; observed-root configuration cannot implicitly
 reconnect it. Finish active Unit/Integration/Playwright and Git operations, resolve
@@ -85,11 +92,13 @@ file-list bounds below also follow this setting.
 
 Git Graph shows bounded commit history with branch filtering, remote visibility,
 loaded-commit search and selected-commit file diffs. Opening and browsing are read-only.
-Fetch explicitly updates remote-tracking branches with destination refspecs for
-configured remotes. It never merges, pushes, prunes, fetches tags or changes local
+The header's Refresh action rereads local history; it does not fetch from a remote.
+There is no viewer Fetch, Pull or Push button.
+
+The retained backend Fetch operation explicitly updates remote-tracking branches
+with destination refspecs for configured remotes. It never merges, pushes, prunes, fetches tags or changes local
 branches/index/files. Requests serialize per common Git directory and report missing
-remotes, busy state and partial failure. Refresh history after success or failure.
-Pull and Push are not available in this toolbar.
+remotes, busy state and partial failure. Clients refresh history after success or failure.
 
 Commit patches are limited to 128 MiB. Larger patches return HTTP 200 with
 `patchOmitted: "size_limit"`, an empty `patch`, the `changedPaths` list and an explicit
@@ -126,10 +135,11 @@ uncertain creation as completed. See [runtime data](storage.md).
 
 ## Local commit and merge
 
-The worktree toolbar inspects uncommitted changes before Commit or Discard. Commit
-includes the inspected staged, unstaged and untracked changes. Discard requires
-explicit confirmation and can delete listed untracked files. Freshness checks reject
-changes since inspection; neither action automatically merges afterward.
+The viewer has no Uncommitted, Commit, Discard or Merge controls. Agents inspect
+changes through host tools before authorized writes. The retained backend Commit
+operation includes inspected staged, unstaged and untracked changes. Discard requires
+explicit authorization and can delete listed untracked files. Backend freshness checks
+reject changes since inspection; neither operation automatically merges afterward.
 
 Merge targets the configured main branch's actual checkout. Dirty source or target,
 stale revisions and unresolved state block admission. Candidate conflicts are kept
@@ -151,13 +161,14 @@ in [settings ownership](settings-reference.md); there is no dependency-overlay p
 
 ## GitHub pull requests
 
-PR opens a form showing source, origin and GitHub's default base branch. Opening
-never pushes. Publication requires a clean named non-default branch and supported
-same-repository github.com origin. The app reuses authenticated `gh` and Git
-credentials; it does not store tokens or bundle another authentication system.
+The viewer has no PR form or publication button. Agents inspect the source, origin
+and target branch before authorized publication using host tools. The retained backend
+publication workflow requires a clean named non-default branch and supported
+same-repository github.com origin. It reuses authenticated `gh` and Git credentials;
+it does not store tokens or bundle another authentication system.
 Global Settings can set an absolute `github.cliPath` and check the connection.
 
-Publish pushes the inspected SHA to the same origin branch without force or tags,
+The backend publication operation pushes the inspected SHA to the same origin branch without force or tags,
 then creates a PR. Existing open same-head/base PRs are reused. Push to PR updates
 the branch without replacing its title/body. Source, revision and destination are
 rechecked; a successful push followed by uncertain creation is reported distinctly,

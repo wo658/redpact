@@ -1,35 +1,7 @@
 import { useTranslation } from "react-i18next"
 import type { ExecutionSelection } from "../../../server/src/core/types/execution-selection"
 import { Notice } from "./feedback"
-import { SearchPicker } from "./search-picker"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible"
-export function ExecutionScopePicker({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: string
-  onChange: (value: string) => void
-  disabled?: boolean
-}) {
-  const { t } = useTranslation()
-  return (
-    <SearchPicker
-      label={t("Execution scope")}
-      value={value}
-      onValueChange={onChange}
-      disabled={disabled}
-      options={[
-        { value: "default", label: t("Shared default") },
-        { value: "all", label: t("All tests") },
-        { value: "changed", label: t("Changed tests") },
-      ]}
-    />
-  )
-}
-export function executionScopeOverride(value: string): "all" | "changed" | undefined {
-  return value === "all" || value === "changed" ? value : undefined
-}
 export function ExecutionSelectionEvidence({
   selection,
 }: {

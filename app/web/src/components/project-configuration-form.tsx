@@ -1,6 +1,7 @@
 import { useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { ApiError, type SettingsDocument, type SettingsEdit } from "@/lib/api"
+import { AppHeaderActions } from "./app-header"
 import type { Entry } from "./authored-settings"
 import { Notice } from "./feedback"
 import { PlaywrightTargetFields } from "./playwright-target-fields"
@@ -303,9 +304,11 @@ export function ProjectConfigurationForm({
         <Notice error>{document.issues.join("\n")}</Notice>
         <p>{t("Ask your agent to repair this file, then reload settings.")}</p>
         <code className="break-all text-sm">{document.file}</code>
-        <Button variant="outline" onClick={onReload}>
-          {t("Reload settings")}
-        </Button>
+        <AppHeaderActions>
+          <Button variant="outline" size="toolbar" onClick={onReload}>
+            {t("Reload settings")}
+          </Button>
+        </AppHeaderActions>
       </div>
     )
   }
@@ -317,6 +320,7 @@ export function ProjectConfigurationForm({
   ]
   return (
     <form
+      id={`${id}-form`}
       className="w-full min-w-0"
       onChange={edit}
       onSubmit={(event) => {
@@ -365,14 +369,22 @@ export function ProjectConfigurationForm({
             </SettingsSection>
           ))}
           {error && <Notice error>{error}</Notice>}
-          {conflict && (
-            <Button type="button" variant="outline" onClick={onReload}>
-              {t("Discard draft and load current file")}
+          <AppHeaderActions>
+            {conflict && (
+              <Button
+                type="button"
+                size="toolbar"
+                variant="outline"
+                disabled={pending}
+                onClick={onReload}
+              >
+                {t("Discard draft and load current file")}
+              </Button>
+            )}
+            <Button type="submit" form={`${id}-form`} size="toolbar" disabled={!dirty || pending}>
+              {pending ? t("Saving…") : t("Save settings")}
             </Button>
-          )}
-          <Button type="submit" className="self-end" disabled={!dirty || pending}>
-            {pending ? t("Saving…") : t("Save settings")}
-          </Button>
+          </AppHeaderActions>
         </FieldGroup>
       </FieldSet>
     </form>

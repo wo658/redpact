@@ -16,10 +16,7 @@ test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토�
   let projectName = ""
   const mobile = (page.viewportSize()?.width ?? 1920) < 768
   const showSidebar = async () => {
-    if (
-      mobile &&
-      !(await page.getByRole("button", { name: "Settings", exact: true }).isVisible())
-    ) {
+    if (!(await page.getByRole("button", { name: "Settings", exact: true }).isVisible())) {
       await page
         .locator("#root")
         .getByRole("button", { name: "사이드바 전환", exact: true })
@@ -55,13 +52,10 @@ test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토�
     await showSidebar()
     await closeSidebar()
   })
-  const workspaceTabs = page.getByRole("tablist", { name: "열린 작업공간", exact: true })
-  const projectTab = workspaceTabs.getByRole("tab", { selected: true })
-  await expect(projectTab).toBeVisible()
-  expect(await projectTab.getAttribute("aria-label")).toMatch(
-    new RegExp(`^${projectName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} / `),
-  )
-  await capture(page, info, "작업공간 / 헤더 / 프로젝트 탭", workspaceTabs)
+  const appHeader = page.locator(".app-header:visible")
+  await expect(appHeader).toBeVisible()
+  await expect(appHeader.getByRole("button", { name: "사이드바 전환", exact: true })).toBeVisible()
+  await capture(page, info, "작업공간 / 헤더 / 공용 헤더", appHeader)
   await showSidebar()
   const navigation = page.getByRole("navigation", { name: "Worktrees", exact: true })
   await expect(navigation.getByRole("button").first()).toBeVisible()
@@ -71,9 +65,6 @@ test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토�
   expect(worktreeName, "워크트리 이름이 접근성 레이블로 제공되어야 한다").toBeTruthy()
   await worktree.click()
   await closeSidebar()
-  await expect(
-    workspaceTabs.getByRole("tab", { name: `${projectName} / Worktrees`, exact: true }),
-  ).toBeVisible()
   await expect(page.getByText("아직 리뷰할 내용이 없습니다.", { exact: true })).toBeVisible()
   const emptyReview = page.getByText("아직 리뷰할 내용이 없습니다.", { exact: true })
   await expect(emptyReview).toBeVisible()
@@ -81,13 +72,13 @@ test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토�
     await expect(page.getByRole("tab", { name, exact: true })).toHaveCount(0)
   }
   await capture(page, info, "워크트리 / 리뷰 / 내용 없는 탭 숨김", emptyReview)
-  await capture(page, info, "작업공간 / 헤더 / 워크트리 탭", workspaceTabs)
+  await capture(page, info, "작업공간 / 헤더 / 워크트리 리뷰", appHeader)
   await showSidebar()
   await page.getByRole("button", { name: projectName, exact: true }).click()
   await capture(page, info, "작업공간 / 탐색 / 프로젝트 메뉴", page.getByRole("menu"))
   await page.keyboard.press("Escape")
   await closeSidebar()
-  await capture(page, info, "작업공간 / 헤더 / 현재 화면 크기의 워크트리 탭", workspaceTabs)
+  await capture(page, info, "작업공간 / 헤더 / 현재 화면 크기의 공용 헤더", appHeader)
 
   await navigate("Settings")
   await expect(page.getByRole("heading", { name: "Settings", exact: true, level: 1 })).toBeVisible()

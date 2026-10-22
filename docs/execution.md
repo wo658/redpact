@@ -253,8 +253,9 @@ Capture is visual evidence; functional assertions establish tested behavior.
 
 Playwright lists current worktree capture drafts and changed project capture files
 even before execution or when no PNG was recorded. Source presence keeps the tab,
-file selection and execution action available. Desktop/Mobile filters recorded
-images, not the source list. Images come from the latest matching execution for the
+file selection and execution action available. The screenshot viewer's local Mobile
+switch filters recorded Desktop/Mobile images, not the source list; it does not occupy
+the shared app header. Images come from the latest matching execution for the
 selected size; no image in that execution means no substitution of an older image.
 Recorded CSS viewport width classifies each PNG at 768px; missing provenance stays
 visible in both modes with an explicit label. Image pixels, filenames and current
@@ -267,6 +268,12 @@ strip scrolls on narrow screens. The selected image fills the mobile content wid
 scrolls vertically instead of shrinking into the remaining height; its run link remains
 available below the image. Project Tests retains
 Captures, Tests and Runs independently of changed-file review.
+
+The viewer has no Clean up worktree code action. Agents explicitly request draft
+cleanup through `POST /api/worktrees/:id/playwright/cleanup-worktree` after the final
+recorded execution. It refuses unrecorded draft changes or unfinished execution/resource
+cleanup. Removing task drafts never removes retained sources, images or execution history.
+This is separate from the viewer's test environment lifecycle and cleanup controls.
 
 Runs with nonempty environment values omit trace archives. Images, videos and submitted source are not
 credential-scanned. Literal environment-value redaction in text is not a hostile-code sandbox.
@@ -398,7 +405,9 @@ failure, and global network pruning can delete other projects' resources.
 ## Selecting all or changed tests
 
 Execution selection is independent of catalog `scope` and Playwright maintenance
-`scope`. `executionScope` overrides the [shared default](configuration.md). `all`
+`scope`. Agent API/CLI requests can use `executionScope` to override the
+[shared default](configuration.md). Viewer Run controls use that default without a
+per-run selector; recorded scope remains visible in approval/result evidence. `all`
 selects the current Integration test directory, Unit file patterns or the selected
 Playwright target. A legacy Unit shell command without `fileCommand` discovers its
 own files; its record explicitly leaves that file list unknown.

@@ -8,14 +8,10 @@ import { DependencyOverview } from "./dependency-overview"
 import { EnvironmentEditor } from "./environment-editor"
 import { EmptyState, Notice } from "./feedback"
 import { useLiveRevision } from "./live-updates"
+import { ReviewToolbar } from "./review-toolbar"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
-import {
-  TabsPanel as ModePanel,
-  TabsTab as ModeTab,
-  Tabs as ModeTabs,
-  TabsList as ModeTabsList,
-} from "./ui/coss-tabs"
+import { TabsPanel as ModePanel, TabsTab as ModeTab, Tabs as ModeTabs } from "./ui/coss-tabs"
 import {
   Dialog,
   DialogClose,
@@ -36,13 +32,10 @@ export function ProjectDependencies({ api, projectId }: { api: Api; projectId: s
   return (
     <section aria-label={t("Project dependencies")} className="flex min-w-0 flex-1 flex-col gap-4">
       <ModeTabs key={projectId} defaultValue="overview" className="min-w-0 gap-4">
-        <div className="flex min-w-0 items-center justify-between gap-3">
-          <ModeTabsList variant="view" aria-label={t("Project dependency views")}>
-            <ModeTab value="overview">{t("Overview")}</ModeTab>
-            <ModeTab value="configuration">{t("Configuration")}</ModeTab>
-          </ModeTabsList>
-          <DependencyHelp />
-        </div>
+        <ReviewToolbar label={t("Project dependency views")} actions={<DependencyHelp />}>
+          <ModeTab value="overview">{t("Overview")}</ModeTab>
+          <ModeTab value="configuration">{t("Configuration")}</ModeTab>
+        </ReviewToolbar>
         <DependencyRead api={api} projectId={projectId} />
       </ModeTabs>
     </section>

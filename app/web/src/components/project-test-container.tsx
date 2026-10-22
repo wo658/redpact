@@ -7,6 +7,7 @@ import type { ProjectEntry } from "../../../server/src/core/types/project-files"
 import { Loading, Notice } from "./feedback"
 import { FileContent } from "./file-content"
 import { useLiveRevision } from "./live-updates"
+import { ReviewToolbar } from "./review-toolbar"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 
@@ -61,7 +62,12 @@ export function ProjectTestContainer({ api, projectId }: { api: Api; projectId: 
     }
   }
   if (!data) {
-    return loadError ? <Notice error>{loadError}</Notice> : <Loading>{t("Loading…")}</Loading>
+    return (
+      <>
+        <ReviewToolbar navigation={<h1 className="text-sm font-medium">{t("Container")}</h1>} />
+        {loadError ? <Notice error>{loadError}</Notice> : <Loading>{t("Loading…")}</Loading>}
+      </>
+    )
   }
   return (
     <TestContainerView
@@ -111,14 +117,17 @@ export function TestContainerView({
       aria-label={t("Container")}
       className="@container mx-auto flex w-full min-w-0 content-width-768 flex-col gap-4 [overflow-wrap:anywhere]"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{environment ? t(environment.state) : t("Stopped")}</Badge>
-          {changed === true && <Badge variant="outline">{t("Local changes available")}</Badge>}
-          {changed === false && <Badge variant="outline">{t("Up to date")}</Badge>}
-        </div>
-        <div className="ml-auto flex flex-wrap justify-end gap-2">
-          {!environment ? (
+      <ReviewToolbar
+        navigation={<h1 className="text-sm font-medium">{t("Container")}</h1>}
+        secondary={
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">{environment ? t(environment.state) : t("Stopped")}</Badge>
+            {changed === true && <Badge variant="outline">{t("Local changes available")}</Badge>}
+            {changed === false && <Badge variant="outline">{t("Up to date")}</Badge>}
+          </div>
+        }
+        actions={
+          !environment ? (
             <Button
               size="toolbar"
               disabled={pending || !target || Boolean(issue)}
@@ -148,9 +157,9 @@ export function TestContainerView({
                 {t("Stop")}
               </Button>
             </>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
       {error && <Notice error>{error}</Notice>}
       {issue && <Notice error>{t(issue)}</Notice>}
       {environment?.errors.map((message) => (

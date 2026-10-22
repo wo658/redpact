@@ -120,7 +120,11 @@ For a visual issue, name the capture and describe the visible problem. For a set
 
 Every execution owns temporary resources and cleans them up automatically after completion, failure or internal interruption. Public test cancellation and forced environment stop are unavailable. Report retained cleanup failures with their execution identity; startup recovery preserves evidence. Project Container controls manage only the separate manual environment. See [interfaces](interfaces.md).
 
-**Clean up worktree code** removes recorded Playwright task drafts only after its checks pass. Historical evidence remains. Unit runtime input copies are removed during cleanup while command evidence remains. Integration submissions retain their captured test bundle.
+Agents remove recorded Playwright task drafts through the explicit
+[draft cleanup contract](execution.md#playwright-evidence); the viewer has no cleanup
+button, and historical evidence remains. Unit runtime input copies are removed during
+cleanup while command evidence remains. Integration submissions retain their captured
+test bundle.
 
 Changing [configuration](configuration.md)  affects future requests; it does not rewrite results or reconfigure an existing environment. Return to the [documentation overview](index.md).
 

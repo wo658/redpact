@@ -159,15 +159,13 @@ test("short segments have a minimum width while labels stay centered", async () 
   assert.match(tabs, /segmentedControlItemSizeClassNames\[resolvedSize\]/)
 })
 
-test("workspace header stays outside the framed main content", async () => {
+test("공용 헤더는 본문 프레임 앞에 탐색과 진단 컨트롤을 제공한다", async () => {
   const source = await readFile(new URL("src/components/project-manager.tsx", root), "utf8")
-  const headerStart = source.indexOf('className="app-header ')
-  const headerEnd = source.indexOf("</header>", headerStart)
+  const header = await readFile(new URL("src/components/app-header.tsx", root), "utf8")
+  const headerStart = source.indexOf("<AppHeader />")
   const insetStart = source.indexOf("<SidebarInset")
-  assert.ok(
-    headerStart >= 0 && headerEnd < insetStart,
-    "The title and sidebar controls must precede the main frame",
-  )
-  assert.match(source.slice(headerStart, headerEnd), /<SidebarTrigger/)
+  assert.ok(headerStart >= 0 && headerStart < insetStart)
+  assert.match(header, /<SidebarTrigger/)
+  assert.match(header, /<ProblemsButton/)
   assert.match(source.slice(insetStart), /md:rounded-xl md:ring-1 md:ring-border/)
 })

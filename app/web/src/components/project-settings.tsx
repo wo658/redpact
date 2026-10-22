@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 import type { Api, Project } from "@/lib/api"
 import { AuthoredSettings } from "./authored-settings"
 import { ProjectTrackingSettings } from "./project-tracking-settings"
+import { ReviewToolbar } from "./review-toolbar"
 import { SettingsSection } from "./settings-row"
 
 export function ProjectSettings({
@@ -19,9 +20,9 @@ export function ProjectSettings({
   const { t } = useTranslation()
   return (
     <section aria-label={t("Project settings")} className="settings-page flex flex-col gap-8">
-      <header className="pb-2">
-        <h1 className="text-2xl font-semibold">{t("Project settings")}</h1>
-      </header>
+      <ReviewToolbar
+        navigation={<h1 className="text-sm font-medium">{t("Project settings")}</h1>}
+      />
       {children}
       <SettingsSection title={t("General")}>
         <ProjectTrackingSettings

@@ -54,7 +54,11 @@ pages use fixed English copy independently of the viewer language preference.
 The separate `project-tests` target checks theme persistence, dependency help and
 configuration interactions without producing named screenshots on success. Workspace
 history scenarios also cover browser history traversal, forward-history replacement,
-closed-tab recovery, reload and responsive sidebar controls. Functional cases remain
+single-page restoration on reload, and responsive sidebar controls. Shared header scenarios
+also verify page navigation, review controls, native form submission from header buttons,
+and one header row at desktop, half-view, and mobile widths. Git writes and
+per-run execution-scope selection are absent from the shared header; screenshot
+Mobile selection stays inside the capture viewer. Functional cases remain
 independent from capture scenarios. Capture preparation
 assertions establish the intended image state, not complete functional coverage.
 
@@ -80,7 +84,8 @@ sources committed with the application. Shared settings declare all four targets
 No empty worktree directory needs to be committed; agents create it when authoring.
 
 Every run retains its source folder and artifacts in Redpact history. At task end,
-use UI Review's Clean up worktree code action or the worktree cleanup-worktree endpoint.
+use the worktree cleanup-worktree endpoint through the agent. The viewer has no
+worktree-code cleanup button.
 It refuses removal of unrecorded changes. Stored sources and images remain readable
 after draft or worktree removal. Project Screenshots and Tests show maintained
 content; worktree evidence stays in worktree review, project Runs and Log.

@@ -28,11 +28,11 @@ freshness and human acceptance.
 4. Open the exact execution review link returned in chat. Inspect the captured
    inputs, evidence and worktree-bound history, then make any required decision.
 
-The full Redpact app keeps project/worktree management, files and diffs, Git, test catalogs, environments and settings in the browser and App Page. Chat MCP returns structured results and web review links; execution approval stays in the connected viewer. Exact execution links open inside the full app.
+The primary experience is the GPT-embedded viewer for agent work, test evidence and environment management. The browser and App Page share project/worktree navigation, file and Git inspection, test catalogs, environments and settings. Chat MCP returns structured results and web review links; execution approval stays in the connected viewer. See [product scope](docs/architecture.md) and [frontend conventions](docs/frontend.md).
 
 > Use Redpact to implement quantity editing in a worktree with TDD. Check valid
 > persistence and invalid-input rejection, verify the real browser interaction,
-> and record desktop and mobile screens. Return the actual execution references
+> and record Full, Half View and Mobile screens. Return the actual execution references
 > and remaining review gaps.
 
 Start with the [review walkthrough](docs/review-workflow.md), [results](docs/results.md) and [CLI and MCP contracts](docs/interfaces.md).

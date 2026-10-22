@@ -161,9 +161,11 @@ Global Settings는 인스턴스를 별도로 제어합니다. `redpact settings 
 
 `tests.executionScope`는 Integration만이 아니라 **Unit, Integration, Playwright**가
 공유하는 기본값입니다. `all`(생략 시 기본값) 또는 `changed`를 지정하며 실행 요청의
-`executionScope`가 우선합니다. 뷰어의 **실행 범위**에서 공유 기본값, 전체 테스트,
-변경 테스트를 고릅니다. 파일 카탈로그 필터 및 Playwright 대상의 유지관리 scope와는
-별개입니다. [선택 규칙](execution.md)을 확인하세요.
+`executionScope`가 우선합니다. 에이전트의 API·CLI 실행 요청에서 이 값을 재정의할 수
+있습니다. 뷰어의 Run 제어는 공유 기본값을 사용하며 실행별 범위 선택기는 제공하지
+않습니다. 파일 카탈로그 필터 및 Playwright 대상의 유지관리 scope와는 별개입니다.
+승인·결과 증거에는 요청·적용 범위를 계속 표시합니다. [선택 규칙](execution.md)을
+확인하세요.
 
 `unitTests.fileCommand`가 없으면 기존 Unit 동작을 유지합니다. `all`은 `command`를
 그대로 실행하고 명령이 발견한 정확한 파일 목록을 주장하지 않습니다. `changed`는

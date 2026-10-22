@@ -27,7 +27,7 @@ test("업데이트 조회 실패는 버튼을 숨기고 복구된 새 버전을 
   const update = page.getByRole("button", { name: "Update to 9.0.0", exact: true })
   await test.step("조회한 새 버전을 사이드바에 표시한다", async () => {
     await openApp(page, "en")
-    await expect(page.getByRole("tablist", { name: "Open workspaces", exact: true })).toBeVisible()
+    await expect(page.locator(".app-header:visible")).toBeVisible()
     if ((page.viewportSize()?.width ?? 1920) < 768) {
       await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
     }
@@ -72,7 +72,7 @@ test("npm도 설정에서 확인하고 Update 확인 후 설치하며 보류 오
     return route.fulfill({ json: { accepted: true } })
   })
   await openApp(page, "en")
-  await expect(page.getByRole("tablist", { name: "Open workspaces", exact: true })).toBeVisible()
+  await expect(page.locator(".app-header:visible")).toBeVisible()
   if ((page.viewportSize()?.width ?? 1920) < 768) {
     await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
   }
@@ -141,7 +141,7 @@ test("확인 실패를 최신 상태로 알리지 않고 npm 자동 설치 불�
     route.fulfill({ json: { ...state, error: "npm registry returned HTTP 404" } }),
   )
   await openApp(page, "en")
-  await expect(page.getByRole("tablist", { name: "Open workspaces", exact: true })).toBeVisible()
+  await expect(page.locator(".app-header:visible")).toBeVisible()
   if ((page.viewportSize()?.width ?? 1920) < 768) {
     await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
   }

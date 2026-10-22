@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test"
-import { node } from "../target"
+import { isOnScreen, openApp } from "../app"
+import { cleanupHeaderFixture, createHeaderFixture } from "../header-fixture"
 
-// 격리된 테스트 앱에서 새 탭의 Web Crypto API를 사용한다.
+// 격리된 테스트 앱 origin에서 실제 Clipboard와 Web Crypto API를 검증한다.
 test.use({
   channel: "chromium",
   launchOptions: {
@@ -9,30 +10,10 @@ test.use({
   },
 })
 
-test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지한다", async ({ page }) => {
-  const project = await node<{ id: string; name: string; settingsSource: string }>(`
-            import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
-            import {randomUUID} from 'node:crypto';
-            const origin='http://127.0.0.1:54318';
-            const project=await (await fetch(origin+'/api/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:'/app',name:'Redpact'})})).json();
-            const worktrees=await (await fetch(origin+'/api/projects/'+project.id+'/worktrees')).json();
-            const worktree=worktrees.find(item=>item.projectRoot==='/app');
-            if(!worktree) throw new Error('Header fixture worktree missing');
-            const settingsPath='/app/.redpact/settings.json';
-            const settingsSource=readFileSync(settingsPath,'utf8');
-            const settings=JSON.parse(settingsSource);
-            settings.playwright={...settings.playwright,directory:'ui-tests',service:'app',port:54320,
-              targets:{...settings.playwright?.targets,'header-capture':{scope:'worktree',purpose:'capture',testMatch:['worktree/captures/header.spec.ts']}}};
-            writeFileSync(settingsPath,JSON.stringify(settings));
-            mkdirSync('/app/ui-tests/worktree/captures',{recursive:true});
-            writeFileSync('/app/ui-tests/worktree/captures/header.spec.ts',"import {test} from '@playwright/test'; test('헤더 캡처', async()=>{});");
-            const id=randomUUID();
-            const directory='/tmp/redpact-e2e-state/playwright-runs';
-            mkdirSync(directory,{recursive:true});
-            writeFileSync(directory+'/'+id+'.json',JSON.stringify({version:1,id,target:'captures',purpose:'capture',scope:'worktree',worktreeId:worktree.id,projectId:project.id,projectRoot:'/app',revision:null,settings:{directory:'ui-tests',targets:{captures:{purpose:'capture',testMatch:['project/captures/**/*.spec.ts']}},service:'app',port:54318,viewport:{width:1920,height:1080}},selection:{services:['app'],select:{}},settingsDigest:'header-fixture',sourceDigest:'header-fixture',appDigest:'header-fixture',createdAt:new Date().toISOString(),state:'finished',outcome:'failed',cleanupError:'Retained header recovery fixture',before:{state:'unavailable',cases:[]},after:{state:'finished',outcome:'failed',cases:[]}}));
-
-            console.log(JSON.stringify({...project,settingsSource}));
-  `)
+test("공용 헤더의 리뷰 탭과 액션은 좁은 화면에서 읽기 크기와 접근성을 유지한다", async ({
+  page,
+}) => {
+  const project = await createHeaderFixture()
   try {
     expect(project, "리뷰할 프로젝트가 있어야 한다").toBeTruthy()
     await page.addInitScript((id) => {
@@ -40,49 +21,28 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
       localStorage.setItem("redpact:project", id)
     }, project.id)
     await page.goto("/")
-    const workspaceTabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
-    await expect(workspaceTabs.getByRole("tab")).toHaveCount(1)
-    if ((page.viewportSize()?.width ?? 1920) < 768) {
-      await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).first().click()
+    const header = page.locator(".app-header:visible")
+    const toggle = header.getByRole("button", { name: "Toggle Sidebar", exact: true })
+    await expect(toggle).toBeVisible()
+    const navigation = page.getByRole("navigation", { name: "Worktrees", exact: true })
+    if (!(await isOnScreen(navigation))) {
+      await toggle.click()
     }
-    await page.getByRole("button", { name: "Settings", exact: true }).click()
-    await page.keyboard.press("Escape")
-    await page.getByRole("button", { name: "New tab", exact: true }).click()
-    if ((page.viewportSize()?.width ?? 1920) < 768) {
-      await expect(page.getByRole("dialog")).toHaveCount(0)
-      await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).first().click()
-    }
-    const worktree = page
-      .getByRole("navigation", { name: "Worktrees", exact: true })
-      .getByRole("button")
-      .first()
-    const worktreeName = await worktree.getAttribute("aria-label")
-    expect(worktreeName, "워크트리 이름이 접근성 레이블로 제공되어야 한다").toBeTruthy()
+    const worktree = navigation.getByRole("button").first()
+    await expect(worktree).toBeVisible()
     await worktree.click()
     await page.keyboard.press("Escape")
+    await expect(header.getByRole("tab", { name: "Log", exact: true })).toBeVisible()
+    await expect(page.getByRole("tablist", { name: "Open workspaces", exact: true })).toHaveCount(0)
+    await expect(header.getByRole("button", { name: "Merge", exact: true })).toHaveCount(0)
+    await expect(header.getByRole("button", { name: "Uncommitted", exact: true })).toHaveCount(0)
     await expect(
-      workspaceTabs.getByRole("tab", {
-        name: `${project.name} / Worktrees`,
-        exact: true,
-      }),
-    ).toBeVisible()
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await expect(page.getByRole("button", { name: "Toggle Sidebar", exact: true })).toBeVisible()
-    const projectTab = workspaceTabs.getByRole("tab").first()
-    const worktreeTab = workspaceTabs.getByRole("tab", {
-      name: `${project.name} / Worktrees`,
-      exact: true,
-    })
-    const projectTabWidth = await projectTab.evaluate(
-      (element) => element.parentElement?.clientWidth,
-    )
-    const worktreeTabWidth = await worktreeTab.evaluate(
-      (element) => element.parentElement?.clientWidth,
-    )
-    expect(projectTabWidth, "헤더 작업 탭은 레이블 길이와 관계없이 같은 폭을 쓴다").toBe(
-      worktreeTabWidth,
-    )
-    const toolbar = page.locator('[data-slot="review-toolbar"]')
+      header.getByRole("button", { name: /Pull request|Publish PR|Clean up worktree/ }),
+    ).toHaveCount(0)
+    await expect(
+      header.getByRole("combobox", { name: "Execution scope", exact: true }),
+    ).toHaveCount(0)
+    const toolbar = header.locator('[data-slot="review-toolbar"]')
     for (const width of [1440, 850, 390]) {
       await test.step(`${width}px에서 탭 전환과 Mobile 토글을 확인한다`, async () => {
         await page.setViewportSize({ width, height: 900 })
@@ -99,21 +59,24 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
         await page.getByRole("tab", { name: "Playwright", exact: true }).click()
         const mobile = page.getByRole("switch", { name: "Mobile", exact: true })
         await expect(mobile).toBeVisible()
+        await expect(header.getByRole("switch", { name: "Mobile", exact: true })).toHaveCount(0)
         const after = await toolbar.boundingBox()
         if (!before || !after) {
           throw new Error("헤더가 표시되어야 한다")
         }
-        expect(after.height, "헤더가 한 줄 높이를 유지한다").toBeLessThanOrEqual(54)
-        expect(
-          Math.abs(after.height - before.height),
-          "추가 액션으로 헤더가 높아지지 않는다",
-        ).toBeLessThanOrEqual(1)
         const navigation = await toolbar.locator('[data-slot="toolbar-navigation"]').boundingBox()
         const actions = await toolbar.locator('[data-slot="toolbar-actions"]').boundingBox()
         if (!navigation || !actions) {
           throw new Error("탐색과 액션이 표시되어야 한다")
         }
-        expect(actions.x, "액션이 탐색 탭 오른쪽에 놓인다").toBeGreaterThan(navigation.x)
+        expect(after.height, "모든 화면 크기에서 공용 헤더는 한 줄을 유지한다").toBeLessThanOrEqual(
+          54,
+        )
+        expect(
+          Math.abs(after.height - before.height),
+          "추가 액션으로 헤더 높이가 달라지지 않는다",
+        ).toBeLessThanOrEqual(1)
+        expect(actions.x, "액션은 탐색 탭 오른쪽에 놓인다").toBeGreaterThan(navigation.x)
         expect(Math.abs(actions.y - navigation.y)).toBeLessThanOrEqual(4)
         expect(
           await page
@@ -132,27 +95,88 @@ test("UI 리뷰 액션이 나타나도 헤더 높이와 좌우 배치를 유지�
         )
       })
     }
-    const closingLabel = await workspaceTabs
-      .getByRole("tab", { selected: true })
-      .getAttribute("aria-label")
-    await workspaceTabs.getByRole("button", { name: `Close ${closingLabel}`, exact: true }).click()
-    await expect(
-      workspaceTabs.getByRole("tab", {
-        name: `${project.name} / Worktrees`,
-        exact: true,
-      }),
-    ).toHaveCount(0)
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await expect(worktree).toBeVisible()
   } finally {
-    await node(
-      `
-      import {writeFileSync,rmSync} from 'node:fs';
-      writeFileSync('/app/.redpact/settings.json',JSON.parse(process.argv[1]));
-      rmSync('/app/ui-tests/worktree/captures/header.spec.ts',{force:true});
-      console.log('null');
-    `,
-      project.settingsSource,
-    )
+    await cleanupHeaderFixture(project.settingsSource)
+  }
+})
+
+test("공용 헤더의 Unit·Integration·Environment는 실제 소스와 중지된 환경을 탐색한다", async ({
+  page,
+}) => {
+  const project = await createHeaderFixture({ allTabs: true })
+  try {
+    await page.addInitScript((id) => localStorage.setItem("redpact:project", id), project.id)
+    await openApp(page, "en")
+    const header = page.locator(".app-header:visible")
+    const navigation = page.getByRole("navigation", { name: "Worktrees", exact: true })
+    if (!(await isOnScreen(navigation))) {
+      await header.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+    }
+    await navigation.getByRole("button").first().click()
+    await page.keyboard.press("Escape")
+    for (const width of [1440, 800, 390]) {
+      await test.step(`${width}px에서 소스와 환경을 실행 없이 탐색한다`, async () => {
+        await page.setViewportSize({ width, height: 900 })
+        for (const [name, marker, action] of [
+          ["Unit Test", "unit-header-source", "Run Unit command"],
+          ["Integration Test", "integration-header-source", "Run Integration tests"],
+        ]) {
+          const tab = header.getByRole("tab", { name, exact: true })
+          await tab.scrollIntoViewIfNeeded()
+          await tab.click()
+          const panel = page.getByRole("tabpanel", { name, exact: true })
+          await expect(panel).toBeVisible()
+          await panel
+            .getByRole("treeitem", { name: "shared-header-fixture.test.ts", exact: true })
+            .click()
+          await expect(panel.locator(".diff")).toContainText(marker)
+          const run = header.getByRole("button", { name: action, exact: true })
+          await run.scrollIntoViewIfNeeded()
+          await expect(run).toBeInViewport()
+          await expect(
+            header.getByRole("combobox", { name: "Execution scope", exact: true }),
+          ).toHaveCount(0)
+          await expect(
+            header.getByRole("button", {
+              name: /Merge|Uncommitted|Pull request|Clean up worktree/,
+            }),
+          ).toHaveCount(0)
+        }
+        const environment = header.getByRole("tab", { name: "Environment", exact: true })
+        await environment.scrollIntoViewIfNeeded()
+        await environment.click()
+        const panel = page.getByRole("tabpanel", { name: "Environment", exact: true })
+        await expect(panel.getByText("No active environments.", { exact: true })).toBeVisible()
+        const stopped = panel.getByRole("button", { name: "Stopped environments (1)", exact: true })
+        if ((await stopped.getAttribute("aria-expanded")) !== "true") {
+          await stopped.click()
+        }
+        await expect(
+          panel.getByRole("button", {
+            name: `Environment details ${project.environmentId}`,
+            exact: true,
+          }),
+        ).toBeVisible()
+        await expect(panel.getByText("stopped", { exact: true })).toBeVisible()
+        const toolbar = header.locator('[data-slot="review-toolbar"]')
+        expect(
+          (await toolbar.boundingBox())?.height,
+          "공용 헤더는 모든 탭에서 한 줄을 유지한다",
+        ).toBeLessThanOrEqual(54)
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth),
+          "긴 탭 탐색은 페이지 전체를 가로로 늘리지 않는다",
+        ).toBeLessThanOrEqual(width)
+        const unit = header.getByRole("tab", { name: "Unit Test", exact: true })
+        await unit.scrollIntoViewIfNeeded()
+        await unit.click()
+        await page.keyboard.press("ArrowRight")
+        await expect(
+          header.getByRole("tab", { name: "Integration Test", exact: true }),
+        ).toHaveAttribute("aria-selected", "true")
+      })
+    }
+  } finally {
+    await cleanupHeaderFixture(project.settingsSource, project.environmentId)
   }
 })

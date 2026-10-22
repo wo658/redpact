@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test"
+import { isOnScreen } from "../app"
 
-test("Git Graph에서 Fetch와 새로고침을 구분하고 검색과 선택을 유지한다", async ({
+test("Git Graph는 Fetch 없이 이력을 새로 읽고 검색과 선택을 유지한다", async ({
   page,
   request,
 }) => {
@@ -15,25 +16,22 @@ test("Git Graph에서 Fetch와 새로고침을 구분하고 검색과 선택을 
       localStorage.setItem("redpact:language", "en")
     }, project.id)
     await page.goto("/")
-    await page.getByRole("button", { name: "Git Graph", exact: true }).click()
+    const navigation = page.getByRole("button", { name: "Git Graph", exact: true })
+    if (!(await isOnScreen(navigation))) {
+      await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+    }
+    await navigation.click()
+    await page.keyboard.press("Escape")
     await expect(page.locator("web-git-graph")).toHaveAttribute("aria-busy", "false")
   })
-  await test.step("Fetch의 원격 미설정 오류를 표시하고 재시도를 허용한다", async () => {
-    const fetchButton = page.getByRole("button", { name: "Fetch", exact: true })
-    await expect(fetchButton).toBeVisible()
-    await fetchButton.click()
-    await expect(page.getByText("No Git remotes configured", { exact: true })).toBeVisible()
-    await expect(fetchButton).toBeEnabled()
-    await fetchButton.click()
-    await expect(page.getByText("No Git remotes configured", { exact: true })).toBeVisible()
-  })
-  await test.step("실패 이후에도 커밋 검색과 변경 파일 선택이 동작한다", async () => {
+  await expect(page.getByRole("button", { name: "Fetch", exact: true })).toHaveCount(0)
+  await test.step("커밋 검색과 변경 파일 선택이 동작한다", async () => {
     const graph = page.locator("web-git-graph")
     await graph.getByRole("searchbox", { name: "Search commits" }).fill("Captured E2E application")
     await expect(graph.locator(".search-count")).toHaveText("1/1")
     await graph.getByText("Captured E2E application", { exact: true }).click()
     await expect(page.getByRole("separator", { name: "Resize commit changes" })).toBeVisible()
-    await expect(page.getByRole("button", { name: "Fetch", exact: true })).toBeEnabled()
+    await expect(page.getByRole("button", { name: "Fetch", exact: true })).toHaveCount(0)
   })
   await test.step("새로고침은 원격 Fetch 없이 이력을 다시 읽고 검색과 선택을 유지한다", async () => {
     const fetchRequests: string[] = []

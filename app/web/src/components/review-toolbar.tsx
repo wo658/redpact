@@ -1,6 +1,7 @@
 import { createContext, type ReactNode, useContext, useLayoutEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { cn } from "@/lib/utils"
+import { useAppHeader } from "./app-header"
 import { TabsList } from "./ui/coss-tabs"
 
 type Slot = "navigation" | "secondary" | "actions"
@@ -74,6 +75,8 @@ export function ReviewToolbar({
   singleRow?: boolean
   className?: string
 }) {
+  const header = useAppHeader()
+  const inlineSingleRow = singleRow || Boolean(header)
   const context = useContext(ToolbarContext)
   const defaults = {
     navigation:
@@ -100,19 +103,20 @@ export function ReviewToolbar({
       </>
     )
   }
-  return (
+  const toolbar = (
     <div
       data-slot="review-toolbar"
       className={cn(
         "flex min-w-0 shrink-0 flex-wrap items-center gap-3 border-b px-3 py-2",
-        singleRow && "flex-nowrap",
+        inlineSingleRow && "flex-nowrap",
+        header && "border-0 px-0 py-0 gap-2",
         className,
       )}
     >
       <div
         className={cn(
           "flex min-w-0 flex-[1_1_20rem] items-center gap-3 overflow-x-auto",
-          singleRow && "flex-1",
+          inlineSingleRow && "flex-1",
         )}
       >
         <div
@@ -135,11 +139,15 @@ export function ReviewToolbar({
         data-slot="toolbar-actions"
         className={cn(
           "ml-auto flex min-w-0 max-w-full items-center gap-2 overflow-x-auto empty:hidden has-[>div:only-child:empty]:hidden",
-          singleRow && "max-w-[65%] shrink-0 [&>*]:shrink-0",
+          inlineSingleRow && "max-w-[65%] shrink-0 [&>*]:shrink-0",
         )}
       >
         {slot("actions")}
       </div>
     </div>
   )
+  if (!header) {
+    return toolbar
+  }
+  return header.toolbar ? createPortal(toolbar, header.toolbar) : null
 }

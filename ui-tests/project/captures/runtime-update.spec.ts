@@ -29,9 +29,7 @@ for (const theme of ["light", "dark"] as const) {
         route.fulfill({ json: { version: "0.2.0", busy: false } }),
       )
       await openApp(page, "en")
-      await expect(
-        page.getByRole("tablist", { name: "Open workspaces", exact: true }),
-      ).toBeVisible()
+      await expect(page.locator(".app-header:visible")).toBeVisible()
       if ((page.viewportSize()?.width ?? 1920) < 768) {
         await page
           .locator("#root")
@@ -87,7 +85,7 @@ test("npm 업데이트 설치 확인창을 촬영한다", async ({ page }, testI
     }),
   )
   await openApp(page, "en")
-  await expect(page.getByRole("tablist", { name: "Open workspaces", exact: true })).toBeVisible()
+  await expect(page.locator(".app-header:visible")).toBeVisible()
   if ((page.viewportSize()?.width ?? 1920) < 768) {
     await page.locator("#root").getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
   }

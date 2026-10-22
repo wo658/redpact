@@ -2,7 +2,6 @@ import { useCallback, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import type { Api, CaptureRun, Worktree } from "@/lib/api"
 import { useRefreshRequest } from "@/lib/use-refresh-request"
-import { ExecutionScopePicker, executionScopeOverride } from "./execution-scope"
 import { Loading, Notice } from "./feedback"
 import { useLiveRevision } from "./live-updates"
 import { SearchPicker } from "./search-picker"
@@ -139,7 +138,6 @@ function TargetExecution({
   const { t } = useTranslation()
   const [data, setData] = useState<Awaited<ReturnType<Api["playwright"]>> | null>(null)
   const [selected, setSelected] = useState("")
-  const [executionScope, setExecutionScope] = useState("default")
   const [error, setError] = useState("")
   const [failure, setFailure] = useState("")
   const running = useRef(false)
@@ -175,14 +173,7 @@ function TargetExecution({
     setPending(true)
     setFailure("")
     try {
-      onRun(
-        await api.runPlaywright(
-          worktreeId,
-          undefined,
-          target,
-          executionScopeOverride(executionScope),
-        ),
-      )
+      onRun(await api.runPlaywright(worktreeId, undefined, target))
     } catch (cause) {
       setFailure(String(cause))
     } finally {
@@ -210,14 +201,6 @@ function TargetExecution({
             value: name,
             label: `${name} · ${value.purpose}`,
           }))}
-        />
-      </Field>
-      <Field>
-        <FieldLabel>{t("Execution scope")}</FieldLabel>
-        <ExecutionScopePicker
-          value={executionScope}
-          onChange={setExecutionScope}
-          disabled={pending}
         />
       </Field>
       <div className="flex justify-end">

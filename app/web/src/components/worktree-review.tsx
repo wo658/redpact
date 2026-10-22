@@ -6,7 +6,6 @@ import { LiveUpdates, useLiveRevision } from "./live-updates"
 import { ReviewToolbar } from "./review-toolbar"
 import { UnitTests } from "./unit-tests"
 import { WorktreeEnvironments } from "./worktree-environments"
-import { WorktreeMergeActions } from "./worktree-merge"
 import "@/locales"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { parseDiff } from "react-diff-view"
@@ -23,7 +22,6 @@ export function WorktreeReview(props: {
   api: Api
   worktreeId: string
   initialTab?: "unit" | "tests"
-  initialGitView?: boolean
 }) {
   return (
     <LiveUpdates worktreeId={props.worktreeId}>
@@ -35,7 +33,6 @@ function WorktreeReviewContent(props: {
   api: Api
   worktreeId: string
   initialTab?: "unit" | "tests"
-  initialGitView?: boolean
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
@@ -48,12 +45,10 @@ function WorktreeReviewTabs({
   api,
   worktreeId,
   initialTab,
-  initialGitView,
 }: {
   api: Api
   worktreeId: string
   initialTab?: "unit" | "tests"
-  initialGitView?: boolean
 }) {
   const { t } = useTranslation()
 
@@ -140,17 +135,16 @@ function WorktreeReviewTabs({
     >
       <ReviewToolbar
         singleRow
+        navigation={
+          !contentReady || !Object.values(content).some(Boolean) ? (
+            <h1 className="text-sm font-semibold">{t("Worktrees")}</h1>
+          ) : undefined
+        }
         actions={
           <>
             <div ref={setPreviewActions} hidden={tab !== "preview"} />
             <div ref={setUnitActions} hidden={tab !== "unit"} />
             <div ref={setTestActions} hidden={tab !== "tests"} />
-            <WorktreeMergeActions
-              key={worktreeId}
-              api={api}
-              worktreeId={worktreeId}
-              initialOpen={initialGitView}
-            />
           </>
         }
       >

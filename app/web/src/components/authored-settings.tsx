@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { type Api, ApiError, type SettingsDocument, type SettingsEdit } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { AppHeaderActions } from "./app-header"
 import { Loading, Notice } from "./feedback"
 import { ProjectConfigurationForm } from "./project-configuration-form"
 import { errorMessage } from "./settings-edit-error"
@@ -346,6 +347,7 @@ function ConfigurationForm({
   }
   return (
     <form
+      id={`${id}-form`}
       className="w-full min-w-0"
       onSubmit={(event) => {
         event.preventDefault()
@@ -441,14 +443,22 @@ function ConfigurationForm({
             ))
           )}
           {error && <Notice error>{error}</Notice>}
-          {conflict && (
-            <Button type="button" variant="outline" onClick={onReload}>
-              {t("Discard draft and load current file")}
+          <AppHeaderActions>
+            {conflict && (
+              <Button
+                type="button"
+                size="toolbar"
+                variant="outline"
+                disabled={pending}
+                onClick={onReload}
+              >
+                {t("Discard draft and load current file")}
+              </Button>
+            )}
+            <Button type="submit" form={`${id}-form`} size="toolbar" disabled={!dirty || pending}>
+              {pending ? t("Saving…") : t("Save settings")}
             </Button>
-          )}
-          <Button type="submit" className="self-end" disabled={!dirty || pending}>
-            {pending ? t("Saving…") : t("Save settings")}
-          </Button>
+          </AppHeaderActions>
         </FieldGroup>
       </FieldSet>
     </form>

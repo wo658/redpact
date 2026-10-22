@@ -26,11 +26,10 @@ Redpact
 │       ├── Open project folder [action]
 │       └── Manage projects [dialog]
 │
-├── Application header
-│   ├── New tab [action]
-│   └── Open workspace tabs [tab]
-│       ├── Connected project [tab]
-│       └── Selected worktree [tab]
+├── Shared application header
+│   ├── Toggle Sidebar [action]
+│   ├── Current page title / navigation / actions [section; contents below]
+│   └── Problems [dialog]
 │
 ├── Sidebar
 │   ├── Project switcher
@@ -89,7 +88,7 @@ Redpact
 │   │   ├── Git Graph [page; Git projects]
 │   │   │   ├── Branch filter, remote visibility and loaded-commit search
 │   │   │   ├── Commit history → selected commit → changed file → diff
-│   │   │   └── Fetch [action]
+│   │   │   └── Refresh [action; read-only]
 │   │   ├── Dependencies [page]
 │   │   │   ├── Overview [tab]
 │   │   │   │   └── Service relationships → selected service details
@@ -121,7 +120,7 @@ Redpact
 │   │   │   │   └── Changed file list → selected file diff
 │   │   │   ├── Playwright [tab; conditional]
 │   │   │   │   └── Capture file list → recorded PNG checkpoints
-│   │   │   │       └── Desktop / Mobile evidence selection
+│   │   │   │       └── Desktop / Mobile evidence selection [viewer-local]
 │   │   │   ├── Unit Test [tab; conditional]
 │   │   │   │   ├── Changed unit test files → Code / Command results
 │   │   │   │   └── Run Tests / Cancel command [action]
@@ -130,16 +129,9 @@ Redpact
 │   │   │   │   └── Run Tests [action; latest submission]
 │   │   │   ├── Log [tab; conditional]
 │   │   │   │   └── Execution history and copyable execution details
-│   │   │   ├── Environment [tab; conditional]
-│   │   │   │   ├── Fixed project execution configuration
-│   │   │   │   └── Recorded environment status, resources and cleanup controls
-│   │   │   └── Git toolbar actions
-│   │   │       ├── Uncommitted [dialog; conditional when changes exist]
-│   │   │       │   ├── File diffs
-│   │   │       │   ├── Commit all changes [action]
-│   │   │       │   └── Discard all listed changes [confirmation dialog]
-│   │   │       ├── Merge [dialog / action]
-│   │   │       └── Pull request publication [dialog / action]
+│   │   │   └── Environment [tab; conditional]
+│   │   │       ├── Fixed project execution configuration
+│   │   │       └── Recorded environment status, resources and cleanup controls
 │   │   └── Selected branch without a live checkout [page; optional]
 │   │       └── Committed changed files → selected file diff
 │   │
@@ -193,8 +185,10 @@ Redpact
   changed-file list is empty; active runs and diagnostics remain reachable, and
   retained execution history remains in Log.
 - Project Unit and Integration browse the full primary-checkout catalog. Worktree
-  tabs focus on changed files. Unit uses the configured command or opted-in
-  `fileCommand` with the selected [execution scope](configuration.md#default-execution-scope);
+  tabs focus on changed files. Viewer Run controls use the shared
+  [execution scope](configuration.md#default-execution-scope), without a per-run selector;
+  agent API/CLI requests can override it. Unit uses the configured command or opted-in
+  `fileCommand`;
   worktree Integration executes the latest submission rather than the selected source file.
 - Project Playwright records remain browsable without a live primary checkout.
   Project Unit and Integration require that checkout. Branch-only review exposes
@@ -202,33 +196,41 @@ Redpact
 - Playwright lists current worktree capture drafts and changed project capture files
   before execution as well. Desktop/Mobile filters images from the latest matching
   execution using recorded viewport metadata; it does not hide source files.
+  The Mobile switch stays in the screenshot viewer rather than the app header.
   Functional test results are available through Tests and execution history.
+  Task-draft cleanup is an explicit agent operation through the retained cleanup
+  endpoint; it has no viewer button. Environment lifecycle controls remain available.
 - Container is a manually retained application environment. Its service/dependency
   selection comes from fixed project configuration; it is separate from recorded
   test execution evidence.
-- The header exposes the open-workspace strip. Desktop browsers and compact mobile
-  screens place the sidebar toggle beside the project selector,
-  before project display options. When closed, the reopen control appears beside the tabs in the existing header without adding a row.
-  Worktree display options appear on hover anywhere in the Worktrees section, on keyboard
-  focus, while the menu is open, and for non-hover input.
-  Workspace tabs show the project and sidebar page separated by a slash. Worktree names,
-  branch paths and internal sections are omitted, including in accessible names and tooltips.
-  See [header layout](frontend.md) for width limits and truncation.
-  Every workspace tab has an identity independent of its project or worktree and records
-  its current page, project and applicable worktree or branch. Sidebar page, project,
-  worktree and branch selections navigate within the active tab. Only explicitly choosing
-  another tab activates it; multiple tabs may show the same target independently.
-  Labels follow the current page and target. The header plus button opens the current
-  page location in a new tab with fresh detail state. Selecting a different project
-  opens that project's default review page within the current tab.
-  Each open tab retains its sidebar and current view state when switching tabs, including
-  expanded folders, selected files, nested test tabs, drafts and scroll positions. Navigating
-  away from a page may release its detail state; there is no per-tab navigation history.
-  Hidden tabs suspend subscriptions and refresh when reactivated. Closing a tab releases
-  its state. Closing the active tab selects the preceding tab, or the next tab when
-  closing the first; closing an inactive tab preserves the active tab. The last tab stays open. Closing never stops execution or disconnects a project.
-  Tabs and page locations are session-only; reload or application restart resets the strip.
-  Pinning, reordering and complete UI-state persistence are not supported.
+- The shared app header always provides the sidebar toggle, the current page's title
+  or navigation and actions, and Problems, in exactly one row at every viewport.
+  Worktree review tabs and test execution actions appear there. Container, Tests, File Viewer, Git Graph, Dependencies,
+  Project settings and global Settings use the same header space. Settings form save
+  and draft-recovery actions appear in the header; section-specific controls remain
+  with their owning section. File-level navigation remains with the selected content;
+  Git Graph keeps its built-in branch/search controls within the graph while
+  Refresh uses the app header. The viewer has no Uncommitted, Merge, PR or Fetch
+  action; agents own Git writes and publication through host tools and retained backend
+  workflows, as described in [Git operations](git.md). See [header layout](frontend.md).
+- There is one current project/page, without workspace tabs or New/Close tab actions.
+  Sidebar project, page, worktree and branch selections update that destination.
+  Choosing another project opens its default review page. Browser Back/Forward
+  restores connected destinations; reload restores the current location, without
+  drafts or detailed view state. Repeated selection adds no duplicate history entry,
+  and navigating after Back discards forward entries. File selections, review subtabs
+  and scrolling do not add history entries. Leaving a page may release its state;
+  hidden workspace tabs do not retain drafts, DOM or subscriptions.
+- The sidebar starts open at widths of 1100 CSS pixels or more and collapsed below
+  that width. Crossing this breakpoint updates its open state. The shared header's
+  toggle remains available; below 768 CSS pixels it opens the mobile drawer.
+  Full, Half View and Mobile keep the header on one row, with fixed sidebar/Problems
+  controls and independent navigation/action scrolling only as a fallback. Remove
+  low-value controls before crowding the header. Half View reserves the content width
+  for the current page instead of a permanent sidebar; verify it at 800px alongside
+  Full at 1920px and Mobile at 390px or 414px.
+- Worktree display options appear on hover anywhere in the Worktrees section, on
+  keyboard focus, while the menu is open, and for non-hover input.
 - Settings sections and actions can depend on available API capabilities. The MCP
   approval preference shown here does not imply a separate approval-inbox page.
 

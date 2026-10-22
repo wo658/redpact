@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+import { isOnScreen } from "../app"
 import { node } from "../target"
 
 // 격리된 테스트 앱 origin에서 실제 Clipboard와 Web Crypto API를 검증한다.
@@ -9,7 +10,7 @@ test.use({
   },
 })
 
-test("머지 충돌에서 해결 요청을 확인하고 복사한다", async ({ page, request }) => {
+test("충돌 가능한 워크트리에서도 Git 쓰기 UI 없이 diff만 탐색한다", async ({ page, request }) => {
   const fixtureRoot = await node<string>(`
     import {execFileSync} from 'node:child_process';
     import {mkdtempSync,writeFileSync} from 'node:fs';
@@ -50,21 +51,20 @@ test("머지 충돌에서 해결 요청을 확인하고 복사한다", async ({ 
     localStorage.setItem("redpact:language", "en")
   }, project.id)
   await page.goto("/")
-  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], {
-    origin: new URL(page.url()).origin,
+  const navigation = page.getByRole("navigation", { name: "Worktrees", exact: true })
+  if (!(await isOnScreen(navigation))) {
+    await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+  }
+  const mutations: string[] = []
+  page.on("request", (value) => {
+    if (value.method() === "POST" && /\/git\/|\/merge/.test(value.url())) {
+      mutations.push(value.url())
+    }
   })
-  await test.step("feature worktree에서 Merge를 실행해 충돌 결과를 연다", async () => {
-    await page.getByText("feature", { exact: true }).first().click()
-    await page.getByRole("button", { name: "Merge", exact: true }).click()
-    await expect(page.getByRole("heading", { name: "Resolve merge issue" })).toBeVisible()
-  })
-  await test.step("공통 복사 shell이 본문과 상세 Git 출력을 유지한다", async () => {
-    await expect(page.locator("pre").filter({ hasText: "Resolve Redpact merge" })).toBeVisible()
-    await page.getByRole("button", { name: "Copy", exact: true }).click()
-    await expect(page.getByRole("button", { name: "Copied", exact: true })).toBeVisible()
-    await page.getByRole("button", { name: "Git output", exact: true }).click()
-    await expect(page.locator('[data-slot="collapsible-content"] pre')).toContainText(
-      "Auto-merging file.txt",
-    )
-  })
+  await navigation.getByRole("button", { name: "feature", exact: true }).click()
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("tab", { name: "Diff", exact: true })).toBeVisible()
+  await expect(page.getByRole("treeitem", { name: "file.txt", exact: true })).toBeVisible()
+  await expect(page.getByRole("button", { name: /Merge|Uncommitted|Pull request/ })).toHaveCount(0)
+  expect(mutations, "탐색은 Git 변경 요청을 만들지 않는다").toEqual([])
 })

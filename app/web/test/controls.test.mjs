@@ -481,7 +481,8 @@ test("마지막 프로젝트를 연결 해제한 뒤에도 관리 화면에서 �
   await user.click(await within(dialog).findByRole("button", { name: "Reconnect", exact: true }))
   await user.click(within(dialog).getByRole("tab", { name: "Connected", exact: true }))
   await user.click(await within(dialog).findByRole("button", { name: "Open", exact: true }))
-  assert.ok(await screen.findByRole("tab", { name: "Only project / Worktrees", exact: true }))
+  assert.ok(await screen.findByRole("button", { name: "Only project", exact: true }))
+  assert.ok(document.querySelector(".app-header"))
   assert.equal(project.disconnectedAt, undefined)
 })
 
@@ -577,11 +578,14 @@ test("웹 데스크톱은 사이드바를 접고 펼친 뒤 프로젝트 설정�
   const user = userEvent.setup({ document })
   const view = render(createElement(ProjectManager, { api, initialProjects: [project] }))
   const sidebar = view.container.querySelector('[data-slot="sidebar"]')
-  assert.equal(sidebar.dataset.state, "expanded")
+  const initialState = sidebar.dataset.state
   await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
-  assert.equal(sidebar.dataset.state, "collapsed")
+  assert.notEqual(sidebar.dataset.state, initialState)
   await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
-  assert.equal(sidebar.dataset.state, "expanded")
+  assert.equal(sidebar.dataset.state, initialState)
+  if (sidebar.dataset.state === "collapsed") {
+    await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
+  }
   await user.click(screen.getByRole("button", { name: project.name, exact: true }))
   await user.click(await screen.findByRole("menuitemradio", { name: "Actual project" }))
   assert.equal(view.container.querySelector('[data-slot="sidebar"]').dataset.state, "expanded")
@@ -592,7 +596,7 @@ test("웹 데스크톱은 사이드바를 접고 펼친 뒤 프로젝트 설정�
   assert.equal(screen.queryByLabelText("Work intent"), null)
 })
 
-test("웹 헤더는 열린 작업공간 탭을 제공하고 페이지 선택은 현재 화면으로 전환한다", async () => {
+test("웹 공용 헤더는 페이지 제목과 사이드바 토글을 제공한다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const project = { id: "p1", name: "Actual project", location: { kind: "git" } }
@@ -608,15 +612,19 @@ test("웹 헤더는 열린 작업공간 탭을 제공하고 페이지 선택은 
   assert.equal(screen.queryByRole("button", { name: "Go forward" }), null)
   await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
   assert.ok(screen.getByRole("heading", { name: "Settings", level: 1 }))
-  assert.ok(screen.getByRole("tab", { name: "Actual project / Settings", exact: true }))
+  const header = view.container.querySelector(".app-header")
+  assert.ok(header.contains(screen.getByRole("heading", { name: "Settings", level: 1 })))
+  assert.equal(screen.queryByRole("tablist", { name: "Open workspaces" }), null)
   await user.click(screen.getByRole("button", { name: "Project settings", exact: true }))
   assert.ok(await screen.findByRole("combobox", { name: "Main branch" }))
+  const sidebar = view.container.querySelector('[data-slot="sidebar"]')
+  const initialState = sidebar.dataset.state
   await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
-  assert.equal(view.container.querySelector('[data-slot="sidebar"]').dataset.state, "collapsed")
-  assert.ok(screen.getByRole("button", { name: "Toggle Sidebar" }))
+  assert.notEqual(sidebar.dataset.state, initialState)
+  assert.ok(header.contains(screen.getByRole("button", { name: "Toggle Sidebar" })))
 })
 
-test("워크트리 탭은 Merge와 같은 본문 줄에 표시되고 키보드 전환과 화면 왕복을 지원한다", async () => {
+test("워크트리 탭은 Git 쓰기 액션 없이 공용 헤더에서 키보드 전환과 화면 왕복을 지원한다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const { sampleApi } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
@@ -644,19 +652,17 @@ test("워크트리 탭은 Merge와 같은 본문 줄에 표시되고 키보드 �
   )
   const diff = await screen.findByRole("tab", { name: "Diff", exact: true })
   const header = view.container.querySelector(".app-header")
-  assert.equal(header.contains(diff), false, "제목 헤더에는 리뷰 탭이 없어야 한다")
+  assert.equal(header.contains(diff), true, "공용 헤더가 리뷰 탭을 소유한다")
   const toolbar = diff.closest('[data-slot="review-toolbar"]')
-  assert.ok(toolbar, "리뷰 탭은 본문 도구 모음에 있어야 한다")
-  assert.ok(
-    toolbar.contains(screen.getByRole("button", { name: "Merge", exact: true })),
-    "탭과 Merge는 같은 도구 모음에 있어야 한다",
-  )
+  assert.ok(toolbar, "리뷰 탭은 공용 헤더 도구 모음에 있어야 한다")
+  assert.equal(Boolean(screen.queryByRole("button", { name: "Merge", exact: true })), false)
+  assert.equal(Boolean(screen.queryByRole("button", { name: /Uncommitted|Pull request/ })), false)
   for (const action of toolbar.querySelectorAll('[data-slot="button"]')) {
     assert.ok(action.classList.contains("rounded-full"), "리뷰 액션은 탭과 같은 둥근 형태여야 한다")
     assert.ok(action.classList.contains("h-7"), "리뷰 액션은 탭과 같은 높이여야 한다")
     assert.ok(action.classList.contains("text-xs"), "리뷰 액션은 작은 글자 크기를 사용해야 한다")
   }
-  assert.equal(screen.getAllByRole("tablist").length, 2)
+  assert.equal(screen.getAllByRole("tablist").length, 1)
   assert.deepEqual(
     Array.from(toolbar.querySelectorAll('[role="tab"]'), (tab) => tab.textContent),
     ["Diff", "Playwright", "Unit Test", "Integration Test", "Log", "Environment"],
@@ -675,7 +681,10 @@ test("워크트리 탭은 Merge와 같은 본문 줄에 표시되고 키보드 �
   await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
   assert.ok(toolbar.contains(screen.getByRole("tab", { name: "Diff", exact: true })))
   await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
-  assert.ok(header.querySelector('[role="tablist"]'))
+  assert.equal(header.querySelector('[role="tablist"]'), null)
+  assert.ok(header.querySelector("h1"))
+  await user.click(screen.getByRole("button", { name: "feature/components", exact: true }))
+  assert.ok(header.contains(await screen.findByRole("tab", { name: "Diff", exact: true })))
 })
 
 test("실행 결과에서 저장된 소스를 열고 돌아올 수 있다", async () => {
@@ -724,7 +733,7 @@ test("실행 결과에서 저장된 소스를 열고 돌아올 수 있다", asyn
   assert.ok(screen.getByText(/expected 422, received 201/))
 })
 
-test("사이드바 이동은 현재 탭을 바꾸고 명시적으로 연 탭만 닫는다", async () => {
+test("사이드바 이동은 단일 작업 화면을 바꾸고 선택한 워크트리의 기록을 유지한다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
@@ -745,22 +754,14 @@ test("사이드바 이동은 현재 탭을 바꾸고 명시적으로 연 탭만 
       initialProjects: [project],
     }),
   )
-  const tabs = () => within(screen.getByRole("tablist", { name: "Open workspaces" }))
   await screen.findByRole("button", { name: "feature/second", exact: true })
-  const location = tabs().getByRole("tab", {
-    name: "Redpact example / Worktrees",
-    exact: true,
-  })
-  assert.equal(location.title, "Redpact example / Worktrees")
-  assert.match(location.textContent, /Worktrees$/)
-  await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
-  assert.equal(tabs().getAllByRole("tab").length, 2)
   await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
+  assert.ok(screen.getByRole("heading", { name: "Settings", exact: true }))
   await user.click(screen.getByRole("button", { name: "feature/second", exact: true }))
-  await waitFor(() => assert.equal(tabs().getAllByRole("tab").length, 2))
-  assert.equal(tabs().getAllByRole("tab")[1].getAttribute("aria-selected"), "true")
-  await user.click(tabs().getAllByRole("button", { name: /Close / })[1])
-  assert.equal(tabs().getAllByRole("tab").length, 1)
+  assert.equal(window.history.state.redpactWorkspace.worktreeId, "second-worktree")
+  assert.equal(window.history.state.redpactWorkspace.view.page, "review")
+  assert.equal(screen.queryByRole("heading", { name: "Settings", exact: true }), null)
+  assert.equal(screen.queryByRole("tablist", { name: "Open workspaces" }), null)
   assert.ok(screen.getByRole("button", { name: "feature/second", exact: true }))
 })
 
@@ -1186,8 +1187,11 @@ test("review navigation uses text-only labels and preserves keyboard selection",
   }
   await user.click(screen.getByRole("tab", { name: "Playwright" }))
   const mobile = await screen.findByRole("switch", { name: "Mobile" })
-  const toolbar = mobile.closest('[data-slot="review-toolbar"]')
-  assert.ok(toolbar, "Mobile belongs in the review header")
+  const toolbar = screen
+    .getByRole("tab", { name: "Playwright" })
+    .closest('[data-slot="review-toolbar"]')
+  assert.ok(mobile.closest('[data-slot="capture-toolbar"]'), "Mobile은 캡처 뷰어 안에 있어야 한다")
+  assert.equal(toolbar.contains(mobile), false)
   assert.ok(toolbar.contains(screen.getByRole("button", { name: "Run Playwright" })))
   await user.click(mobile)
   await user.click(screen.getByRole("tab", { name: "Diff" }))
@@ -2138,8 +2142,9 @@ test("dependency 도움말은 기본적으로 숨겨지고 클릭으로 열고 �
   const help = screen.getByRole("button", {
     name: "About fixed dependencies and environment overrides",
   })
-  assert.ok(help.parentElement === tabs.parentElement, "Help shares the view navigation row")
-  assert.ok(tabs.parentElement.classList.contains("items-center"))
+  const toolbar = tabs.closest('[data-slot="review-toolbar"]')
+  assert.ok(toolbar.contains(help), "도움말과 탐색은 같은 도구 모음에 있어야 한다")
+  assert.ok(toolbar.classList.contains("items-center"))
   assert.equal(screen.queryAllByRole("dialog").length, 0)
   const user = userEvent.setup({ document })
   await user.click(
@@ -2519,7 +2524,7 @@ test("unit view browses added source but runs the whole configured command witho
   await screen.findByText(sourceLine("assert 1 == 1"))
   const user = userEvent.setup({ document })
   await user.click(screen.getByRole("button", { name: "Run Unit command" }))
-  assert.deepEqual(calls, [["w1", undefined]])
+  assert.deepEqual(calls, [["w1"]])
   assert.equal(screen.queryByRole("button", { name: "Cancel command" }), null)
   assert.equal(screen.getByRole("button", { name: "Run Unit command" }).disabled, true)
 })
@@ -3237,101 +3242,49 @@ test("백그라운드 오류는 화면을 차지하지 않고 문제 목록에�
   assert.ok(await screen.findByRole("button", { name: "Problems (0)" }))
 })
 
-for (const outcome of ["merged", "conflict", "dirty", "target-dirty", "error"]) {
-  test(`머지 버튼은 ${outcome} 결과에 맞게 바로 실행하거나 문제 모달을 연다`, async () => {
-    const { WorktreeReview } = await server.ssrLoadModule("/src/components/worktree-review.tsx")
-    await i18n.changeLanguage("en")
-    const user = userEvent.setup({ document })
-    const empty = {
-      available: true,
-      patch:
-        "diff --git a/readme.txt b/readme.txt\n--- a/readme.txt\n+++ b/readme.txt\n@@ -1 +1 @@\n-old\n+new\n",
-      omitted: [],
-    }
-    const source = {
-      root: "/feature",
-      branch: "feature",
-      revision: "source",
-      files: [],
-      dirty: outcome === "dirty",
-      blockedReason: null,
-      staged: empty,
-      unstaged: empty,
-    }
-    const record = {
-      id: "result",
-      state: outcome,
-      sourceHead: "abc",
-      targetHead: "def",
-      sourceBranch: "feature",
-      targetBranch: "main",
-      createdAt: "2026-09-10T00:00:00Z",
-      conflicts: [],
-      output: "",
-      resolutionRequest: "Resolve this conflict",
-    }
-    let merged = 0
-    render(
-      createElement(WorktreeReview, {
-        worktreeId: "feature",
-        api: {
-          gitDiff: async () => ({
-            available: true,
-            patch:
-              "diff --git a/readme.txt b/readme.txt\n--- a/readme.txt\n+++ b/readme.txt\n@@ -1 +1 @@\n-old\n+new\n",
-            omitted: [],
-          }),
-          mergeInspection: async () => ({
-            source,
-            target: { ...source, dirty: outcome === "target-dirty", revision: "target" },
-            targetBranch: "main",
-            blockedReason:
-              {
-                dirty: "Commit or discard all uncommitted changes before merging",
-                "target-dirty":
-                  "The target worktree has uncommitted changes; organize them there first",
-              }[outcome] ?? null,
-            records: merged && outcome !== "error" ? [record] : [],
-          }),
-          mergeWorktree: async () => {
-            merged++
-            if (outcome === "error") {
-              throw new Error("Connection failed")
-            }
-            return record
-          },
+test("워크트리 리뷰는 Git 쓰기 액션이나 머지 사전 조회 없이 diff를 읽는다", async () => {
+  const { WorktreeReview } = await server.ssrLoadModule("/src/components/worktree-review.tsx")
+  await i18n.changeLanguage("en")
+  let inspections = 0
+  let mutations = 0
+  render(
+    createElement(WorktreeReview, {
+      worktreeId: "feature",
+      api: {
+        reviewContent: async () => ({
+          changes: true,
+          preview: false,
+          unit: false,
+          tests: false,
+          log: false,
+          environment: false,
+        }),
+        gitDiff: async () => ({
+          available: true,
+          patch:
+            "diff --git a/readme.txt b/readme.txt\n--- a/readme.txt\n+++ b/readme.txt\n@@ -1 +1 @@\n-old\n+new\n",
+          omitted: [],
+        }),
+        mergeInspection: async () => {
+          inspections++
+          throw new Error("Unused Git inspection")
         },
-      }),
-    )
-    if (source.dirty) {
-      await screen.findByRole("button", { name: /Uncommitted/ })
-    } else {
-      await waitFor(() => assert.equal(screen.queryByRole("button", { name: /Uncommitted/ }), null))
-    }
-    assert.equal(screen.queryByRole("dialog"), null)
-    await user.click(screen.getByRole("button", { name: "Merge", exact: true }))
-    if (outcome === "merged") {
-      await waitFor(() => assert.equal(merged, 1))
-      assert.equal(screen.queryByRole("dialog"), null)
-      assert.ok(screen.getByRole("tab", { name: "Diff" }))
-    } else {
-      const dialog = await screen.findByRole("dialog", { name: "Worktree merge" })
-      assert.equal(merged, outcome === "dirty" || outcome === "target-dirty" ? 0 : 1)
-      assert.match(
-        dialog.textContent,
-        {
-          dirty: /Commit or discard/,
-          "target-dirty": /target worktree/,
-          error: /Connection failed/,
-          conflict: /Resolve merge issue/,
-        }[outcome],
-      )
-      await user.click(screen.getByRole("button", { name: "Close", exact: true }))
-      await waitFor(() => assert.ok(screen.queryByRole("dialog") === null, "Dialog should close"))
-      assert.ok(screen.getByRole("tab", { name: "Diff" }))
-    }
-  })
-}
+        mergeWorktree: async () => {
+          mutations++
+          throw new Error("Unused Git mutation")
+        },
+      },
+    }),
+  )
+  await screen.findByRole("tab", { name: "Diff", exact: true })
+  await screen.findByRole("treeitem", { name: "readme.txt", exact: true })
+  assert.equal(
+    Boolean(screen.queryByRole("button", { name: /Merge|Uncommitted|Pull request/ })),
+    false,
+  )
+  assert.equal(inspections, 0)
+  assert.equal(mutations, 0)
+})
 
 test("복구 handoff는 상태와 보존된 진단을 복사 가능한 하나의 맥락으로 만든다", async () => {
   const { formatHandoffContext } = await server.ssrLoadModule("/src/components/copy-handoff.tsx")
@@ -4123,7 +4076,7 @@ test("프로젝트 Playwright 헤더에서 대상을 고른 뒤에만 테스트�
     within(screen.getByRole("dialog")).getByRole("button", { name: "Run Playwright" }),
   )
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", undefined, "functional", undefined])
+  assert.deepEqual(calls[0], ["w", undefined, "functional"])
   assert.ok(screen.getByRole("dialog"))
   // Exercise a failed poll before completion without inspecting the DOM's React fiber graph.
   const closed = waitFor(() =>
@@ -5140,7 +5093,7 @@ test("워크트리 캡처는 기본 FHD 16:9 해상도로 실행한다", async (
   await waitFor(() => assert.equal(button.disabled, false))
   await userEvent.setup().click(button)
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", { width: 1920, height: 1080 }, "captures", undefined])
+  assert.deepEqual(calls[0], ["w", { width: 1920, height: 1080 }, "captures"])
   await screen.findByText("Stopped after recording request")
 })
 
@@ -5912,7 +5865,7 @@ test("UI 리뷰는 모바일 모드 토글로 저장된 모바일과 데스크�
   assert.equal(screen.queryByAltText("desktop-shot"), null)
   await user.click(screen.getByRole("button", { name: "Run Playwright" }))
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "captures", undefined])
+  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "captures"])
   await user.click(mobileMode)
   assert.equal(mobileMode.getAttribute("aria-checked"), "false")
   await screen.findByAltText("desktop-shot")
@@ -6490,7 +6443,7 @@ test("한 실행의 캡처를 실제 viewport로 분류하고 이름과 실행 �
   assert.equal(screen.queryByAltText("desktop-shot"), null)
   await user.click(screen.getByRole("button", { name: "Run Playwright" }))
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "captures", undefined])
+  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "captures"])
   await user.click(mobileMode)
   assert.equal(mobileMode.getAttribute("aria-checked"), "false")
   await screen.findByAltText("desktop-shot")
@@ -6755,7 +6708,7 @@ test("캡처 소스는 실행 전에도 파일 선택과 실행 대상으로 남
   assert.equal(run.disabled, false)
   await user.click(run)
   await waitFor(() => assert.equal(calls.length, 1))
-  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "screens", undefined])
+  assert.deepEqual(calls[0], ["w", { width: 390, height: 844 }, "screens"])
 })
 
 test("공유 파일 뷰어가 SVG 미리보기·원본 전환과 PNG·ICO 오류를 동일하게 제공한다", async () => {
@@ -6920,32 +6873,32 @@ test("사이드바 하단에 설정과 안전한 브라우저 GitHub 링크를 �
   assert.equal(settings.getAttribute("aria-current"), "page")
 })
 
-test("브라우저 방문 기록으로 메뉴와 작업공간 탭을 복원하고 새 이동은 앞으로 기록을 지운다", async () => {
+test("브라우저 방문 기록으로 현재 페이지를 복원하고 새 이동은 앞으로 기록을 지운다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
   const { sampleApi, project } = await server.ssrLoadModule("/test/workspace-fixture.mjs")
   render(createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }))
   const user = userEvent.setup({ document })
   await user.click(screen.getByRole("button", { name: "Settings", exact: true }))
-  const firstTab = window.history.state.redpactWorkspace.id
-  await user.click(screen.getByRole("button", { name: "New tab", exact: true }))
-  assert.ok(screen.getByRole("heading", { name: "Settings", exact: true }))
-  const secondTab = window.history.state.redpactWorkspace.id
+  await user.click(screen.getByRole("button", { name: "Project settings", exact: true }))
+  assert.ok(await screen.findByRole("heading", { name: "Project settings", exact: true }))
   window.history.back()
-  await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, firstTab))
   await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
   window.history.forward()
-  await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, secondTab))
+  await waitFor(() =>
+    assert.ok(screen.getByRole("heading", { name: "Project settings", exact: true })),
+  )
   window.history.back()
-  await waitFor(() => assert.equal(window.history.state.redpactWorkspace.id, firstTab))
   await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Settings", exact: true })))
-  await user.click(screen.getByRole("button", { name: "Project settings", exact: true }))
-  await screen.findByRole("combobox", { name: "Main branch" })
+  await user.click(screen.getByRole("button", { name: "File Viewer", exact: true }))
+  await screen.findByRole("heading", { name: "File Viewer", exact: true })
   const state = window.history.state
   window.history.forward()
   await new Promise((resolve) => setTimeout(resolve, 30))
   assert.deepEqual(window.history.state, state)
-  assert.ok(screen.getByRole("combobox", { name: "Main branch" }))
+  assert.ok(screen.getByRole("heading", { name: "File Viewer", exact: true }))
+  assert.equal(screen.queryByRole("tablist", { name: "Open workspaces" }), null)
+  assert.equal(screen.queryByRole("button", { name: "New tab" }), null)
 })
 
 test("선택 소스는 늦은 성공과 오류 응답을 버리고 현재 파일만 표시한다", async () => {
@@ -6992,7 +6945,7 @@ test("선택 소스는 늦은 성공과 오류 응답을 버리고 현재 파일
   assert.ok(screen.getByText("LATEST_SOURCE"))
 })
 
-test("변경 Unit 실행이 거절되어도 전체 범위로 전환해 다시 실행한다", async () => {
+test("Unit 실행은 범위 선택 없이 공유 기본값을 요청하고 거절 후 다시 실행한다", async () => {
   await i18n.changeLanguage("en")
   const { UnitTests } = await server.ssrLoadModule("/src/components/unit-tests.tsx")
   const calls = []
@@ -7002,12 +6955,24 @@ test("변경 Unit 실행이 거절되어도 전체 범위로 전환해 다시 �
       worktreeId: "w",
       api: {
         unitTests: async () => ({ settings, catalog: { files: [], diagnostics: [] }, runs: [] }),
-        runUnitTests: async (_id, executionScope) => {
-          calls.push(executionScope)
-          if (executionScope === "changed") {
-            throw new Error("No tests selected")
+        runUnitTests: async (...args) => {
+          calls.push(args)
+          if (calls.length === 1) {
+            throw new Error("Request unavailable")
           }
-          return { id: "all-run", settings, state: "running", stdout: "", stderr: "" }
+          return {
+            id: "default-run",
+            worktreeId: "w",
+            settings,
+            state: "finished",
+            outcome: "command_succeeded",
+            exitCode: 0,
+            createdAt: "2026-10-23T00:00:00Z",
+            finishedAt: "2026-10-23T00:00:01Z",
+            stdout: "default run",
+            stderr: "",
+            cleanup: { state: "removed", error: null },
+          }
         },
       },
     }),
@@ -7017,15 +6982,13 @@ test("변경 Unit 실행이 거절되어도 전체 범위로 전환해 다시 �
     assert.equal(screen.getByRole("button", { name: "Run Unit command" }).disabled, false),
   )
   const run = screen.getByRole("button", { name: "Run Unit command" })
-  await user.click(screen.getByRole("combobox", { name: "Execution scope" }))
-  await user.click(await screen.findByRole("option", { name: "Changed tests", exact: true }))
+  assert.equal(Boolean(screen.queryByRole("combobox", { name: "Execution scope" })), false)
   await user.click(run)
-  await waitFor(() => assert.deepEqual(calls, ["changed"]))
-  await user.click(screen.getByRole("combobox", { name: "Execution scope" }))
-  await user.click(await screen.findByRole("option", { name: "All tests", exact: true }))
-  assert.equal(run.disabled, false, "거절된 요청 때문에 전체 실행이 잠기면 안 된다")
+  await waitFor(() => assert.equal(calls.length, 1))
+  assert.equal(run.disabled, false, "거절된 요청으로 이후 실행이 잠기지 않는다")
   await user.click(run)
-  await waitFor(() => assert.deepEqual(calls, ["changed", "all"]))
+  await waitFor(() => assert.equal(calls.length, 2))
+  assert.deepEqual(calls, [["w"], ["w"]], "공유 기본값을 재정의하는 요청을 보내지 않는다")
 })
 
 test("Settings의 Git 추적 설정은 숨겨진 선택을 지우고 다시 열어도 유지된다", async () => {

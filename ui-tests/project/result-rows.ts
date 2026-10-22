@@ -38,7 +38,7 @@ async function recordedFixture(page: Page) {
   )
   expect(submission.status).toBe(201)
   await page.goto("/")
-  await expect(page.getByRole("tablist", { name: "Open workspaces", exact: true })).toBeVisible()
+  await expect(page.locator(".app-header:visible")).toBeVisible()
   const viewport = page.viewportSize()!
   const pictures = []
   for (const width of [1280, 390]) {

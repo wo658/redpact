@@ -1,4 +1,5 @@
 import type { Expect, Page } from "@playwright/test"
+import { node } from "./target"
 
 export async function verifyProblems(page: Page, expect: Expect, width: number) {
   await page.setViewportSize({ width, height: 900 })
@@ -22,22 +23,18 @@ export async function verifyProblems(page: Page, expect: Expect, width: number) 
   }
   const content = page.locator('input[name="playwright.service"]:visible')
   await expect(content).toHaveValue("app")
-  const tabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
-  await expect(tabs).toBeVisible()
+  await expect(page.locator(".app-header:visible")).toBeVisible()
   await expect(page.getByRole("button", { name: "Problems (0)", exact: true })).toBeVisible()
-  const original = await tabs.getByRole("tab").first().getAttribute("aria-label")
-  if (!original) {
-    throw new Error("열린 프로젝트 탭의 접근 가능한 이름이 필요합니다")
-  }
-  // 실제 앱의 유지된 탭을 재활성화하여 새로고침 요청만 실패시킨다.
-  const newTabLoaded = page.waitForResponse(
-    (response) => /\/api\/projects\/[^/]+\/worktrees$/.test(response.url()) && response.ok(),
-  )
-  await page.getByRole("button", { name: "New tab", exact: true }).click()
-  await newTabLoaded
-  await expect(tabs.getByRole("tab")).toHaveCount(2)
   fail = true
-  await tabs.getByRole("tab", { name: original, exact: true }).first().click()
+  // 실제 파일 관찰로 백그라운드 새로고침만 실패시킨다.
+  const failed = page.waitForResponse(
+    (response) =>
+      /\/api\/projects\/[^/]+\/worktrees$/.test(response.url()) && response.status() === 503,
+  )
+  await node(
+    `import {writeFileSync} from 'node:fs'; writeFileSync('/app/problems-refresh.txt',String(Date.now())); console.log('null');`,
+  )
+  await failed
   const problems = page.getByRole("button", { name: "Problems (1)", exact: true })
   await expect(problems).toBeVisible()
   await expect(content).toHaveValue("app")
@@ -57,9 +54,14 @@ export async function verifyProblems(page: Page, expect: Expect, width: number) 
       await page.keyboard.press("Escape")
       await expect(problems).toHaveCount(0)
       await expect(page.getByRole("button", { name: "Problems (0)", exact: true })).toBeFocused()
-      // 새 요청이 성공하는지 실제 탭 탐색으로 확인한다.
-      await tabs.getByRole("tab").last().click()
-      await tabs.getByRole("tab").first().click()
+      // 실제 파일 관찰로 성공한 새로고침을 다시 확인한다.
+      const refreshed = page.waitForResponse(
+        (response) => /\/api\/projects\/[^/]+\/worktrees$/.test(response.url()) && response.ok(),
+      )
+      await node(
+        `import {rmSync} from 'node:fs'; rmSync('/app/problems-refresh.txt',{force:true}); console.log('null');`,
+      )
+      await refreshed
       await expect(page.getByRole("button", { name: "Problems (0)", exact: true })).toBeVisible()
     },
   }

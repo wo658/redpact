@@ -9,6 +9,7 @@ import { EmptyState, Loading, Notice } from "./feedback"
 import { FileContent } from "./file-content"
 import { FileIcon } from "./file-icon"
 import { useLiveRevision } from "./live-updates"
+import { ReviewToolbar } from "./review-toolbar"
 import { Button } from "./ui/button"
 import "@/locales"
 
@@ -123,15 +124,18 @@ function FilteredProjectFiles({
   useRefreshRequest(read, revision, attempt)
   const displayedSelection = trackedOnly && error && !preview ? "" : selected
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-      {error && (
-        <>
-          <Notice error>{error}</Notice>
-          <Button variant="ghost" size="sm" onClick={() => setAttempt((value) => value + 1)}>
-            {t("Retry")}
-          </Button>
-        </>
-      )}
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <ReviewToolbar
+        navigation={<h1 className="text-sm font-medium">{t("File Viewer")}</h1>}
+        actions={
+          error ? (
+            <Button variant="ghost" size="toolbar" onClick={() => setAttempt((value) => value + 1)}>
+              {t("Retry")}
+            </Button>
+          ) : undefined
+        }
+      />
+      {error && <Notice error>{error}</Notice>}
       <div
         style={{ containerType: "inline-size", containerName: "workspace" }}
         className="min-h-0 flex-1 overflow-hidden"

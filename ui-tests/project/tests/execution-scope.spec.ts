@@ -16,7 +16,7 @@ for (const width of [1920, 414]) {
         width,
       )
     })
-    await test.step("실제 Unit 실행 컨트롤에서 전체 범위로 재정의한다", async () => {
+    await test.step("Unit 실행 컨트롤은 범위 선택 없이 공유 기본값을 요청한다", async () => {
       await page.goto("/")
       if (width < 768) {
         await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
@@ -37,18 +37,9 @@ for (const width of [1920, 414]) {
       await node(
         `import {execFileSync} from 'node:child_process';execFileSync('git',['-C',${JSON.stringify(fixture.path)},'restore','unit/a.test.ts']);console.log('null');`,
       )
-      await page.getByRole("combobox", { name: "Execution scope", exact: true }).click()
-      await page.getByRole("option", { name: "Changed tests", exact: true }).click()
-      const rejected = page.waitForResponse(
-        (response) =>
-          response.url().includes("/unit-tests/run") && response.request().method() === "POST",
-      )
-      await page.getByRole("button", { name: "Run Unit command", exact: true }).click()
-      const rejection = await rejected
-      expect(rejection.status()).toBe(400)
-      expect(await rejection.text()).toContain("No tests selected")
-      await page.getByRole("combobox", { name: "Execution scope", exact: true }).click()
-      await page.getByRole("option", { name: "All tests", exact: true }).click()
+      await expect(
+        page.getByRole("combobox", { name: "Execution scope", exact: true }),
+      ).toHaveCount(0)
       await expect(
         page.getByRole("button", { name: "Run Unit command", exact: true }),
       ).toBeEnabled()
@@ -59,7 +50,7 @@ for (const width of [1920, 414]) {
       await page.getByRole("button", { name: "Run Unit command", exact: true }).click()
       const result = await response
       expect(result.status()).toBe(200)
-      expect(result.request().postDataJSON()).toEqual({ executionScope: "all" })
+      expect(result.request().postDataJSON()).toEqual({})
       expect((await result.json()).executionSelection.files).toEqual([
         "unit/a.test.ts",
         "unit/b.test.ts",

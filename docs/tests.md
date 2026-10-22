@@ -164,9 +164,14 @@ rendered UI, say so when requesting functional evidence only.
 
 ## Finish a task without losing evidence
 
-Both Playwright scopes retain executed scenario sources and artifacts. Worktree drafts remain editable during the task. Once the final draft has been executed and resource cleanup has completed, use **Clean up worktree code** in Playwright to remove the recorded draft subtree.
+Both Playwright scopes retain executed scenario sources and artifacts. Worktree drafts
+remain editable during the task. After the final recorded execution and resource cleanup,
+ask the agent to perform the explicit [draft cleanup operation](execution.md#playwright-evidence).
+The viewer has no draft-cleanup button. Successful runs and merges do not automatically
+remove drafts; retained evidence remains available.
 
-Cleanup refuses active execution, unrecorded new or edited drafts, changed configuration and unsafe paths. Inspect any refusal and record intended changes before retrying. Successful runs and merges do not automatically remove drafts. Draft cleanup preserves history. Maintaining a scenario long-term requires explicitly moving it into `project` and updating imports or target matches as needed.
+Maintaining a scenario long-term requires explicitly moving it into `project` and updating
+imports or target matches as needed.
 
 Continue to [results and screenshots](results.md), [troubleshooting](troubleshooting.md), or the [documentation overview](index.md).
 

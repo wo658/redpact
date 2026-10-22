@@ -20,14 +20,21 @@ for lifecycle, access boundaries, size limits and host verification requirements
 
 ## Full app and chat results
 
-The standalone browser and Global App Page use the full management app: project/worktree navigation, files and diffs, Git, test catalogs, environments, dependencies, and project/global settings. Opening the app without a record restores normal project navigation or the connect-project screen.
+The GPT-embedded viewer is the primary experience for following agent work,
+reviewing evidence, approving execution and managing test environments. The standalone
+browser and Global App Page share project/worktree navigation, file and Git inspection,
+test catalogs, environments, dependencies, and project/global settings. Opening the
+app without a record restores project navigation or the connect-project screen.
+Manual Git writes and publication remain agent responsibilities; the viewer has no
+Uncommitted, Merge, PR or Fetch action. See [product scope](architecture.md) and
+[Git operations](git.md).
 
 Chat MCP returns text and structured evidence with web review paths; it does not render inline cards. An exact `/?page=review&kind=unit|integration|playwright&id=<id>` link opens the recorded request or execution inside the full app. Record identity determines its worktree; current project selection cannot retarget it. Opening a link never requests a run. The linked review retains its worktree-bound history and explicit approval controls; test cancellation is not exposed.
 
 ## File Viewer Git filter
 
 **Settings → Preferences → Show Git-tracked files only** defaults off. This browser-local
-preference applies to every File Viewer tab and project on the same origin. It is saved
+preference applies to every File Viewer view and project on the same origin. It is saved
 in browser storage and survives reloads; changes also update other open browser tabs.
 If storage is unavailable, the choice remains usable for the current session. It is not
 a project execution setting. File Viewer has no separate filter control.
@@ -115,8 +122,8 @@ inference or user-configurable icon associations. Action icons continue to use L
 
 ## File content previews
 
-File Viewer, worktree review, committed branch and Git Graph comparisons, and the
-uncommitted changes dialog share image presentation. PNG, JPEG, SVG, GIF, WebP,
+File Viewer, worktree review, and committed branch and Git Graph comparisons share
+image presentation. PNG, JPEG, SVG, GIF, WebP,
 AVIF, BMP and ICO files open as images on a transparency checkerboard. Browser
 image decoding determines format support; corrupt or unsupported bytes show an
 explicit decode error. Each image is limited to 5 MiB; ordinary UTF-8 source
@@ -137,44 +144,32 @@ preview never executes project code.
 
 ## Layout and reading width
 
-The app header owns open-workspace tabs outside the rounded content frame. Workspace tabs show `Project / Sidebar page`, including `Project / Worktrees` for
-worktree or branch review. Worktree names, branch paths and nested sections are intentionally
-omitted. The same label appears in the tooltip and accessible name, including the close action.
-Sidebar navigation and browser history update the location; nested detail selections remain
-in their page toolbar. Tabs are at most 256px wide and shrink to the available strip width.
-The project uses at most 40% of the label, leaving the remaining width for the sidebar page;
-both truncate independently. Tabs use left-aligned icons, a subtle outline. The selected tab uses the theme’s accent background and a stronger
-primary-colored border in both light and dark themes; keyboard focus remains a separate ring. The adjacent plus button opens the current page location in a fresh tab and remains reachable
-when the strip scrolls horizontally. Selecting or closing a tab reveals the active tab. The
-desktop browser provides a sidebar toggle; compact mobile screens retain
-the sidebar trigger. In browser and mobile layouts, the open sidebar places this control
-beside the project selector, immediately before project display options. When closed,
-a reopening control sits at the start of the existing workspace header, beside the tabs.
-It adds no extra row above the content; tabs scroll within the remaining header width.
+The shared app header sits outside the rounded content frame and remains exactly
+one row in Full, Half View and Mobile. It always contains one sidebar toggle, the
+current page's title or navigation and actions, and Problems.
+There is no workspace-tab strip, New tab or Close tab action. The standalone browser
+and embedded App Page use the same header and one current project/page.
 
-Browser desktops use browser Back/Forward controls.
+The sidebar starts open at 1100 CSS pixels and wider, and collapsed below that width.
+Crossing this breakpoint updates its open state; the header toggle remains available
+for manual navigation. Below 768 CSS pixels, navigation uses the mobile sidebar drawer with an explicit
+Close sidebar action inside the drawer.
+Half View is a first-class design target: keep the content area available without a
+persistent sidebar. Preserve desktop gutters and full-width mobile content. Verify the
+actual application at Full (1920px), Half View (800px), and Mobile (390px or 414px),
+including desktop/mobile captures and a separate half-view capture for layout changes.
 
 Worktree display options appear while hovering anywhere in the Worktrees section,
 including its remaining space above the footer. Keyboard focus, an open options menu
 and non-hover input keep the control available.
 
-Project/worktree tab activation and sidebar page selection use the browser session history.
-Browser Back/Forward navigates across workspace tabs through the History API.
-Repeated selection adds no duplicate entry; navigating after Back discards forward entries.
-History restores the destination page and reopens a closed destination tab while its project
-is connected. Reload restores the current destination, but not drafts or other tabs. File
-selection, review subtabs and scroll changes do not add history entries.
-The sidebar remains on the canvas. Preserve desktop
-gutters, collapsed state and full-width mobile content.
-Workspace IDs are independent of project/worktree IDs. Each tab records its page and target;
-sidebar navigation updates the active tab, and labels reflect its current location. Creating a
-new tab copies that location with a fresh ID. Project/worktree changes retain the active tab ID
-and create a history destination even when its page name is unchanged. See
-[UX navigation](ux-navigation.md) for new-tab and close behavior.
-Open workspace tabs retain their React state and DOM through React Activity. Hidden tabs
-release effect subscriptions; activating a tab restarts reads without discarding its view state.
-Sidebar providers belong to each workspace tab. This retention is session-only and ends when
-the tab closes; it does not persist drafts across reloads.
+Project, worktree, branch and sidebar-page selections use browser session history.
+Browser Back/Forward restores the destination while its project is connected.
+Repeated selection adds no duplicate entry; navigating after Back discards forward
+entries. Reload restores the current destination, but not drafts or detailed view state.
+File selection, review subtabs and scroll changes do not add history entries.
+Changing the current page can release its detailed state; there are no hidden workspace
+tabs retaining React state, drafts or subscriptions. See [UX navigation](ux-navigation.md).
 
 The app owns viewport height; evidence and lists scroll in their own panels.
 Flex/grid boundaries need `min-w-0` and, for nested scrolling, `min-h-0`.
@@ -210,19 +205,37 @@ follow [Problems and background failures](#problems-and-background-failures).
 Recovery views with durable identifiers, selections or retained resources continue
 to provide their own specific `CopyHandoff` context.
 
-Only the active workspace mounts the project selector, so hidden tabs cannot retain
-its portaled menu.
-
 ## One review toolbar
 
-A page owns one `ReviewToolbar` with navigation, secondary and actions slots.
-Project Tests supplies Unit/Integration/Playwright; active Playwright supplies
-Screenshots/Tests/Runs and its execution action within the same toolbar. File-level
-Code/Results tabs remain in their file panel. Controls can wrap at narrow widths;
-navigation groups own local overflow. Worktree review keeps navigation on the left
-and actions on the right in one row, including Playwright’s Mobile and Run Playwright
-controls. Each side scrolls horizontally when needed; labels keep their normal
-font size and do not wrap.
+Each page owns one `ReviewToolbar` with navigation, secondary and actions slots. In
+the app, it renders into the shared header beside the sidebar toggle and Problems,
+rather than adding another toolbar row inside the content frame. Standalone component
+usage retains an inline toolbar. Portals preserve the page's Tabs context and action
+state; a page change removes its previous header content.
+
+Worktree review supplies its available Diff, Playwright, Unit Test, Integration Test,
+Log and Environment tabs, together with test execution actions. Project Tests
+supplies Unit/Integration/Playwright; active Playwright supplies Screenshots/Tests/Runs
+and its execution action within the same header. Container supplies its title, status
+and lifecycle actions. File Viewer and Settings supply their page titles; Dependencies
+supplies Overview/Configuration and Help. Git Graph supplies its title and Refresh.
+Its built-in branch, remote-visibility and commit-search controls remain with the graph.
+Project and instance settings place their form save and draft-recovery actions in the
+shared header; independent settings sections keep their own controls. Run controls
+use the shared execution default, with no per-run scope selector or task-draft cleanup
+action in the header. Agent overrides and explicit cleanup remain available through
+the contracts in [execution](execution.md).
+
+File names, source/diff controls and file-level Code/Results tabs remain in their file
+panels. The capture viewer's Mobile switch belongs beside the recorded screenshots,
+not in the app header; it filters stored Desktop/Mobile evidence without changing the
+source list or running tests.
+
+Keep the shared toolbar on one row at every width. Prefer removing low-value controls
+to crowding it; never add a second row or reduce label font size to make everything fit.
+Navigation and action groups independently scroll horizontally as a fallback. Labels
+do not wrap. The sidebar toggle and Problems stay fixed and reachable without
+scrolling through the page's controls.
 
 Run result panels share the execution progress strip described in
 [execution](execution.md). Active Unit and Integration phases also appear by their
@@ -269,13 +282,13 @@ the server before the application can load. A feature request returning 503 is n
 itself critical. Independent components without the app's Problems provider retain
 an inline fallback so diagnostics cannot disappear outside the shared app shell.
 
-The workspace header's **Problems** button shows the number of collected problems;
+The shared app header's **Problems** button shows the number of collected problems;
 the project connection screen also provides it. Open the list to inspect messages,
 last-seen times, observation counts and page locations, or clear it. The panel never
 opens automatically. Informational notices and user-requested recovery dialogs keep
 their existing roles.
 
-Problems are browser-session memory, shared across workspace tabs and lost on reload;
+Problems are application-wide browser-session memory and are lost on reload;
 they are not server history. Matching message/location pairs share one row. The list
 retains the latest 100 rows and at most 16,384 characters per message. Clearing it does
 not retry requests or resolve the underlying problem. Startup connection failures

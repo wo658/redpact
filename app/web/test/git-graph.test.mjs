@@ -372,7 +372,7 @@ test("모든 커밋은 클릭과 키보드 선택에도 행을 확장하지 않�
   assert.ok(root.textContent.includes("Copy Commit Hash"))
 })
 
-test("Git graph를 열 때 Fetch를 자동 실행하지 않고 Pull·Push는 제공하지 않는다", async () => {
+test("Git Graph는 읽기 전용 새로고침만 제공하고 Git 변경 액션을 표시하지 않는다", async () => {
   const { ProjectGitGraph } = await server.ssrLoadModule("/src/components/project-git-graph.tsx")
   const calls = []
   const api = createApi(async (url, init) => {
@@ -381,45 +381,11 @@ test("Git graph를 열 때 Fetch를 자동 실행하지 않고 Pull·Push는 제
   })
   render(createElement(ProjectGitGraph, { api, projectId: "p" }))
   await waitFor(() => assert.equal(document.querySelector("web-git-graph")?.data.commits.length, 1))
-  assert.ok(await screen.findByRole("button", { name: "Fetch" }))
-  for (const action of ["Pull", "Push"]) {
-    assert.equal(screen.queryByRole("button", { name: action }) === null, true)
+  assert.ok(screen.getByRole("button", { name: "Refresh", exact: true }))
+  for (const action of ["Fetch", "Pull", "Push"]) {
+    assert.equal(Boolean(screen.queryByRole("button", { name: action, exact: true })), false)
   }
   assert.ok(calls.every(({ init }) => init.method === "GET"))
-})
-
-test("Fetch 중 중복 요청을 막고 성공·실패 모두 그래프를 다시 읽는다", async () => {
-  const { ProjectGitGraph } = await server.ssrLoadModule("/src/components/project-git-graph.tsx")
-  let finish
-  let reads = 0
-  let writes = 0
-  const api = createApi(async (url) => {
-    if (url.endsWith("/git/fetch")) {
-      writes++
-      return new Promise((resolve) => {
-        finish = resolve
-      })
-    }
-    reads++
-    return Response.json(page)
-  })
-  render(createElement(ProjectGitGraph, { api, projectId: "p" }))
-  const button = await screen.findByRole("button", { name: "Fetch", exact: true })
-  fireEvent.click(button)
-  await waitFor(() => assert.equal(button.disabled, true))
-  fireEvent.click(button)
-  assert.equal(writes, 1)
-  const previousReads = reads
-  await act(async () => finish(Response.json({ remotes: ["origin"] })))
-  await screen.findByText("Fetch complete")
-  await waitFor(() => assert.ok(reads > previousReads))
-  fireEvent.click(button)
-  await act(async () =>
-    finish(Response.json({ error: "No Git remotes configured" }, { status: 400 })),
-  )
-  await screen.findByText("No Git remotes configured")
-  assert.equal(button.disabled, false)
-  assert.equal(screen.queryByText("Fetch complete"), null)
 })
 
 test("새로고침은 GET으로 새 커밋을 표시하고 읽는 동안 중복 클릭을 막는다", async () => {

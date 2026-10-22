@@ -1,13 +1,13 @@
 import type { GitGraphProvider, WebGitGraphElement } from "@web-git-graph/web"
-import { Download, RefreshCw } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
-import { createPortal } from "react-dom"
 import { useTranslation } from "react-i18next"
 import { type Api, ApiError } from "@/lib/api"
 import { CommitChanges } from "./commit-changes"
 import { Notice } from "./feedback"
 import { applyGitGraphTheme } from "./git-graph-theme"
 import { useLiveRevision } from "./live-updates"
+import { ReviewToolbar } from "./review-toolbar"
 import { Button } from "./ui/button"
 import { Spinner } from "./ui/spinner"
 
@@ -23,44 +23,12 @@ function ProjectGitGraphView({ api, projectId }: { api: Api; projectId: string }
   const resize = (value: number) => setGraphSize(Math.max(20, Math.min(80, value)))
   const host = useRef<HTMLDivElement>(null)
   const element = useRef<WebGitGraphElement>(null)
-  const [actionHost, setActionHost] = useState<WebGitGraphElement | null>(null)
-  const pending = useRef(false)
-  const mounted = useRef(true)
-  const [fetching, setFetching] = useState(false)
+  const [graphReady, setGraphReady] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-  const [fetchError, setFetchError] = useState("")
-  const [fetched, setFetched] = useState(false)
   const revision = useLiveRevision()
   const [selected, setSelected] = useState<{ projectId: string; oid: string } | null>(null)
   const [error, setError] = useState("")
-  async function fetchRemotes() {
-    if (pending.current) {
-      return
-    }
-    pending.current = true
-    setFetching(true)
-    setFetched(false)
-    setFetchError("")
-    try {
-      await api.gitFetch(projectId)
-      if (mounted.current) {
-        setFetched(true)
-      }
-    } catch (error) {
-      if (mounted.current) {
-        setFetchError(error instanceof Error ? error.message : String(error))
-      }
-    } finally {
-      pending.current = false
-      if (mounted.current) {
-        setFetching(false)
-        // A multi-remote fetch can update some refs before a later remote fails.
-        element.current?.refresh()
-      }
-    }
-  }
   useEffect(() => {
-    mounted.current = true
     const container = host.current
     const lifetime = new AbortController()
     let observer: MutationObserver | undefined
@@ -135,10 +103,7 @@ function ProjectGitGraphView({ api, projectId }: { api: Api; projectId: string }
         loadingObserver = new MutationObserver(updateLoading)
         loadingObserver.observe(graph, { attributes: true, attributeFilter: ["aria-busy"] })
         updateLoading()
-        const actions = document.createElement("slot")
-        actions.name = "redpact-actions"
-        graph.shadowRoot?.querySelector(".tools")?.append(actions)
-        setActionHost(graph)
+        setGraphReady(true)
       })
       .catch((error: unknown) => {
         if (!lifetime.signal.aborted) {
@@ -146,7 +111,6 @@ function ProjectGitGraphView({ api, projectId }: { api: Api; projectId: string }
         }
       })
     return () => {
-      mounted.current = false
       lifetime.abort()
       observer?.disconnect()
       loadingObserver?.disconnect()
@@ -162,34 +126,20 @@ function ProjectGitGraphView({ api, projectId }: { api: Api; projectId: string }
   return (
     <div ref={layout} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       {error && <Notice error>{error}</Notice>}
-      {fetchError && <Notice error>{t(fetchError)}</Notice>}
-      {actionHost &&
-        createPortal(
-          <div slot="redpact-actions" className="flex items-center gap-2">
-            <span role="status" className="text-xs text-muted-foreground">
-              {fetched ? t("Fetch complete") : ""}
-            </span>
-            <Button
-              variant="ghost"
-              size="toolbar"
-              disabled={refreshing || fetching}
-              onClick={() => element.current?.refresh()}
-            >
-              {refreshing ? <Spinner aria-hidden="true" /> : <RefreshCw aria-hidden="true" />}
-              {t("Refresh")}
-            </Button>
-            <Button
-              variant="ghost"
-              size="toolbar"
-              disabled={fetching}
-              onClick={() => void fetchRemotes()}
-            >
-              {fetching ? <Spinner aria-hidden="true" /> : <Download aria-hidden="true" />}
-              {fetching ? t("Fetching…") : t("Fetch")}
-            </Button>
-          </div>,
-          actionHost,
-        )}
+      <ReviewToolbar
+        navigation={<h1 className="text-sm font-medium">{t("Git Graph")}</h1>}
+        actions={
+          <Button
+            variant="ghost"
+            size="toolbar"
+            disabled={!graphReady || refreshing}
+            onClick={() => element.current?.refresh()}
+          >
+            {refreshing ? <Spinner aria-hidden="true" /> : <RefreshCw aria-hidden="true" />}
+            {t("Refresh")}
+          </Button>
+        }
+      />
       <div
         id={paneId}
         ref={host}

@@ -73,8 +73,10 @@ pnpm lint
 ```
 
 The server test script builds before its public CLI tests. Run affected acceptance
-tests as well; default server tests do not prove real Docker behavior. For managed
-self-E2E, follow the [repository procedure](../e2e/README.md), use the actual checkout,
+tests as well; default server tests do not prove real Docker behavior. UI changes also
+require actual-app functional checks and layout captures in Full, Half View and Mobile,
+following the viewport contract in [frontend conventions](frontend.md).
+For managed self-E2E, follow the [repository procedure](../e2e/README.md), use the actual checkout,
 preserve shared settings, and confirm the returned submission in that worktree's viewer.
 The Docker build context excludes generated `.source` and `.next` directories so
 host-specific website paths and caches do not enter the runtime image.

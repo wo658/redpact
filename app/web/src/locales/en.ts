@@ -3,10 +3,11 @@ export const en = {
   "Problems collected in this browser session. Background failures do not interrupt your work.":
     "Problems collected in this browser session. Background failures do not interrupt your work.",
   "No problems recorded.": "No problems recorded.",
+  "Close sidebar": "Close sidebar",
   "Clear problems": "Clear problems",
 
-  "Apply to all File Viewer tabs in this browser.":
-    "Apply to all File Viewer tabs in this browser.",
+  "Apply to all File Viewer views in this browser.":
+    "Apply to all File Viewer views in this browser.",
   "Show Git-tracked files only": "Show Git-tracked files only",
   "No Git-tracked files to display.": "No Git-tracked files to display.",
   "Only the first 50 selected files are shown. Open the recorded run for the full list.":
