@@ -72,6 +72,15 @@ line numbers and statistics.
 Image comparisons follow the shared [file preview contract](frontend.md#file-content-previews),
 including explicit commit revisions, rename paths and distinct staged/unstaged bytes.
 
+Git queries and worktree, branch and commit diffs default to a 128 MiB output bound
+per stdout/stderr stream per invocation. Set the server process environment variable
+`REDPACT_GIT_MAX_BUFFER_MIB` to an integer from 1 to 2048 to override it, for example
+`REDPACT_GIT_MAX_BUFFER_MIB=256 redpact serve --port 54322`. Restart the server after changes.
+Memory grows with output rather than reserving the entire bound; concurrent commands
+and diff rendering consume additional memory. Separate image, individual untracked-file
+preview and bounded metadata-query limits remain unchanged. The commit patch and
+file-list bounds below also follow this setting.
+
 ## Git Graph and Fetch
 
 Git Graph shows bounded commit history with branch filtering, remote visibility,
@@ -82,11 +91,11 @@ branches/index/files. Requests serialize per common Git directory and report mis
 remotes, busy state and partial failure. Refresh history after success or failure.
 Pull and Push are not available in this toolbar.
 
-Commit patches are limited to 4 MiB. Larger patches return HTTP 200 with
+Commit patches are limited to 128 MiB. Larger patches return HTTP 200 with
 `patchOmitted: "size_limit"`, an empty `patch`, the `changedPaths` list and an explicit
 `omitted` diagnostic. Git Graph keeps commit metadata and displays the file paths
 with a size-limit notice; it does not present truncated content as a complete diff.
-The file-name response has its own 4 MiB Git output bound. If it also exceeds that
+The file-name response has its own 128 MiB Git output bound. If it also exceeds that
 bound, HTTP 200 retains commit identity with `changedPathsOmitted: "size_limit"`
 and a separate diagnostic; no partial file list is returned or shown.
 

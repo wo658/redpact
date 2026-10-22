@@ -195,3 +195,7 @@ other suites. Arguments and filenames are passed literally, never interpolated i
 
 Install/build prerequisites in the Unit image; `fileCommand` replaces `command` for an
 opted-in execution and does not run its shell preparation steps first.
+
+Configure the Git output bound with the server environment variable
+`REDPACT_GIT_MAX_BUFFER_MIB` (default 128 MiB). See [Git query limits](git.md)
+for range, restart and coverage. This is not an instance JSON field.

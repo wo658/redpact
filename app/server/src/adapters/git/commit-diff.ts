@@ -1,6 +1,7 @@
 import { problem } from "../../core/problems.js"
 import type { GitDiff } from "../../core/types/git.js"
 import { readGit } from "./native-read.js"
+import { gitOutputLimitMiB } from "./output-limit.js"
 
 export async function readCommitDiff(root: string, oid: string): Promise<GitDiff> {
   if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(oid)) {
@@ -37,6 +38,7 @@ export async function readCommitDiff(root: string, oid: string): Promise<GitDiff
     ...(parents[0] ? [parents[0], oid] : [oid]),
     "--",
   ]
+  const limit = gitOutputLimitMiB()
   const metadata = {
     available: true,
     revision: oid,
@@ -57,7 +59,7 @@ export async function readCommitDiff(root: string, oid: string): Promise<GitDiff
     return {
       ...partial,
       changedPaths: names.split("\0").filter(Boolean),
-      omitted: ["Patch exceeds the 4 MiB display limit. Only changed file paths are shown."],
+      omitted: [`Patch exceeds the ${limit} MiB display limit. Only changed file paths are shown.`],
     }
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") {
@@ -67,7 +69,7 @@ export async function readCommitDiff(root: string, oid: string): Promise<GitDiff
       ...partial,
       changedPathsOmitted: "size_limit",
       omitted: [
-        "Patch and file list exceed their 4 MiB display limits. Only commit metadata is shown.",
+        `Patch and file list exceed their ${limit} MiB display limits. Only commit metadata is shown.`,
       ],
     }
   }
