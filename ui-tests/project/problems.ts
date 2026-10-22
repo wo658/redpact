@@ -12,12 +12,23 @@ export async function verifyProblems(page: Page, expect: Expect, width: number) 
   )
   await page.goto("/")
   await loaded
-  await expect(page.getByRole("tab", { name: "Diff", exact: true })).toBeVisible()
+  const mobile = width < 768
+  if (mobile) {
+    await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+  }
+  await page.getByRole("button", { name: "Project settings", exact: true }).click()
+  if (mobile) {
+    await page.keyboard.press("Escape")
+  }
+  const content = page.locator('input[name="playwright.service"]')
+  await expect(content).toHaveValue("app")
   const tabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
   await expect(tabs).toBeVisible()
   await expect(page.getByRole("button", { name: "Problems (0)", exact: true })).toBeVisible()
   const original = await tabs.getByRole("tab").first().getAttribute("aria-label")
-  expect(original).toBeTruthy()
+  if (!original) {
+    throw new Error("열린 프로젝트 탭의 접근 가능한 이름이 필요합니다")
+  }
   // 실제 앱의 유지된 탭을 재활성화하여 새로고침 요청만 실패시킨다.
   const newTabLoaded = page.waitForResponse(
     (response) => /\/api\/projects\/[^/]+\/worktrees$/.test(response.url()) && response.ok(),
@@ -26,9 +37,10 @@ export async function verifyProblems(page: Page, expect: Expect, width: number) 
   await newTabLoaded
   await expect(tabs.getByRole("tab")).toHaveCount(2)
   fail = true
-  await tabs.getByRole("tab", { name: original!, exact: true }).first().click()
+  await tabs.getByRole("tab", { name: original, exact: true }).first().click()
   const problems = page.getByRole("button", { name: "Problems (1)", exact: true })
   await expect(problems).toBeVisible()
+  await expect(content).toHaveValue("app")
   await expect(page.getByText("Request failed (503)", { exact: true })).toHaveCount(0)
   await expect(page.getByRole("heading", { name: "Problem details", exact: true })).toHaveCount(0)
   await expect(page.getByRole("dialog")).toHaveCount(0)
