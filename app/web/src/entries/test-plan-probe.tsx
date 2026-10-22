@@ -196,37 +196,37 @@ function TestPlanProbe() {
             }}
           >
             <DialogTrigger render={<Button variant="outline" size="toolbar" disabled={pending} />}>
-              Modify
+              수정 요청
             </DialogTrigger>
             <DialogContent
               showCloseButton={false}
               className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
             >
-              <DialogTitle>Modify</DialogTitle>
+              <DialogTitle>수정 요청</DialogTitle>
               <Field>
                 <FieldLabel htmlFor="modification-request" className="sr-only">
-                  Modification request
+                  수정 요청 내용
                 </FieldLabel>
                 <Textarea
                   id="modification-request"
                   rows={4}
                   className="max-h-40 resize-none overflow-y-auto"
                   value={feedback}
-                  placeholder="How should this plan change?"
+                  placeholder="원하는 수정 방향을 적어주세요."
                   onChange={(event) => setFeedback(event.target.value)}
                 />
               </Field>
               {modifying && statusMessage}
               <div className="flex justify-end gap-2">
                 <DialogClose render={<Button variant="ghost" size="toolbar" disabled={pending} />}>
-                  Cancel
+                  취소
                 </DialogClose>
                 <Button
                   size="toolbar"
                   disabled={!ready || pending || !feedback.trim()}
                   onClick={() => void submit("modify")}
                 >
-                  Send
+                  보내기
                 </Button>
               </div>
             </DialogContent>
@@ -236,7 +236,7 @@ function TestPlanProbe() {
             disabled={!ready || pending}
             onClick={() => void submit("approve")}
           >
-            Submit
+            확정
           </Button>
         </div>
         {!modifying && statusMessage}
