@@ -1,6 +1,13 @@
 import { expect, test } from "@playwright/test"
 import { verifyProblems } from "../problems"
 
+test.use({
+  channel: "chromium",
+  launchOptions: {
+    args: ["--unsafely-treat-insecure-origin-as-secure=http://app.redpact.test:54320"],
+  },
+})
+
 test.beforeEach(async ({ request, page }) => {
   const response = await request.post("/api/projects", {
     data: { path: process.env.REDPACT_TEST_PROJECT_ROOT ?? "/app", name: "Redpact" },
