@@ -125,12 +125,12 @@ function FilteredProjectFiles({
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
       {error && (
-        <Notice error>
-          {error}
+        <>
+          <Notice error>{error}</Notice>
           <Button variant="ghost" size="sm" onClick={() => setAttempt((value) => value + 1)}>
             {t("Retry")}
           </Button>
-        </Notice>
+        </>
       )}
       <div
         style={{ containerType: "inline-size", containerName: "workspace" }}

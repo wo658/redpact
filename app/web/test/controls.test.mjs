@@ -5248,12 +5248,25 @@ test("File Viewer에서 같은 파일을 다시 눌러도 원문을 유지하고
       return { kind: "text", path, content: "original" }
     },
   }
-  render(createElement(ProjectFileViewer, { api, projectId: "project" }))
+  const { ProblemsProvider, ProblemsButton } = await server.ssrLoadModule(
+    "/src/components/problems.tsx",
+  )
+  render(
+    createElement(
+      ProblemsProvider,
+      null,
+      createElement(ProblemsButton),
+      createElement(ProjectFileViewer, { api, projectId: "project" }),
+    ),
+  )
   const user = userEvent.setup()
   const file = await screen.findByRole("treeitem", { name: "readme.md" })
   assert.deepEqual(reads, [""])
   await user.click(file)
-  assert.ok(await screen.findByText("File temporarily unavailable"))
+  await screen.findByRole("button", { name: "Problems (1)" })
+  assert.equal(screen.queryByRole("alert"), null)
+  assert.equal(screen.queryByText("File temporarily unavailable"), null)
+  assert.ok(screen.getByRole("button", { name: "Retry" }))
   failed = false
   await user.click(screen.getByRole("button", { name: "Retry" }))
   await waitFor(() => assert.equal(document.querySelector(".diff-code")?.textContent, "original"))

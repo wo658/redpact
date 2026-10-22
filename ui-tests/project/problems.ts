@@ -20,7 +20,7 @@ export async function verifyProblems(page: Page, expect: Expect, width: number) 
   if (mobile) {
     await page.keyboard.press("Escape")
   }
-  const content = page.locator('input[name="playwright.service"]')
+  const content = page.locator('input[name="playwright.service"]:visible')
   await expect(content).toHaveValue("app")
   const tabs = page.getByRole("tablist", { name: "Open workspaces", exact: true })
   await expect(tabs).toBeVisible()

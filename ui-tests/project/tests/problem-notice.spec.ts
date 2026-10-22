@@ -12,7 +12,14 @@ test("설정 검증 오류는 inline 없이 문제 목록에만 남긴다", asyn
   }, project.id)
   await page.goto("/")
   await test.step("실제 프로젝트 설정의 필수 Playwright 서비스를 제거해 검증 오류를 표시한다", async () => {
+    const mobile = (page.viewportSize()?.width ?? 1920) < 768
+    if (mobile) {
+      await page.getByRole("button", { name: "사이드바 전환", exact: true }).click()
+    }
     await page.getByRole("button", { name: "Project settings", exact: true }).click()
+    if (mobile) {
+      await page.keyboard.press("Escape")
+    }
     const service = page.locator('input[name="playwright.service"]')
     await expect(service).toHaveValue("app")
     await service.fill("")
@@ -27,4 +34,47 @@ test("설정 검증 오류는 inline 없이 문제 목록에만 남긴다", asyn
     await expect(dialog).toBeVisible()
     await expect(dialog.getByText(/playwright/)).toBeVisible()
   })
+})
+
+test("파일 조회 503을 문제 목록에 모아도 재시도와 원문 탐색을 유지한다", async ({
+  page,
+  request,
+}) => {
+  const response = await request.post("/api/projects", {
+    data: { path: "/app", name: "File recovery fixture" },
+  })
+  expect(response.ok()).toBeTruthy()
+  const project = await response.json()
+  await page.addInitScript((id: string) => {
+    localStorage.setItem("redpact:project", id)
+    localStorage.setItem("redpact:language", "en")
+  }, project.id)
+  let failing = true
+  await page.route("**/api/projects/*/files?**", (route) =>
+    failing ? route.fulfill({ status: 503, body: "Temporarily unavailable" }) : route.continue(),
+  )
+  await page.goto("/")
+  const mobile = (page.viewportSize()?.width ?? 1920) < 768
+  if (mobile) {
+    await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+  }
+  await page.getByRole("button", { name: "File Viewer", exact: true }).click()
+  if (mobile) {
+    await page.keyboard.press("Escape")
+  }
+  await expect(page.getByRole("button", { name: /^Problems \(/ })).toContainText("1")
+  await expect(page.getByRole("alert")).toHaveCount(0)
+  await expect(page.getByText("Request failed (503)", { exact: true })).toHaveCount(0)
+  const retry = page.getByRole("button", { name: "Retry", exact: true })
+  await expect(retry).toBeVisible()
+  failing = false
+  await retry.click()
+  await expect(page.getByRole("treeitem", { name: "docs", exact: true })).toBeVisible()
+  await expect(retry).toHaveCount(0)
+  await page.getByRole("button", { name: /^Problems \(/ }).click()
+  await expect(
+    page
+      .getByRole("dialog", { name: "Problems", exact: true })
+      .getByText("Request failed (503)", { exact: true }),
+  ).toBeVisible()
 })

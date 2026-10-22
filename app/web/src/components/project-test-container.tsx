@@ -263,12 +263,12 @@ function ComposePreview({
         </Button>
       </div>
       {error && (
-        <Notice error>
-          {error}
+        <>
+          <Notice error>{error}</Notice>
           <Button variant="ghost" size="sm" onClick={() => setAttempt((value) => value + 1)}>
             {t("Retry")}
           </Button>
-        </Notice>
+        </>
       )}
       {!file && !error && <Loading>{t("Loading…")}</Loading>}
       {file && <FileContent entry={file} />}
