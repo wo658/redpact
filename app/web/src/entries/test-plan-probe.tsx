@@ -6,6 +6,13 @@ import { createRoot } from "react-dom/client"
 import { ReviewToolbar } from "../components/review-toolbar"
 import { Button } from "../components/ui/button"
 import { Tabs, TabsContent, TabsTrigger } from "../components/ui/coss-tabs"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from "../components/ui/dialog"
 import { Field, FieldLabel } from "../components/ui/field"
 import { Textarea } from "../components/ui/textarea"
 import { cn } from "../lib/utils"
@@ -95,12 +102,26 @@ function TestPlanProbe() {
           ? "Host rejected the message. Your edits are preserved; retry or send them manually."
           : `Host accepted ${marker}. Check the chat for receipt; host acceptance alone does not prove GPT received it.`,
       )
+      if (!result.isError && action === "modify") {
+        setModifying(false)
+      }
     } catch (error) {
       setStatus(`Submission failed: ${String(error)}. Your edits are preserved.`)
     } finally {
       setPending(false)
     }
   }
+  const statusMessage = (
+    <p
+      role="status"
+      className={cn(
+        "max-w-full text-xs break-words text-muted-foreground",
+        status.startsWith("Connected.") && "sr-only",
+      )}
+    >
+      {status}
+    </p>
+  )
   return (
     <main className="mx-auto flex h-dvh w-full max-w-3xl flex-col overflow-hidden bg-background text-foreground">
       <Tabs
@@ -165,67 +186,60 @@ function TestPlanProbe() {
         ))}
       </Tabs>
       <footer className="flex shrink-0 flex-col gap-3 border-t px-3 py-3">
-        {modifying && (
-          <Field>
-            <FieldLabel htmlFor="overall-feedback">Overall feedback</FieldLabel>
-            <Textarea
-              id="overall-feedback"
-              rows={3}
-              className="max-h-32 resize-none overflow-y-auto"
-              value={feedback}
-              placeholder="Describe how the whole plan should change…"
-              onChange={(event) => setFeedback(event.target.value)}
-            />
-          </Field>
-        )}
         <div className="flex justify-end gap-2">
-          {modifying ? (
-            <>
-              <Button
-                variant="ghost"
-                size="toolbar"
-                disabled={pending}
-                onClick={() => setModifying(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="toolbar"
-                disabled={!ready || pending || !feedback.trim()}
-                onClick={() => void submit("modify")}
-              >
-                Request rewrite
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                size="toolbar"
-                disabled={pending}
-                onClick={() => setModifying(true)}
-              >
-                Modify
-              </Button>
-              <Button
-                size="toolbar"
-                disabled={!ready || pending}
-                onClick={() => void submit("approve")}
-              >
-                Approve
-              </Button>
-            </>
-          )}
+          <Dialog
+            open={modifying}
+            onOpenChange={(open) => {
+              if (!pending) {
+                setModifying(open)
+              }
+            }}
+          >
+            <DialogTrigger render={<Button variant="outline" size="toolbar" disabled={pending} />}>
+              Modify
+            </DialogTrigger>
+            <DialogContent
+              showCloseButton={false}
+              className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+            >
+              <DialogTitle>Modify</DialogTitle>
+              <Field>
+                <FieldLabel htmlFor="modification-request" className="sr-only">
+                  Modification request
+                </FieldLabel>
+                <Textarea
+                  id="modification-request"
+                  rows={4}
+                  className="max-h-40 resize-none overflow-y-auto"
+                  value={feedback}
+                  placeholder="How should this plan change?"
+                  onChange={(event) => setFeedback(event.target.value)}
+                />
+              </Field>
+              {modifying && statusMessage}
+              <div className="flex justify-end gap-2">
+                <DialogClose render={<Button variant="ghost" size="toolbar" disabled={pending} />}>
+                  Cancel
+                </DialogClose>
+                <Button
+                  size="toolbar"
+                  disabled={!ready || pending || !feedback.trim()}
+                  onClick={() => void submit("modify")}
+                >
+                  Send
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Button
+            size="toolbar"
+            disabled={!ready || pending}
+            onClick={() => void submit("approve")}
+          >
+            Submit
+          </Button>
         </div>
-        <p
-          role="status"
-          className={cn(
-            "max-w-full text-xs break-words text-muted-foreground",
-            status.startsWith("Connected.") && "sr-only",
-          )}
-        >
-          {status}
-        </p>
+        {!modifying && statusMessage}
       </footer>
     </main>
   )

@@ -82,10 +82,24 @@ try {
   await page.goto(origin)
   const app = page.frameLocator("iframe")
   await app.getByRole("status").filter({ hasText: "Connected." }).waitFor()
+  assert.equal(await app.getByRole("dialog").count(), 0, "기본 화면에는 수정 입력창이 없어야 한다")
+  await app.getByRole("button", { name: "Modify", exact: true }).click()
+  assert.equal(
+    await app.getByRole("dialog").count(),
+    1,
+    "Modify를 누르면 별도의 작은 입력창만 열려야 한다",
+  )
+  await app.getByRole("button", { name: "Cancel", exact: true }).click()
+  await app.getByRole("dialog").waitFor({ state: "hidden" })
   assert.equal(
     await app.getByRole("button", { name: "Modify", exact: true }).count(),
     1,
     "항목을 직접 편집하지 않아도 전체 수정 의견을 요청할 수 있어야 한다",
+  )
+  assert.deepEqual(
+    await app.locator("footer button").allTextContents(),
+    ["Modify", "Submit"],
+    "기본 하단에는 제출과 Modify 두 버튼만 표시해야 한다",
   )
   assert.equal(await app.getByRole("tab").count(), 3, "최상단 탭에서 세 종류를 선택해야 한다")
   assert.equal(
@@ -109,7 +123,7 @@ try {
     revised,
     "종류를 전환해도 편집 내용이 유지되어야 한다",
   )
-  await app.getByRole("button", { name: "Approve", exact: true }).click()
+  await app.getByRole("button", { name: "Submit", exact: true }).click()
   await app.getByRole("status").filter({ hasText: "Host accepted" }).waitFor()
   const received = JSON.parse(await page.locator("#received").textContent())
   assert.equal(received.role, "user")
@@ -121,14 +135,14 @@ try {
   assert.ok(text.includes("Action: approve"), "승인 제출은 승인 의도를 명시해야 한다")
   await app.getByRole("button", { name: "Modify", exact: true }).click()
   assert.equal(
-    await app.getByRole("button", { name: "Request rewrite", exact: true }).isEnabled(),
+    await app.getByRole("button", { name: "Send", exact: true }).isEnabled(),
     false,
     "전체 의견이 비어 있으면 재작성을 요청하면 안 된다",
   )
   const feedback =
     "전체적으로 구현 내부보다는 사용자에게 보이는 실패와 복구를 중심으로 다시 써줘. Unit은 줄이고 Integration을 보강해줘."
-  await app.getByRole("textbox", { name: "Overall feedback", exact: true }).fill(feedback)
-  await app.getByRole("button", { name: "Request rewrite", exact: true }).click()
+  await app.getByRole("textbox", { name: "Modification request", exact: true }).fill(feedback)
+  await app.getByRole("button", { name: "Send", exact: true }).click()
   await app.getByRole("status").filter({ hasText: "Host accepted" }).waitFor()
   const rewrite = JSON.parse(await page.locator("#received").textContent()).content[0].text
   assert.ok(rewrite.includes("Action: modify"), "재작성 요청은 승인과 구분되어야 한다")
@@ -145,17 +159,17 @@ try {
   await page.goto(`${origin}/?reject`)
   await app.getByRole("button", { name: "Modify", exact: true }).click()
   await app
-    .getByRole("textbox", { name: "Overall feedback", exact: true })
+    .getByRole("textbox", { name: "Modification request", exact: true })
     .fill("전체 테스트를 실패 복구 중심으로 다시 써줘.")
-  await app.getByRole("button", { name: "Request rewrite", exact: true }).click()
+  await app.getByRole("button", { name: "Send", exact: true }).click()
   await app.getByRole("status").filter({ hasText: "Host rejected" }).waitFor()
   assert.equal(
-    await app.getByRole("textbox", { name: "Overall feedback", exact: true }).inputValue(),
+    await app.getByRole("textbox", { name: "Modification request", exact: true }).inputValue(),
     "전체 테스트를 실패 복구 중심으로 다시 써줘.",
     "호스트 거절 후 전체 의견을 보존해야 한다",
   )
   assert.equal(
-    await app.getByRole("button", { name: "Request rewrite", exact: true }).isEnabled(),
+    await app.getByRole("button", { name: "Send", exact: true }).isEnabled(),
     true,
     "호스트 거절 후 다시 제출할 수 있어야 한다",
   )
@@ -167,7 +181,7 @@ try {
     "공유 테마는 호스트의 어두운 모드를 따라야 한다",
   )
   assert.equal(
-    await app.getByRole("button", { name: "Approve", exact: true }).getAttribute("data-slot"),
+    await app.getByRole("button", { name: "Submit", exact: true }).getAttribute("data-slot"),
     "button",
     "기존 Redpact 버튼을 재사용해야 한다",
   )

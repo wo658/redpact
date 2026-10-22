@@ -127,9 +127,11 @@ codex plugin add test-plan-probe@redpact-test-plan-probe
 
 Reconnect the host if needed, select **Redpact Test Plan Probe** in the conversation,
 and ask it to open the probe. Edit the Unit, Integration or Playwright items and
-choose **Approve** or **Modify**. Modify opens an overall-feedback editor;
-**Request rewrite** sends all three current plans and that feedback, asking for a
-new draft to review. A rewrite request is not approval and requires nonblank feedback.
+choose **Submit** or **Modify**. The default footer shows only Submit and Modify. Modify opens a compact dialog
+only after a click; **Send** sends all three current plans and that feedback, asking for a
+new draft to review. A rewrite request is not approval and requires nonblank feedback. The dialog
+closes after host acceptance; rejection keeps it open with the draft preserved.
+Cancel or Escape closes it while retaining the feedback draft.
 Long items grow with their text; only the list scrolls, keeping the tabs and footer
 actions available. Edits live only in the open view. The app sends the current
 text and a unique marker using `App.sendMessage`; it does not execute the sample tests.
