@@ -1,4 +1,10 @@
 export const en = {
+  Problems: "Problems",
+  "Problems collected in this browser session. Background failures do not interrupt your work.":
+    "Problems collected in this browser session. Background failures do not interrupt your work.",
+  "No problems recorded.": "No problems recorded.",
+  "Clear problems": "Clear problems",
+
   "Apply to all File Viewer tabs in this browser.":
     "Apply to all File Viewer tabs in this browser.",
   "Show Git-tracked files only": "Show Git-tracked files only",

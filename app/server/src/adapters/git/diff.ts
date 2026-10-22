@@ -4,8 +4,8 @@ import type { GitDiff, GitScope, GitSnapshot } from "../../core/types/git.js"
 import { captureGit } from "./capture.js"
 import { comparisonBase } from "./comparison-base.js"
 import { isImagePath } from "./image-formats.js"
+import { gitOutputLimit } from "./output-limit.js"
 
-const limit = 2 * 1024 * 1024
 export async function readDiff(
   snapshot: GitSnapshot,
   scope: GitScope,
@@ -14,6 +14,7 @@ export async function readDiff(
   if (!snapshot.available) {
     return { available: false, reason: snapshot.reason, patch: "", omitted: [] }
   }
+  const limit = gitOutputLimit()
   const root = snapshot.root
   const env = Object.fromEntries(
     Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
@@ -86,7 +87,7 @@ export async function readDiff(
         continue
       }
       const next = await diff(["--no-index", "--", "/dev/null", change.path], true)
-      if (patch.length + next.length > limit) {
+      if (Buffer.byteLength(patch) + Buffer.byteLength(next) > limit) {
         omitted.push(`${change.path}: diff size limit`)
         continue
       }

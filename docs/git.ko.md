@@ -67,6 +67,13 @@ optional lock, fsmonitor를 비활성화하며 저장소 상대 경로를 검증
 이미지 비교는 [공통 파일 미리보기 규약](frontend.md)을 따르며, 명시적인 커밋
 리비전과 이름 변경 경로를 사용하고 staged/unstaged 바이트를 구분합니다.
 
+Git 조회 및 작업 트리·브랜치·커밋 diff의 호출별 stdout/stderr 출력 상한은 기본 128 MiB입니다.
+서버 프로세스의 `REDPACT_GIT_MAX_BUFFER_MIB` 환경 변수로 1–2048 범위의 정수 MiB를 설정할 수 있습니다.
+예: `REDPACT_GIT_MAX_BUFFER_MIB=256 redpact serve --port 54322`. 변경 후 서버를 다시 시작하세요.
+출력에 따라 메모리를 사용하며 미리 전부 할당하지 않습니다. 동시 호출과 diff 렌더링은 추가 메모리를 사용합니다.
+이미지·개별 미추적 파일 미리보기 및 제한된 메타데이터 조회의 별도 제한은 유지됩니다.
+아래 커밋 패치와 파일 목록의 128 MiB 제한도 이 설정을 따릅니다.
+
 ## Git Graph와 Fetch
 
 Git Graph는 제한된 커밋 목록, 브랜치 필터, 원격 표시, 로드된 커밋 검색과 선택한
@@ -76,11 +83,11 @@ tag fetch나 로컬 브랜치·index·파일 변경은 하지 않습니다. comm
 직렬화하고 원격 누락, 사용 중 상태, 부분 실패를 보고합니다. 성공·실패 뒤 모두 목록을
 갱신합니다. 이 툴바에는 Pull과 Push가 없습니다.
 
-커밋 패치는 4 MiB로 제한됩니다. 이를 초과하면 HTTP 200과 함께
+커밋 패치는 128 MiB로 제한됩니다. 이를 초과하면 HTTP 200과 함께
 `patchOmitted: "size_limit"`, 빈 `patch`, `changedPaths` 목록과 명시적인
 `omitted` 진단을 반환합니다. Git Graph는 커밋 메타데이터를 유지하며 크기 제한 안내와
 파일 경로를 표시합니다. 잘린 내용을 완전한 diff로 표시하지 않습니다.
-파일 이름 응답에도 별도의 4 MiB Git 출력 제한이 적용됩니다. 이 제한도 초과하면
+파일 이름 응답에도 별도의 128 MiB Git 출력 제한이 적용됩니다. 이 제한도 초과하면
 HTTP 200 응답은 커밋 식별 정보와 `changedPathsOmitted: "size_limit"`, 별도 진단을
 유지하며 부분 파일 목록을 반환하거나 표시하지 않습니다.
 

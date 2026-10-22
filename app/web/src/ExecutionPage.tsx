@@ -4,6 +4,7 @@ import { ExecutionLog } from "@/components/execution-log"
 import { ExecutionReview } from "@/components/execution-workspace"
 import { EmptyState, Notice } from "@/components/feedback"
 import { LiveUpdates } from "@/components/live-updates"
+import { ProblemsButton } from "@/components/problems"
 import { Toaster } from "@/components/ui/toast"
 import { type Api, createApi } from "@/lib/api"
 import { navigateReviewLink, readReviewLocation } from "@/lib/workspace-history"
@@ -28,6 +29,7 @@ export default function ExecutionPage({ api = connectedApi }: { api?: Api }) {
           <a href="?" onClick={navigateReviewLink} className="text-sm underline underline-offset-4">
             {t("Back to app")}
           </a>
+          <ProblemsButton />
         </nav>
         {location.page === "review" && (
           <ExecutionReview key={`${location.kind}:${location.id}`} api={api} execution={location} />

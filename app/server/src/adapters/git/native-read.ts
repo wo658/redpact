@@ -1,4 +1,5 @@
 import { captureGit } from "./capture.js"
+import { gitOutputLimit } from "./output-limit.js"
 
 export async function readGit(root: string, args: string[]) {
   const env = Object.fromEntries(
@@ -13,7 +14,7 @@ export async function readGit(root: string, args: string[]) {
         GIT_TERMINAL_PROMPT: "0",
         GIT_LITERAL_PATHSPECS: "1",
       },
-      4 * 1024 * 1024,
+      gitOutputLimit(),
     )
   ).stdout
 }

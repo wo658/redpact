@@ -17,6 +17,7 @@ import { afterEach, expect, test, vi } from "vitest"
 import {
   archiveStoppedWriter,
   assertIdle,
+  preflightRuntime,
   switchRuntime,
   verifyServer,
 } from "../tools/local-update.js"
@@ -294,4 +295,48 @@ test("현재 상태 도구 실패는 rollback에서도 이전 도구로 우회�
 test("상태 도구가 성공해도 웹 진입점이 없으면 후보 검증에 실패한다", async () => {
   verificationRuntime(["redpact_status"], false, "missing viewer")
   await expect(verifyServer("http://runtime")).rejects.toThrow("web entrypoint")
+})
+
+test("실행 이력 마이그레이션 사전 검증이 실패하면 기존 서비스를 멈추거나 교체하지 않는다", async () => {
+  const paths = await fixture()
+  const stop = vi.fn(async () => {})
+  await expect(
+    switchRuntime({
+      ...paths,
+      idle: async () => {},
+      preflight: async () => {
+        throw new Error("unit-runs/legacy.json: unsupported record version")
+      },
+      stop,
+      start: async () => {},
+      verify: async () => {},
+    }),
+  ).rejects.toThrow("unit-runs/legacy.json")
+  expect(stop).not.toHaveBeenCalled()
+  expect(await readFile(join(paths.runtime, "version"), "utf8")).toBe("old")
+})
+
+test("사전 검증은 실제 후보 마이그레이션을 복사본에서 실행하고 원본에는 완료 이력을 쓰지 않는다", async () => {
+  const { root } = await fixture()
+  const data = join(root, "data")
+  await mkdir(data)
+  await writeFile(join(data, "settings.json"), '{"server":{"port":54320}}\n')
+  const runtime = fileURLToPath(new URL("../", import.meta.url))
+  await preflightRuntime(runtime, data)
+  expect(await readdir(data)).toEqual(["settings.json"])
+  expect(await readFile(join(data, "settings.json"), "utf8")).toBe('{"server":{"port":54320}}\n')
+})
+
+test("지원하지 않는 실행 이력은 사전 검증에서 파일 경로를 보고하고 원본은 변경하지 않는다", async () => {
+  const { root } = await fixture()
+  const data = join(root, "data")
+  await mkdir(join(data, "unit-runs"), { recursive: true })
+  const id = "5b0633a2-e936-4325-b6ea-aaf9918ce00a"
+  const path = join(data, "unit-runs", `${id}.json`)
+  const source = JSON.stringify({ version: 1, id })
+  await writeFile(path, source)
+  const runtime = fileURLToPath(new URL("../", import.meta.url))
+  await expect(preflightRuntime(runtime, data)).rejects.toThrow(`unit-runs/${id}.json`)
+  expect(await readFile(path, "utf8")).toBe(source)
+  expect(await readdir(data)).toEqual(["unit-runs"])
 })

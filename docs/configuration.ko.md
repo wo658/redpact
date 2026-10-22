@@ -193,3 +193,6 @@ Global Settings는 인스턴스를 별도로 제어합니다. `redpact settings 
 
 설치·빌드 준비는 Unit 이미지에서 수행하세요. `fileCommand`는 해당 실행의
 `command`를 대체하며 기존 셸 명령의 준비 단계를 먼저 실행하지 않습니다.
+
+Git 출력 상한은 서버 환경 변수 `REDPACT_GIT_MAX_BUFFER_MIB`로 설정합니다(기본 128 MiB).
+범위, 재시작 및 적용 대상은 [Git 조회 제한](git.md)을 참고하세요. 인스턴스 JSON 필드는 아닙니다.

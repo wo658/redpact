@@ -27,7 +27,7 @@ test("파일 목록도 제한을 넘으면 부분 경로를 완전한 목록으�
     patchOmitted: "size_limit",
     changedPathsOmitted: "size_limit",
     omitted: [
-      "Patch and file list exceed their 4 MiB display limits. Only commit metadata is shown.",
+      "Patch and file list exceed their 128 MiB display limits. Only commit metadata is shown.",
     ],
   })
   expect(vi.mocked(readGit).mock.calls[3]?.[1]).toContain("--name-only")

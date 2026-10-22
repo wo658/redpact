@@ -105,6 +105,14 @@ backup and expected converted result. Files are not a multi-file transaction: in
 can leave a partially converted set, with originals retained and completion still pending.
 This is process-interruption recovery, not a general filesystem disaster-recovery guarantee.
 
+Execution-selection changes run only while `003-execution-selection` is pending.
+Current record validation happens after the pending transformations, before any
+record replacement. Execution failures identify their record family and filename.
+On interrupted retry, every execution record must match its exact original backup
+or expected migrated output, including records that already captured a selection;
+otherwise startup refuses to overwrite it. Validation failure does not imply a
+backup was written: unchanged originals may still be in their original location.
+
 Backups cover changed runtime records only, not the whole instance, Docker volumes or
 project files. They are not pruned automatically. Keep a complete instance backup before
 an upgrade if rollback is required. There is no automatic downgrade or `down` command;
@@ -118,6 +126,28 @@ infrastructure for users. Instance `settings.json` is currently unchanged by the
 migration. Future persisted-settings changes must add an explicit ordered migration
 with old input validation, original preservation and interrupted-upgrade tests, rather
 than coupling historical snapshots to a new authoring schema without an upgrade path.
+
+## Upgrade preflight and explicit history resets
+
+The contributor `pnpm local:update` command checks the candidate's HTTP/MCP/UI, then
+copies the instance data into a temporary snapshot and runs that candidate's
+migrations and execution-record validation there before stopping the installed
+service. The snapshot excludes the live writer guard/owner files. It starts no
+server, recovery, tests or Docker operations. Failure leaves the installed service
+running and removes the temporary snapshot. This is a migration compatibility
+check, not an atomic snapshot or proof of readiness: data can change while copied,
+and startup still holds the real writer lock and validates the actual instance.
+
+Unsupported historical formats remain explicit errors; a missing lifecycle field
+is not evidence of successful cleanup. Redpact never fills in invented results,
+skips corrupt evidence or resets history automatically. An explicitly authorized
+history reset is a stopped-instance maintenance operation: take a complete data
+backup, separate execution records/artifacts and their approvals together, and
+preserve instance identity, settings and project/worktree registrations. Retained
+environment ownership must remain available until its resources are reconciled;
+never delete Docker resources solely because execution history was reset. Keep
+migration journals with their matching records rather than deleting them to bypass
+validation. The product has no automatic history-pruning or general reset command.
 
 ## Publication and recovery
 

@@ -1,11 +1,10 @@
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react"
-import { useTranslation } from "react-i18next"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Empty, EmptyDescription, EmptyHeader } from "@/components/ui/empty"
 import { Item, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
-import { CopyHandoff } from "./copy-handoff"
+import { useProblem } from "./problems"
 
 function visibleText(children: ReactNode): string {
   return Children.toArray(children)
@@ -22,29 +21,22 @@ function visibleText(children: ReactNode): string {
     .trim()
 }
 
-export function Notice({ children, error = false }: { children: ReactNode; error?: boolean }) {
-  const { t } = useTranslation()
-  if (error) {
-    const message = visibleText(children) || t("Visible diagnostic")
-    return (
-      <CopyHandoff
-        showContext={false}
-        context={{
-          title: t("Problem details"),
-          summary: t("Copy this context to continue investigating the problem."),
-          fields: [[t("Message"), message]],
-        }}
-      >
-        <Alert variant="destructive">
-          <AlertDescription className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">
-            {children}
-          </AlertDescription>
-        </Alert>
-      </CopyHandoff>
-    )
+export function Notice({
+  children,
+  error = false,
+  background = false,
+}: {
+  children: ReactNode
+  error?: boolean
+  background?: boolean
+}) {
+  const message = visibleText(children)
+  const collected = useProblem(message, error)
+  if (error && background && collected) {
+    return null
   }
   return (
-    <Alert variant="default" role="status">
+    <Alert variant={error ? "destructive" : "default"} role={error ? "alert" : "status"}>
       <AlertDescription className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">
         {children}
       </AlertDescription>

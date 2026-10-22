@@ -91,3 +91,40 @@ test("corrupt records are rejected before any replacements", async () => {
   expect(await readFile(join(root, "unit-runs", `${id}.json`), "utf8")).toBe(source)
   expect(await files.history()).toEqual([])
 })
+
+test("잘못된 실행 이력의 파일 경로를 표시하고 원본과 완료 이력을 유지한다", async () => {
+  const { root, id, files } = await fixture()
+  const path = join(root, "unit-runs", `${id}.json`)
+  const invalid = JSON.stringify({ version: 1, id })
+  await writeFile(path, invalid)
+  await expect(migrateRuntime(files)).rejects.toThrow(`unit-runs/${id}.json`)
+  expect(await readFile(path, "utf8")).toBe(invalid)
+  expect(await files.history()).toEqual([])
+})
+
+test("이미 선택 정보가 있는 백업도 재시도 중 변경된 현재 기록을 덮어쓰지 않는다", async () => {
+  const { root, id, source, files } = await fixture()
+  const original = JSON.stringify({ ...JSON.parse(source), executionSelection: null })
+  const changed = JSON.stringify({ ...JSON.parse(original), stdout: "new evidence" })
+  const path = join(root, "unit-runs", `${id}.json`)
+  const backup = join(root, ".migrations/backups/001-fixed-environment-settings/unit-runs")
+  await mkdir(backup, { recursive: true })
+  await writeFile(join(backup, `${id}.json`), original)
+  await writeFile(path, changed)
+  await expect(migrateRuntime(files)).rejects.toThrow(`unit-runs/${id}`)
+  expect(await readFile(path, "utf8")).toBe(changed)
+  expect(await readFile(join(backup, `${id}.json`), "utf8")).toBe(original)
+  expect(await files.history()).toEqual([])
+})
+
+test("이미 적용된 실행 선택 마이그레이션은 후속 단계에서 다시 실행하지 않는다", async () => {
+  const { root, id, source, files } = await fixture()
+  await files.recordHistory([
+    "001-fixed-environment-settings",
+    "002-flat-environment-values",
+    "003-execution-selection",
+  ])
+  await migrateRuntime(files)
+  expect(await readFile(join(root, "unit-runs", `${id}.json`), "utf8")).toBe(source)
+  expect(await files.history()).toContain("004-manual-environment-scope")
+})

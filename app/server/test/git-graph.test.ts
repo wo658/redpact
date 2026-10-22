@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process"
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { afterEach, beforeEach, expect, test } from "vitest"
+import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import { createApp } from "../src/app.js"
 
 let dir: string
@@ -14,7 +14,10 @@ beforeEach(async () => {
   git("config", "user.email", "test@example.com")
   git("config", "user.name", "Test")
 })
-afterEach(() => rm(dir, { recursive: true, force: true }))
+afterEach(async () => {
+  vi.unstubAllEnvs()
+  await rm(dir, { recursive: true, force: true })
+})
 function app() {
   return createApp({
     projectGraph: {
@@ -185,12 +188,19 @@ test("커밋 diff는 전체 SHA만 허용하고 없는 커밋을 명시적으로
   ).toBe(404)
 })
 
-test("4MiB를 넘는 커밋도 메타데이터와 파일 목록 및 명시적 생략 상태를 반환한다", async () => {
+test("기본 한도는 큰 커밋 diff를 표시하고 설정한 4 MiB 한도에서는 명시적으로 생략한다", async () => {
   const base = commit("base")
   await writeFile(join(dir, "large.txt"), "large changed line\n".repeat(260000))
   await writeFile(join(dir, "small.txt"), "small change\n")
   git("add", ".")
   const revision = commit("large commit")
+  const full = await app().request(`/api/projects/project/git/commits/${revision}/diff`)
+  expect(full.status).toBe(200)
+  const fullResult = await full.json()
+  expect(fullResult.available).toBe(true)
+  expect(fullResult.patch.length).toBeGreaterThan(4 * 1024 * 1024)
+  expect(fullResult).not.toHaveProperty("patchOmitted")
+  vi.stubEnv("REDPACT_GIT_MAX_BUFFER_MIB", "4")
   const response = await app().request(`/api/projects/project/git/commits/${revision}/diff`)
   expect(response.status).toBe(200)
   expect(await response.json()).toMatchObject({
@@ -207,6 +217,7 @@ test("4MiB를 넘는 커밋도 메타데이터와 파일 목록 및 명시적 �
 })
 
 test("파일 경로 목록도 4MiB를 넘는 실제 커밋은 HTTP 200으로 메타데이터와 별도 제한을 반환한다", async () => {
+  vi.stubEnv("REDPACT_GIT_MAX_BUFFER_MIB", "4")
   const base = commit("base")
   const blob = execFileSync("git", ["-C", dir, "hash-object", "-w", "--stdin"], {
     input: "content\n",

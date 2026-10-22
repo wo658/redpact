@@ -3200,27 +3200,41 @@ test("복사 요청 shell은 화면별 내용을 유지하고 선택 가능한 �
   assert.ok(screen.getByText(/Resolve the conflict in \/repo\/feature\./))
 })
 
-test("오류 알림은 즉시 복사 가능한 Handoff 컨텍스트를 제공한다", async () => {
+test("오류 알림은 진단을 유지하고 큰 문제 상세 박스를 표시하지 않는다", async () => {
   const { Notice } = await server.ssrLoadModule("/src/components/feedback.tsx")
   await i18n.changeLanguage("en")
   const error = "Test timeout of 30000ms exceeded.\nError: apiRequestContext.get closed"
   render(createElement(Notice, { error: true }, error))
-  assert.ok(screen.getByRole("heading", { name: "Problem details" }))
-  const copied = []
-  const clipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard")
-  Object.defineProperty(navigator, "clipboard", {
-    configurable: true,
-    value: { writeText: async (value) => copied.push(value) },
-  })
-  try {
-    await userEvent.click(screen.getByRole("button", { name: "Copy" }))
-    assert.match(
-      copied[0],
-      /Message: Test timeout of 30000ms exceeded\.\nError: apiRequestContext\.get closed/,
-    )
-  } finally {
-    Object.defineProperty(navigator, "clipboard", clipboard)
-  }
+  assert.equal(screen.getByRole("alert").textContent, error)
+  assert.equal(screen.queryByRole("heading", { name: "Problem details" }), null)
+  assert.equal(screen.queryByRole("button", { name: "Copy" }), null)
+})
+
+test("백그라운드 오류는 화면을 차지하지 않고 문제 목록에서 확인하고 비운다", async () => {
+  const { Notice } = await server.ssrLoadModule("/src/components/feedback.tsx")
+  const { ProblemsProvider, ProblemsButton } = await server.ssrLoadModule(
+    "/src/components/problems.tsx",
+  )
+  await i18n.changeLanguage("en")
+  render(
+    createElement(
+      ProblemsProvider,
+      null,
+      createElement(ProblemsButton),
+      createElement(Notice, { error: true, background: true }, "Request failed (503)"),
+      createElement("p", null, "Existing content"),
+    ),
+  )
+  assert.ok(screen.getByText("Existing content"))
+  assert.equal(screen.queryByText("Request failed (503)"), null)
+  assert.equal(screen.queryByRole("alert"), null)
+  await userEvent.click(await screen.findByRole("button", { name: "Problems (1)" }))
+  assert.ok(await screen.findByRole("dialog", { name: "Problems" }))
+  assert.ok(screen.getByText("Request failed (503)"))
+  await userEvent.click(screen.getByRole("button", { name: "Clear problems" }))
+  assert.ok(await screen.findByText("No problems recorded."))
+  await userEvent.keyboard("{Escape}")
+  assert.ok(await screen.findByRole("button", { name: "Problems (0)" }))
 })
 
 for (const outcome of ["merged", "conflict", "dirty", "target-dirty", "error"]) {

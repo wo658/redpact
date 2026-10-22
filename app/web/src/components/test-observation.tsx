@@ -127,7 +127,9 @@ export function TestObservation({
         }}
       />
       {error && (
-        <Notice error>{t("{{error}} · Displayed evidence may be outdated.", { error })}</Notice>
+        <Notice error background={Boolean(data)}>
+          {t("{{error}} · Displayed evidence may be outdated.", { error })}
+        </Notice>
       )}
       {evidenceError && (
         <Notice error>

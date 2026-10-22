@@ -322,6 +322,9 @@ Docker 리소스를 prune하지 않습니다. 이전 릴리스는 명시적으�
 [로컬 updater](../app/server/tools/local-update.ts),
 [릴리스 workflow](../.github/workflows/npm-publish.yml).
 
+로컬 런타임 업데이트는 서비스 종료 전에 임시 데이터 복사본으로 마이그레이션 호환성을
+검증합니다. 적용 범위와 한계는 [업데이트 사전 검증](storage.md)을 참고하세요.
+
 ## 공개 설치 배포
 
 공개 배포 경로는 npm/pnpm 웹 런타임, Plugin과 Skills CLI 독립 에이전트 스킬입니다.

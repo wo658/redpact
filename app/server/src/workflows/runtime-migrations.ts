@@ -7,7 +7,11 @@ import {
   validateCurrentEnvironmentRecord,
   validateMigrationHistory,
 } from "../core/runtime-migrations.js"
-import type { MigrationFile, RuntimeMigrationFiles } from "../core/types/runtime-migrations.js"
+import type {
+  MigrationFile,
+  RuntimeMigrationFiles,
+  SelectionMigrationFile,
+} from "../core/types/runtime-migrations.js"
 
 // Append transformations; never change an applied migration's name or input contract.
 const migrations = [
@@ -35,28 +39,11 @@ export async function migrateRuntime(files: RuntimeMigrationFiles) {
       })),
     )
     const selectionRecords = await files.executionSelections(firstPending)
-    const selections = selectionRecords.map((file) => {
-      const original = file.backup ?? file.source
-      files.validateExecutionSelection(file, original)
-      const value = JSON.parse(original)
-      const data = file.family === "submissions" ? value.data : value
-      if (data.executionSelection !== undefined) {
-        return { file, source: original }
-      }
-      data.executionSelection = null
-      const source = `${JSON.stringify(value, null, 2)}\n`
-      files.validateExecutionSelection(file, source)
-      if (
-        file.backup !== undefined &&
-        file.source !== file.backup &&
-        !isDeepStrictEqual(JSON.parse(file.source), value)
-      ) {
-        throw new Error(
-          `${file.family}/${file.id}: record differs from its original backup and migrated output`,
-        )
-      }
-      return { file, source }
-    })
+    const selections = selectionRecords.map((file) => ({
+      file,
+      source: file.backup ?? file.source,
+      intermediates: [file.backup ?? file.source],
+    }))
     const completed = [...history]
     const migrator = new Umzug({
       logger: undefined,
@@ -68,6 +55,14 @@ export async function migrateRuntime(files: RuntimeMigrationFiles) {
               transform(item.source, item.file.id, item.values),
             )
             item.intermediates.push(item.source)
+          }
+          if (name === "003-execution-selection") {
+            for (const item of selections) {
+              item.source = withRecordPath(item.file, () =>
+                addExecutionSelection(item.file, item.source),
+              )
+              item.intermediates.push(item.source)
+            }
           }
         },
       })),
@@ -100,6 +95,19 @@ export async function migrateRuntime(files: RuntimeMigrationFiles) {
         }
       })
     }
+    for (const { file, source, intermediates } of selections) {
+      withRecordPath(file, () => {
+        files.validateExecutionSelection(file, source)
+        if (
+          file.backup !== undefined &&
+          !intermediates.some((value) =>
+            isDeepStrictEqual(JSON.parse(file.source), JSON.parse(value)),
+          )
+        ) {
+          throw new Error("Record differs from both its original backup and migrated output")
+        }
+      })
+    }
     for (const { file, source } of planned) {
       if (source !== file.source) {
         await files.backupEnvironment(firstPending, file)
@@ -117,18 +125,28 @@ export async function migrateRuntime(files: RuntimeMigrationFiles) {
     const cause =
       error instanceof Error && error.cause instanceof Error ? error.cause.message : String(error)
     throw new Error(
-      `Runtime migration failed: ${cause}. Originals are retained in .migrations/backups; correct the reported input and restart.`,
+      `Runtime migration failed: ${cause}. No records are reset automatically. Originals remain in place or in .migrations/backups; correct the reported input and restart.`,
       { cause: error },
     )
   }
 }
 
-function withRecordPath<T>(file: MigrationFile, action: () => T): T {
+function addExecutionSelection(file: SelectionMigrationFile, source: string) {
+  const value = JSON.parse(source)
+  const data = file.family === "submissions" ? value.data : value
+  if (data.executionSelection !== undefined) {
+    return source
+  }
+  data.executionSelection = null
+  return `${JSON.stringify(value, null, 2)}\n`
+}
+
+function withRecordPath<T>(file: MigrationFile & { family?: string }, action: () => T): T {
   try {
     return action()
   } catch (error) {
     throw new Error(
-      `environments/${file.id}.json: ${error instanceof Error ? error.message : String(error)}`,
+      `${file.family ?? "environments"}/${file.id}.json: ${error instanceof Error ? error.message : String(error)}`,
     )
   }
 }
