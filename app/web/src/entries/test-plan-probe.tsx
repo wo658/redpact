@@ -6,7 +6,7 @@ import { createRoot } from "react-dom/client"
 import { ReviewToolbar } from "../components/review-toolbar"
 import { Button } from "../components/ui/button"
 import { Tabs, TabsContent, TabsTrigger } from "../components/ui/coss-tabs"
-import { Field } from "../components/ui/field"
+import { Field, FieldLabel } from "../components/ui/field"
 import { Textarea } from "../components/ui/textarea"
 import { cn } from "../lib/utils"
 import "../index.css"
@@ -35,6 +35,8 @@ function TestPlanProbe() {
   const [nextId, setNextId] = useState(4)
   const [ready, setReady] = useState(false)
   const [pending, setPending] = useState(false)
+  const [modifying, setModifying] = useState(false)
+  const [feedback, setFeedback] = useState("")
   const [status, setStatus] = useState("Connecting to host…")
   useEffect(() => {
     app.onhostcontextchanged = (context) => {
@@ -59,8 +61,14 @@ function TestPlanProbe() {
   function update(items: Item[]) {
     setPlans((current) => ({ ...current, [kind]: items }))
   }
-  async function submit() {
-    if (kinds.every((name) => plans[name].every((item) => !item.text.trim()))) {
+  async function submit(action: "approve" | "modify") {
+    if (action === "modify" && !feedback.trim()) {
+      return
+    }
+    if (
+      action === "approve" &&
+      kinds.every((name) => plans[name].every((item) => !item.text.trim()))
+    ) {
       setStatus("Add at least one test before submitting.")
       return
     }
@@ -68,7 +76,11 @@ function TestPlanProbe() {
     const text = [
       "This is a Redpact MCP Apps round-trip verification, not authorization to execute tests.",
       `Marker: ${marker}`,
-      "I edited the following natural-language test plan in the app. Confirm receipt by repeating the marker and my revised tests, then describe the next TDD step without executing anything.",
+      `Action: ${action}`,
+      action === "modify"
+        ? "The plan is NOT approved. Rewrite the entire natural-language test plan using the overall feedback below, then present it for review again. Do not write executable tests or start implementation. Confirm receipt by repeating the marker and feedback."
+        : "The current natural-language test plan is approved. Confirm receipt by repeating the marker and approved tests, then describe the next TDD step without executing anything in this probe.",
+      ...(action === "modify" ? [`\nOverall feedback:\n${feedback}`] : []),
       ...kinds.map((name) => {
         const tests = plans[name].filter((item) => item.text.trim())
         return `\n${name}\n${tests.length ? tests.map((item, index) => `${index + 1}. ${item.text}`).join("\n") : "(No tests)"}`
@@ -90,8 +102,12 @@ function TestPlanProbe() {
     }
   }
   return (
-    <main className="mx-auto w-full max-w-3xl bg-background text-foreground">
-      <Tabs value={kind} onValueChange={(value) => setKind(value as Kind)} className="gap-0">
+    <main className="mx-auto flex h-dvh w-full max-w-3xl flex-col overflow-hidden bg-background text-foreground">
+      <Tabs
+        value={kind}
+        onValueChange={(value) => setKind(value as Kind)}
+        className="min-h-0 flex-1 gap-0"
+      >
         <ReviewToolbar label="Test type">
           {kinds.map((name) => (
             <TabsTrigger key={name} value={name}>
@@ -100,7 +116,7 @@ function TestPlanProbe() {
           ))}
         </ReviewToolbar>
         {kinds.map((name) => (
-          <TabsContent key={name} value={name} className="px-3 py-2">
+          <TabsContent key={name} value={name} className="min-h-0 overflow-y-auto px-3 py-2">
             <ol aria-label={`${name} tests`} className="flex flex-col gap-1">
               {plans[name].map((item, index) => (
                 <li key={item.id} className="flex items-start gap-2 py-1">
@@ -148,10 +164,59 @@ function TestPlanProbe() {
           </TabsContent>
         ))}
       </Tabs>
-      <footer className="flex flex-col items-end gap-2 border-t px-3 py-3">
-        <Button size="toolbar" disabled={!ready || pending} onClick={() => void submit()}>
-          Submit to chat
-        </Button>
+      <footer className="flex shrink-0 flex-col gap-3 border-t px-3 py-3">
+        {modifying && (
+          <Field>
+            <FieldLabel htmlFor="overall-feedback">Overall feedback</FieldLabel>
+            <Textarea
+              id="overall-feedback"
+              rows={3}
+              className="max-h-32 resize-none overflow-y-auto"
+              value={feedback}
+              placeholder="Describe how the whole plan should change…"
+              onChange={(event) => setFeedback(event.target.value)}
+            />
+          </Field>
+        )}
+        <div className="flex justify-end gap-2">
+          {modifying ? (
+            <>
+              <Button
+                variant="ghost"
+                size="toolbar"
+                disabled={pending}
+                onClick={() => setModifying(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="toolbar"
+                disabled={!ready || pending || !feedback.trim()}
+                onClick={() => void submit("modify")}
+              >
+                Request rewrite
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="toolbar"
+                disabled={pending}
+                onClick={() => setModifying(true)}
+              >
+                Modify
+              </Button>
+              <Button
+                size="toolbar"
+                disabled={!ready || pending}
+                onClick={() => void submit("approve")}
+              >
+                Approve
+              </Button>
+            </>
+          )}
+        </div>
         <p
           role="status"
           className={cn(
