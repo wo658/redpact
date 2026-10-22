@@ -1,5 +1,7 @@
 name: Publish npm runtime
 on:
+  push:
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       publish:
@@ -8,17 +10,20 @@ on:
         default: false
 permissions:
   contents: read
-  id-token: write
 concurrency:
   group: npm-publish
   cancel-in-progress: false
 jobs:
   verify-npm:
+    if: ${{ github.event_name != 'push' || !contains(github.ref_name, '-') }}
     uses: ./.github/workflows/runtime-verification.yml
   publish:
     needs: verify-npm
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -33,5 +38,5 @@ jobs:
       - name: Inspect publish contents
         run: node app/server/tools/publish-runtime.mjs --dry-run
       - name: Publish using npm trusted publishing
-        if: ${{ inputs.publish }}
+        if: ${{ github.event_name == 'push' || inputs.publish }}
         run: node app/server/tools/publish-runtime.mjs

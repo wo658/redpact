@@ -106,7 +106,8 @@ Treat a release as a verified product snapshot, not a version bump on every comm
   existing published tag or replace published contents; corrections need a new version.
 - Local builds and updates do not constitute publication. Perform tagging, pushing
   and publication within the user's authorized release scope. The current npm
-  workflow is manually dispatched; pushing a tag does not trigger it. For a
+  workflow verifies and publishes stable `v<version>` tag pushes; manual dispatch
+  defaults to verification only. Tags containing `-` skip automatic publication. For a
   `-beta.N` package, verify an explicit npm prerelease dist-tag before publication:
   the current publish script does not select one automatically.
 

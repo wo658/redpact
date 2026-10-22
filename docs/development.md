@@ -296,8 +296,19 @@ and required user actions in English and Korean.
 Supported distribution consists of the npm/pnpm web runtime, Plugins and standalone
 agent skills. The product
 version belongs to `app/server/package.json`. Tag the verified commit
-with `v<version>` and manually dispatch the [npm workflow](../.github/workflows/npm-publish.yml).
-Pushing a tag does not publish npm packages.
+with `v<version>` and push the stable tag to start the [npm workflow](../.github/workflows/npm-publish.yml).
+It verifies the snapshot before publishing. Tags containing `-` do not trigger automatic
+publication; prereleases require a separately reviewed channel. Manual dispatch remains
+available with `publish=false` by default for verification or explicit retries.
+
+Configure npm Trusted Publishing once for `@wo658/redpact`: GitHub owner `wo658`,
+repository `redpact`, workflow filename `npm-publish.yml`, with direct publishing allowed.
+The GitHub-hosted publishing job obtains a short-lived OIDC credential through
+`id-token: write`; normal releases require neither local `npm login` nor a stored npm token.
+A permission-related 404 may indicate that the npm trust does not match the workflow;
+local login does not repair the CI relationship. Package owners must configure that
+relationship through npm's authenticated settings. Existing tags are immutable: recover
+an unsuccessful publication by retrying its workflow, not by deleting or moving the tag.
 
 The [npm verification workflow](../.github/workflows/runtime-verification.yml) runs
 one Ubuntu/Node 24 job. It builds and installation-tests one tarball, runs server

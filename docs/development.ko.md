@@ -260,8 +260,18 @@ Redpact는 베타 기간에 `0.x.y` 제품 버전을 사용하고 사용자에�
 
 지원 배포는 npm/pnpm 웹 런타임, Plugin과 독립 에이전트 스킬입니다. 제품 버전은
 `app/server/package.json`에서 관리합니다. 검증한 커밋에 `v<version>` 태그를 만들고
-수동 [npm workflow](../.github/workflows/npm-publish.yml)를 실행하세요.
-태그 push 자체는 npm 게시를 시작하지 않습니다.
+안정 버전 태그를 push하면 [npm workflow](../.github/workflows/npm-publish.yml)가 시작됩니다.
+스냅샷을 검증한 뒤 게시합니다. `-`가 포함된 태그는 자동 게시하지 않으며 prerelease는
+별도로 검토한 채널이 필요합니다. 수동 실행도 유지하며 `publish=false`가 기본값이므로
+검증하거나 명시적으로 게시를 재시도할 수 있습니다.
+
+npm에서 `@wo658/redpact`의 Trusted Publishing을 한 번 설정하세요. GitHub 소유자는
+`wo658`, 저장소는 `redpact`, workflow 파일명은 `npm-publish.yml`이며 직접 게시를 허용해야 합니다.
+GitHub 호스팅 게시 job은 `id-token: write`로 단기 OIDC 자격을 얻으므로 정상적인 릴리스에는
+로컬 `npm login`이나 저장된 npm 토큰이 필요하지 않습니다. 권한 관련 404는 npm의 신뢰
+설정이 workflow와 일치하지 않을 때도 발생하며 로컬 로그인으로 CI 신뢰 관계가 복구되지는
+않습니다. 패키지 소유자가 npm의 인증된 설정에서 해당 관계를 구성해야 합니다. 기존 태그는
+불변이므로 게시 실패는 태그를 삭제·이동하는 대신 해당 workflow를 재실행해 복구하세요.
 
 [npm 검증 workflow](../.github/workflows/runtime-verification.yml)는 Ubuntu/Node 24의
 단일 job으로 실행합니다. tarball 하나를 빌드하고 설치 검증한 뒤 서버·웹 테스트를 실행하고,

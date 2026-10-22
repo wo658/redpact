@@ -81,3 +81,21 @@ test("자동 앱 CI는 웹과 서버만 검증하고 무거운 플러그인 검�
     run: "node tools/plugins/publish.mjs",
   })
 })
+
+test("안정 버전 태그 push는 로그인 없이 OIDC로 검증된 패키지를 게시한다", async () => {
+  const workflow = parse(
+    await readFile(new URL("../../../.github/workflows/npm-publish.yml", import.meta.url), "utf8"),
+  )
+  expect(workflow.on.push?.tags).toEqual(["v*"])
+  expect(workflow.jobs["verify-npm"].if).toBe(
+    "${{ github.event_name != 'push' || !contains(github.ref_name, '-') }}",
+  )
+  expect(workflow.permissions).toEqual({ contents: "read" })
+  expect(workflow.jobs.publish.permissions).toEqual({ contents: "read", "id-token": "write" })
+  expect(workflow.jobs.publish.steps).toContainEqual({
+    name: "Publish using npm trusted publishing",
+    if: "${{ github.event_name == 'push' || inputs.publish }}",
+    run: "node app/server/tools/publish-runtime.mjs",
+  })
+  expect(workflow.on.workflow_dispatch.inputs.publish.default).toBe(false)
+})
