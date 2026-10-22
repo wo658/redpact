@@ -178,7 +178,9 @@ Redpact
 
 - Project display options start with every available item visible. Hiding an item
   preserves the current page and active work. Worktrees and global Settings remain
-  accessible. Visibility is remembered per project in browser storage.
+  accessible. Visibility is remembered per project in browser storage. The display-options
+  button has no numeric badge; its accessible name and tooltip retain the hidden-item
+  count. Use the menu checkboxes or **Show all** to restore hidden items.
 - Worktree review hides confirmed-empty tabs. Errors, diagnostics, active execution
   and cleanup remain reachable. If the selected tab disappears, the first available
   tab opens; no available content produces one empty state.
@@ -206,7 +208,7 @@ Redpact
   test execution evidence.
 - The header exposes the open-workspace strip. Desktop browsers and compact mobile
   screens place the sidebar toggle beside the project selector,
-  before project display options. When closed, the reopen control appears below the header.
+  before project display options. When closed, the reopen control appears beside the tabs in the existing header without adding a row.
   Worktree display options appear on hover anywhere in the Worktrees section, on keyboard
   focus, while the menu is open, and for non-hover input.
   Workspace tabs show the project and sidebar page separated by a slash. Worktree names,

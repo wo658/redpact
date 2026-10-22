@@ -149,7 +149,8 @@ when the strip scrolls horizontally. Selecting or closing a tab reveals the acti
 desktop browser provides a sidebar toggle; compact mobile screens retain
 the sidebar trigger. In browser and mobile layouts, the open sidebar places this control
 beside the project selector, immediately before project display options. When closed,
-a reopening control sits below the workspace header.
+a reopening control sits at the start of the existing workspace header, beside the tabs.
+It adds no extra row above the content; tabs scroll within the remaining header width.
 
 Browser desktops use browser Back/Forward controls.
 
