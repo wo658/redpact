@@ -28,6 +28,7 @@ import { GitHubSettings } from "./github-settings"
 import { LanguageSelector } from "./language-selector"
 import { LiveUpdates, useLiveRevision } from "./live-updates"
 import { PluginUpdateSettings } from "./plugin-updates"
+import { ProblemsButton } from "./problems"
 import { ProjectFileViewer } from "./project-file-viewer"
 import { ProjectGitGraph } from "./project-git-graph"
 import { ProjectLibrary } from "./project-library"
@@ -589,7 +590,11 @@ export function WorktreePanel({
 
   const notices = (
     <>
-      {error && <Notice error>{error}</Notice>}
+      {error && (
+        <Notice error background={!loading && worktrees.length > 0}>
+          {error}
+        </Notice>
+      )}
       {display.error && <Notice error>{display.error}</Notice>}
     </>
   )
@@ -721,6 +726,7 @@ export function WorktreePanel({
             </Button>
           )}
           <div className="h-8 min-w-4 flex-1" />
+          <ProblemsButton />
         </header>
         {(isMobile ? !openMobile : !open) && (
           <div className="sidebar-reopen flex shrink-0 px-2 pb-2">

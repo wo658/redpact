@@ -1,6 +1,12 @@
 import type { en } from "./en"
 
 export const ko = {
+  Problems: "문제 목록",
+  "Problems collected in this browser session. Background failures do not interrupt your work.":
+    "현재 브라우저 세션에서 수집한 문제입니다. 백그라운드 오류는 작업을 방해하지 않습니다.",
+  "No problems recorded.": "기록된 문제가 없습니다.",
+  "Clear problems": "목록 비우기",
+
   "Apply to all File Viewer tabs in this browser.":
     "이 브라우저의 모든 File Viewer 탭에 적용합니다.",
   "Show Git-tracked files only": "Git 추적 파일만 표시",

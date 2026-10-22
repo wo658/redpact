@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next"
 import { LanguageSelector } from "@/components/language-selector"
 import { Loading, Notice } from "./components/feedback"
 import { LiveUpdates } from "./components/live-updates"
+import { ProblemsProvider } from "./components/problems"
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card"
 import ExecutionPage from "./ExecutionPage"
 import type { Api } from "./lib/api"
@@ -16,6 +17,14 @@ import { createApi, type Project } from "@/lib/api"
 const api = createApi()
 
 export default function App({ api: connectedApi = api }: { api?: Api }) {
+  return (
+    <ProblemsProvider>
+      <AppContent api={connectedApi} />
+    </ProblemsProvider>
+  )
+}
+
+function AppContent({ api: connectedApi }: { api: Api }) {
   const [location, setLocation] = useState(() =>
     readReviewLocation(typeof window === "undefined" ? "" : window.location.search),
   )

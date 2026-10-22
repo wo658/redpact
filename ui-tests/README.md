@@ -17,7 +17,7 @@ Dependencies empty overview is exercised in both entry flows.
 | Worktree UI Review | Empty screenshots and empty recorded source, both with persistent tabs |
 | Project Playwright | Empty screenshots, functional file list, selected source, empty run history |
 | Execution results | Unit output and exit code, Integration preparation failure, Playwright scenario/step errors and copyable Log rows at 1280px and 390px |
-| Problem notice | Actual settings validation failure with the shared Handoff shell and visible diagnostic |
+| Problem notice | Actual settings validation failure with a compact diagnostic and no expanded Problem details shell |
 
 Captures await the expected state and fonts. A visible container alone does not
 establish readiness: empty Dependencies must display its empty message before the

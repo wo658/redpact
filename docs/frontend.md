@@ -204,12 +204,10 @@ The shell standardizes the heading, Copy action, selectable text, clipboard-fail
 fallback and optional labelled details disclosure. Do not label it generically as an
 agent handoff or force unrelated recovery content into a common text template.
 
-Every destructive `Notice` is a problem state and uses the same shell automatically.
-It supplies the visible diagnostic as copyable context under **Problem details** so a
-user can hand it off immediately. The diagnostic stays visible once; the formatted
-copy text appears only if clipboard access fails. Views with durable identifiers,
-selection or retained resources still provide their own specific `CopyHandoff`
-context rather than relying on this fallback.
+Ordinary error `Notice` components do not automatically use `CopyHandoff`. They
+follow [Problems and background failures](#problems-and-background-failures).
+Recovery views with durable identifiers, selections or retained resources continue
+to provide their own specific `CopyHandoff` context.
 
 Only the active workspace mounts the project selector, so hidden tabs cannot retain
 its portaled menu.
@@ -249,9 +247,30 @@ state/input identity while open.
 Keep navigation available during loading, empty and failed reads. Preserve active
 tabs while content remains available; hide only confirmed-empty worktree sections.
 Errors and active execution/cleanup must remain reachable. Stale evidence requires
-a visible diagnostic, not a fabricated empty state or silently current result.
+an accessible diagnostic in the owning view or Problems, not a fabricated empty
+state or silently current result.
 Handle live-update notices through the shared components and clean subscriptions
 on exit. Keep errors beside the action or content that owns recovery.
+
+## Problems and background failures
+
+Error notices show a compact diagnostic beside the owning action or content, without
+an expanded Problem details/copy shell. Failed actions, invalid configuration and
+initial reads with no usable content remain visible there. Execution and cleanup
+failures remain visible in their evidence views.
+
+When a worktree list, execution review/log or Integration catalog refresh fails while
+usable content is already displayed, the viewer keeps that content and collects the
+error without inserting a notice into the page. The workspace header's **Problems**
+button shows the number of collected problems; open it to inspect messages, last-seen
+times, observation counts and page locations, or clear the list. Retained content may
+be outdated until a successful refresh. The panel never opens automatically.
+
+Problems are browser-session memory, shared across workspace tabs and lost on reload;
+they are not server history. Matching message/location pairs share one row. The list
+retains the latest 100 rows and at most 16,384 characters per message. Clearing it does
+not retry requests or resolve the underlying problem. Startup connection failures
+still show the connection screen and Retry.
 
 ## Language and access
 

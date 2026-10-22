@@ -45,7 +45,9 @@ export function ExecutionLog({ api, worktreeId }: { api: Api; worktreeId: string
       className="mx-auto flex min-h-full w-full min-w-0 content-width-768 flex-col gap-3"
     >
       {error && (
-        <Notice error>{t("{{error}} · Displayed evidence may be outdated.", { error })}</Notice>
+        <Notice error background={Boolean(page)}>
+          {t("{{error}} · Displayed evidence may be outdated.", { error })}
+        </Notice>
       )}
       {!page && !error && <Loading>{t("Loading execution…")}</Loading>}
       {page && !page.items.length && <EmptyState>{t("No executions yet")}</EmptyState>}
