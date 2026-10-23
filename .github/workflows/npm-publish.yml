@@ -47,7 +47,7 @@ jobs:
     needs: [prepare, verify-npm]
     if: ${{ always() && needs.verify-npm.result == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     permissions:
       contents: write
       id-token: write

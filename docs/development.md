@@ -341,7 +341,14 @@ Docker execution and registry download availability are not established by this 
 Only after all runtime release checks pass does the npm job publish the verified
 tarball through trusted publishing. The npm job
 checks the artifact identity again and does not rebuild it. No candidate npm version
-is published during verification. Registry availability must be checked after posting;
+is published during verification. After npm accepts an upload, its publish-time
+scan can delay registry visibility beyond five minutes. Runtime and Plugin workflows
+wait up to 30 minutes for availability and retain their validation gates; they do not
+upload the same accepted version again while it is pending. A timeout is not a
+successful release. Wait until the registry exposes the version before retrying the
+failed publication job; matching verified contents are then reused. See
+[npm publish-time scanning](https://github.blog/changelog/2026-07-28-npm-publish-time-malware-scanning-and-dual-use-metadata/).
+ Registry availability must be checked after posting;
 GitHub and npm publication are separate operations, not an atomic transaction. A failed
 check leaves the release unpublished (a tag and draft may remain). Retry infrastructure
 failures; source corrections require a new version/tag rather than moving a release tag.
