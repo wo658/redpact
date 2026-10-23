@@ -103,9 +103,9 @@ Redpact
 │   │       │   └── Main branch selection for Git projects
 │   │       ├── Application [section]
 │   │       │   └── Compose files
-│   │       ├── Unit Test [section]
+│   │       ├── Unit [section]
 │   │       │   └── Dockerfile, command, working directory and file patterns
-│   │       ├── Integration Test [section]
+│   │       ├── Integration [section]
 │   │       │   └── Directory, test/hook timeout and test environment
 │   │       ├── Playwright [section]
 │   │       │   └── Application connection, scenarios, targets and browser options
@@ -121,10 +121,10 @@ Redpact
 │   │   │   ├── Playwright [tab; conditional]
 │   │   │   │   └── Capture file list → recorded PNG checkpoints
 │   │   │   │       └── Desktop / Mobile evidence selection [viewer-local]
-│   │   │   ├── Unit Test [tab; conditional]
+│   │   │   ├── Unit [tab; conditional]
 │   │   │   │   ├── Changed unit test files → Code / Command results
 │   │   │   │   └── Run Tests / Cancel command [action]
-│   │   │   ├── Integration Test [tab; conditional]
+│   │   │   ├── Integration [tab; conditional]
 │   │   │   │   ├── Changed integration files → Code / Execution results
 │   │   │   │   └── Run Tests [action; latest submission]
 │   │   │   ├── Log [tab; conditional]

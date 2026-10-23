@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 import type { Api, CaptureRun, Worktree } from "@/lib/api"
 import { useRefreshRequest } from "@/lib/use-refresh-request"
 import { Loading, Notice } from "./feedback"
+import { IconAction } from "./icon-action"
 import { useLiveRevision } from "./live-updates"
 import { SearchPicker } from "./search-picker"
 import { Button } from "./ui/button"
@@ -23,9 +24,7 @@ export function ProjectPlaywrightAction({
   const [pending, setPending] = useState(false)
   return (
     <>
-      <Button variant="ghost" size="toolbar" onClick={() => setOpen(true)}>
-        {t("Run Playwright")}
-      </Button>
+      <IconAction label={t("Run Playwright")} onClick={() => setOpen(true)} />
       <Dialog
         open={open}
         onOpenChange={(value) => {

@@ -213,7 +213,7 @@ rather than adding another toolbar row inside the content frame. Standalone comp
 usage retains an inline toolbar. Portals preserve the page's Tabs context and action
 state; a page change removes its previous header content.
 
-Worktree review supplies its available Diff, Playwright, Unit Test, Integration Test,
+Worktree review supplies its available Diff, Playwright, Unit, Integration,
 Log and Environment tabs, together with test execution actions. Project Tests
 supplies Unit/Integration/Playwright; active Playwright supplies Screenshots/Tests/Runs
 and its execution action within the same header. Container supplies its title, status
@@ -222,7 +222,11 @@ supplies Overview/Configuration and Help. Git Graph supplies its title and Refre
 Its built-in branch, remote-visibility and commit-search controls remain with the graph.
 Project and instance settings place their form save and draft-recovery actions in the
 shared header; independent settings sections keep their own controls. Run controls
-use the shared execution default, with no per-run scope selector or task-draft cleanup
+use one shared 28px Lucide Play icon button with an accessible action name and native
+hover tooltip. Container Start, Restart and Stop and Git Graph Refresh use the same
+compact icon control with their respective Lucide symbols. Keep explicit text in the
+Playwright target-selection dialog. Execution controls use the shared execution
+default, with no per-run scope selector or task-draft cleanup
 action in the header. Agent overrides and explicit cleanup remain available through
 the contracts in [execution](execution.md).
 

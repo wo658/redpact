@@ -314,8 +314,8 @@ export function ProjectConfigurationForm({
   }
   const groups = [
     { title: t("Application"), prefix: "composeFiles" },
-    { title: t("Unit Test"), prefix: "unitTests." },
-    { title: t("Integration Test"), prefix: "tests." },
+    { title: t("Unit"), prefix: "unitTests." },
+    { title: t("Integration"), prefix: "tests." },
     { title: t("Playwright"), prefix: "playwright." },
   ]
   return (

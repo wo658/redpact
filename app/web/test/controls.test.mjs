@@ -665,7 +665,7 @@ test("워크트리 탭은 Git 쓰기 액션 없이 공용 헤더에서 키보드
   assert.equal(screen.getAllByRole("tablist").length, 1)
   assert.deepEqual(
     Array.from(toolbar.querySelectorAll('[role="tab"]'), (tab) => tab.textContent),
-    ["Diff", "Playwright", "Unit Test", "Integration Test", "Log", "Environment"],
+    ["Diff", "Playwright", "Unit", "Integration", "Log", "Environment"],
   )
   const log = screen.getByRole("tab", { name: "Log", exact: true })
   await user.click(log)
@@ -1174,14 +1174,7 @@ test("review navigation uses text-only labels and preserves keyboard selection",
   await screen.findAllByText("readme.txt")
   assert.deepEqual(reads, [["w1", "all"]])
   assert.ok(!screen.queryByRole("tablist", { name: "Compare" }))
-  for (const name of [
-    "Diff",
-    "Playwright",
-    "Unit Test",
-    "Integration Test",
-    "Log",
-    "Environment",
-  ]) {
+  for (const name of ["Diff", "Playwright", "Unit", "Integration", "Log", "Environment"]) {
     const tab = screen.getByRole("tab", { name })
     assert.equal(tab.querySelector("svg"), null, `${name} uses a text-only label`)
   }
@@ -1204,7 +1197,7 @@ test("review navigation uses text-only labels and preserves keyboard selection",
   changes.focus()
   await user.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}{Enter}")
   assert.equal(
-    screen.getByRole("tab", { name: "Integration Test" }).getAttribute("aria-selected"),
+    screen.getByRole("tab", { name: "Integration" }).getAttribute("aria-selected"),
     "true",
   )
   await user.click(changes)
@@ -1479,8 +1472,8 @@ test("project invalidations retain the active review tab during background list 
   )
   await user.click(screen.getByRole("button", { name: project.name, exact: true }))
   await user.click(await screen.findByRole("menuitemradio", { name: project.name }))
-  await screen.findByRole("tab", { name: "Integration Test" })
-  await user.click(screen.getByRole("tab", { name: "Integration Test" }))
+  await screen.findByRole("tab", { name: "Integration" })
+  await user.click(screen.getByRole("tab", { name: "Integration" }))
   const checkout = events.find((e) => e.url.includes("worktreeId=") && !e.url.includes("scope="))
   assert.ok(!checkout.closed, "hidden Diff keeps observing whether new changes appear")
   const evidence = events.find((e) => e.url.includes("scope=tests") && !e.closed)
@@ -1488,7 +1481,7 @@ test("project invalidations retain the active review tab during background list 
   await act(async () => evidence.onmessage())
   assert.equal(evidenceReads, 2)
   assert.equal(diffReads.get(hiddenDiffSignal), 1, "evidence must not reread hidden Diff")
-  const tab = screen.getByRole("tab", { name: "Integration Test", selected: true })
+  const tab = screen.getByRole("tab", { name: "Integration", selected: true })
   const projectEvents = events.find((e) => e.url.includes("projectId=scope-p"))
   assert.ok(projectEvents, "project list must have its own subscription")
   await act(async () => projectEvents.onmessage())
@@ -1503,7 +1496,7 @@ test("project invalidations retain the active review tab during background list 
   assert.ok(tab.isConnected, "background reads must not unmount the active review")
   assert.equal(tab.getAttribute("aria-selected"), "true")
   await act(async () => resolveList(dependencyWorktrees))
-  assert.equal(screen.getByRole("tab", { name: "Integration Test", selected: true }), tab)
+  assert.equal(screen.getByRole("tab", { name: "Integration", selected: true }), tab)
   await act(async () => events.find((e) => e.url === "/api/events").onmessage())
   assert.equal(
     reads,
@@ -1599,7 +1592,7 @@ test("Git read failures use Toasts, preserve the diff, and clear on recovery or 
   })
   await waitFor(() => assert.equal(visibleToasts().length, 1))
   const user = userEvent.setup({ document })
-  await user.click(screen.getByRole("tab", { name: "Integration Test", exact: true }))
+  await user.click(screen.getByRole("tab", { name: "Integration", exact: true }))
   await waitFor(() => assert.equal(visibleToasts().length, 0))
   view.unmount()
   const initial = render(content("w2"))
@@ -3516,7 +3509,7 @@ test("워크트리 표시 메뉴에서 브랜치와 병합 항목을 선택하�
   await user.keyboard("{Escape}")
   await user.click(await screen.findByRole("button", { name: "feature/without-folder" }))
   assert.ok(await screen.findByText("No working directory. Only committed changes are shown."))
-  assert.equal(screen.queryByRole("tab", { name: "Unit Test", exact: true }), null)
+  assert.equal(screen.queryByRole("tab", { name: "Unit", exact: true }), null)
   assert.equal(tracking.showBranches, true)
   await user.click(options)
   await user.click(await screen.findByRole("menuitemcheckbox", { name: "Hide merged worktrees" }))
@@ -4517,7 +4510,7 @@ test("프로젝트 설정은 오류가 있어도 항목별 그룹을 유지하�
     screen.queryByRole("spinbutton", { name: "Test and hook timeout (ms)" }),
     "Validation must keep the field editor available",
   )
-  for (const name of ["Application", "Unit Test", "Integration Test", "Playwright"]) {
+  for (const name of ["Application", "Unit", "Integration", "Playwright"]) {
     assert.ok(screen.getByRole("heading", { name, exact: true }))
   }
   assert.equal(screen.queryByRole("textbox", { name: "Settings JSON" }), null)
@@ -5704,7 +5697,7 @@ test("테스트 실행은 상단 툴바에만 표시되고 탭 전환 시 이전
   assert.equal(run.querySelector('[data-icon="inline-start"]'), null)
   assert.equal(screen.queryByText("pnpm exec vitest run unit"), null)
   const user = userEvent.setup({ document })
-  await user.click(screen.getByRole("tab", { name: "Integration Test", exact: true }))
+  await user.click(screen.getByRole("tab", { name: "Integration", exact: true }))
   await waitFor(() =>
     assert.equal(screen.getByRole("button", { name: "Run Integration tests" }).disabled, false),
   )
@@ -5722,7 +5715,7 @@ test("테스트 실행은 상단 툴바에만 표시되고 탭 전환 시 이전
   )
   await user.click(screen.getByRole("tab", { name: "Diff", exact: true }))
   assert.equal(screen.queryByRole("button", { name: "Run Integration tests" }), null)
-  await user.click(screen.getByRole("tab", { name: "Unit Test", exact: true }))
+  await user.click(screen.getByRole("tab", { name: "Unit", exact: true }))
   assert.equal(screen.getAllByRole("button", { name: "Run Unit command" }).length, 1)
 })
 
@@ -6334,23 +6327,20 @@ test("새 리뷰 내용은 탭을 다시 표시하고 사라진 선택은 남은
     await waitFor(() =>
       assert.deepEqual(
         screen.getAllByRole("tab").map((tab) => tab.textContent),
-        ["Integration Test"],
+        ["Integration"],
       ),
     )
     hasUnit = true
     await refresh()
     assert.equal(
-      screen.getByRole("tab", { name: "Integration Test" }).getAttribute("aria-selected"),
+      screen.getByRole("tab", { name: "Integration" }).getAttribute("aria-selected"),
       "true",
     )
-    assert.ok(screen.getByRole("tab", { name: "Unit Test" }))
+    assert.ok(screen.getByRole("tab", { name: "Unit" }))
     hasTests = false
     await refresh()
-    assert.equal(screen.queryByRole("tab", { name: "Integration Test" }), null)
-    assert.equal(
-      screen.getByRole("tab", { name: "Unit Test" }).getAttribute("aria-selected"),
-      "true",
-    )
+    assert.equal(screen.queryByRole("tab", { name: "Integration" }), null)
+    assert.equal(screen.getByRole("tab", { name: "Unit" }).getAttribute("aria-selected"), "true")
     hasUnit = false
     await refresh()
     assert.equal(screen.queryAllByRole("tab").length, 0)

@@ -33,7 +33,7 @@ for (const width of [1920, 414]) {
           page.getByRole("navigation", { name: "Worktrees", exact: true }),
         ).not.toBeVisible()
       }
-      await page.getByRole("tab", { name: "Unit Test", exact: true }).click()
+      await page.getByRole("tab", { name: "Unit", exact: true }).click()
       await node(
         `import {execFileSync} from 'node:child_process';execFileSync('git',['-C',${JSON.stringify(fixture.path)},'restore','unit/a.test.ts']);console.log('null');`,
       )

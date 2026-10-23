@@ -7,10 +7,10 @@ import { useRefreshRequest } from "@/lib/use-refresh-request"
 import { ExecutionProgress } from "./execution-progress"
 import { ExecutionSelectionEvidence } from "./execution-scope"
 import { EmptyState, Loading, Notice } from "./feedback"
+import { IconAction } from "./icon-action"
 import { useLiveRevision } from "./live-updates"
 import { TestFileBrowser } from "./test-file-browser"
 import { Badge } from "./ui/badge"
-import { Button } from "./ui/button"
 import { Field, FieldLabel } from "./ui/field"
 import { Switch } from "./ui/switch"
 import { ViewerImage } from "./viewer-asset"
@@ -134,9 +134,8 @@ function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureRev
   const controls = (
     <div className="flex shrink-0 items-center gap-3 whitespace-nowrap">
       {worktreeId && (
-        <Button
-          size="toolbar"
-          variant="ghost"
+        <IconAction
+          label={t("Run Playwright")}
           disabled={
             pending ||
             !target ||
@@ -146,9 +145,7 @@ function WorktreeCaptureReview({ api, worktreeId, actionsContainer }: CaptureRev
             data?.runs.some((item) => item.state !== "finished" || Boolean(item.cleanupError))
           }
           onClick={() => void execute()}
-        >
-          {t("Run Playwright")}
-        </Button>
+        />
       )}
     </div>
   )

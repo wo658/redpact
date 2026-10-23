@@ -78,7 +78,7 @@ test("Unit과 Integration 실행 기록에서 진행 상태와 오류를 함께 
     await page.keyboard.press("Escape")
     await page.getByRole("tab", { name: "Unit", exact: true }).click()
     await page.getByRole("tab", { name: "Command results", exact: true }).click()
-    const panel = page.getByRole("region", { name: "Unit Test", exact: true })
+    const panel = page.getByRole("region", { name: "Unit", exact: true })
     await expect(panel.getByRole("status", { name: "Unit progress" })).toContainText("Finished")
     await expect(panel.getByText("Docker unavailable", { exact: true })).toBeVisible()
     await expect(panel.getByRole("heading", { name: "stdout", exact: true })).toBeVisible()
@@ -89,7 +89,7 @@ test("Unit과 Integration 실행 기록에서 진행 상태와 오류를 함께 
   })
   await test.step("Integration 결과에서도 같은 진행 상태 형식을 확인한다", async () => {
     await page.getByRole("tab", { name: "Integration", exact: true }).click()
-    const panel = page.getByRole("region", { name: "Integration Test", exact: true })
+    const panel = page.getByRole("region", { name: "Integration", exact: true })
     await panel.getByRole("treeitem", { name: "progress.test.ts", exact: true }).click()
     await panel.getByRole("tab", { name: "Execution results", exact: true }).first().click()
     await expect(panel.getByRole("status", { name: "Integration progress" })).toContainText(

@@ -33,7 +33,7 @@ Add `unitTests` to the shared `.redpact/settings.json`. This fragment assumes a 
 
 Merge these fields into your configuration, preserving other settings. Paths resolve from the selected worktree. The Dockerfile must provide `/bin/sh`, the package manager and dependencies. Installation belongs in Dockerfile build steps because Redpact replaces the image's startup command. See [configuration](configuration.md).
 
-Open the project's **Tests** page and choose **Unit** to target the primary checkout. For a feature worktree, use its Unit Test execution controls. **Run Tests** uses the selected execution scope. Without the opt-in `fileCommand`, Unit runs the configured command in full. Selecting a source file does not filter execution; `patterns` determines the catalog and file-command candidates. Use a finite command with watch mode disabled.
+Open the project's **Tests** page and choose **Unit** to target the primary checkout. For a feature worktree, use its **Unit** execution controls. The Play icon uses the shared project execution scope. Without the opt-in `fileCommand`, Unit runs the configured command in full. Selecting a source file does not filter execution; `patterns` determines the catalog and file-command candidates. Use a finite command with watch mode disabled.
 
 Each run gets a fresh container. It does not use host-installed dependencies or require Compose dependency selections. Redpact records the command outcome and bounded stdout/stderr; it does not infer individual test verdicts from text output.
 

@@ -118,8 +118,8 @@ test("공용 헤더의 Unit·Integration·Environment는 실제 소스와 중지
       await test.step(`${width}px에서 소스와 환경을 실행 없이 탐색한다`, async () => {
         await page.setViewportSize({ width, height: 900 })
         for (const [name, marker, action] of [
-          ["Unit Test", "unit-header-source", "Run Unit command"],
-          ["Integration Test", "integration-header-source", "Run Integration tests"],
+          ["Unit", "unit-header-source", "Run Unit command"],
+          ["Integration", "integration-header-source", "Run Integration tests"],
         ]) {
           const tab = header.getByRole("tab", { name, exact: true })
           await tab.scrollIntoViewIfNeeded()
@@ -167,13 +167,14 @@ test("공용 헤더의 Unit·Integration·Environment는 실제 소스와 중지
           await page.evaluate(() => document.documentElement.scrollWidth),
           "긴 탭 탐색은 페이지 전체를 가로로 늘리지 않는다",
         ).toBeLessThanOrEqual(width)
-        const unit = header.getByRole("tab", { name: "Unit Test", exact: true })
+        const unit = header.getByRole("tab", { name: "Unit", exact: true })
         await unit.scrollIntoViewIfNeeded()
         await unit.click()
         await page.keyboard.press("ArrowRight")
-        await expect(
-          header.getByRole("tab", { name: "Integration Test", exact: true }),
-        ).toHaveAttribute("aria-selected", "true")
+        await expect(header.getByRole("tab", { name: "Integration", exact: true })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        )
       })
     }
   } finally {

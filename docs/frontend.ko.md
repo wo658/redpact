@@ -205,15 +205,19 @@ Redpact 밖의 도움이 필요한 복구 상태는 해당 view가 구체적인 
 Portal은 페이지의 Tabs context와 작업 상태를 보존하며, 페이지가 바뀌면 이전 헤더 내용을
 제거합니다.
 
-워크트리 리뷰는 사용 가능한 Diff·Playwright·Unit Test·Integration Test·Log·Environment
+워크트리 리뷰는 사용 가능한 Diff·Playwright·Unit·Integration·Log·Environment
 탭과 테스트 실행 작업을 제공합니다. 프로젝트 Tests는 Unit·Integration·Playwright를 제공하고
 활성 Playwright는 같은 헤더에 Screenshots·Tests·Runs와 실행 작업을 제공합니다.
 Container는 제목·상태·수명주기 작업, File Viewer와 Settings는 페이지 제목,
 Dependencies는 Overview·Configuration과 도움말, Git Graph는 제목과 Refresh를
 제공합니다. Graph 내부의 브랜치·원격 표시·커밋 검색 제어는 graph에 남습니다.
 프로젝트·인스턴스 설정의 양식 저장과 초안 복구 작업은 공용 헤더에 배치하며,
-독립된 설정 섹션의 제어는 해당 섹션에 유지합니다. Run 제어는 공유 실행 기본값을
-사용하며 헤더에는 실행별 범위 선택기나 작업 초안 정리 동작을 두지 않습니다.
+독립된 설정 섹션의 제어는 해당 섹션에 유지합니다. Run 제어는 접근 가능한 작업 이름과
+기본 hover 툴팁을 가진 공통 28px Lucide Play 아이콘 버튼을 사용합니다. Container의
+Start·Restart·Stop과 Git Graph의 Refresh도 각 의미에 맞는 Lucide 아이콘으로 같은
+소형 제어를 사용합니다. Playwright 대상 선택 대화상자의 실행 버튼은 명시적인 텍스트를
+유지합니다. 실행 제어는 공유 실행 기본값을 사용하며 헤더에는 실행별 범위 선택기나
+작업 초안 정리 동작을 두지 않습니다.
 에이전트의 재정의와 명시적인 정리는 [실행](execution.md) 계약으로 유지합니다.
 
 파일명, 소스·diff 제어와 파일별 Code·Results 탭은 파일 panel에 남습니다.

@@ -6,10 +6,9 @@ import { type Api, ApiError } from "@/lib/api"
 import { CommitChanges } from "./commit-changes"
 import { Notice } from "./feedback"
 import { applyGitGraphTheme } from "./git-graph-theme"
+import { IconAction } from "./icon-action"
 import { useLiveRevision } from "./live-updates"
 import { ReviewToolbar } from "./review-toolbar"
-import { Button } from "./ui/button"
-import { Spinner } from "./ui/spinner"
 
 export function ProjectGitGraph({ api, projectId }: { api: Api; projectId: string }) {
   return <ProjectGitGraphView key={projectId} api={api} projectId={projectId} />
@@ -129,15 +128,13 @@ function ProjectGitGraphView({ api, projectId }: { api: Api; projectId: string }
       <ReviewToolbar
         navigation={<h1 className="text-sm font-medium">{t("Git Graph")}</h1>}
         actions={
-          <Button
-            variant="ghost"
-            size="toolbar"
+          <IconAction
+            label={t("Refresh")}
+            icon={RefreshCw}
+            aria-busy={refreshing}
             disabled={!graphReady || refreshing}
             onClick={() => element.current?.refresh()}
-          >
-            {refreshing ? <Spinner aria-hidden="true" /> : <RefreshCw aria-hidden="true" />}
-            {t("Refresh")}
-          </Button>
+          />
         }
       />
       <div

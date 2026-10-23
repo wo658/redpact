@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { ExecutionProgress } from "./execution-progress"
 import { ExecutionSelectionEvidence } from "./execution-scope"
 import { EmptyState, Loading, Notice } from "./feedback"
+import { IconAction } from "./icon-action"
 import { ListGroup, ListHeader, ListItem, ListItems } from "./kibo-ui/list"
 import { useLiveRevision } from "./live-updates"
 import { ResultRow } from "./result-row"
@@ -22,7 +23,6 @@ import {
   TimelineItem,
   TimelineSeparator,
 } from "@/components/reui/timeline"
-import { Button } from "@/components/ui/button"
 import type { Api, TestRun, TestSubmission } from "@/lib/api"
 
 export function TestObservation({
@@ -98,7 +98,7 @@ export function TestObservation({
   }, [api, worktreeId, revision])
   return (
     <section
-      aria-label={t("Integration Test")}
+      aria-label={t("Integration")}
       className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden"
     >
       <IntegrationRunControls
@@ -197,9 +197,8 @@ function IntegrationRunControls({
     }
   }
   const runButton = (
-    <Button
-      size="toolbar"
-      variant="ghost"
+    <IconAction
+      label={t("Run Integration tests")}
       title={
         runCurrent
           ? t("Runs current integration sources with the fixed project configuration.")
@@ -207,9 +206,7 @@ function IntegrationRunControls({
       }
       disabled={(!submissionId && !runCurrent) || pending || active || unavailable}
       onClick={() => void execute()}
-    >
-      {t("Run Integration tests")}
-    </Button>
+    />
   )
   const controls = (
     <div className="flex items-center gap-2">

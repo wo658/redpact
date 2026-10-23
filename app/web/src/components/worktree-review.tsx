@@ -106,8 +106,8 @@ function WorktreeReviewTabs({
     <>
       {content?.changes && <TabsTrigger value="changes">{t("Diff")}</TabsTrigger>}
       {content?.preview && <TabsTrigger value="preview">{t("UI Review")}</TabsTrigger>}
-      {content?.unit && <TabsTrigger value="unit">{t("Unit Test")}</TabsTrigger>}
-      {content?.tests && <TabsTrigger value="tests">{t("Integration Test")}</TabsTrigger>}
+      {content?.unit && <TabsTrigger value="unit">{t("Unit")}</TabsTrigger>}
+      {content?.tests && <TabsTrigger value="tests">{t("Integration")}</TabsTrigger>}
       {content?.log && <TabsTrigger value="log">{t("Log")}</TabsTrigger>}
       {content?.environment && <TabsTrigger value="environment">{t("Environment")}</TabsTrigger>}
     </>

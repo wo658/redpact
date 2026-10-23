@@ -36,7 +36,7 @@ test("Redpact 데모: 변경사항과 실행 근거를 한 작업공간에서 �
     await expect(worktrees.getByRole("button").first()).toBeVisible()
     await worktrees.getByRole("button").first().click()
     await expect(page.getByText("아직 리뷰할 내용이 없습니다.", { exact: true })).toBeVisible()
-    for (const name of ["Diff", "Unit Test", "Integration Test", "Log", "Environment", "UI 리뷰"]) {
+    for (const name of ["Diff", "Unit", "Integration", "Log", "Environment", "UI 리뷰"]) {
       await expect(page.getByRole("tab", { name, exact: true })).toHaveCount(0)
     }
     await holdForDemo()
@@ -45,9 +45,9 @@ test("Redpact 데모: 변경사항과 실행 근거를 한 작업공간에서 �
   await test.step("프로젝트 전체 테스트와 실행 기록으로 이어지는 경로를 확인한다", async () => {
     await page.getByRole("button", { name: "Test", exact: true }).click()
     await expect(page.getByRole("tab", { name: "Unit", selected: true })).toBeVisible()
-    await expect(page.getByRole("region", { name: "Unit Test", exact: true })).toBeVisible()
+    await expect(page.getByRole("region", { name: "Unit", exact: true })).toBeVisible()
     await page.getByRole("tab", { name: "Integration", exact: true }).click()
-    await expect(page.getByRole("region", { name: "Integration Test", exact: true })).toBeVisible()
+    await expect(page.getByRole("region", { name: "Integration", exact: true })).toBeVisible()
     await page.getByRole("tab", { name: "Playwright", exact: true }).click()
     await expect(page.getByRole("region", { name: "Playwright", exact: true })).toBeVisible()
     await page.getByRole("tab", { name: "실행 기록", exact: true }).click()

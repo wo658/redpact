@@ -102,9 +102,9 @@ Redpact
 │   │       │   └── Git 프로젝트의 메인 브랜치 선택
 │   │       ├── Application [섹션]
 │   │       │   └── Compose files
-│   │       ├── Unit Test [섹션]
+│   │       ├── Unit [섹션]
 │   │       │   └── Dockerfile, 명령, 작업 디렉터리와 파일 패턴
-│   │       ├── Integration Test [섹션]
+│   │       ├── Integration [섹션]
 │   │       │   └── 디렉터리, 테스트·hook timeout과 테스트 환경
 │   │       ├── Playwright [섹션]
 │   │       │   └── 앱 연결, 시나리오, 타깃과 브라우저 옵션
@@ -120,10 +120,10 @@ Redpact
 │   │   │   ├── Playwright [탭; 조건부]
 │   │   │   │   └── 캡처 파일 목록 → 기록된 PNG checkpoint
 │   │   │   │       └── Desktop / Mobile 증거 선택 [뷰어 내부]
-│   │   │   ├── Unit Test [탭; 조건부]
+│   │   │   ├── Unit [탭; 조건부]
 │   │   │   │   ├── 변경된 단위 테스트 파일 → Code / Command results
 │   │   │   │   └── Run Tests / Cancel command [작업]
-│   │   │   ├── Integration Test [탭; 조건부]
+│   │   │   ├── Integration [탭; 조건부]
 │   │   │   │   ├── 변경된 통합 테스트 파일 → Code / Execution results
 │   │   │   │   └── Run Tests [작업; 최신 제출]
 │   │   │   ├── Log [탭; 조건부]

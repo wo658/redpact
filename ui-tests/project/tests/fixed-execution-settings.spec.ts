@@ -20,7 +20,7 @@ test("프로젝트 통합 테스트 화면에는 실행 선택 폼이 없다", a
       await page.keyboard.press("Escape")
     }
     await page.getByRole("tab", { name: "Integration", exact: true }).click()
-    await expect(page.getByRole("region", { name: "Integration Test", exact: true })).toBeVisible()
+    await expect(page.getByRole("region", { name: "Integration", exact: true })).toBeVisible()
   })
   await test.step("고정 설정을 다시 선택하는 컨트롤이 없는지 확인한다", async () => {
     await expect(

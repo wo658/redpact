@@ -12,11 +12,21 @@ export async function openApp(page: Page, language = process.env.REDPACT_UI_LANG
 
 // Offcanvas desktop navigation stays mounted outside the viewport.
 export async function isOnScreen(locator: Locator) {
+  const viewport = locator.page().viewportSize()
+  if (viewport && viewport.width >= 768) {
+    await locator.waitFor({ state: "attached" })
+  }
   if (!(await locator.isVisible())) {
     return false
   }
+  // Read desktop intent before its offcanvas transition settles.
+  const sidebarState = await locator.evaluate((element) =>
+    element.closest('[data-slot="sidebar"]')?.getAttribute("data-state"),
+  )
+  if (sidebarState) {
+    return sidebarState === "expanded"
+  }
   const bounds = await locator.boundingBox()
-  const viewport = locator.page().viewportSize()
   return (
     !!bounds &&
     !!viewport &&

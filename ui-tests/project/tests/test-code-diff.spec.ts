@@ -42,10 +42,10 @@ test("테스트 코드는 전체 코드 전환 없이 변경 구간만 보여준
       .getByRole("button")
       .first()
       .click()
-    for (const tab of ["Unit Test", "Integration Test"]) {
+    for (const tab of ["Unit", "Integration"]) {
       await page.getByRole("tab", { name: tab, exact: true }).click()
       const panel = page.getByRole("region", { name: tab, exact: true })
-      const file = tab === "Unit Test" ? "unit.test.ts" : "api.test.ts"
+      const file = tab === "Unit" ? "unit.test.ts" : "api.test.ts"
       await panel.getByRole("treeitem", { name: file, exact: true }).click()
       await test.step(`${tab} 변경된 줄과 주변 문맥만 표시한다`, async () => {
         await expect(
@@ -62,7 +62,7 @@ test("테스트 코드는 전체 코드 전환 없이 변경 구간만 보여준
       await expect(panel.getByRole("tab", { name: "Changes", exact: true })).toHaveCount(0)
     }
     await page.setViewportSize({ width: 390, height: 844 })
-    const mobilePanel = page.getByRole("region", { name: "Integration Test", exact: true })
+    const mobilePanel = page.getByRole("region", { name: "Integration", exact: true })
     await expect(
       mobilePanel.locator(".diff-code-insert").filter({ hasText: "NEW_ASSERTION" }),
     ).toBeVisible()

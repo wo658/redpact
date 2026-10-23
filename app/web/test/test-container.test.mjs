@@ -81,10 +81,14 @@ test("변경 표시와 실행 제어는 유지하고 상시 운영 안내는 표
   })
   const buttons = [...unavailable.querySelectorAll("button")]
   assert.equal(
-    buttons.find((button) => button.textContent === "Restart with latest code").disabled,
+    buttons.find((button) => button.getAttribute("aria-label") === "Restart with latest code")
+      .disabled,
     true,
   )
-  assert.equal(buttons.find((button) => button.textContent === "Stop").disabled, false)
+  assert.equal(
+    buttons.find((button) => button.getAttribute("aria-label") === "Stop").disabled,
+    false,
+  )
 })
 
 test("워크트리 환경 목록에서도 수동 컨테이너를 자동 테스트 실행으로 표시하지 않는다", async () => {

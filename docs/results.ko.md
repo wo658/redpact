@@ -20,7 +20,7 @@ Redpact에 실행을 요청한 프로젝트와 워크트리를 선택하세요. 
 | 화면 | 확인할 내용 |
 |---|---|
 | 프로젝트 **Tests** | 기본 체크아웃의 현재 Unit·Integration 파일과 실행 결과 |
-| 워크트리 **Unit Test** | 조건에 맞는 변경 소스와 명령 결과 |
+| 워크트리 **Unit** | 조건에 맞는 변경 소스와 명령 결과 |
 | 워크트리 Integration 검토 | 제출한 케이스, 기록된 소스, 실행 증거 |
 | 워크트리 **Playwright** | 선택한 Desktop·Mobile 크기의 PNG checkpoint가 기록된 capture 목적 파일 |
 | 프로젝트 **Tests → Playwright → Screenshots** | 프로젝트 타깃과 기록된 워크트리 타깃의 현재 이름별 캡처 |

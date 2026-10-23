@@ -68,7 +68,7 @@ test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토�
   await expect(page.getByText("아직 리뷰할 내용이 없습니다.", { exact: true })).toBeVisible()
   const emptyReview = page.getByText("아직 리뷰할 내용이 없습니다.", { exact: true })
   await expect(emptyReview).toBeVisible()
-  for (const name of ["Diff", "Unit Test", "Integration Test", "Log", "Environment", "UI 리뷰"]) {
+  for (const name of ["Diff", "Unit", "Integration", "Log", "Environment", "UI 리뷰"]) {
     await expect(page.getByRole("tab", { name, exact: true })).toHaveCount(0)
   }
   await capture(page, info, "워크트리 / 리뷰 / 내용 없는 탭 숨김", emptyReview)
@@ -123,20 +123,20 @@ test("앱 문맥에서 설정을 확인하고 주요 페이지 상태를 검토�
 
   await navigate("Test")
   await expect(page.getByRole("tab", { name: "Unit", selected: true })).toBeVisible()
-  await expect(page.getByRole("region", { name: "Unit Test", exact: true })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Unit", exact: true })).toBeVisible()
   await capture(
     page,
     info,
     "프로젝트 / Unit / 단위테스트 미설정",
-    page.getByRole("region", { name: "Unit Test", exact: true }),
+    page.getByRole("region", { name: "Unit", exact: true }),
   )
   await page.getByRole("tab", { name: "Integration", exact: true }).click()
-  await expect(page.getByRole("region", { name: "Integration Test", exact: true })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Integration", exact: true })).toBeVisible()
   await capture(
     page,
     info,
     "프로젝트 / Integration / 통합테스트 소스",
-    page.getByRole("region", { name: "Integration Test", exact: true }),
+    page.getByRole("region", { name: "Integration", exact: true }),
   )
   await page.getByRole("tab", { name: "Playwright", exact: true }).click()
   await expect(

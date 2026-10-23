@@ -20,7 +20,7 @@ Execution outcome, current-source freshness and human acceptance remain separate
 | View | What to inspect |
 |---|---|
 | Project **Tests** | Current Unit and Integration files in the primary checkout, plus execution results |
-| Worktree **Unit Test** | Matching changed sources and command results |
+| Worktree **Unit** | Matching changed sources and command results |
 | Worktree Integration review | Submitted cases, recorded source and execution evidence |
 | Worktree **Playwright** | Capture-purpose files with recorded PNG checkpoints for the selected Desktop/Mobile size |
 | Project **Tests → Playwright → Screenshots** | Current named captures from project targets and recorded worktree targets |

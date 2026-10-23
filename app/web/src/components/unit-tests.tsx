@@ -5,12 +5,12 @@ import type { Api, UnitInspection, UnitRun } from "@/lib/api"
 import { ExecutionProgress } from "./execution-progress"
 import { ExecutionSelectionEvidence } from "./execution-scope"
 import { EmptyState, Loading, Notice } from "./feedback"
+import { IconAction } from "./icon-action"
 import { useLiveRevision } from "./live-updates"
 import { ResultRow } from "./result-row"
 import { SearchPicker } from "./search-picker"
 import { SelectedTestSource } from "./selected-test-source"
 import { TestFileBrowser } from "./test-file-browser"
-import { Button } from "./ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/coss-tabs"
 import { toast } from "./ui/toast"
 
@@ -108,14 +108,11 @@ export function UnitTests({
   }
   const running = data?.runs.find((run) => run.state === "running")
   const runButton = (
-    <Button
-      size="toolbar"
-      variant="ghost"
+    <IconAction
+      label={t("Run Unit command")}
       disabled={pending || Boolean(running) || Boolean(loadError) || !data?.settings}
       onClick={() => void action()}
-    >
-      {t("Run Unit command")}
-    </Button>
+    />
   )
   const controls = (
     <div className="flex items-center gap-2">
@@ -138,10 +135,7 @@ export function UnitTests({
   }
   if (!data.settings && !data.catalog.files.length && !data.runs.length) {
     return (
-      <section
-        aria-label={t("Unit Test")}
-        className="flex h-full min-w-0 flex-col gap-3 overflow-auto"
-      >
+      <section aria-label={t("Unit")} className="flex h-full min-w-0 flex-col gap-3 overflow-auto">
         {toolbar}
         {data.catalog.diagnostics.map((message) => (
           <Notice error key={message}>
@@ -157,10 +151,7 @@ export function UnitTests({
   const selected = data.catalog.files.find((file) => file.path === path) ?? data.catalog.files[0]
   const run = data.runs.find((item) => item.id === runId) ?? data.runs[0]
   return (
-    <section
-      aria-label={t("Unit Test")}
-      className="flex h-full min-w-0 flex-col gap-3 overflow-hidden"
-    >
+    <section aria-label={t("Unit")} className="flex h-full min-w-0 flex-col gap-3 overflow-hidden">
       {toolbar}
       {!data.settings && (
         <EmptyState compact>

@@ -6,6 +6,7 @@ import { useRefreshRequest } from "@/lib/use-refresh-request"
 import type { ProjectEntry } from "../../../server/src/core/types/project-files"
 import { Loading, Notice } from "./feedback"
 import { FileContent } from "./file-content"
+import { IconAction } from "./icon-action"
 import { useLiveRevision } from "./live-updates"
 import { ReviewToolbar } from "./review-toolbar"
 import { Badge } from "./ui/badge"
@@ -128,34 +129,26 @@ export function TestContainerView({
         }
         actions={
           !environment ? (
-            <Button
-              size="toolbar"
+            <IconAction
+              label={t("Start")}
+              icon={PlayIcon}
               disabled={pending || !target || Boolean(issue)}
               onClick={() => onAction("start")}
-            >
-              <PlayIcon data-icon="inline-start" />
-              {t("Start")}
-            </Button>
+            />
           ) : (
             <>
-              <Button
-                size="toolbar"
-                variant="ghost"
+              <IconAction
+                label={t("Restart with latest code")}
+                icon={RotateCwIcon}
                 disabled={pending || transitioning || !target || Boolean(issue)}
                 onClick={() => onAction("restart")}
-              >
-                <RotateCwIcon data-icon="inline-start" />
-                {t("Restart with latest code")}
-              </Button>
-              <Button
-                size="toolbar"
-                variant="ghost"
+              />
+              <IconAction
+                label={t("Stop")}
+                icon={SquareIcon}
                 disabled={pending || environment.state === "stopping"}
                 onClick={() => onAction("stop")}
-              >
-                <SquareIcon data-icon="inline-start" />
-                {t("Stop")}
-              </Button>
+              />
             </>
           )
         }
