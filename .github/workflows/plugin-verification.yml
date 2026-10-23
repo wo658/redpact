@@ -47,7 +47,7 @@ jobs:
     needs: verify
     if: github.repository == 'wo658/redpact'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 40
     permissions:
       contents: read
       id-token: write
@@ -67,9 +67,9 @@ jobs:
         run: node tools/plugins/publish.mjs
       - name: Verify published catalog version
         if: ${{ inputs.publish }}
-        timeout-minutes: 5
+        timeout-minutes: 30
         run: |
-          for attempt in {1..20}; do
+          for attempt in {1..120}; do
             if node tools/plugins/check-release.mjs --registry; then
               exit 0
             fi

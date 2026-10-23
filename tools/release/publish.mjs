@@ -4,6 +4,7 @@ import { createHash } from "node:crypto"
 import { readFile } from "node:fs/promises"
 import { pathToFileURL } from "node:url"
 import { tarball, verifyArtifact } from "../../app/server/tools/runtime-artifact.mjs"
+import { waitForPublishedMetadata } from "./registry-wait.mjs"
 
 export function checkPublishedIntegrity(metadata, integrity) {
   assert.equal(
@@ -35,18 +36,11 @@ export async function publishVerifiedRuntime() {
   }
   assert.equal(response.status, 404, `Registry preflight returned HTTP ${response.status}`)
   execFileSync("node", ["app/server/tools/publish-runtime.mjs"], { stdio: "inherit" })
-  // npm processing is asynchronous; verify immutable registry contents before success.
-  for (let attempt = 0; attempt < 30; attempt++) {
-    const published = await fetch(url, { signal: AbortSignal.timeout(30000) })
-    if (published.ok) {
-      checkPublishedIntegrity(await published.json(), integrity)
-      console.log(`Registry verified @wo658/redpact@${version}`)
-      return
-    }
-    assert.equal(published.status, 404, `Registry verification returned HTTP ${published.status}`)
-    await new Promise((resolve) => setTimeout(resolve, 10000))
-  }
-  throw new Error(`Published package was not visible after five minutes: ${version}`)
+  // An accepted upload may remain unavailable during npm's asynchronous scanning.
+  // Poll metadata only; never repeat the upload while it is pending.
+  const published = await waitForPublishedMetadata(url)
+  checkPublishedIntegrity(published, integrity)
+  console.log(`Registry verified @wo658/redpact@${version}`)
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

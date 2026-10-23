@@ -8,8 +8,8 @@ const manifest = JSON.parse(await readFile(new URL("../package.json", import.met
 const tarball = fileURLToPath(
   new URL(`../../../dist/redpact-${manifest.version}.tgz`, import.meta.url),
 )
-const args = ["publish", tarball, "--access", "public", "--registry", "https://registry.npmjs.org/"]
+let args = ["publish", tarball, "--access", "public", "--registry", "https://registry.npmjs.org/"]
 if (values["dry-run"]) {
-  args.push("--dry-run")
+  args = ["pack", tarball, "--dry-run", "--ignore-scripts"]
 }
 execFileSync("npm", args, { stdio: "inherit" })

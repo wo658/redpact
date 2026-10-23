@@ -301,7 +301,14 @@ GitHub 호스팅 게시 job은 `id-token: write`로 단기 OIDC 자격을 얻으
 
 모든 런타임 릴리스 검사가 통과한 뒤에만 검증한 npm tarball을
 trusted publishing으로 게시합니다. npm job은 아티팩트 식별 정보를 다시 검사하며 재빌드하지
-않습니다. 검증 도중 candidate npm 버전을 게시하지 않습니다. 레지스트리 가용성은 게시 후
+않습니다. 내용 검사는 `npm pack <tarball> --dry-run --ignore-scripts`를 사용하므로 이미
+게시된 버전의 재시도에서도 동작하며 패키지 lifecycle script를 실행하지 않습니다. 검증 도중 candidate npm 버전을 게시하지 않습니다. npm이 업로드를 수락한 뒤에도
+게시 시 검사로 레지스트리 공개까지 5분 이상 걸릴 수 있습니다. 런타임·Plugin workflow는
+검증 조건을 유지하면서 공개를 최대 30분 기다리며, 처리 중인 같은 버전을 다시 업로드하지
+않습니다. 시간 초과는 릴리스 성공이 아닙니다. 레지스트리에 해당 버전이 나타난 뒤 실패한
+게시 job을 재시도하면 일치하는 검증 아티팩트를 재사용합니다.
+[npm 게시 시 검사 안내](https://github.blog/changelog/2026-07-28-npm-publish-time-malware-scanning-and-dual-use-metadata/)를 참고하세요.
+ 레지스트리 가용성은 게시 후
 확인해야 하며 GitHub와 npm 게시는 원자적 트랜잭션이 아닌 별도 작업입니다. 검사 실패 시
 공개되지 않으며 태그와 Draft는 남을 수 있습니다. 인프라 오류는 재실행하고, 소스 수정은
 릴리스 태그를 이동하는 대신 새 버전·태그를 사용합니다. 게시 스크립트는 `-beta.N`에 맞는
