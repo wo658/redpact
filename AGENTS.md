@@ -84,6 +84,11 @@ Use braces for control-flow bodies, avoid nested ternaries, and remove redundant
 
 ## Publication destination
 
+Use `dev` for local development and target development pull requests at `dev`.
+Reserve `main` for npm publication and release tags. Promote verified changes from
+`dev` to `main` when preparing a release, and create release tags on the verified
+`main` commit. Do not use `main` for routine local development.
+
 Publish product changes and pull requests to the public `wo658/redpact` repository.
 A merge into `wo658/redpact-private` alone does not complete publication. Verify the
 explicit GitHub repository and target branch before pushing or creating a PR.
