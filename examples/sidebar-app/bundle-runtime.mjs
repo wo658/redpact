@@ -14,7 +14,7 @@ const target = fileURLToPath(
 )
 const stage = await mkdtemp(join(tmpdir(), "redpact-plugin-node-"))
 try {
-  const version = "26.0.0"
+  const version = "24.22.1"
   const filename = `node-v${version}-darwin-arm64.tar.gz`
   const base = `https://nodejs.org/dist/v${version}/`
   const checksums = await fetch(`${base}SHASUMS256.txt`)
@@ -44,6 +44,7 @@ try {
   await cp(join(stage, `node-v${version}-darwin-arm64/LICENSE`), join(target, "bin/NODE-LICENSE"))
   await rm(join(target, "runtime"), { recursive: true, force: true })
   await mkdir(join(target, "tooling"), { recursive: true })
+  await rm(join(target, "tooling/npm"), { recursive: true, force: true })
   await cp(
     join(stage, `node-v${version}-darwin-arm64/lib/node_modules/npm`),
     join(target, "tooling/npm"),

@@ -429,6 +429,10 @@ In `examples/sidebar-app`, `pnpm pack:plugin` bundles macOS arm64 Node, npm, pnp
 the full web viewer, MCP companion and skills. Run `pnpm test`, `pnpm typecheck`,
 `pnpm test:package`, and the actual installation browser checks for npm and pnpm.
 `dist/plugin-artifact.json` records the source commit, version and tarball SHA-256.
+Codex accepts archives up to 50 MiB (52,428,800 bytes). Packing, extracted-package
+verification and publication reject larger archives. Embed the minified shared
+viewer once in `dist/app.html`; remove `dist/viewer` build intermediates after
+inlining, while preserving bundled tooling and license notices.
 Publish that verified tarball with `npm publish <tarball> --access public`, verify
 registry installation with `pnpm plugins:check --registry`, then merge the catalog
 change. A prepared unpublished version intentionally fails the registry check until
@@ -438,7 +442,7 @@ verification only: it inspects the verified tarball with `npm pack --dry-run`, s
 already published versions remain verifiable. Enable its `publish` input to publish that verified artifact from
 an Ubuntu/Node 24 job using npm OIDC trusted publishing. The publisher verifies the
 catalog version, source commit, filename and SHA-256 before publishing without a
-rebuild, then waits up to five minutes for npm processing and registry/catalog
+rebuild, then waits up to 30 minutes for npm processing and registry/catalog
 agreement. A final mismatch or registry outage fails the job. Configure the package trust
 once with npm 11.15 or newer: `npm trust github @wo658/redpact-plugin --repo wo658/redpact --file plugin-verification.yml --allow-publish --yes`.
 Account setup may require npm two-factor authentication; subsequent workflow publishes

@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
+import { assertPluginArchiveSize } from "../../tools/plugins/artifact-size.mjs"
 
 const root = new URL("./", import.meta.url)
 const target = new URL("dist/redpact-marketplace/plugins/redpact-app/", root)
@@ -20,6 +21,7 @@ const packed = JSON.parse(
   ),
 )[0]
 const tarball = await readFile(new URL(`dist/${packed.filename}`, root))
+assertPluginArchiveSize(tarball)
 const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim()
 await writeFile(
   new URL("dist/plugin-artifact.json", root),

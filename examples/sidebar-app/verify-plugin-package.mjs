@@ -7,11 +7,13 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
+import { assertPluginArchiveSize } from "../../tools/plugins/artifact-size.mjs"
 import { readPluginSource } from "../../tools/plugins/check-release.mjs"
 
 const dist = new URL("dist/", import.meta.url)
 const artifact = JSON.parse(await readFile(new URL("plugin-artifact.json", dist), "utf8"))
 const archive = new URL(artifact.filename, dist)
+assertPluginArchiveSize(await readFile(archive))
 assert.equal(
   createHash("sha256")
     .update(await readFile(archive))
@@ -23,6 +25,22 @@ const client = new Client({ name: "plugin-package-verification", version: "1.0.0
 try {
   execFileSync("tar", ["-xzf", fileURLToPath(archive), "-C", stage])
   const root = join(stage, "package")
+  const notices = await readFile(join(root, "dist/THIRD_PARTY_LICENSES"), "utf8")
+  assert.match(notices, /react \/ LICENSE/)
+  assert.match(notices, /react-dom \/ LICENSE/)
+  assert.match(notices, /Copyright \(c\) Meta Platforms, Inc\. and affiliates\./)
+  for (const license of [
+    "LICENSE",
+    "dist/LICENSE",
+    "dist/NOTICE",
+    "dist/licenses/shadcn-ui.txt",
+    "dist/licenses/material-icon-theme.txt",
+    "bin/NODE-LICENSE",
+    "tooling/npm/LICENSE",
+    "tooling/pnpm/LICENSE",
+  ]) {
+    assert.ok((await readFile(join(root, license), "utf8")).length > 0)
+  }
   const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8"))
   assert.equal(pkg.version, artifact.version)
   assert.equal(pkg.name, "@wo658/redpact-plugin")

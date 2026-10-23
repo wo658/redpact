@@ -1,6 +1,6 @@
 import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
-import { build } from "esbuild"
+import { build, transform } from "esbuild"
 import { build as buildViewer } from "../../app/web/node_modules/vite/dist/node/index.js"
 import { readPluginSource } from "../../tools/plugins/check-release.mjs"
 
@@ -19,6 +19,7 @@ const viewerBuild = await buildViewer({
   define: { "process.env.NODE_ENV": JSON.stringify("production") },
   logLevel: "warn",
   build: {
+    minify: true,
     outDir: fileURLToPath(new URL("dist/viewer/", target)),
     emptyOutDir: true,
     assetsInlineLimit: Number.MAX_SAFE_INTEGER,
@@ -92,6 +93,8 @@ const script = output
   .filter((asset) => asset.type === "chunk")
   .map((asset) => asset.code)
   .join("\n")
+// Minify explicitly: library ES output preserves formatting in the viewer bundler.
+const minifiedScript = await transform(script, { minify: true, legalComments: "none" })
 const css = output
   .filter((asset) => asset.type === "asset" && asset.fileName.endsWith(".css"))
   .map((asset) => asset.source)
@@ -102,8 +105,11 @@ await writeFile(
   template
     .replace("</head>", () => `<style>${css}</style></head>`)
     .replace("<body>", () => `<body><div hidden>${sprite}</div>`)
-    .replace("/* APP_SCRIPT */", () => script.replaceAll("</script", "<\\/script")),
+    .replace("/* APP_SCRIPT */", () => minifiedScript.code.replaceAll("</script", "<\\/script")),
 )
+
+// The MCP resource embeds the complete viewer; emitted files are build intermediates.
+await rm(new URL("dist/viewer/", target), { recursive: true, force: true })
 
 await build({
   entryPoints: [fileURLToPath(new URL("src/redpact/main.ts", root))],

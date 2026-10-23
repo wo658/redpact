@@ -19,7 +19,7 @@ jobs:
           version: 11.19.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 26
+          node-version: 24
       - run: pnpm install --frozen-lockfile
       - run: pnpm --dir examples/sidebar-app install --frozen-lockfile
       - run: pnpm --dir examples/sidebar-app pack:plugin
