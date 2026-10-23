@@ -245,13 +245,13 @@ establish it.
 When the plugin-managed runtime is missing, the page shows **Install Redpact** and
 an **npm / pnpm** selector. Installation is an explicit action; opening the page or
 refreshing it does not install anything. The companion installs the fixed public
-package `@wo658/redpact@0.9.0` with the selected bundled package manager, with lifecycle
+package `@wo658/redpact@0.11.0` with the selected bundled package manager, with lifecycle
 scripts disabled. Progress is polled while the installation runs. Failures remain
 visible and the button allows a retry; details are written to `install.log`.
 There is no arbitrary package name, registry or command input.
 
-Successful installs live under `~/.redpact/app-page/packages/0.9.0-npm` or
-`~/.redpact/app-page/packages/0.9.0-pnpm`. The default is pnpm. A verified existing
+Successful installs live under `~/.redpact/app-page/packages/0.11.0-npm` or
+`~/.redpact/app-page/packages/0.11.0-pnpm`. The default is pnpm. A verified existing
 installation is reused; if both are present, npm is selected first. This lookup
 covers plugin-managed packages, not unrelated global installations.
 Each attempt uses a temporary directory and publishes its installation directory
@@ -291,8 +291,14 @@ Agents use CLI for projects, settings, environments, tests, evidence and updates
 Install the global CLI separately to use `redpact` from a shell, then pass the status
 result's `origin` through `--server` (normally `http://127.0.0.1:54322`). A custom
 `REDPACT_APP_PORT` changes that origin without requiring another MCP connection.
+
+When a Plugin update changes its pinned runtime version, **Install Redpact** may
+reappear until that version is installed. A global CLI installation and the
+Plugin-managed package are separate; existing projects and evidence remain in the
+runtime data directory.
+
 The Plugin build pins the product version from `app/server/package.json`; publish
-that runtime before distributing the Plugin. Version 0.9.0 includes the CLI.
+that runtime before distributing the Plugin. Plugin 0.8.0 uses runtime 0.11.0, including its CLI.
 Reconnect the host after updating the plugin to refresh its connection and tool catalog.
 
 The default plugin port is `54322`, with runtime data in
@@ -370,6 +376,10 @@ Manage the public npm-sourced App Page Plugin through the host's Plugin controls
 or run `codex plugin marketplace upgrade redpact` followed by
 `codex plugin add redpact@redpact`. The runtime update controls below support
 path-based HTTP Plugins and do not compare npm-source versions.
+If `redpact` still points to a local development marketplace, register the public
+Git source with `codex plugin marketplace add wo658/redpact --ref main` before
+installing the public Plugin. Marketplace refresh does not convert a local source
+to a Git source.
 
 
 Settings → Agent plugins checks installed Redpact plugins in Codex and Claude Code.

@@ -239,13 +239,13 @@ npm 배포본 및 고정 버전 pnpm CLI를 플러그인에 포함합니다. 이
 
 플러그인 관리 런타임이 없으면 **Install Redpact**와 **npm / pnpm** 선택기가 나타납니다.
 명시적으로 눌러야 설치하며 페이지 열기나 새로고침은 설치를 시작하지 않습니다.
-선택한 번들 패키지 매니저로 공개 패키지 `@wo658/redpact@0.9.0`을 설치하며 라이프사이클
+선택한 번들 패키지 매니저로 공개 패키지 `@wo658/redpact@0.11.0`을 설치하며 라이프사이클
 스크립트는 실행하지 않습니다. 설치 중에는 진행 상태를 주기적으로 읽습니다. 실패를
 표시하고 버튼으로 재시도할 수 있으며 상세 기록은 `install.log`에 남깁니다.
 임의의 패키지 이름, 레지스트리 또는 명령은 입력할 수 없습니다.
 
-설치 결과는 `~/.redpact/app-page/packages/0.9.0-npm` 또는
-`~/.redpact/app-page/packages/0.9.0-pnpm`에 저장합니다. 기본 선택은 pnpm입니다.
+설치 결과는 `~/.redpact/app-page/packages/0.11.0-npm` 또는
+`~/.redpact/app-page/packages/0.11.0-pnpm`에 저장합니다. 기본 선택은 pnpm입니다.
 검증된 기존 설치가 있으면 재사용하며 두 가지가 모두 있으면 npm을 먼저 선택합니다.
 이 탐지는 플러그인 관리 패키지만 대상으로 하며 다른 전역 설치는
 탐색하지 않습니다. 임시 디렉터리에 설치한 후 패키지 버전, 진입점, 뷰어를 확인해야
@@ -282,8 +282,13 @@ App 패키지는 일반 플러그인과 같은 `redpact`, `redpact-init` 스킬�
 셸에서 `redpact`를 사용하려면 전역 CLI를 별도로 설치하고 상태 결과의 `origin`을
 `--server`로 전달합니다(기본값 `http://127.0.0.1:54322`). `REDPACT_APP_PORT`를
 변경하면 이 주소가 바뀌며 추가 MCP 연결은 필요하지 않습니다.
+
+Plugin 업데이트로 고정 런타임 버전이 바뀌면 새 버전을 설치할 때까지 **Install Redpact**가
+다시 표시될 수 있습니다. 전역 CLI 설치와 Plugin 관리 패키지는 별개이며 기존 프로젝트와
+실행 기록은 런타임 데이터 디렉터리에 유지됩니다.
+
 Plugin 빌드는 `app/server/package.json`의 제품 버전을 고정하므로 Plugin 배포 전에
-해당 런타임을 게시해야 합니다. 0.9.0에는 CLI가 포함됩니다.
+해당 런타임을 게시해야 합니다. Plugin 0.8.0은 CLI를 포함한 런타임 0.11.0을 사용합니다.
 플러그인 업데이트 후 호스트를 다시 연결해 연결 설정과 도구 목록을 갱신하세요.
 
 기본 포트는 `54322`, 런타임 데이터는 `~/.redpact/app-page/54322`, 시작 출력은 그 안의
@@ -355,6 +360,9 @@ npm 소스의 공개 App Page Plugin은 호스트의 Plugin 관리 화면 또는
 `codex plugin marketplace upgrade redpact` 후 `codex plugin add redpact@redpact`로
 업데이트하세요. 아래 런타임 내 업데이트 화면은 경로 기반 HTTP Plugin만 지원하며
 npm 소스 버전을 비교하지 않습니다.
+`redpact`가 로컬 개발 마켓플레이스를 가리키면 공개 Plugin을 설치하기 전에
+`codex plugin marketplace add wo658/redpact --ref main`으로 공개 Git 소스를
+등록하세요. 마켓플레이스 갱신만으로 로컬 소스가 Git 소스로 바뀌지는 않습니다.
 
 
 설정 → 에이전트 플러그인에서 Codex와 Claude Code에 설치된 Redpact 플러그인을

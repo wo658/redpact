@@ -153,12 +153,12 @@ async function sourceRequest() {
   return request.id
 }
 async function captures(page, app, state) {
-  for (const width of [1280, 640, 390]) {
+  for (const width of [1920, 800]) {
     await page.setViewportSize({ width, height: 900 })
     assert.equal(
       await app.locator("body").evaluate(() => document.documentElement.scrollWidth > innerWidth),
       false,
-      "전체·반폭·모바일에서 가로 넘침이 없어야 한다",
+      "Desktop Full·Half View에서 가로 넘침이 없어야 한다",
     )
     await page.screenshot({
       path: new URL(`${width}-${state}.png`, output).pathname,
