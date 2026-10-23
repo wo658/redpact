@@ -225,9 +225,12 @@ Redpact
   and navigating after Back discards forward entries. File selections, review subtabs
   and scrolling do not add history entries. Leaving a page may release its state;
   hidden workspace tabs do not retain drafts, DOM or subscriptions.
-- The sidebar starts open at widths of 1100 CSS pixels or more and collapsed below
-  that width. Crossing this breakpoint updates its open state. The shared header's
-  toggle remains available; below 768 CSS pixels it opens the mobile drawer.
+- The embedded GPT viewer always starts with its sidebar collapsed, including Full
+  and Half View. Resizing preserves its state; the shared header toggle opens or closes
+  it manually. Reopening the embedded viewer starts collapsed again. The standalone
+  app starts open at widths of 1100 CSS pixels or more and collapsed below that width;
+  crossing this breakpoint updates its open state. Below 768 CSS pixels, the shared
+  header toggle opens the mobile drawer.
   Full, Half View and Mobile keep the header on one row, with a fixed sidebar
   toggle and available Play action and independent navigation/action scrolling only
   as a fallback. Remove low-value controls before crowding the header. Half View reserves the content width

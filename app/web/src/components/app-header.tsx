@@ -1,19 +1,27 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react"
 import { createPortal } from "react-dom"
+import { hasViewerTransport } from "@/lib/viewer-transport"
 import { SidebarProvider, SidebarTrigger } from "./ui/sidebar"
 
 const wideSidebarQuery = "(min-width: 1100px)"
 
 export function ResponsiveSidebarProvider({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(() =>
-    typeof window === "undefined" ? true : window.matchMedia(wideSidebarQuery).matches,
-  )
+  const embedded = hasViewerTransport()
+  const [open, setOpen] = useState(() => {
+    if (embedded) {
+      return false
+    }
+    return typeof window === "undefined" || window.matchMedia(wideSidebarQuery).matches
+  })
   useEffect(() => {
+    if (embedded) {
+      return
+    }
     const media = window.matchMedia(wideSidebarQuery)
     const update = () => setOpen(media.matches)
     media.addEventListener("change", update)
     return () => media.removeEventListener("change", update)
-  }, [])
+  }, [embedded])
   return (
     <SidebarProvider open={open} onOpenChange={setOpen} className="h-dvh min-h-0 overflow-hidden">
       {children}

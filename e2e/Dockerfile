@@ -9,7 +9,7 @@ COPY app/web/package.json ./app/web/package.json
 RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
 # Refresh captured file timestamps without running Git hooks in the source archive.
-RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm build && cp -R app/web/dist app/server/dist/ui
+RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm build && node e2e/build-embedded-viewer.mjs && cp -R app/web/dist app/server/dist/ui
 RUN node app/server/tools/pack-runtime.mjs --directory /runtime
 
 FROM node:24-bookworm-slim

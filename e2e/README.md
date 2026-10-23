@@ -77,6 +77,13 @@ Keep chat-context and approval checks alongside the full application coverage. V
 
 Use `redpact tests run --kind playwright` with the actual checkout and the declared functional or capture target. Target patterns are relative to `ui-tests`. Capture completion alone is not visual approval: inspect desktop/mobile images and identify seeded record fixtures as fixtures, not application execution evidence. The companion's real MCP bridge needs its own lifecycle checks.
 
+The disposable image also builds the shipped MCP viewer entry as `embedded-viewer.html`.
+The embedded sidebar browser tests initialize that entry through an explicit simulated
+host in a parent iframe, with viewer requests and live events forwarded to the actual
+disposable HTTP/SSE server. This verifies embedded UI initialization and manual
+navigation; it does not establish compatibility with the real ChatGPT host or the
+plugin installation and private capability lifecycle.
+
 The native runner checks described in [development](../docs/development.md) cover actual capture collection, delayed/path attachments, crops, high-DPI pages and artifact persistence. They do not create a connected Integration submission.
 
 `host-boundaries.test.ts` must verify restored management HTTP controls while preserving the narrower model-facing MCP scope. Configuration checks use the fixed settings contract and shared validation; reads must not silently repair invalid authored content. `runtime-migrations.test.ts` verifies original backups, retained evidence, interrupted migration recovery and rejection of unsupported history through the real CLI.

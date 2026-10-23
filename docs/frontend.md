@@ -151,9 +151,11 @@ when available, sits at the far right; diagnostics have no persistent header but
 There is no workspace-tab strip, New tab or Close tab action. The standalone browser
 and embedded App Page use the same header and one current project/page.
 
-The sidebar starts open at 1100 CSS pixels and wider, and collapsed below that width.
-Crossing this breakpoint updates its open state; the header toggle remains available
-for manual navigation. Below 768 CSS pixels, navigation uses the mobile sidebar drawer with an explicit
+The embedded GPT viewer starts with the sidebar collapsed at every width, including
+Full and Half View. Resizing does not change this state; the header toggle opens or
+closes it manually. Reopening the embedded viewer starts collapsed again. The standalone
+app starts open at 1100 CSS pixels and wider, and collapsed below that width; crossing
+this breakpoint updates its open state. Below 768 CSS pixels, navigation uses the mobile sidebar drawer with an explicit
 Close sidebar action inside the drawer.
 Half View is a first-class design target: keep the content area available without a
 persistent sidebar. Preserve desktop gutters and full-width mobile content. Verify the

@@ -157,3 +157,53 @@ test("모바일 탐색 서랍은 명시적 닫기 버튼으로 닫고 다시 열
     Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth })
   }
 })
+
+test("GPT 뷰어는 Full에서도 접혀 시작하고 크기를 바꿔도 자동으로 펼치지 않는다", async () => {
+  const { ResponsiveSidebarProvider } = await server.ssrLoadModule("/src/components/app-header.tsx")
+  const { useSidebar } = await server.ssrLoadModule("/src/components/ui/sidebar.tsx")
+  const { setViewerTransport } = await server.ssrLoadModule("/src/lib/viewer-transport.ts")
+  const originalMedia = window.matchMedia
+  const listeners = new Set()
+  window.matchMedia = (query) => ({
+    matches: query === "(min-width: 1100px)",
+    addEventListener(_event, listener) {
+      listeners.add(listener)
+    },
+    removeEventListener(_event, listener) {
+      listeners.delete(listener)
+    },
+  })
+  setViewerTransport({
+    fetch() {
+      throw new Error("Unused transport")
+    },
+    events() {
+      throw new Error("Unused events")
+    },
+  })
+  function Probe() {
+    const sidebar = useSidebar()
+    return createElement("button", { onClick: sidebar.toggleSidebar }, sidebar.state)
+  }
+  try {
+    const first = render(createElement(ResponsiveSidebarProvider, null, createElement(Probe)))
+    assert.equal(screen.getByRole("button").textContent, "collapsed")
+    fireEvent.click(screen.getByRole("button"))
+    assert.equal(screen.getByRole("button").textContent, "expanded")
+    first.unmount()
+    render(createElement(ResponsiveSidebarProvider, null, createElement(Probe)))
+    assert.equal(
+      screen.getByRole("button").textContent,
+      "collapsed",
+      "이전 토글 상태와 관계없이 새로 열면 접힌다",
+    )
+    for (const listener of listeners) {
+      listener({ matches: true })
+    }
+    assert.equal(screen.getByRole("button").textContent, "collapsed")
+  } finally {
+    cleanup()
+    setViewerTransport(undefined)
+    window.matchMedia = originalMedia
+  }
+})
