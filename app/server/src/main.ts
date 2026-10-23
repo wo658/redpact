@@ -16,7 +16,9 @@ import { fetchRemotes } from "./adapters/git/fetch.js"
 import { readHistory } from "./adapters/git/history.js"
 import { readCommittedImage } from "./adapters/git/image.js"
 import { createGitAdapter } from "./adapters/git/isomorphic.js"
+import { createMergeTrackingGit } from "./adapters/git/merge-tracking.js"
 import { createGitMutations } from "./adapters/git/mutations.js"
+import { createGitHubMergeTracking } from "./adapters/github/merge-tracking.js"
 import { createGitHubPullRequests } from "./adapters/github/pull-requests.js"
 import { parseSource } from "./adapters/parser/source.js"
 import { createCaptureBaselineCleanup } from "./adapters/playwright/baseline.js"
@@ -61,6 +63,7 @@ import { createExecutionScopes } from "./workflows/execution-scope.js"
 import { createGitService } from "./workflows/git.js"
 import { createIntegrationTests } from "./workflows/integration-tests.js"
 import { createMergeService } from "./workflows/merge.js"
+import { createMergeTracking } from "./workflows/merge-tracking.js"
 import { createObserveProjects } from "./workflows/observe-projects.js"
 import { createCaptures } from "./workflows/playwright.js"
 import { createPlaywrightCatalog } from "./workflows/playwright-catalog.js"
@@ -163,12 +166,26 @@ const command = new Command()
       }
       const runner = createVitestRunner(directory, readTestResources)
       const gitAdapter = createGitAdapter()
+      const mergeTracking = createMergeTracking({
+        git: gitAdapter,
+        ...createMergeTrackingGit(),
+        github: createGitHubMergeTracking(undefined, async () => {
+          const document = await settingsEditor.instance()
+          if (document.issues.length) {
+            throw new Error("Fix global settings before using GitHub")
+          }
+          return (document.value?.github as { cliPath?: string } | undefined)?.cliPath
+        }),
+        now: Date.now,
+      })
       const projectSettings = createProjectSettings({
+        mergeTracking,
         store: storage.store,
         git: gitAdapter,
         preferences: preferenceFiles,
       })
       const worktrees = createWorktrees({
+        mergeTracking,
         activity: (projectId) => {
           const ids = storage.store
             .listWorktrees()

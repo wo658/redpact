@@ -78,6 +78,49 @@ test("모든 브랜치의 분기·병합과 태그를 읽고 작업 파일과 �
   expect(await readFile(join(dir, "dirty.txt"), "utf8")).toBe("working")
 })
 
+test("PR squash 커밋과 원래 브랜치는 실제 부모 관계를 유지하고 가짜 병합 선을 만들지 않는다", async () => {
+  const base = commit("base")
+  git("checkout", "-qb", "feature")
+  await writeFile(join(dir, "feature.txt"), "feature\n")
+  git("add", ".")
+  const original = commit("feature")
+  git("checkout", "-q", "main")
+  const main = commit("main change")
+  git("merge", "--squash", "feature")
+  const squash = commit("feature (#29)")
+
+  const all = await page()
+  expect(all.commits.find((row: { oid: string }) => row.oid === squash)).toMatchObject({
+    message: "feature (#29)",
+    parents: [main],
+  })
+  expect(all.commits.find((row: { oid: string }) => row.oid === original)).toMatchObject({
+    parents: [base],
+  })
+  const selected = await page("?ref=refs%2Fheads%2Fmain")
+  expect(selected.commits.map((row: { oid: string }) => row.oid)).toEqual([squash, main, base])
+})
+
+test("PR rebase 병합은 다시 작성된 커밋의 단일 부모 이력을 표시한다", async () => {
+  const base = commit("base")
+  git("checkout", "-qb", "feature")
+  await writeFile(join(dir, "feature.txt"), "feature\n")
+  git("add", ".")
+  const original = commit("feature")
+  git("checkout", "-q", "main")
+  const main = commit("main change")
+  git("checkout", "-q", "feature")
+  git("rebase", "main")
+  const rebased = git("rev-parse", "HEAD")
+  expect(rebased).not.toBe(original)
+  git("checkout", "-q", "main")
+  git("merge", "--ff-only", "feature")
+
+  const result = await page()
+  expect(result.commits.map((row: { oid: string }) => row.oid)).toEqual([rebased, main, base])
+  expect(result.commits[0].parents).toEqual([main])
+})
+
 test("페이지를 이어 읽어도 중복이나 누락이 없고 변경된 히스토리는 재조회한다", async () => {
   const oldest = commit("one")
   commit("two")

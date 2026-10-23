@@ -4,10 +4,12 @@ import { problem } from "../core/problems.js"
 import { trackingSchema } from "../core/tracking-schema.js"
 import type { Store } from "../core/types/contracts.js"
 import type { GitAdapter } from "../core/types/git.js"
+import type { MergeTracking } from "../core/types/merge-tracking.js"
 import type { PreferenceFiles } from "../core/types/preferences.js"
 import type { ProjectSettingsService } from "../core/types/services.js"
 
 export function createProjectSettings(deps: {
+  mergeTracking?: MergeTracking
   preferences: PreferenceFiles
   store: Pick<Store, "getProject">
   git: Pick<
@@ -87,7 +89,11 @@ export function createProjectSettings(deps: {
         return []
       }
       const value = await tracking(id)
-      const rows = await deps.git.branchReviews(await root(id), value.mainBranch)
+      const projectRoot = await root(id)
+      const localRows = await deps.git.branchReviews(projectRoot, value.mainBranch)
+      const rows = deps.mergeTracking
+        ? await deps.mergeTracking.branches(projectRoot, localRows, value.mainBranch)
+        : localRows
       return rows.filter(
         (row) => !value.hideMerged || !row.merged || row.worktrees.some((w) => !w.missing),
       )

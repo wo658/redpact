@@ -5,6 +5,7 @@ import { defaultIntegrationSelection } from "../core/integration-defaults.js"
 import { problem } from "../core/problems.js"
 import type { ProjectRecord, Store, Worktree } from "../core/types/contracts.js"
 import type { GitAdapter, GitDiff, GitScope, GitService } from "../core/types/git.js"
+import type { MergeTracking } from "../core/types/merge-tracking.js"
 import type {
   ProjectSettingsService,
   WorktreeAdmission,
@@ -15,6 +16,7 @@ import type { SettingsService } from "../core/types/settings.js"
 export function createWorktrees(deps: {
   store: Store
   activity?(projectId: string): boolean
+  mergeTracking?: MergeTracking
   git: Pick<GitAdapter, "metadata" | "primaryRoot" | "listWorktrees" | "currentBranch" | "isMerged">
   projects: ProjectSettingsService
   gitService(path: string): GitService
@@ -286,7 +288,10 @@ export function createWorktrees(deps: {
           return true
         }
         try {
-          return !(await deps.git.isMerged(item.checkoutRoot, tracking.mainBranch))
+          return !(await (deps.mergeTracking ?? deps.git).isMerged(
+            item.checkoutRoot,
+            tracking.mainBranch,
+          ))
         } catch {
           // A failed merge check is not evidence of a completed merge.
           return true

@@ -29,6 +29,25 @@ creating a checkout or exposing execution controls.
 dirty-worktree visibility follow the tracking service. Include local branches is
 optional; branch rows supplement rather than duplicate live worktrees.
 
+With **Hide merged** enabled, clean worktrees are hidden when their HEAD is an
+ancestor of the configured local main branch. For a github.com `origin`, Redpact
+also checks merged PRs through authenticated `gh` (using Global Settings'
+`github.cliPath` when configured). A PR counts only when its source repository,
+branch and exact head SHA match, its base is the configured main branch, and its
+merge-result commit is already an ancestor of that local branch. This recognizes
+squash and rebase PR merges without changing Git history or fetching automatically.
+A merged PR on GitHub alone does not establish local integration.
+
+The same check supplies branch-only merge status. New commits, dirty worktrees,
+detached unmerged checkouts and the main checkout remain visible. Unsupported
+origins, unavailable GitHub authentication, malformed responses and lookup failures
+leave unconfirmed work visible; local ancestry checks continue to work offline.
+Remote lookup results are shared for up to 30 seconds in a bounded in-memory cache;
+local heads, target ancestry and dirty state are rechecked before hiding anything.
+No PR database or new persisted settings are introduced. Fork and non-github.com
+PR evidence are outside this fallback. Existing **Hide merged** preferences still
+control visibility; no branch or checkout is deleted.
+
 ## Project management
 
 Open **Manage projects** from the project switcher or the empty startup screen.
@@ -94,6 +113,17 @@ Git Graph shows bounded commit history with branch filtering, remote visibility,
 loaded-commit search and selected-commit file diffs. Opening and browsing are read-only.
 The header's Refresh action rereads local history; it does not fetch from a remote.
 There is no viewer Fetch, Pull or Push button.
+
+The graph uses actual commit parents, as conventional Git graphs do. A merge commit
+connects its parent histories; a squash PR produces a single-parent commit, and a
+rebase PR produces rewritten commits in linear history. Neither creates a merge edge
+to the original branch. PR numbers already in commit subjects, such as `(#29)`, remain
+visible; the graph does not query a hosting provider for PR metadata. Retained source
+branches may therefore remain on a separate lane after a squash merge.
+
+Search covers loaded commits only. Load more history to search older commits, or use
+the branch filter to narrow the history being loaded. Refresh rereads existing local
+refs; remote-only history requires an explicit host Git fetch first.
 
 The retained backend Fetch operation explicitly updates remote-tracking branches
 with destination refspecs for configured remotes. It never merges, pushes, prunes, fetches tags or changes local
