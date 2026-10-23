@@ -16,7 +16,8 @@ export function verifyIdentity(actual, expected) {
 }
 
 export async function artifactIdentity() {
-  assert(process.env.GITHUB_SHA, "GITHUB_SHA is required to identify the release source")
+  const commit = process.env.RELEASE_SHA || process.env.GITHUB_SHA
+  assert(commit, "RELEASE_SHA or GITHUB_SHA is required to identify the release source")
   if (process.env.GITHUB_REF_TYPE === "tag") {
     assert.equal(
       process.env.GITHUB_REF_NAME,
@@ -26,7 +27,7 @@ export async function artifactIdentity() {
   }
   return {
     version: manifest.version,
-    commit: process.env.GITHUB_SHA,
+    commit,
     sha256: createHash("sha256")
       .update(await readFile(tarball))
       .digest("hex"),

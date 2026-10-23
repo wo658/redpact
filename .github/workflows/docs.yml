@@ -12,7 +12,7 @@ on:
       - 'pnpm-lock.yaml'
       - '.github/workflows/docs.yml'
   push:
-    branches: [main]
+    branches: [dev, main]
     paths:
       - 'docs/**'
       - 'tools/docs/**'

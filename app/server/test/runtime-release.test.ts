@@ -31,7 +31,7 @@ test("npm 릴리스는 단일 Linux 환경에서 패키지를 검증하고 OS �
   const manual = parse(
     await readFile(new URL("../../../.github/workflows/npm-publish.yml", import.meta.url), "utf8"),
   )
-  expect(manual.jobs.publish.needs).toBe("verify-npm")
+  expect(manual.jobs.publish.needs).toEqual(["prepare", "verify-npm"])
   expect(manual.jobs["verify-npm"].uses).toBe("./.github/workflows/runtime-verification.yml")
 })
 
@@ -87,15 +87,55 @@ test("안정 버전 태그 push는 로그인 없이 OIDC로 검증된 패키지�
     await readFile(new URL("../../../.github/workflows/npm-publish.yml", import.meta.url), "utf8"),
   )
   expect(workflow.on.push?.tags).toEqual(["v*"])
-  expect(workflow.jobs["verify-npm"].if).toBe(
-    "${{ github.event_name != 'push' || !contains(github.ref_name, '-') }}",
+  expect(workflow.on.push.branches).toEqual(["main"])
+  expect(workflow.jobs["verify-npm"].if).toContain("needs.prepare.result == 'success'")
+  expect(workflow.jobs["verify-npm"].if).toContain("!contains(github.ref_name, '-')")
+  expect(workflow.jobs["verify-npm"].with["source-sha"]).toBe(
+    "${{ needs.prepare.outputs.commit || github.sha }}",
   )
   expect(workflow.permissions).toEqual({ contents: "read" })
-  expect(workflow.jobs.publish.permissions).toEqual({ contents: "read", "id-token": "write" })
+  expect(workflow.jobs.publish.permissions).toEqual({ contents: "write", "id-token": "write" })
   expect(workflow.jobs.publish.steps).toContainEqual({
     name: "Publish using npm trusted publishing",
-    if: "${{ github.event_name == 'push' || inputs.publish }}",
-    run: "node app/server/tools/publish-runtime.mjs",
+    if: "${{ github.event_name == 'push' || (inputs.publish && github.ref_type == 'tag') }}",
+    run: "node tools/release/publish.mjs",
   })
   expect(workflow.on.workflow_dispatch.inputs.publish.default).toBe(false)
+})
+
+test("dev는 검증만 하고 main은 같은 실행에서 버전·검증·태그·npm 게시를 순서대로 수행한다", async () => {
+  const readWorkflow = async (name: string) =>
+    parse(
+      await readFile(new URL(`../../../.github/workflows/${name}.yml`, import.meta.url), "utf8"),
+    )
+  const application = await readWorkflow("server")
+  const docs = await readWorkflow("docs")
+  expect(application.on.push.branches).toEqual(["dev", "main"])
+  expect(docs.on.push.branches).toEqual(["dev", "main"])
+  const workflow = await readWorkflow("npm-publish")
+  expect(workflow.jobs.prepare.if).toContain("github.ref == 'refs/heads/main'")
+  expect(workflow.jobs.prepare.permissions).toEqual({ contents: "write" })
+  expect(workflow.jobs["verify-npm"].needs).toBe("prepare")
+  expect(workflow.jobs.publish.if).toContain("needs.verify-npm.result == 'success'")
+  const steps = workflow.jobs.publish.steps
+  const tagIndex = steps.findIndex(
+    (step: { run?: string }) => step.run === "node tools/release/tag.mjs",
+  )
+  const publishIndex = steps.findIndex(
+    (step: { run?: string }) => step.run === "node tools/release/publish.mjs",
+  )
+  expect(tagIndex).toBeGreaterThan(
+    steps.findIndex(
+      (step: { run?: string }) => step.run === "node app/server/tools/runtime-artifact.mjs verify",
+    ),
+  )
+  expect(publishIndex).toBeGreaterThan(tagIndex)
+  const releaseIndex = steps.findIndex(
+    (step: { run?: string }) => step.run === "node tools/release/github-release.mjs",
+  )
+  expect(releaseIndex).toBeGreaterThan(publishIndex)
+  expect(steps[releaseIndex].if).toBe(steps[publishIndex].if)
+  const verification = await readWorkflow("runtime-verification")
+  expect(verification.jobs.package.steps[0].with.ref).toBe("${{ inputs.source-sha }}")
+  expect(verification.jobs.package.env.RELEASE_SHA).toBe("${{ inputs.source-sha }}")
 })

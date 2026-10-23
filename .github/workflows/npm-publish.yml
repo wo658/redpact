@@ -1,6 +1,7 @@
 name: Publish npm runtime
 on:
   push:
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
     inputs:
@@ -14,18 +15,48 @@ concurrency:
   group: npm-publish
   cancel-in-progress: false
 jobs:
+  prepare:
+    if: ${{ github.repository == 'wo658/redpact' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    outputs:
+      commit: ${{ steps.release.outputs.commit }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Prepare the next stable version on main
+        id: release
+        run: node tools/release/prepare.mjs
   verify-npm:
-    if: ${{ github.event_name != 'push' || !contains(github.ref_name, '-') }}
+    needs: prepare
+    if: >-
+      ${{ always() && github.repository == 'wo658/redpact' &&
+          (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') &&
+          (github.event_name != 'push' || github.ref_type != 'tag' || !contains(github.ref_name, '-')) }}
     uses: ./.github/workflows/runtime-verification.yml
+    with:
+      source-sha: ${{ needs.prepare.outputs.commit || github.sha }}
   publish:
-    needs: verify-npm
+    needs: [prepare, verify-npm]
+    if: ${{ always() && needs.verify-npm.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
-      contents: read
+      contents: write
       id-token: write
+    env:
+      RELEASE_SHA: ${{ needs.prepare.outputs.commit || github.sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -37,6 +68,14 @@ jobs:
       - run: node app/server/tools/runtime-artifact.mjs verify
       - name: Inspect publish contents
         run: node app/server/tools/publish-runtime.mjs --dry-run
+      - name: Tag the verified main snapshot
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: node tools/release/tag.mjs
       - name: Publish using npm trusted publishing
-        if: ${{ github.event_name == 'push' || inputs.publish }}
-        run: node app/server/tools/publish-runtime.mjs
+        if: ${{ github.event_name == 'push' || (inputs.publish && github.ref_type == 'tag') }}
+        run: node tools/release/publish.mjs
+      - name: Publish GitHub release notes
+        if: ${{ github.event_name == 'push' || (inputs.publish && github.ref_type == 'tag') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node tools/release/github-release.mjs

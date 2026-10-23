@@ -1,14 +1,22 @@
 name: Verify release npm artifact
 on:
   workflow_call:
+    inputs:
+      source-sha:
+        type: string
+        required: true
 permissions:
   contents: read
 jobs:
   package:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      RELEASE_SHA: ${{ inputs.source-sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source-sha }}
       - uses: pnpm/action-setup@v4
         with:
           version: 11.19.0
@@ -19,6 +27,7 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm rebuild esbuild
       - run: pnpm lint
+      - run: node --test tools/release/*.test.mjs
       - run: pnpm docs:check
       - run: pnpm --filter @redpact/server typecheck
       - run: pnpm test:package

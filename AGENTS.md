@@ -114,7 +114,10 @@ explicit GitHub repository and target branch before pushing or creating a PR.
 
 Follow the version, tag, naming and cadence policy in
 [Development: Release policy](docs/development.md#release-policy).
-Treat a release as a verified product snapshot, not a version bump on every commit.
+Develop on `dev` and target development pull requests at `dev`. Promote verified
+changes to `main` to request an automatic stable release. Every main push runs
+version preparation, snapshot verification, immutable tagging and npm publication;
+ordinary dev commits do not publish.
 
 - Before preparing a release, inspect existing tags and published versions, choose
   the next version under that policy, and summarize changes since the prior release.
@@ -128,8 +131,10 @@ Treat a release as a verified product snapshot, not a version bump on every comm
   existing published tag or replace published contents; corrections need a new version.
 - Local builds and updates do not constitute publication. Perform tagging, pushing
   and publication within the user's authorized release scope. The current npm
-  workflow verifies and publishes stable `v<version>` tag pushes; manual dispatch
-  defaults to verification only. Tags containing `-` skip automatic publication. For a
+  workflow prepares a stable version on main pushes, verifies that exact commit,
+  tags it and publishes the same tarball through npm OIDC. Stable tag pushes also
+  verify/publish; manual dispatch defaults to verification only and publishing retries
+  require an existing stable tag ref. Tags containing `-` skip automatic publication. For a
   `-beta.N` package, verify an explicit npm prerelease dist-tag before publication:
   the current publish script does not select one automatically.
 

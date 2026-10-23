@@ -17,9 +17,11 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.github/workflows/server.yml'
+      - '.github/workflows/npm-publish.yml'
+      - '.github/workflows/runtime-verification.yml'
       - '.github/workflows/plugin-verification.yml'
   push:
-    branches: [main]
+    branches: [dev, main]
     paths:
       - 'app/**'
       - 'e2e/**'
@@ -36,6 +38,8 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.github/workflows/server.yml'
+      - '.github/workflows/npm-publish.yml'
+      - '.github/workflows/runtime-verification.yml'
       - '.github/workflows/plugin-verification.yml'
 permissions:
   contents: read
@@ -55,6 +59,7 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm rebuild esbuild
       - run: pnpm lint
+      - run: node --test tools/release/*.test.mjs
       - run: pnpm docs:check
       - run: pnpm plugins:check --registry
       - run: pnpm --filter @redpact/server typecheck

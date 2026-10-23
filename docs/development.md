@@ -289,19 +289,39 @@ Use these naming conventions when presenting releases:
 - Release title: `Redpact v0.2.0 — Execution result comparison`.
 - Diagnostic identification: product version plus short commit SHA.
 
-Target one release per week when verified changes are ready, with important bug
-fixes released as needed. Bump versions when distributing verified changes, not
-for every commit or merely because a week elapsed. This cadence is policy, not an
-automated schedule. Release notes describe changes, verification, known limitations
+Use `dev` for routine development and target development pull requests at `dev`.
+Promote reviewed, verified changes from `dev` to `main` when they should be released.
+Both branches run verification, but only `main` publishes automatically. Every main
+push requests a stable release, including documentation-only promotions; there is
+no weekly schedule. Release notes describe changes, verification, known limitations
 and required user actions in English and Korean.
 
+The [npm workflow](../.github/workflows/npm-publish.yml) serializes release requests.
+It reads the latest public `main`, keeps an explicitly prepared version higher than
+all stable tags, or increments the latest stable patch version. Prepare meaningful
+features or compatibility changes with the appropriate higher minor version before
+promotion. If needed, the workflow commits only `app/server/package.json` back to
+main without forcing. A concurrent push aborts that update; queued requests may
+release the newest main snapshot together. The release version commit does not
+recursively start another workflow. Bring release commits back into `dev` before
+preparing subsequent promotions.
+
+Verification checks out the exact prepared SHA, builds and installation-tests its
+single npm tarball, and records its identity. Only a verified snapshot receives an
+immutable `v<version>` tag. The same workflow publishes the same verified tarball
+through npm OIDC, checks registry integrity and then creates the GitHub Release.
+It does not rely on a workflow-generated tag to trigger another workflow.
 Supported distribution consists of the npm/pnpm web runtime, Plugins and standalone
-agent skills. The product
-version belongs to `app/server/package.json`. Tag the verified commit
-with `v<version>` and push the stable tag to start the [npm workflow](../.github/workflows/npm-publish.yml).
-It verifies the snapshot before publishing. Tags containing `-` do not trigger automatic
-publication; prereleases require a separately reviewed channel. Manual dispatch remains
-available with `publish=false` by default for verification or explicit retries.
+agent skills; the product version belongs to `app/server/package.json`.
+
+Existing stable tag pushes also verify and publish. Tags containing `-` do not
+publish automatically. Manual dispatch defaults to `publish=false`; explicit
+publishing retries require selecting an existing stable tag, while branch dispatches
+perform verification only. A retry reuses matching immutable tags and matching npm
+contents; different contents at the same version are rejected. Never move a release
+tag. Curated bilingual notes live under `tools/release/notes/v<version>.md`; when
+absent, the GitHub Release includes bilingual verification/limitation guidance and
+GitHub-generated commit notes. Existing published release text is preserved.
 
 Configure npm Trusted Publishing once for `@wo658/redpact`: GitHub owner `wo658`,
 repository `redpact`, workflow filename `npm-publish.yml`, with direct publishing allowed.
