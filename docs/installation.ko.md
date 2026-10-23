@@ -207,8 +207,12 @@ CLI 연결은 `redpact --server http://127.0.0.1:54321 settings describe --scope
 
 ## App Page Plugin 패키징과 동작
 
+Plugin 압축 파일은 호스트의 50 MiB 설치 한도를 지켜야 합니다. MCP 리소스에 축소한
+뷰어 하나를 내장하며 중간 뷰어 빌드 파일은 배포하지 않습니다. 패키징·압축 해제 검증·게시
+단계에서 압축 파일 크기 한도를 확인합니다.
+
 [Redpact App](../examples/sidebar-app/README.md)은 독립적인 로컬 STDIO MCP App Page입니다.
-macOS arm64 부트스트랩에 공식 Node 26.0.0, npm, pnpm 11.2.2와 라이선스를 포함하지만
+macOS arm64 부트스트랩에 공식 Node 24.22.1, npm, pnpm 11.2.2와 라이선스를 포함하지만
 **Redpact 서버는 포함하지 않습니다**. Redpact 설치 전에도 페이지가 열립니다.
 사용자가 Node, npm, pnpm 또는 Redpact를 따로 설치할 필요는 없습니다. 런타임 설치에는
 공개 npm 레지스트리 네트워크 접근이 필요합니다. Docker와 프로젝트별 실행 도구는
@@ -288,7 +292,7 @@ Plugin 업데이트로 고정 런타임 버전이 바뀌면 새 버전을 설치
 실행 기록은 런타임 데이터 디렉터리에 유지됩니다.
 
 Plugin 빌드는 `app/server/package.json`의 제품 버전을 고정하므로 Plugin 배포 전에
-해당 런타임을 게시해야 합니다. Plugin 0.8.0은 CLI를 포함한 런타임 0.11.0을 사용합니다.
+해당 런타임을 게시해야 합니다. Plugin 0.8.1은 CLI를 포함한 런타임 0.11.0을 사용합니다.
 플러그인 업데이트 후 호스트를 다시 연결해 연결 설정과 도구 목록을 갱신하세요.
 
 기본 포트는 `54322`, 런타임 데이터는 `~/.redpact/app-page/54322`, 시작 출력은 그 안의

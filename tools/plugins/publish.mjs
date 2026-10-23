@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { readFile } from "node:fs/promises"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { assertPluginArchiveSize } from "./artifact-size.mjs"
 import { readPluginSource } from "./check-release.mjs"
 
 export function verifyPluginArtifact(actual, expected) {
@@ -25,6 +26,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const artifact = JSON.parse(await readFile(new URL("plugin-artifact.json", dist), "utf8"))
   const filename = `wo658-redpact-plugin-${source.version}.tgz`
   const tarball = new URL(filename, dist)
+  assertPluginArchiveSize(await readFile(tarball))
   verifyPluginArtifact(artifact, {
     filename,
     version: source.version,

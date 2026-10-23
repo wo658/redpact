@@ -31,3 +31,11 @@ test("배포 Plugin은 제품 버전의 런타임과 CLI 스킬 계약을 사용
   expect(manifest.description).toContain("CLI")
   expect(manifest.description).not.toContain("cards")
 })
+
+test("배포 Plugin 압축 파일은 Codex의 50 MiB 설치 한도를 넘지 않는다", async () => {
+  const artifact = JSON.parse(
+    await readFile(new URL("../dist/plugin-artifact.json", import.meta.url), "utf8"),
+  )
+  const archive = await readFile(new URL(`../dist/${artifact.filename}`, import.meta.url))
+  expect(archive.byteLength).toBeLessThanOrEqual(50 * 1024 * 1024)
+})

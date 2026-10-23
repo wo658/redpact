@@ -211,10 +211,13 @@ See [the interface contract](interfaces.md).
 ## App Page Plugin packaging and behavior
 
 [Redpact App](../examples/sidebar-app/README.md) is an independent local STDIO MCP
-App Page. Its macOS arm64 bootstrap bundles official Node 26.0.0, npm and pnpm 11.2.2,
+App Page. Its macOS arm64 bootstrap bundles official Node 24.22.1, npm and pnpm 11.2.2,
 with their licenses, but does **not** include the Redpact server. The page works
 before Redpact is installed. Users do not need a separate Node, npm, pnpm or Redpact
-installation to use this artifact. Installing the runtime requires network access
+installation to use this artifact. The Plugin archive must fit the host’s 50 MiB installation limit. It contains one
+minified viewer embedded in the MCP resource; intermediate viewer files are not
+shipped. Package, extraction and publication checks enforce the archive limit.
+Installing the runtime requires network access
 to the public npm registry. Docker and project-specific execution tools remain
 separate prerequisites for features that need them.
 
@@ -298,7 +301,7 @@ Plugin-managed package are separate; existing projects and evidence remain in th
 runtime data directory.
 
 The Plugin build pins the product version from `app/server/package.json`; publish
-that runtime before distributing the Plugin. Plugin 0.8.0 uses runtime 0.11.0, including its CLI.
+that runtime before distributing the Plugin. Plugin 0.8.1 uses runtime 0.11.0, including its CLI.
 Reconnect the host after updating the plugin to refresh its connection and tool catalog.
 
 The default plugin port is `54322`, with runtime data in

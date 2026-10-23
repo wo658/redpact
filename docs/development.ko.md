@@ -384,6 +384,9 @@ App Page Plugin 버전은 런타임 및 HTTP Plugin 버전과 독립적입니다
 전체 웹 뷰어, MCP companion과 스킬을 묶습니다. `pnpm test`, `pnpm typecheck`,
 `pnpm test:package`를 실행하고 npm·pnpm 실제 설치 브라우저 검사도 각각 실행하세요.
 `dist/plugin-artifact.json`은 소스 커밋·버전·tarball SHA-256을 기록합니다.
+Codex는 최대 50 MiB(52,428,800바이트) 압축 파일을 허용합니다. 패키징·압축 해제 검증·게시
+단계에서 초과 파일을 거부합니다. 축소한 공용 뷰어를 `dist/app.html`에 한 번만 내장하고
+인라인 처리 후 `dist/viewer` 중간 파일을 제거하며 번들 도구와 라이선스 고지는 보존합니다.
 검증한 tarball을 `npm publish <tarball> --access public`으로 게시한 뒤 레지스트리에서
 `pnpm plugins:check --registry`로 검증한 뒤 카탈로그 변경을 병합합니다.
 준비 중인 미게시 버전은 게시가 끝날 때까지 레지스트리 검사가 실패하는 것이 정상입니다.
@@ -392,7 +395,7 @@ App Page Plugin 버전은 런타임 및 HTTP Plugin 버전과 독립적입니다
 검증한 tarball을 `npm pack --dry-run`으로 검사하므로 이미 게시한 버전도 재검증할 수 있습니다.
 `publish` 입력을 켜면 검증한 아티팩트를 Ubuntu/Node 24 job에서 npm OIDC trusted publishing으로
 게시합니다. 게시기는 카탈로그 버전·소스 커밋·파일명·SHA-256을 확인하고 재빌드 없이 게시한 뒤
-npm 처리와 레지스트리·카탈로그 일치를 최대 5분 기다립니다. 마지막 검사에서도 불일치하거나
+npm 처리와 레지스트리·카탈로그 일치를 최대 30분 기다립니다. 마지막 검사에서도 불일치하거나
 레지스트리 장애가 있으면 job이 실패합니다. 패키지 신뢰 연결은
 `npm trust github @wo658/redpact-plugin --repo wo658/redpact --file plugin-verification.yml --allow-publish --yes`로
 npm 11.15 이상에서 한 번 설정합니다. 계정 설정에는 npm 2차 인증이 필요할 수 있지만 이후 workflow 게시는
