@@ -286,7 +286,9 @@ the server before the application can load. A feature request returning 503 is n
 itself critical. Independent components without the app's Problems provider retain
 an inline fallback so diagnostics cannot disappear outside the shared app shell.
 
-The shared app header's **Problems** button shows the number of collected problems;
+The shared app header's **Problems** button shows a Lucide warning icon and the
+number of collected problems, with a muted zero badge and a highlighted nonzero badge.
+Its accessible name and native tooltip retain the Problems label and count;
 the project connection screen also provides it. Open the list to inspect messages,
 last-seen times, observation counts and page locations, or clear it. The panel never
 opens automatically. Informational notices and user-requested recovery dialogs keep

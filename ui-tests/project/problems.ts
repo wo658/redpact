@@ -1,4 +1,5 @@
 import type { Expect, Page } from "@playwright/test"
+import { isOnScreen } from "./app"
 import { node } from "./target"
 
 export async function verifyProblems(page: Page, expect: Expect, width: number) {
@@ -14,7 +15,7 @@ export async function verifyProblems(page: Page, expect: Expect, width: number) 
   await page.goto("/")
   await loaded
   const mobile = width < 768
-  if (mobile) {
+  if (!(await isOnScreen(page.getByRole("button", { name: "Project settings", exact: true })))) {
     await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
   }
   await page.getByRole("button", { name: "Project settings", exact: true }).click()
@@ -24,7 +25,14 @@ export async function verifyProblems(page: Page, expect: Expect, width: number) 
   const content = page.locator('input[name="playwright.service"]:visible')
   await expect(content).toHaveValue("app")
   await expect(page.locator(".app-header:visible")).toBeVisible()
-  await expect(page.getByRole("button", { name: "Problems (0)", exact: true })).toBeVisible()
+  const emptyProblems = page.getByRole("button", { name: "Problems (0)", exact: true })
+  await expect(emptyProblems).toBeVisible()
+  await expect(emptyProblems).toHaveText("0")
+  await expect(emptyProblems.locator("svg.lucide-triangle-alert")).toBeVisible()
+  await expect(emptyProblems.locator('[data-slot="badge"]')).toHaveAttribute(
+    "data-variant",
+    "secondary",
+  )
   fail = true
   // 실제 파일 관찰로 백그라운드 새로고침만 실패시킨다.
   const failed = page.waitForResponse(
@@ -37,6 +45,12 @@ export async function verifyProblems(page: Page, expect: Expect, width: number) 
   await failed
   const problems = page.getByRole("button", { name: "Problems (1)", exact: true })
   await expect(problems).toBeVisible()
+  await expect(problems).toHaveText("1")
+  await expect(problems).toHaveAttribute("title", "Problems (1)")
+  await expect(problems.locator('[data-slot="badge"]')).toHaveAttribute(
+    "data-variant",
+    "destructive",
+  )
   await expect(content).toHaveValue("app")
   await expect(page.getByText("Request failed (503)", { exact: true })).toHaveCount(0)
   await expect(page.getByRole("heading", { name: "Problem details", exact: true })).toHaveCount(0)

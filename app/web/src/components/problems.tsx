@@ -1,3 +1,4 @@
+import { TriangleAlert } from "lucide-react"
 import {
   createContext,
   type ReactNode,
@@ -9,6 +10,7 @@ import {
   useState,
 } from "react"
 import { useTranslation } from "react-i18next"
+import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import {
   Dialog,
@@ -71,10 +73,20 @@ export function ProblemsButton() {
   if (!state) {
     return null
   }
+  const label = `${t("Problems")} (${state.problems.length})`
   return (
     <Dialog>
-      <DialogTrigger render={<Button variant="ghost" size="sm" />}>
-        {t("Problems")} ({state.problems.length})
+      <DialogTrigger
+        render={<Button variant="ghost" size="toolbar" aria-label={label} title={label} />}
+      >
+        <TriangleAlert aria-hidden="true" />
+        <Badge
+          aria-hidden="true"
+          variant={state.problems.length > 0 ? "destructive" : "secondary"}
+          className="tabular-nums"
+        >
+          {state.problems.length}
+        </Badge>
       </DialogTrigger>
       <DialogContent className="max-h-[80dvh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
