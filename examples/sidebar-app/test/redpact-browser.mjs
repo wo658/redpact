@@ -287,6 +287,8 @@ try {
 
     await app.getByRole("button", { name: "Start Redpact", exact: true }).click()
     await app.locator("body[data-running=true]").waitFor({ timeout: 60000 })
+    await app.getByRole("button", { name: "Open project folder", exact: true }).waitFor()
+    await captures(page, app, "running")
     const first = await appTool("get_redpact_page")
     assert.equal(first.page.status.owned, true)
     await appTool("stop_redpact_server", { token: first.controlToken })
@@ -381,7 +383,7 @@ try {
     }
     await captures(page, app, "recorded-images")
     await app.getByRole("alert").last().scrollIntoViewIfNeeded()
-    await page.screenshot({ path: new URL("390-image-errors.png", output).pathname })
+    await page.screenshot({ path: new URL("800-image-errors.png", output).pathname })
     assert.deepEqual(await app.locator("body").evaluate(() => window.cspViolations), [])
     await page.goto(`${runtimeOrigin}/?page=review&kind=playwright&id=${capture.id}`)
     for (const name of ["기억 설정 캡처", "호칭 정정 결과 캡처"]) {
