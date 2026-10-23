@@ -301,7 +301,8 @@ GitHub 호스팅 게시 job은 `id-token: write`로 단기 OIDC 자격을 얻으
 
 모든 런타임 릴리스 검사가 통과한 뒤에만 검증한 npm tarball을
 trusted publishing으로 게시합니다. npm job은 아티팩트 식별 정보를 다시 검사하며 재빌드하지
-않습니다. 검증 도중 candidate npm 버전을 게시하지 않습니다. npm이 업로드를 수락한 뒤에도
+않습니다. 내용 검사는 `npm pack <tarball> --dry-run --ignore-scripts`를 사용하므로 이미
+게시된 버전의 재시도에서도 동작하며 패키지 lifecycle script를 실행하지 않습니다. 검증 도중 candidate npm 버전을 게시하지 않습니다. npm이 업로드를 수락한 뒤에도
 게시 시 검사로 레지스트리 공개까지 5분 이상 걸릴 수 있습니다. 런타임·Plugin workflow는
 검증 조건을 유지하면서 공개를 최대 30분 기다리며, 처리 중인 같은 버전을 다시 업로드하지
 않습니다. 시간 초과는 릴리스 성공이 아닙니다. 레지스트리에 해당 버전이 나타난 뒤 실패한

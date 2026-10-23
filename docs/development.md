@@ -340,7 +340,9 @@ Docker execution and registry download availability are not established by this 
 
 Only after all runtime release checks pass does the npm job publish the verified
 tarball through trusted publishing. The npm job
-checks the artifact identity again and does not rebuild it. No candidate npm version
+checks the artifact identity again and does not rebuild it. Inspection uses
+`npm pack <tarball> --dry-run --ignore-scripts`, so it also works when retrying an
+already published version and never runs package lifecycle scripts. No candidate npm version
 is published during verification. After npm accepts an upload, its publish-time
 scan can delay registry visibility beyond five minutes. Runtime and Plugin workflows
 wait up to 30 minutes for availability and retain their validation gates; they do not
