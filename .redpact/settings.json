@@ -1,5 +1,7 @@
 {
-  "composeFiles": ["e2e/compose.yaml"],
+  "composeFiles": [
+    "e2e/compose.yaml"
+  ],
   "dependencies": {},
   "tests": {
     "directory": "e2e/tests",
@@ -8,8 +10,10 @@
   },
   "unitTests": {
     "cwd": "app/server",
-    "command": "pnpm test",
-    "patterns": ["app/server/test/*.test.ts"],
+    "command": "pnpm test --maxWorkers=2",
+    "patterns": [
+      "app/server/test/*.test.ts"
+    ],
     "dockerfile": "unit.Dockerfile"
   },
   "playwright": {
@@ -24,29 +28,41 @@
       "worktree-captures": {
         "scope": "worktree",
         "purpose": "capture",
-        "testMatch": ["worktree/captures/**/*.ts"]
+        "testMatch": [
+          "worktree/captures/**/*.ts"
+        ]
       },
       "worktree-tests": {
         "scope": "worktree",
         "purpose": "functional",
-        "testMatch": ["worktree/tests/**/*.ts"]
+        "testMatch": [
+          "worktree/tests/**/*.ts"
+        ]
       },
       "project-captures": {
         "scope": "project",
         "purpose": "capture",
-        "testMatch": ["project/captures/**/*.ts"]
+        "testMatch": [
+          "project/captures/**/*.ts"
+        ]
       },
       "project-tests": {
         "scope": "project",
         "purpose": "functional",
-        "testMatch": ["project/tests/**/!(product-demo.spec).ts"]
+        "testMatch": [
+          "project/tests/**/!(product-demo.spec).ts"
+        ]
       },
       "product-demo": {
         "scope": "project",
         "purpose": "functional",
-        "testMatch": ["project/tests/product-demo.spec.ts"]
+        "testMatch": [
+          "project/tests/product-demo.spec.ts"
+        ]
       }
     }
   },
-  "services": ["app"]
+  "services": [
+    "app"
+  ]
 }
