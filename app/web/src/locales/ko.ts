@@ -1,6 +1,8 @@
 import type { en } from "./en"
 
 export const ko = {
+  "Problem recorded": "문제가 기록되었습니다",
+  "See Settings for details.": "자세한 내용은 Settings에서 확인하세요.",
   Problems: "문제 목록",
   "Problems collected in this browser session. Background failures do not interrupt your work.":
     "현재 브라우저 세션에서 수집한 문제입니다. 백그라운드 오류는 작업을 방해하지 않습니다.",

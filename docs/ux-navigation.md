@@ -29,7 +29,7 @@ Redpact
 ├── Shared application header
 │   ├── Toggle Sidebar [action]
 │   ├── Current page title / navigation / actions [section; contents below]
-│   └── Problems [dialog]
+│   └── Play [action; when available, far right]
 │
 ├── Sidebar
 │   ├── Project switcher
@@ -139,6 +139,7 @@ Redpact
 │   ├── Star on GitHub [link; sidebar footer icon]
 │   ├── Update [action; newer npm version only]
 │   └── Settings [page; global, sidebar footer icon]
+│       ├── Problems [section; session diagnostics and explicit clear action]
 │       ├── Updates [section]
 │       ├── Agent plugins [section; check versions and confirm installation]
 │       │   └── Check for updates [action; no installation]
@@ -204,7 +205,10 @@ Redpact
   selection comes from fixed project configuration; it is separate from recorded
   test execution evidence.
 - The shared app header always provides the sidebar toggle, the current page's title
-  or navigation and actions, and Problems, in exactly one row at every viewport.
+  or navigation and actions in exactly one row at every viewport. The available
+  Play execution action sits at the far right. Noncritical diagnostics appear as a
+  bottom-right notification; clicking dismisses the notification without clearing
+  history. Global Settings contains Problems details and the clear action.
   Worktree review tabs and test execution actions appear there. Container, Tests, File Viewer, Git Graph, Dependencies,
   Project settings and global Settings use the same header space. Settings form save
   and draft-recovery actions appear in the header; section-specific controls remain
@@ -224,11 +228,12 @@ Redpact
 - The sidebar starts open at widths of 1100 CSS pixels or more and collapsed below
   that width. Crossing this breakpoint updates its open state. The shared header's
   toggle remains available; below 768 CSS pixels it opens the mobile drawer.
-  Full, Half View and Mobile keep the header on one row, with fixed sidebar/Problems
-  controls and independent navigation/action scrolling only as a fallback. Remove
-  low-value controls before crowding the header. Half View reserves the content width
+  Full, Half View and Mobile keep the header on one row, with a fixed sidebar
+  toggle and available Play action and independent navigation/action scrolling only
+  as a fallback. Remove low-value controls before crowding the header. Half View reserves the content width
   for the current page instead of a permanent sidebar; verify it at 800px alongside
-  Full at 1920px and Mobile at 390px or 414px.
+  desktop Full at 1920px. Capture both desktop widths; Mobile captures are required
+  only when specifically requested.
 - Worktree display options appear on hover anywhere in the Worktrees section, on
   keyboard focus, while the menu is open, and for non-hover input.
 - Settings sections and actions can depend on available API capabilities. The MCP

@@ -13,6 +13,8 @@ for (const name of [
   "HTMLElement",
   "Element",
   "Node",
+  "AbortController",
+  "AbortSignal",
   "Event",
   "CustomEvent",
   "MouseEvent",
@@ -233,9 +235,12 @@ test("잘못된 검토 링크는 네트워크 호출 없이 진단하고 다른 
     )
     assert.equal(screen.queryByRole("alert"), null)
     assert.ok(screen.getByRole("heading", { name: "Open an execution from chat" }))
-    fireEvent.click(await screen.findByRole("button", { name: "Problems (1)" }))
-    assert.ok(await screen.findByRole("dialog", { name: "Problems" }))
-    assert.ok(screen.getByText("Invalid execution link."))
+    assert.ok(await screen.findByText("See Settings for details."))
+    assert.equal(Boolean(document.querySelector('[data-slot="dialog-content"]')), false)
+    fireEvent.click(screen.getByText("See Settings for details."))
+    await waitFor(() =>
+      assert.equal(Boolean(screen.queryByText("See Settings for details.")), false),
+    )
   } finally {
     cleanup()
     window.history.replaceState(null, "", "/")

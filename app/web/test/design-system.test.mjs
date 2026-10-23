@@ -159,13 +159,13 @@ test("short segments have a minimum width while labels stay centered", async () 
   assert.match(tabs, /segmentedControlItemSizeClassNames\[resolvedSize\]/)
 })
 
-test("공용 헤더는 본문 프레임 앞에 탐색과 진단 컨트롤을 제공한다", async () => {
+test("공용 헤더는 본문 프레임 앞에 탐색과 오른쪽 작업 공간을 제공한다", async () => {
   const source = await readFile(new URL("src/components/project-manager.tsx", root), "utf8")
   const header = await readFile(new URL("src/components/app-header.tsx", root), "utf8")
   const headerStart = source.indexOf("<AppHeader />")
   const insetStart = source.indexOf("<SidebarInset")
   assert.ok(headerStart >= 0 && headerStart < insetStart)
   assert.match(header, /<SidebarTrigger/)
-  assert.match(header, /<ProblemsButton/)
+  assert.doesNotMatch(header, /<ProblemsButton/)
   assert.match(source.slice(insetStart), /md:rounded-xl md:ring-1 md:ring-border/)
 })

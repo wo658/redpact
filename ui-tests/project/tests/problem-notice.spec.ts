@@ -1,6 +1,18 @@
-import { expect, test } from "@playwright/test"
+import { expect, type Page, test } from "@playwright/test"
+import { isOnScreen } from "../app"
 
-test("설정 검증 오류는 inline 없이 문제 목록에만 남긴다", async ({ page, request }) => {
+async function navigate(page: Page, name: string) {
+  const button = page.getByRole("button", { name, exact: true })
+  if (!(await isOnScreen(button))) {
+    await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+  }
+  await button.click()
+  if ((page.viewportSize()?.width ?? 1920) < 768) {
+    await page.keyboard.press("Escape")
+  }
+}
+
+test.beforeEach(async ({ page, request }) => {
   const response = await request.post("/api/projects", {
     data: { path: "/app", name: "Problem notice fixture" },
   })
@@ -8,62 +20,58 @@ test("설정 검증 오류는 inline 없이 문제 목록에만 남긴다", asyn
   const project = await response.json()
   await page.addInitScript((id: string) => {
     localStorage.setItem("redpact:project", id)
-    localStorage.setItem("redpact:language", "ko")
+    localStorage.setItem("redpact:language", "en")
+    window.history.replaceState(
+      {
+        redpactWorkspace: {
+          id: `project:${id}`,
+          kind: "project",
+          label: "Problem notice fixture",
+          projectId: id,
+          view: { page: "project-settings", selectedId: "" },
+        },
+      },
+      "",
+    )
   }, project.id)
+})
+
+test("설정 검증 오류는 토스트로 알리고 상세 진단은 전역 Settings에 보존한다", async ({ page }) => {
   await page.goto("/")
-  await test.step("실제 프로젝트 설정의 필수 Playwright 서비스를 제거해 검증 오류를 표시한다", async () => {
-    const mobile = (page.viewportSize()?.width ?? 1920) < 768
-    if (mobile) {
-      await page.getByRole("button", { name: "사이드바 전환", exact: true }).click()
-    }
-    await page.getByRole("button", { name: "Project settings", exact: true }).click()
-    if (mobile) {
-      await page.keyboard.press("Escape")
-    }
+  await test.step("프로젝트 설정 검증은 본문 오류나 문제 버튼을 추가하지 않는다", async () => {
+    await navigate(page, "Project settings")
     const service = page.locator('input[name="playwright.service"]')
     await expect(service).toHaveValue("app")
     await service.fill("")
-    await page.getByRole("button", { name: "설정 저장", exact: true }).click()
-    await expect(page.getByRole("alert")).toHaveCount(0)
-    await expect(page.getByRole("heading", { name: "문제 상세", exact: true })).toHaveCount(0)
+    await page.getByRole("button", { name: "Save settings", exact: true }).click()
+    await expect(page.locator('[data-slot="toast-title"]')).toHaveText("Problem recorded")
+    await expect(page.locator('main [role="alert"]')).toHaveCount(0)
+    await expect(page.getByRole("heading", { name: "Problem details", exact: true })).toHaveCount(0)
+    await expect(page.getByRole("button", { name: /^Problems \(/ })).toHaveCount(0)
+    await expect(page.getByRole("heading", { name: /^Problems \(/ })).toHaveCount(0)
   })
-  await test.step("문제 목록은 직접 열 때만 오류 진단을 표시한다", async () => {
-    await expect(page.getByRole("dialog", { name: "문제 목록", exact: true })).toHaveCount(0)
-    await page.getByRole("button", { name: /^문제 목록 \(/ }).click()
-    const dialog = page.getByRole("dialog", { name: "문제 목록", exact: true })
-    await expect(dialog).toBeVisible()
-    await expect(dialog.getByText(/playwright/)).toBeVisible()
+  await test.step("토스트를 닫아도 Settings의 상세 진단은 남는다", async () => {
+    await page.locator('[data-slot="toast-title"]').click()
+    await expect(page.locator('[data-slot="toast"]')).toHaveCount(0)
+    await navigate(page, "Settings")
+    const problems = page.getByRole("region", { name: "Problems (1)", exact: true })
+    await expect(problems).toBeVisible()
+    await expect(problems.locator("li")).toHaveCount(1)
+    await expect(problems.locator("li")).toContainText(/playwright/i)
+    await expect(page.locator('[data-slot="dialog-content"]:visible')).toHaveCount(0)
   })
 })
 
-test("파일 조회 503을 문제 목록에 모아도 재시도와 원문 탐색을 유지한다", async ({
-  page,
-  request,
-}) => {
-  const response = await request.post("/api/projects", {
-    data: { path: "/app", name: "File recovery fixture" },
-  })
-  expect(response.ok()).toBeTruthy()
-  const project = await response.json()
-  await page.addInitScript((id: string) => {
-    localStorage.setItem("redpact:project", id)
-    localStorage.setItem("redpact:language", "en")
-  }, project.id)
+test("파일 조회 503을 Settings에 보존해도 재시도와 원문 탐색을 유지한다", async ({ page }) => {
   let failing = true
   await page.route("**/api/projects/*/files?**", (route) =>
     failing ? route.fulfill({ status: 503, body: "Temporarily unavailable" }) : route.continue(),
   )
   await page.goto("/")
-  const mobile = (page.viewportSize()?.width ?? 1920) < 768
-  if (mobile) {
-    await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
-  }
-  await page.getByRole("button", { name: "File Viewer", exact: true }).click()
-  if (mobile) {
-    await page.keyboard.press("Escape")
-  }
-  await expect(page.getByRole("button", { name: /^Problems \(/ })).toContainText("1")
-  await expect(page.getByRole("alert")).toHaveCount(0)
+  await navigate(page, "File Viewer")
+  await expect(page.locator('[data-slot="toast-title"]')).toHaveText("Problem recorded")
+  await expect(page.getByRole("button", { name: /^Problems \(/ })).toHaveCount(0)
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0)
   await expect(page.getByText("Request failed (503)", { exact: true })).toHaveCount(0)
   const retry = page.getByRole("button", { name: "Retry", exact: true })
   await expect(retry).toBeVisible()
@@ -71,10 +79,8 @@ test("파일 조회 503을 문제 목록에 모아도 재시도와 원문 탐색
   await retry.click()
   await expect(page.getByRole("treeitem", { name: "docs", exact: true })).toBeVisible()
   await expect(retry).toHaveCount(0)
-  await page.getByRole("button", { name: /^Problems \(/ }).click()
-  await expect(
-    page
-      .getByRole("dialog", { name: "Problems", exact: true })
-      .getByText("Request failed (503)", { exact: true }),
-  ).toBeVisible()
+  await navigate(page, "Settings")
+  const problems = page.getByRole("region", { name: "Problems (1)", exact: true })
+  await expect(problems.getByText("Request failed (503)", { exact: true })).toBeVisible()
+  await expect(page.locator('[data-slot="dialog-content"]:visible')).toHaveCount(0)
 })

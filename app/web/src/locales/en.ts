@@ -1,4 +1,6 @@
 export const en = {
+  "Problem recorded": "Problem recorded",
+  "See Settings for details.": "See Settings for details.",
   Problems: "Problems",
   "Problems collected in this browser session. Background failures do not interrupt your work.":
     "Problems collected in this browser session. Background failures do not interrupt your work.",

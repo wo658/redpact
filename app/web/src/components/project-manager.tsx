@@ -28,6 +28,7 @@ import { GitHubSettings } from "./github-settings"
 import { LanguageSelector } from "./language-selector"
 import { LiveUpdates, useLiveRevision } from "./live-updates"
 import { PluginUpdateSettings } from "./plugin-updates"
+import { ProblemsSettings } from "./problems"
 import { ProjectFileViewer } from "./project-file-viewer"
 import { ProjectGitGraph } from "./project-git-graph"
 import { ProjectLibrary } from "./project-library"
@@ -637,6 +638,7 @@ export function GlobalSettings({ api }: { api: Api }) {
   const [trackedOnly, setTrackedOnly] = useTrackedFilesOnly()
   return (
     <div className="flex min-w-0 flex-col gap-8">
+      <ProblemsSettings />
       <UpdateSettings />
       <PluginUpdateSettings />
       <SettingsSection title={t("Preferences")}>

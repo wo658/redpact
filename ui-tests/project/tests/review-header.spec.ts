@@ -96,7 +96,7 @@ test("공용 헤더의 리뷰 탭과 액션은 좁은 화면에서 읽기 크기
       })
     }
   } finally {
-    await cleanupHeaderFixture(project.settingsSource)
+    await cleanupHeaderFixture(project.settingsSource, project.environmentId, project.captureId)
   }
 })
 
@@ -178,6 +178,6 @@ test("공용 헤더의 Unit·Integration·Environment는 실제 소스와 중지
       })
     }
   } finally {
-    await cleanupHeaderFixture(project.settingsSource, project.environmentId)
+    await cleanupHeaderFixture(project.settingsSource, project.environmentId, project.captureId)
   }
 })

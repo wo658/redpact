@@ -180,10 +180,14 @@ function ToastIcon({ type }: { type: string | undefined }) {
 }
 
 function ToastList() {
-  const { toasts } = ToastPrimitive.useToastManager()
+  const { toasts, close } = ToastPrimitive.useToastManager()
 
   return toasts.map((toastItem) => (
-    <Toast key={toastItem.id} toast={toastItem}>
+    <Toast
+      key={toastItem.id}
+      toast={toastItem}
+      onClick={toastItem.data?.dismissOnClick ? () => close(toastItem.id) : undefined}
+    >
       <ToastContent>
         <ToastIcon type={toastItem.type} />
         <div className="flex min-w-0 flex-1 flex-col gap-1">

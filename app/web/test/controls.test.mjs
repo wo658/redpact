@@ -16,6 +16,8 @@ for (const name of [
   "HTMLInputElement",
   "Element",
   "Node",
+  "AbortController",
+  "AbortSignal",
   "Event",
   "MouseEvent",
   "KeyboardEvent",
@@ -2669,6 +2671,19 @@ test("폴더 선택과 연결 중에는 중복 실행을 막는다", async () =>
   assert.ok(signal.aborted)
 })
 
+test("프로젝트 연결을 막는 오류는 Settings 없이도 직접 읽을 수 있다", async () => {
+  const { ProjectStart } = await server.ssrLoadModule("/src/components/project-start.tsx")
+  const { ProblemsProvider } = await server.ssrLoadModule("/src/components/problems.tsx")
+  render(
+    createElement(
+      ProblemsProvider,
+      null,
+      createElement(ProjectStart, { onConnect() {}, pending: false, error: "Connection failed" }),
+    ),
+  )
+  assert.equal(screen.getByRole("alert").textContent, "Connection failed")
+})
+
 test("폴더 선택 취소는 연결하지 않고 오류 뒤에는 다시 선택할 수 있다", async () => {
   await i18n.changeLanguage("en")
   const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
@@ -3208,35 +3223,64 @@ test("오류 알림은 진단을 유지하고 큰 문제 상세 박스를 표시
   assert.equal(screen.queryByRole("button", { name: "Copy" }), null)
 })
 
-test("백그라운드 오류는 화면을 차지하지 않고 문제 목록에서 확인하고 비운다", async () => {
+test("경고 알림을 닫아도 Settings에서 진단을 확인하고 비울 수 있다", async () => {
   const { Notice } = await server.ssrLoadModule("/src/components/feedback.tsx")
-  const { ProblemsProvider, ProblemsButton } = await server.ssrLoadModule(
-    "/src/components/problems.tsx",
-  )
+  const { ProblemsProvider } = await server.ssrLoadModule("/src/components/problems.tsx")
+  const { ProjectManager } = await server.ssrLoadModule("/src/components/project-manager.tsx")
+  const { project, sampleApi } = await import("./workspace-fixture.mjs")
   await i18n.changeLanguage("en")
   render(
     createElement(
       ProblemsProvider,
       null,
-      createElement(ProblemsButton),
+      createElement(ProjectManager, { api: sampleApi(), initialProjects: [project] }),
       createElement(Notice, { error: true }, "Request failed (503)"),
-      createElement("p", null, "Existing content"),
     ),
   )
-  assert.ok(screen.getByText("Existing content"))
-  assert.equal(screen.queryByText("Request failed (503)"), null)
-  assert.equal(screen.queryByRole("alert"), null)
-  const problemButton = await screen.findByRole("button", { name: "Problems (1)" })
-  assert.equal(problemButton.textContent, "1", "헤더에는 문제 아이콘과 숫자만 표시한다")
-  assert.ok(problemButton.querySelector("svg.lucide-triangle-alert"))
-  assert.equal(problemButton.getAttribute("title"), "Problems (1)")
-  await userEvent.click(problemButton)
-  assert.ok(await screen.findByRole("dialog", { name: "Problems" }))
-  assert.ok(screen.getByText("Request failed (503)"))
+  assert.equal(
+    Boolean(screen.queryByRole("button", { name: /Problems \(/ })),
+    false,
+    "경고는 공용 헤더 공간을 차지하지 않는다",
+  )
+  const summary = await screen.findByText("See Settings for details.")
+  await userEvent.click(summary)
+  await waitFor(() => assert.equal(Boolean(screen.queryByText("See Settings for details.")), false))
+  await userEvent.click(screen.getByRole("button", { name: "Settings", exact: true }))
+  assert.ok(await screen.findByText("Request failed (503)"))
+  assert.equal(Boolean(screen.queryByRole("dialog", { name: "Problems", exact: true })), false)
   await userEvent.click(screen.getByRole("button", { name: "Clear problems" }))
   assert.ok(await screen.findByText("No problems recorded."))
-  await userEvent.keyboard("{Escape}")
-  assert.ok(await screen.findByRole("button", { name: "Problems (0)" }))
+})
+
+test("닫은 경고는 같은 진단이 재관측되어도 다시 뜨지 않고 횟수만 갱신한다", async () => {
+  const { Notice } = await server.ssrLoadModule("/src/components/feedback.tsx")
+  const { ProblemsProvider, ProblemsSettings } = await server.ssrLoadModule(
+    "/src/components/problems.tsx",
+  )
+  await i18n.changeLanguage("en")
+  function tree(key) {
+    return createElement(
+      ProblemsProvider,
+      null,
+      createElement(ProblemsSettings),
+      createElement(Notice, { key, error: true }, "Repeated diagnostic"),
+    )
+  }
+  const view = render(tree("first"))
+  await userEvent.click(await screen.findByText("See Settings for details."))
+  await waitFor(() => assert.equal(Boolean(screen.queryByText("See Settings for details.")), false))
+  view.rerender(tree("second"))
+  await waitFor(() =>
+    assert.match(screen.getByRole("region", { name: "Problems (1)" }).textContent, /· 2 ·/),
+  )
+  assert.equal(
+    Boolean(screen.queryByText("See Settings for details.")),
+    false,
+    "같은 문제의 반복 관측은 닫은 알림을 되살리지 않는다",
+  )
+  await userEvent.click(screen.getByRole("button", { name: "Clear problems" }))
+  view.rerender(tree("third"))
+  assert.ok(await screen.findByText("See Settings for details."))
 })
 
 test("워크트리 리뷰는 Git 쓰기 액션이나 머지 사전 조회 없이 diff를 읽는다", async () => {
@@ -5198,14 +5242,11 @@ test("File Viewer에서 같은 파일을 다시 눌러도 원문을 유지하고
       return { kind: "text", path, content: "original" }
     },
   }
-  const { ProblemsProvider, ProblemsButton } = await server.ssrLoadModule(
-    "/src/components/problems.tsx",
-  )
+  const { ProblemsProvider } = await server.ssrLoadModule("/src/components/problems.tsx")
   render(
     createElement(
       ProblemsProvider,
       null,
-      createElement(ProblemsButton),
       createElement(ProjectFileViewer, { api, projectId: "project" }),
     ),
   )
@@ -5213,7 +5254,7 @@ test("File Viewer에서 같은 파일을 다시 눌러도 원문을 유지하고
   const file = await screen.findByRole("treeitem", { name: "readme.md" })
   assert.deepEqual(reads, [""])
   await user.click(file)
-  await screen.findByRole("button", { name: "Problems (1)" })
+  await screen.findByText("See Settings for details.")
   assert.equal(screen.queryByRole("alert"), null)
   assert.equal(screen.queryByText("File temporarily unavailable"), null)
   assert.ok(screen.getByRole("button", { name: "Retry" }))

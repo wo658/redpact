@@ -11,7 +11,6 @@ import "@/locales"
 import { useEffect, useState } from "react"
 import { ProjectManager } from "@/components/project-manager"
 import { Button } from "@/components/ui/button"
-import { Toaster } from "@/components/ui/toast"
 import { createApi, type Project } from "@/lib/api"
 
 const api = createApi()
@@ -37,11 +36,9 @@ function AppContent({ api: connectedApi }: { api: Api }) {
     return <ExecutionPage api={connectedApi} />
   }
   return (
-    <Toaster>
-      <LiveUpdates>
-        <ConnectedApp api={connectedApi} />
-      </LiveUpdates>
-    </Toaster>
+    <LiveUpdates>
+      <ConnectedApp api={connectedApi} />
+    </LiveUpdates>
   )
 }
 

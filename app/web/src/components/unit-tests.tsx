@@ -116,8 +116,8 @@ export function UnitTests({
   )
   const controls = (
     <div className="flex items-center gap-2">
-      {runButton}
       {running && <ExecutionProgress kind="unit" run={running} compact />}
+      {runButton}
     </div>
   )
   const toolbar = actionsContainer ? createPortal(controls, actionsContainer) : controls

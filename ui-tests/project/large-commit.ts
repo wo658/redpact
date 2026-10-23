@@ -1,4 +1,5 @@
 import { type APIRequestContext, expect, type Page } from "@playwright/test"
+import { isOnScreen } from "./app"
 import { node } from "./target"
 
 export const sizeNotice =
@@ -47,10 +48,10 @@ export async function openLargeCommit(
     localStorage.setItem("redpact:language", "en")
   }, project.id)
   await page.goto("/")
-  if ((page.viewportSize()?.width ?? 1920) < 768) {
+  const navigation = page.getByRole("button", { name: "Git Graph", exact: true })
+  if (!(await isOnScreen(navigation))) {
     await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
   }
-  const navigation = page.getByRole("button", { name: "Git Graph", exact: true })
   await expect(navigation).toBeInViewport()
   await navigation.click()
   if ((page.viewportSize()?.width ?? 1920) < 768) {
@@ -73,11 +74,32 @@ export async function openLargeCommit(
       : { changedPaths: ["large.txt", "tail.txt"] }),
     omitted: [metadataOnly ? metadataNotice : sizeNotice],
   })
-  await expect(page.getByRole("alert")).toHaveCount(0)
-  await page.getByRole("button", { name: /^Problems \(/ }).click()
-  const problems = page.getByRole("dialog", { name: "Problems", exact: true })
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0)
+  const notice = page.locator('[data-slot="toast"]').filter({ hasText: "Problem recorded" })
+  await expect(notice).toBeVisible()
+  await notice.getByText("Problem recorded", { exact: true }).click()
+  await expect(notice).toHaveCount(0)
+  const settings = page.getByRole("button", { name: "Settings", exact: true })
+  if (!(await isOnScreen(settings))) {
+    await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+  }
+  await settings.click()
+  if ((page.viewportSize()?.width ?? 1920) < 768) {
+    await page.keyboard.press("Escape")
+  }
+  const problems = page.getByRole("region", { name: /^Problems \(/ })
   await expect(
     problems.getByText(metadataOnly ? metadataNotice : sizeNotice, { exact: true }),
   ).toBeVisible()
-  await page.keyboard.press("Escape")
+  // 진단을 확인한 뒤 원래 커밋 내용을 다시 탐색한다.
+  if (!(await isOnScreen(navigation))) {
+    await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+  }
+  await navigation.click()
+  if ((page.viewportSize()?.width ?? 1920) < 768) {
+    await page.keyboard.press("Escape")
+  }
+  await expect(graph).toHaveAttribute("aria-busy", "false")
+  await graph.getByText(metadataOnly ? "Metadata only" : "Large commit", { exact: true }).click()
+  await expect(page.getByRole("region", { name: "Commit changes" })).toBeVisible()
 }

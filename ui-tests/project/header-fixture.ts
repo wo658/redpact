@@ -2,7 +2,13 @@ import { node } from "./target"
 
 // 격리 앱에 리뷰용 기록을 준비한다. 실제 테스트 실행을 의미하지 않는다.
 export async function createHeaderFixture({ allTabs = false } = {}) {
-  return node<{ id: string; name: string; settingsSource: string; environmentId?: string }>(
+  return node<{
+    id: string
+    name: string
+    settingsSource: string
+    environmentId?: string
+    captureId: string
+  }>(
     `
             import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
             import {randomUUID} from 'node:crypto';
@@ -47,24 +53,29 @@ export async function createHeaderFixture({ allTabs = false } = {}) {
               mkdirSync('/tmp/redpact-e2e-state/environments',{recursive:true});
               writeFileSync('/tmp/redpact-e2e-state/environments/'+environmentId+'.json',JSON.stringify({version:1,data:environment}));
             }
-            console.log(JSON.stringify({...project,settingsSource,environmentId}));
+            console.log(JSON.stringify({...project,settingsSource,environmentId,captureId:id}));
   `,
     { allTabs },
   )
 }
 
-export async function cleanupHeaderFixture(settingsSource: string, environmentId?: string) {
+export async function cleanupHeaderFixture(
+  settingsSource: string,
+  environmentId?: string,
+  captureId?: string,
+) {
   await node(
     `
       import {writeFileSync,rmSync} from 'node:fs';
-      const {settingsSource,environmentId}=JSON.parse(process.argv[1]);
+      const {settingsSource,environmentId,captureId}=JSON.parse(process.argv[1]);
       writeFileSync('/app/.redpact/settings.json',settingsSource);
       rmSync('/app/ui-tests/worktree/captures/header.spec.ts',{force:true});
       rmSync('/app/app/server/test/shared-header-fixture.test.ts',{force:true});
       rmSync('/app/e2e/tests/shared-header-fixture.test.ts',{force:true});
       if(environmentId) rmSync('/tmp/redpact-e2e-state/environments/'+environmentId+'.json',{force:true});
+      if(captureId) rmSync('/tmp/redpact-e2e-state/playwright-runs/'+captureId+'.json',{force:true});
       console.log('null');
     `,
-    { settingsSource, environmentId },
+    { settingsSource, environmentId, captureId },
   )
 }

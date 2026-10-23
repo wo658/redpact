@@ -146,7 +146,8 @@ preview never executes project code.
 
 The shared app header sits outside the rounded content frame and remains exactly
 one row in Full, Half View and Mobile. It always contains one sidebar toggle, the
-current page's title or navigation and actions, and Problems.
+current page's title or navigation and actions. The shared Play execution action,
+when available, sits at the far right; diagnostics have no persistent header button.
 There is no workspace-tab strip, New tab or Close tab action. The standalone browser
 and embedded App Page use the same header and one current project/page.
 
@@ -156,8 +157,8 @@ for manual navigation. Below 768 CSS pixels, navigation uses the mobile sidebar 
 Close sidebar action inside the drawer.
 Half View is a first-class design target: keep the content area available without a
 persistent sidebar. Preserve desktop gutters and full-width mobile content. Verify the
-actual application at Full (1920px), Half View (800px), and Mobile (390px or 414px),
-including desktop/mobile captures and a separate half-view capture for layout changes.
+actual application at desktop Full (1920px) and Half View (800px), including both
+captures for layout changes. Mobile captures are only required when specifically requested.
 
 Worktree display options appear while hovering anywhere in the Worktrees section,
 including its remaining space above the footer. Keyboard focus, an open options menu
@@ -208,7 +209,7 @@ to provide their own specific `CopyHandoff` context.
 ## One review toolbar
 
 Each page owns one `ReviewToolbar` with navigation, secondary and actions slots. In
-the app, it renders into the shared header beside the sidebar toggle and Problems,
+the app, it renders into the shared header beside the sidebar toggle,
 rather than adding another toolbar row inside the content frame. Standalone component
 usage retains an inline toolbar. Portals preserve the page's Tabs context and action
 state; a page change removes its previous header content.
@@ -222,9 +223,9 @@ supplies Overview/Configuration and Help. Git Graph supplies its title and Refre
 Its built-in branch, remote-visibility and commit-search controls remain with the graph.
 Project and instance settings place their form save and draft-recovery actions in the
 shared header; independent settings sections keep their own controls. Run controls
-use one shared 28px Lucide Play icon button with an accessible action name and native
-hover tooltip. Container Start, Restart and Stop and Git Graph Refresh use the same
-compact icon control with their respective Lucide symbols. Keep explicit text in the
+use one shared 28px Lucide Play icon button at the far right of the header, with an
+accessible action name and native hover tooltip. Container Start, Restart and Stop
+and Git Graph Refresh use the same compact icon control with their respective Lucide symbols. Keep explicit text in the
 Playwright target-selection dialog. Execution controls use the shared execution
 default, with no per-run scope selector or task-draft cleanup
 action in the header. Agent overrides and explicit cleanup remain available through
@@ -238,8 +239,8 @@ source list or running tests.
 Keep the shared toolbar on one row at every width. Prefer removing low-value controls
 to crowding it; never add a second row or reduce label font size to make everything fit.
 Navigation and action groups independently scroll horizontally as a fallback. Labels
-do not wrap. The sidebar toggle and Problems stay fixed and reachable without
-scrolling through the page's controls.
+do not wrap. The sidebar toggle and the available Play action stay fixed and reachable
+without scrolling through the page's controls.
 
 Run result panels share the execution progress strip described in
 [execution](execution.md). Active Unit and Integration phases also appear by their
@@ -286,13 +287,17 @@ the server before the application can load. A feature request returning 503 is n
 itself critical. Independent components without the app's Problems provider retain
 an inline fallback so diagnostics cannot disappear outside the shared app shell.
 
-The shared app header's **Problems** button shows a Lucide warning icon and the
-number of collected problems, with a muted zero badge and a highlighted nonzero badge.
-Its accessible name and native tooltip retain the Problems label and count;
-the project connection screen also provides it. Open the list to inspect messages,
-last-seen times, observation counts and page locations, or clear it. The panel never
-opens automatically. Informational notices and user-requested recovery dialogs keep
-their existing roles.
+New noncritical diagnostics show a compact notification at the bottom right, outside
+the header. It expires after 8 seconds; hover or keyboard focus pauses the timer.
+Clicking the notification or its close control dismisses it without clearing collected problems.
+New distinct problems update the same notification rather than adding a stack.
+Repeated observations of an existing message/location update its count without
+reviving a dismissed notification. Clearing the list allows a later occurrence to notify again.
+The notification never automatically opens a modal or navigates away from the current
+page. Global **Settings → Problems** contains the full list of messages, last-seen
+times, observation counts and page locations, and the explicit clear action. There
+is no persistent Problems button in the header or connection screen. Informational
+notices and user-requested recovery dialogs keep their existing roles.
 
 Problems are application-wide browser-session memory and are lost on reload;
 they are not server history. Matching message/location pairs share one row. The list
@@ -310,8 +315,9 @@ project configuration fields.
 Use semantic buttons, labels, tabs and dialogs with keyboard focus/selection
 behavior. Responsive reflow must preserve controls, file selection and diagnostics.
 Run relevant functional Playwright tests against the actual application for screen
-changes. For layout/style changes, inspect desktop/mobile captures too. Component,
-structure and build checks supplement this evidence, never replace it.
+changes. For layout/style changes, inspect desktop Full and Half View captures too;
+Mobile captures are optional unless requested. Component, structure and build checks
+supplement this evidence, never replace it.
 
 ## Documented palette
 

@@ -35,10 +35,20 @@ test("공통 실행 아이콘은 좁은 헤더에서 이름과 상태를 유지�
           await expect(run).toBeVisible()
           await expect(run).toHaveText("")
           await expect(run.locator("svg.lucide-play")).toBeVisible()
-          const bounds = await run.boundingBox()
-          expect(bounds?.width).toBe(28)
-          expect(bounds?.height).toBe(28)
-          expect((await header.boundingBox())?.height).toBeLessThanOrEqual(54)
+          await expect(async () => {
+            const bounds = await run.boundingBox()
+            expect(bounds?.width).toBe(28)
+            expect(bounds?.height).toBe(28)
+            const headerBounds = await header.boundingBox()
+            expect(headerBounds?.height).toBeLessThanOrEqual(54)
+            if (!bounds || !headerBounds) {
+              throw new Error("헤더와 실행 버튼의 화면 위치를 확인할 수 없습니다")
+            }
+            const rightInset = headerBounds.x + headerBounds.width - bounds.x - bounds.width
+            expect(rightInset).toBeGreaterThanOrEqual(0)
+            expect(rightInset).toBeLessThanOrEqual(9)
+          }).toPass({ timeout: 5000 })
+          await expect(header.getByRole("button", { name: /^Problems \(/ })).toHaveCount(0)
         }
       })
     }
@@ -49,12 +59,14 @@ test("공통 실행 아이콘은 좁은 헤더에서 이름과 상태를 유지�
     await page.keyboard.press("Escape")
     await header.getByRole("tab", { name: "Playwright", exact: true }).click()
     await header.getByRole("button", { name: "Run Playwright", exact: true }).click()
-    await expect(page.getByRole("dialog")).toBeVisible()
+    await expect(page.getByRole("dialog", { name: "Run Playwright", exact: true })).toBeVisible()
     await expect(page.getByRole("heading", { name: "Run Playwright", exact: true })).toBeVisible()
     await expect(
-      page.getByRole("dialog").getByRole("button", { name: "Run Playwright", exact: true }),
+      page
+        .getByRole("dialog", { name: "Run Playwright", exact: true })
+        .getByRole("button", { name: "Run Playwright", exact: true }),
     ).toHaveText("Run Playwright")
   } finally {
-    await cleanupHeaderFixture(project.settingsSource, project.environmentId)
+    await cleanupHeaderFixture(project.settingsSource, project.environmentId, project.captureId)
   }
 })

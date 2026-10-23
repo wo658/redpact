@@ -210,8 +210,8 @@ function IntegrationRunControls({
   )
   const controls = (
     <div className="flex items-center gap-2">
-      {runButton}
       {active && currentRun && <ExecutionProgress kind="integration" run={currentRun} compact />}
+      {runButton}
     </div>
   )
   return (

@@ -50,11 +50,12 @@ Exception: user-facing semantic content in submitted E2E tests follows the user'
 
 The shared app header must remain exactly one row in Full, Half View and Mobile.
 Prioritize removing low-value controls before crowding the header. Keep its sidebar
-trigger and Problems reachable, with independent navigation/action scrolling as a
-fallback. Follow [frontend conventions](docs/frontend.md) for placement and responsive
-behavior. Treat Half View as an explicit design and verification target.
+trigger reachable and the shared Play action at the far right, with independent
+navigation/action scrolling as a fallback. Keep noncritical diagnostic notifications
+outside the header and their full history in global Settings. Follow
+[frontend conventions](docs/frontend.md) for placement and responsive behavior. Treat Half View as an explicit design and verification target.
 
-For every UI or screen change, review the relevant Playwright tests and verify the changed screen through the actual application. Run functional tests for affected navigation, controls, states, and responsive behavior; add or update meaningful coverage when missing. For layout or styling changes, also capture and inspect Full (1920px), Half View (800px), and Mobile (390px or 414px) states. Browser tools and screenshots are authorized for this verification without a separate request. Static HTML/CSS checks, component tests, and builds supplement this evidence; they do not replace it. Report any unverified state or execution blocker explicitly. Read `docs/frontend.md` before UI work. The default `app/web/` entry is the connected viewer; separate demo surfaces do not specify backend behavior.
+For every UI or screen change, review the relevant Playwright tests and verify the changed screen through the actual application. Run functional tests for affected navigation, controls, states, and responsive behavior; add or update meaningful coverage when missing. For layout or styling changes, also capture and inspect desktop Full (1920px) and Half View (800px) states. Mobile captures are not required unless specifically requested. Browser tools and screenshots are authorized for this verification without a separate request. Static HTML/CSS checks, component tests, and builds supplement this evidence; they do not replace it. Report any unverified state or execution blocker explicitly. Read `docs/frontend.md` before UI work. The default `app/web/` entry is the connected viewer; separate demo surfaces do not specify backend behavior.
 
 ## Implementation
 

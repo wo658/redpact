@@ -2,8 +2,8 @@ import type { Expect, Page } from "@playwright/test"
 import { isOnScreen } from "./app"
 import { node } from "./target"
 
-export async function verifyProblems(page: Page, expect: Expect, width: number) {
-  await page.setViewportSize({ width, height: 900 })
+export async function verifyProblems(page: Page, expect: Expect, width: number, height = 900) {
+  await page.setViewportSize({ width, height })
   await page.addInitScript(() => localStorage.setItem("redpact:language", "en"))
   let fail = false
   await page.route("**/api/projects/*/worktrees", (route) =>
@@ -25,14 +25,9 @@ export async function verifyProblems(page: Page, expect: Expect, width: number) 
   const content = page.locator('input[name="playwright.service"]:visible')
   await expect(content).toHaveValue("app")
   await expect(page.locator(".app-header:visible")).toBeVisible()
-  const emptyProblems = page.getByRole("button", { name: "Problems (0)", exact: true })
-  await expect(emptyProblems).toBeVisible()
-  await expect(emptyProblems).toHaveText("0")
-  await expect(emptyProblems.locator("svg.lucide-triangle-alert")).toBeVisible()
-  await expect(emptyProblems.locator('[data-slot="badge"]')).toHaveAttribute(
-    "data-variant",
-    "secondary",
-  )
+  await expect(
+    page.locator(".app-header").getByRole("button", { name: /^Problems \(/ }),
+  ).toHaveCount(0)
   fail = true
   // 실제 파일 관찰로 백그라운드 새로고침만 실패시킨다.
   const failed = page.waitForResponse(
@@ -43,31 +38,46 @@ export async function verifyProblems(page: Page, expect: Expect, width: number) 
     `import {writeFileSync} from 'node:fs'; writeFileSync('/app/problems-refresh.txt',String(Date.now())); console.log('null');`,
   )
   await failed
-  const problems = page.getByRole("button", { name: "Problems (1)", exact: true })
-  await expect(problems).toBeVisible()
-  await expect(problems).toHaveText("1")
-  await expect(problems).toHaveAttribute("title", "Problems (1)")
-  await expect(problems.locator('[data-slot="badge"]')).toHaveAttribute(
-    "data-variant",
-    "destructive",
-  )
+  const notice = page.locator('[data-slot="toast"]').filter({ hasText: "Problem recorded" })
+  await expect(notice).toBeVisible()
+  await expect(notice.getByText("See Settings for details.", { exact: true })).toBeVisible()
   await expect(content).toHaveValue("app")
+  await expect(
+    page.locator(".app-header").getByRole("button", { name: /^Problems \(/ }),
+  ).toHaveCount(0)
   await expect(page.getByText("Request failed (503)", { exact: true })).toHaveCount(0)
   await expect(page.getByRole("heading", { name: "Problem details", exact: true })).toHaveCount(0)
-  await expect(page.getByRole("dialog")).toHaveCount(0)
-  await problems.click()
-  const dialog = page.getByRole("dialog", { name: "Problems", exact: true })
-  await expect(dialog).toBeVisible()
-  await expect(dialog.getByText("Request failed (503)", { exact: true })).toBeVisible()
+  await expect(page.locator('[data-slot="dialog-content"]:visible')).toHaveCount(0)
+  const settings = page.getByRole("region", { name: "Problems (1)", exact: true })
+  const openSettings = async () => {
+    if (await notice.isVisible()) {
+      await notice.getByText("Problem recorded", { exact: true }).click()
+      await expect(notice).toHaveCount(0)
+    }
+    if (!(await isOnScreen(page.getByRole("button", { name: "Settings", exact: true })))) {
+      await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+    }
+    await page.getByRole("button", { name: "Settings", exact: true }).click()
+    if (mobile) {
+      await page.keyboard.press("Escape")
+    }
+    await expect(settings).toBeVisible()
+    await expect(settings.getByText("Request failed (503)", { exact: true })).toBeVisible()
+    await expect(notice).toHaveCount(0)
+    await expect(page.locator('[data-slot="dialog-content"]:visible')).toHaveCount(0)
+  }
   return {
-    dialog,
+    notice,
+    settings,
+    openSettings,
     recover: async () => {
       fail = false
-      await dialog.getByRole("button", { name: "Clear problems", exact: true }).click()
-      await expect(dialog.getByText("No problems recorded.")).toBeVisible()
-      await page.keyboard.press("Escape")
-      await expect(problems).toHaveCount(0)
-      await expect(page.getByRole("button", { name: "Problems (0)", exact: true })).toBeFocused()
+      if (!(await settings.isVisible())) {
+        await openSettings()
+      }
+      await settings.getByRole("button", { name: "Clear problems", exact: true }).click()
+      await expect(page.getByRole("region", { name: "Problems (0)", exact: true })).toBeVisible()
+      await expect(page.getByText("No problems recorded.", { exact: true })).toBeVisible()
       // 실제 파일 관찰로 성공한 새로고침을 다시 확인한다.
       const refreshed = page.waitForResponse(
         (response) => /\/api\/projects\/[^/]+\/worktrees$/.test(response.url()) && response.ok(),
@@ -76,7 +86,10 @@ export async function verifyProblems(page: Page, expect: Expect, width: number) 
         `import {rmSync} from 'node:fs'; rmSync('/app/problems-refresh.txt',{force:true}); console.log('null');`,
       )
       await refreshed
-      await expect(page.getByRole("button", { name: "Problems (0)", exact: true })).toBeVisible()
+      await expect(page.getByRole("heading", { name: "Problems (0)", exact: true })).toBeVisible()
+      await expect(
+        page.locator(".app-header").getByRole("button", { name: /^Problems \(/ }),
+      ).toHaveCount(0)
     },
   }
 }
