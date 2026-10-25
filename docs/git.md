@@ -88,10 +88,15 @@ Supported HEAD/index blob reads retain isomorphic-git with native fallback.
 External diff, textconv, hooks, optional locks and fsmonitor are disabled for
 inspection. Paths remain repository-relative and validated.
 
-Worktree review compares against a usable branch-creation reflog commit, otherwise
-the configured main branch's merge base. It includes committed, staged, unstaged
-and untracked changes. Missing or ambiguous comparison state yields diagnostics;
-it is not an empty diff. Branch-only comparison uses committed changes only.
+Worktree review compares the current HEAD with the configured main branch using
+`git merge-base --all`. Exactly one common ancestor is required; branch-creation
+reflogs do not define the baseline. Merging or rebasing onto the main branch advances
+the comparison baseline, including for existing linked worktrees. Text and image
+comparisons share this baseline and include committed, staged, unstaged and untracked
+changes. Changes inherited from another feature branch remain visible until they
+share ancestry with the configured main branch. Missing branches, unrelated histories
+or multiple merge bases yield diagnostics instead of an empty diff. Branch-only
+comparison uses committed changes only.
 Source/diff wrapping is a global display preference and preserves source characters,
 line numbers and statistics.
 

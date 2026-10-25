@@ -1,5 +1,4 @@
 import { captureGit } from "./capture.js"
-import { branchCreation } from "./reflog.js"
 
 export async function comparisonBase(
   root: string,
@@ -9,10 +8,6 @@ export async function comparisonBase(
 ) {
   if (!revision) {
     throw new Error("A committed HEAD is required for worktree comparison")
-  }
-  const creation = await branchCreation(root, revision, mainBranch, env)
-  if (creation) {
-    return creation
   }
   if (!mainBranch) {
     throw new Error("A main branch and committed HEAD are required for worktree comparison")

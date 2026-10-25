@@ -82,9 +82,13 @@ Native Git이 모든 index 형식의 상태와 중첩·전역·공유 제외 규
 isomorphic-git과 native fallback을 유지합니다. 검사 시 외부 diff, textconv, hook,
 optional lock, fsmonitor를 비활성화하며 저장소 상대 경로를 검증합니다.
 
-워크트리 검토는 사용 가능한 브랜치 생성 reflog commit을 기준으로, 없으면 설정한
-메인 브랜치 merge base를 기준으로 비교합니다. 커밋·staged·unstaged·untracked 변경을
-포함합니다. 비교 상태가 없거나 모호하면 빈 diff 대신 진단을 반환합니다.
+워크트리 검토는 현재 HEAD와 설정한 메인 브랜치의 `git merge-base --all` 결과를
+사용합니다. 공통 조상이 정확히 하나여야 하며 브랜치 생성 reflog는 기준으로 쓰지
+않습니다. 메인 브랜치를 병합하거나 그 위로 rebase하면 기존 연결 워크트리에서도
+비교 기준이 전진합니다. 텍스트와 이미지 비교는 같은 기준을 사용하며
+커밋·staged·unstaged·untracked 변경을 포함합니다. 다른 기능 브랜치에서 물려받은
+변경도 설정한 메인 브랜치와 계보를 공유하기 전까지 표시합니다. 기준 브랜치 누락,
+서로 무관한 이력, 여러 merge base는 빈 diff 대신 진단을 반환합니다.
 브랜치 전용 비교는 커밋된 변경만 포함합니다. 소스·diff 줄바꿈은 전역 표시 설정이며
 원문, 줄 번호와 통계를 보존합니다.
 
