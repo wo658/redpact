@@ -69,6 +69,16 @@ Use file-based runtime storage as described in `docs/storage.md`. Ordinary reade
 
 Write tests before implementation and observe a real assertion failure. Do not treat process non-zero status or environment/collection errors as proof of functional red. Never silently weaken reviewed tests or claim unobserved results. Use the existing Vitest tests for the current server.
 
+Use Red → Green → Refactor for testable behavior changes, including Integration
+and Playwright acceptance paths. First observe the intended assertion fail on the
+baseline, implement the smallest change that passes it, then refactor while keeping
+the assertions and affected regression checks green. Preserve the command or run ID
+and observed red/green results in task evidence. Tests written after implementation
+do not establish TDD. Documentation and static configuration changes use relevant
+checks without inventing a failing behavior test; visual-only changes still require
+the actual-app captures above. Apply the same procedure in distributed plugin skills;
+see [writing verification](docs/tests.md).
+
 The retired Hurl implementation and skill were removed. Use the current server tests and Git history for historical context.
 
 Read-only Git inspection and existing-checkout routing support source identity.

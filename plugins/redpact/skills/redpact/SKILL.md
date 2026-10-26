@@ -19,8 +19,8 @@ with its absolute path to inspect configuration diagnostics, pending approvals a
 recorded execution state. A status read does not register or execute the project;
 use `redpact settings describe/get/validate --scope project` when setup needs attention.
 
-Choose evidence from the requested behavior, write a regression, observe its intended
-assertion fail, implement, then rerun. Use subagents for independent work when available;
+Follow the [Red → Green → Refactor procedure](#test-first-cycle) for testable behavior.
+Use subagents for independent work when available;
 give each an explicit file boundary and the same checkout/evidence identity. The parent
 integrates their changes and verifies the final tree. Delegation is not verification.
 
@@ -190,10 +190,9 @@ For combined frontend/backend work, cover the user flow and add Integration wher
 changed API or persistence contracts need independent assertions; avoid duplicating
 identical coverage merely to fill every layer.
 
-Write the relevant acceptance regression before implementation and observe its
-intended assertion fail, then pass with the changed application. TDD is not limited
-to Unit. Add focused Unit tests where complex rules or edge cases benefit from them;
-component tests supplement rather than replace real browser behavior evidence.
+Apply the test-first cycle below to the selected acceptance regression. TDD is not
+limited to Unit. Add focused Unit tests where complex rules or edge cases benefit
+from them; component tests supplement rather than replace real browser behavior evidence.
 
 Unit-only verification is appropriate for isolated pure logic with no changed user
 flow, rendered UI or external contract, with a concrete reason. Documentation and
@@ -201,6 +200,28 @@ static configuration use relevant static/build/review checks without invented be
 tests. Visual-only UI changes still require a capture target, but do not invent
 functional assertions. Respect explicit execution restrictions and explain their actual
 scope: a ban on browser layout inspection alone does not ban functional browser tests.
+
+## Test-first cycle
+
+For each testable behavior change, use Red → Green → Refactor in the actual checkout:
+
+1. **Red:** Write the acceptance regression before implementing the behavior. Run it
+   against the baseline and inspect the intended assertion failure. A nonzero exit,
+   missing module, collection error or unavailable environment does not establish red.
+   If compilation needs a minimal seam, keep it behaviorless and identify that baseline.
+2. **Green:** Implement the smallest change that satisfies the intended assertion,
+   then rerun the same test against fresh application inputs. Preserve reviewed
+   assertions; diagnose incorrect fixtures explicitly rather than weakening the test.
+3. **Refactor:** Improve structure where useful while preserving behavior, then rerun
+   affected tests and required regression checks on the final tree.
+
+Retain the test identity, command or managed run ID, actual failing assertion and
+observed green result in task evidence. Label local-only red/green separately from
+connected acceptance evidence. Tests added after implementation do not prove TDD;
+report that gap honestly. Delegated implementation follows the same sequence, and
+the parent verifies the integrated tree. Documentation, static configuration and
+visual-only changes retain the relevant checks described above without invented red.
+This procedure applies to standalone skills and every plugin distribution.
 
 ## Carry the required work to completion
 

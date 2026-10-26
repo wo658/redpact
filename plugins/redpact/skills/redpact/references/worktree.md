@@ -48,6 +48,10 @@ Use the absolute new checkout path as `workdir` for subsequent source and Git co
 
 ## Execute the selected work
 
+Follow the [test-first cycle](../SKILL.md#test-first-cycle) before implementing each
+testable behavior change. Preserve baseline red, green and final regression evidence
+under this checkout identity, including when implementation is delegated.
+
 Derive required evidence from the acceptance criteria in SKILL.md, prioritizing
 Integration and frontend Playwright functional tests. Read the applicable
 [Integration](integration-tests.md), supporting [Unit](unit-tests.md) or

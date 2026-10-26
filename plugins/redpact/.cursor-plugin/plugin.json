@@ -1,7 +1,7 @@
 {
   "name": "redpact",
   "version": "0.2.0",
-  "description": "Local development review with Redpact MCP and skills.",
+  "description": "Develop through Red → Green → Refactor with Redpact-managed verification and recorded evidence.",
   "author": {
     "name": "wo658"
   },

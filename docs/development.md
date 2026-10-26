@@ -82,6 +82,8 @@ The Docker build context excludes generated `.source` and `.next` directories so
 host-specific website paths and caches do not enter the runtime image.
 Observe a real assertion failure before implementation; collection/environment errors
 are not a functional red. Do not weaken reviewed assertions or claim unobserved runs.
+Follow [test-first development](tests.md#test-first-development) for the shared
+Red → Green → Refactor procedure and evidence required by repository and plugin skills.
 
 The default server suite leaves Docker, installed-package and actual-application
 checks opt-in, including actual Integration runner, source-integrity, redaction and

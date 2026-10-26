@@ -9,7 +9,7 @@
   "interface": {
     "displayName": "Redpact",
     "shortDescription": "Develop in chat and review recorded evidence.",
-    "longDescription": "Use redpact-init for project setup. Redpact guides test-first work in isolated checkouts, requests Unit, Integration and Playwright execution through CLI, and returns recorded evidence and review links. Ask policy leaves execution approval to the human through App controls. The host agent owns files and Git; Redpact owns execution and evidence. Local commands support iteration but do not replace connected acceptance evidence or human review.",
+    "longDescription": "Use redpact-init for project setup. Redpact guides Red → Green → Refactor in isolated checkouts: observe the intended assertion fail before implementation, pass it, then refactor and rerun affected checks. It requests Unit, Integration and Playwright execution through CLI and returns recorded evidence and review links. Ask policy leaves execution approval to the human through App controls. The host agent owns files and Git; Redpact owns execution and evidence. Local commands support iteration but do not replace connected acceptance evidence or human review.",
     "developerName": "jhkim",
     "category": "Productivity",
     "capabilities": [],

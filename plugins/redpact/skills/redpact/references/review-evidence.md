@@ -41,6 +41,9 @@ applicable run/environment IDs and remaining review gaps.
 
 Keep these claims distinct:
 
+- TDD: the baseline's intended failing assertion, its command or run ID, the same
+  test's green result and affected checks after refactoring. Tests authored after
+  implementation and environment failures do not establish a completed cycle.
 - Unit: failing/passing assertions observed locally, plus connected whole-command
   status and output when recorded; no inferred per-case Redpact verdicts.
 - Integration: immutable submission, actual run and observed Steps on the intended
