@@ -16,6 +16,33 @@ Start with [Review your first change](review-workflow.md) to decide which eviden
 
 A screenshot lets someone inspect appearance. Assertions establish the behavior a test actually checks. Keep both when a change needs functional verification and visual review.
 
+## Test-first development
+
+The Redpact skill uses Red → Green → Refactor for testable behavior changes, whether
+installed as a standalone skill or bundled in a plugin. Choose the relevant Unit,
+Integration or Playwright functional boundary before implementation:
+
+1. **Red:** Write the regression and run it against the baseline. Observe the intended
+   assertion fail; a nonzero exit, collection error or unavailable environment is not red.
+   A minimal compilation seam must remain behaviorless and be identified in the evidence.
+2. **Green:** Implement the smallest change that passes the same intended assertion,
+   then rerun against fresh application inputs. Preserve reviewed assertions and
+   diagnose incorrect fixtures explicitly instead of weakening the test.
+3. **Refactor:** Improve structure where useful without changing behavior, then rerun
+   affected tests and required regression checks on the final tree.
+
+Retain the test identity, command or managed run ID, actual failing assertion and
+observed green result in the task handoff. The parent agent verifies the combined
+tree when work is delegated. Local red/green results remain separate from connected
+acceptance evidence; direct shell runs do not create Redpact records. Tests written
+after implementation do not establish TDD and must be reported honestly.
+
+Documentation and static configuration changes use relevant static/build/review
+checks without invented failing behavior tests. Visual-only changes still require
+actual-application captures; see [frontend conventions](frontend.md) for this
+repository's viewport and inspection requirements. Execution approval remains a
+human action in the connected viewer and does not establish code acceptance.
+
 ## Connect an existing unit command
 
 Add `unitTests` to the shared `.redpact/settings.json`. This fragment assumes a project-supplied `unit.Dockerfile` that installs dependencies and copies the application into `/workspace`:

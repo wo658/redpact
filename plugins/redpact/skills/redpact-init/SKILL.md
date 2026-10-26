@@ -43,3 +43,6 @@ Report authored/reused application files, CLI settings changes, execution and sh
 validation results, observed managed evidence and remaining limits. Use an actual
 returned review path for evidence. Setup-only requests end here; authorized feature
 work continues through the main redpact workflow without another onboarding round.
+Before implementing testable behavior, follow its
+[Red → Green → Refactor procedure](../redpact/SKILL.md#test-first-cycle); a setup smoke
+pass does not establish the feature's failing regression or completed TDD cycle.
