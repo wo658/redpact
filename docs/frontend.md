@@ -105,6 +105,8 @@ uses `accent`/`accent-foreground`; hover uses a lighter transient state. Checked
 state and keyboard highlight stay distinct. Avoid decorative cards, nested borders,
 gradients and per-row boxes. Preserve action inversion and semantic error colors.
 
+The Redpact app icon and browser favicons use a solid purple (`#7772D5`) background with the white mascot and dark eyes, without gradients. SVG, PNG, ICO and the home-screen touch icon share this artwork. The sidebar App plugin packages the same favicon and touch-icon assets.
+
 ## File and folder icons
 
 File Viewer, changed-file trees and source/diff headers use bundled Material Icon
